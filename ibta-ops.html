@@ -311,10 +311,37 @@
   }
   .settings-desc{font-size:14.5px; color:var(--muted); margin-bottom:14px; line-height:1.7;}
   [hidden]{display:none!important;}
-  .cloud-box{max-width:888px;margin:20px auto;padding:20px;border:1px solid var(--border);border-radius:18px;background:var(--surface);font-family:inherit;}
-  .cloud-box input{display:block;width:100%;max-width:400px;margin:8px 0 16px;padding:10px;border:1px solid var(--border);border-radius:8px;font:inherit;direction:ltr;}
-  .cloud-box button{padding:9px 13px;border:1px solid var(--border);border-radius:8px;background:var(--blue);color:white;cursor:pointer;font:inherit;}
-  #auth-message,#cloud-status{font-size:14px;line-height:1.6;}
+  .cloud-controls{position:relative;margin-inline-start:auto;font-family:inherit;}
+  .cloud-menu>summary{display:flex;align-items:center;gap:7px;height:38px;padding:0 10px;border:1px solid var(--border);border-radius:10px;background:var(--surface);box-shadow:var(--shadow);color:var(--text);font-size:13px;font-weight:700;cursor:pointer;list-style:none;white-space:nowrap;}
+  .cloud-menu>summary::-webkit-details-marker,.cloud-admin summary::-webkit-details-marker{display:none;}
+  .cloud-menu>summary:hover,.cloud-menu[open]>summary{border-color:var(--blue-100);background:var(--blue-50);}
+  .cloud-avatar{display:grid;place-items:center;width:25px;height:25px;flex:none;border-radius:7px;background:var(--blue-50);color:var(--blue-600);font-size:11px;font-weight:800;letter-spacing:-.5px;}
+  .cloud-chevron{font-size:14px;color:var(--muted);transition:transform .15s;}
+  .cloud-menu[open] .cloud-chevron{transform:rotate(180deg);}
+  .cloud-popover{position:absolute;z-index:30;inset-inline-start:0;top:calc(100% + 8px);width:min(340px,calc(100vw - 32px));padding:17px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:0 16px 38px #16315920;}
+  .cloud-identity-text{display:flex;flex-direction:column;gap:3px;min-width:0;}
+  .cloud-identity-text strong{font-size:13px;font-weight:700;color:var(--text);}
+  #signed-in{font-size:12px;color:var(--muted);overflow-wrap:anywhere;unicode-bidi:plaintext;}
+  .cloud-status{margin:8px 0 0;font-size:12px;line-height:1.5;color:var(--muted);}
+  .cloud-status:empty{display:none;}
+  .cloud-actions{display:flex;align-items:center;gap:8px;margin-top:15px;}
+  .cloud-popover button{padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--blue-600);cursor:pointer;font:inherit;font-size:12px;font-weight:700;transition:background .15s,border-color .15s;}
+  .cloud-popover button:hover{background:var(--blue-50);border-color:var(--blue-100);}
+  .cloud-menu>summary:focus-visible,.cloud-popover button:focus-visible,.cloud-admin summary:focus-visible{outline:3px solid var(--blue-100);outline-offset:2px;}
+  .cloud-actions button{display:flex;align-items:center;justify-content:center;gap:6px;flex:1;white-space:nowrap;}
+  .cloud-actions svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+  #sign-out{color:var(--muted);}
+  .cloud-admin{margin-top:15px;border-top:1px solid var(--border);}
+  .cloud-admin summary{display:flex;align-items:center;gap:7px;padding:13px 0 0;cursor:pointer;color:var(--blue-600);font-size:12.5px;font-weight:700;list-style:none;}
+  .cloud-admin summary::before{content:'⌄';display:grid;place-items:center;width:17px;height:17px;border-radius:5px;background:var(--blue-50);font-size:15px;line-height:1;transition:transform .15s;}
+  .cloud-admin[open] summary::before{transform:rotate(180deg);}
+  .cloud-admin-content{padding-top:14px;}
+  .cloud-admin-actions{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 16px;}
+  .cloud-admin label{display:block;font-size:12px;font-weight:700;color:var(--muted);}
+  .cloud-popover input{display:block;width:100%;margin:7px 0 10px;padding:9px 11px;border:1px solid var(--border);border-radius:var(--radius-sm);font:inherit;font-size:13px;direction:ltr;}
+  .cloud-popover input:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-50);}
+  #auth-message{font-size:14px;line-height:1.6;}
+  @media(max-width:600px){header.top{flex-wrap:wrap;}.cloud-controls{order:3;width:100%;margin:0;}.cloud-menu>summary{width:max-content;}.cloud-popover{inset-inline-start:0;}}
   #auth-box{font-family:'Tajawal','Segoe UI',Tahoma,sans-serif;min-height:100svh;padding:36px 24px;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at 90% 5%,#e2eeff 0,transparent 45%),#f5f7fb;}
   .auth-shell{width:100%;max-width:1040px;display:grid;grid-template-columns:1fr 1fr;background:white;border:1px solid #e2e9f3;border-radius:28px;overflow:hidden;box-shadow:0 24px 80px -28px #233b6b30;}
   .auth-story{position:relative;overflow:hidden;padding:44px 42px;background:linear-gradient(145deg,#12396e,#0c2450);color:white;display:flex;flex-direction:column;justify-content:space-between;min-height:620px;}
@@ -390,15 +417,6 @@
     </main>
   </div>
 </section>
-<section id="cloud-tools" class="cloud-box" dir="rtl" hidden>
-  <span id="signed-in"></span> <button id="refresh-data">تحديث البيانات</button> <button id="sign-out">تسجيل الخروج</button>
-  <p id="cloud-status" role="status"></p>
-  <details id="admin-tools"><summary>إدارة البيانات والمستخدمين</summary>
-    <p><button id="import-legacy">استيراد بيانات المتصفح القديمة</button> <button id="export-data">تنزيل نسخة احتياطية</button></p>
-    <label for="member-email">بريد مستخدم جديد</label><input id="member-email" type="email" placeholder="user@example.com">
-    <button id="add-member">اعتماد المستخدم</button>
-  </details>
-</section>
 <div class="wrap" id="app" hidden>
 
   <header class="top">
@@ -408,6 +426,26 @@
         <h1 data-i18n="appTitle">IBTA Tools</h1>
       </div>
     </div>
+    <section id="cloud-tools" class="cloud-controls" dir="rtl" hidden>
+      <details class="cloud-menu">
+        <summary><span class="cloud-avatar" aria-hidden="true">IB</span>حسابي<span class="cloud-chevron" aria-hidden="true">⌄</span></summary>
+        <div class="cloud-popover">
+          <div class="cloud-identity-text"><strong>الحساب الحالي</strong><span id="signed-in"></span></div>
+          <p id="cloud-status" class="cloud-status" role="status" aria-live="polite"></p>
+          <div class="cloud-actions">
+            <button id="refresh-data" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M5.7 9A7 7 0 0 1 18 7l2 5M4 12l2 5a7 7 0 0 0 12.3-2"/></svg>تحديث</button>
+            <button id="sign-out" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4M14 7l5 5-5 5M9 12h10"/></svg>خروج</button>
+          </div>
+          <details id="admin-tools" class="cloud-admin"><summary>إدارة البيانات والمستخدمين</summary>
+            <div class="cloud-admin-content">
+              <div class="cloud-admin-actions"><button id="import-legacy" type="button">استيراد بيانات المتصفح القديمة</button><button id="export-data" type="button">تنزيل نسخة احتياطية</button></div>
+              <label for="member-email">بريد مستخدم جديد</label><input id="member-email" type="email" placeholder="user@example.com">
+              <button id="add-member" type="button">اعتماد المستخدم</button>
+            </div>
+          </details>
+        </div>
+      </details>
+    </section>
     <div class="header-actions">
       <button class="icon-pill-btn" id="lang-btn">AR</button>
       <button class="icon-pill-btn square" id="settings-btn" title="Settings">⚙️</button>
@@ -656,13 +694,30 @@ function getOrderedKeycodeItems(cat, items){
 // Matches the spreadsheet's own highlight-color style (Excel-like fills):
 // yellow, red, purple, dark green, maroon, blue, salmon/pink, teal, orange, light green, gray, gold.
 const DAY_COLOR_PALETTE = ["#FFC000","#FF0000","#7030A0","#375623","#C00000","#0070C0","#FF99CC","#00B0A0","#ED7D31","#92D050","#7F7F7F","#FFD966"];
-function getColorForDate(dateStr){
-  if(!state.dateColors) state.dateColors = {};
-  if(!state.dateColors[dateStr]){
+function getDayColors(){
+  // Every category shares the same ordered set of used days. Keep existing
+  // colors where possible, but repair a collision with the preceding used day.
+  const dates = [...new Set(Object.values(state.usedCodes).filter(Boolean))];
+  const dayNumber = dateStr=>{
+    const date = parseAnyDateString(dateStr);
+    return date ? Date.UTC(date.year, date.month - 1, date.day) : 0;
+  };
+  dates.sort((a,b)=>dayNumber(a)-dayNumber(b) || a.localeCompare(b));
+  const colors = {};
+  let previousColor = '';
+  dates.forEach(dateStr=>{
+    const saved = state.dateColors?.[dateStr];
     const hash = [...dateStr].reduce((n,c)=>(n*31+c.charCodeAt(0))>>>0,0);
-    state.dateColors[dateStr] = DAY_COLOR_PALETTE[hash % DAY_COLOR_PALETTE.length];
-  }
-  return state.dateColors[dateStr];
+    let color = typeof saved === 'string' && /^#[0-9a-f]{6}$/i.test(saved)
+      ? saved.toUpperCase() : DAY_COLOR_PALETTE[hash % DAY_COLOR_PALETTE.length];
+    if(color === previousColor){
+      const start = DAY_COLOR_PALETTE.indexOf(color);
+      color = DAY_COLOR_PALETTE[(start + 1 + DAY_COLOR_PALETTE.length) % DAY_COLOR_PALETTE.length];
+    }
+    colors[dateStr] = color;
+    previousColor = color;
+  });
+  return colors;
 }
 function hexToRgba(hex, alpha){
   const h = hex.replace('#','');
@@ -1154,7 +1209,7 @@ function renderStats(){
   `;
 }
 
-function renderDayLegend(){
+function renderDayLegend(dayColors){
   const list = state.codesByCategory[activeCategory] || [];
   const dates = [];
   list.forEach(code=>{
@@ -1207,7 +1262,7 @@ function renderDayLegend(){
     const pillsWrap = document.createElement('div');
     pillsWrap.className = 'day-legend-pills';
     groups[key].sort().forEach(dateStr=>{
-      const color = getColorForDate(dateStr);
+      const color = dayColors[dateStr];
       const pill = document.createElement('div');
       pill.className = 'day-pill';
       const dot = document.createElement('span');
@@ -1240,8 +1295,9 @@ function renderCodeGrid(){
   const grid = document.getElementById('code-grid');
   grid.innerHTML = '';
   const list = state.codesByCategory[activeCategory] || [];
+  const dayColors = getDayColors();
   renderStats();
-  renderDayLegend();
+  renderDayLegend(dayColors);
   updateBulkBar();
   if(list.length === 0){
     grid.innerHTML = `<div class="empty-state" style="border:none; box-shadow:none;">${t('noCodesYet')}</div>`;
@@ -1282,7 +1338,7 @@ function renderCodeGrid(){
     d.textContent = used || '';
 
     if(used){
-      const dayColor = getColorForDate(used);
+      const dayColor = dayColors[used];
       const fg = getContrastText(dayColor);
       row.style.background = dayColor;
       c.style.textDecoration = 'line-through';
