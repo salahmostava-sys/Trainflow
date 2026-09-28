@@ -311,14 +311,9 @@
   }
   .settings-desc{font-size:14.5px; color:var(--muted); margin-bottom:14px; line-height:1.7;}
   [hidden]{display:none!important;}
-  .cloud-controls{position:relative;margin-inline-start:auto;font-family:inherit;}
-  .cloud-menu>summary{display:flex;align-items:center;gap:7px;height:38px;padding:0 10px;border:1px solid var(--border);border-radius:10px;background:var(--surface);box-shadow:var(--shadow);color:var(--text);font-size:13px;font-weight:700;cursor:pointer;list-style:none;white-space:nowrap;}
-  .cloud-menu>summary::-webkit-details-marker,.cloud-admin summary::-webkit-details-marker{display:none;}
-  .cloud-menu>summary:hover,.cloud-menu[open]>summary{border-color:var(--blue-100);background:var(--blue-50);}
-  .cloud-avatar{display:grid;place-items:center;width:25px;height:25px;flex:none;border-radius:7px;background:var(--blue-50);color:var(--blue-600);font-size:11px;font-weight:800;letter-spacing:-.5px;}
-  .cloud-chevron{font-size:14px;color:var(--muted);transition:transform .15s;}
-  .cloud-menu[open] .cloud-chevron{transform:rotate(180deg);}
-  .cloud-popover{position:absolute;z-index:30;inset-inline-start:0;top:calc(100% + 8px);width:min(340px,calc(100vw - 32px));padding:17px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:0 16px 38px #16315920;}
+  .cloud-controls{margin-top:18px;font-family:inherit;}
+  .cloud-admin summary::-webkit-details-marker{display:none;}
+  .cloud-popover{width:100%;padding:22px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow);}
   .cloud-identity-text{display:flex;flex-direction:column;gap:3px;min-width:0;}
   .cloud-identity-text strong{font-size:13px;font-weight:700;color:var(--text);}
   #signed-in{font-size:12px;color:var(--muted);overflow-wrap:anywhere;unicode-bidi:plaintext;}
@@ -327,7 +322,7 @@
   .cloud-actions{display:flex;align-items:center;gap:8px;margin-top:15px;}
   .cloud-popover button{padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--blue-600);cursor:pointer;font:inherit;font-size:12px;font-weight:700;transition:background .15s,border-color .15s;}
   .cloud-popover button:hover{background:var(--blue-50);border-color:var(--blue-100);}
-  .cloud-menu>summary:focus-visible,.cloud-popover button:focus-visible,.cloud-admin summary:focus-visible{outline:3px solid var(--blue-100);outline-offset:2px;}
+  .cloud-popover button:focus-visible,.cloud-admin summary:focus-visible{outline:3px solid var(--blue-100);outline-offset:2px;}
   .cloud-actions button{display:flex;align-items:center;justify-content:center;gap:6px;flex:1;white-space:nowrap;}
   .cloud-actions svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
   #sign-out{color:var(--muted);}
@@ -341,7 +336,7 @@
   .cloud-popover input{display:block;width:100%;margin:7px 0 10px;padding:9px 11px;border:1px solid var(--border);border-radius:var(--radius-sm);font:inherit;font-size:13px;direction:ltr;}
   .cloud-popover input:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-50);}
   #auth-message{font-size:14px;line-height:1.6;}
-  @media(max-width:600px){header.top{flex-wrap:wrap;}.cloud-controls{order:3;width:100%;margin:0;}.cloud-menu>summary{width:max-content;}.cloud-popover{inset-inline-start:0;}}
+  @media(max-width:600px){.cloud-popover{padding:17px;}}
   #auth-box{font-family:'Tajawal','Segoe UI',Tahoma,sans-serif;min-height:100svh;padding:36px 24px;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at 90% 5%,#e2eeff 0,transparent 45%),#f5f7fb;}
   .auth-shell{width:100%;max-width:1040px;display:grid;grid-template-columns:1fr 1fr;background:white;border:1px solid #e2e9f3;border-radius:28px;overflow:hidden;box-shadow:0 24px 80px -28px #233b6b30;}
   .auth-story{position:relative;overflow:hidden;padding:44px 42px;background:linear-gradient(145deg,#12396e,#0c2450);color:white;display:flex;flex-direction:column;justify-content:space-between;min-height:620px;}
@@ -426,26 +421,6 @@
         <h1 data-i18n="appTitle">IBTA Tools</h1>
       </div>
     </div>
-    <section id="cloud-tools" class="cloud-controls" dir="rtl" hidden>
-      <details class="cloud-menu">
-        <summary><span class="cloud-avatar" aria-hidden="true">IB</span>حسابي<span class="cloud-chevron" aria-hidden="true">⌄</span></summary>
-        <div class="cloud-popover">
-          <div class="cloud-identity-text"><strong>الحساب الحالي</strong><span id="signed-in"></span></div>
-          <p id="cloud-status" class="cloud-status" role="status" aria-live="polite"></p>
-          <div class="cloud-actions">
-            <button id="refresh-data" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M5.7 9A7 7 0 0 1 18 7l2 5M4 12l2 5a7 7 0 0 0 12.3-2"/></svg>تحديث</button>
-            <button id="sign-out" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4M14 7l5 5-5 5M9 12h10"/></svg>خروج</button>
-          </div>
-          <details id="admin-tools" class="cloud-admin"><summary>إدارة البيانات والمستخدمين</summary>
-            <div class="cloud-admin-content">
-              <div class="cloud-admin-actions"><button id="import-legacy" type="button">استيراد بيانات المتصفح القديمة</button><button id="export-data" type="button">تنزيل نسخة احتياطية</button></div>
-              <label for="member-email">بريد مستخدم جديد</label><input id="member-email" type="email" placeholder="user@example.com">
-              <button id="add-member" type="button">اعتماد المستخدم</button>
-            </div>
-          </details>
-        </div>
-      </details>
-    </section>
     <div class="header-actions">
       <button class="icon-pill-btn" id="lang-btn">AR</button>
       <button class="icon-pill-btn square" id="settings-btn" title="Settings">⚙️</button>
@@ -529,6 +504,23 @@
         <span class="switch-label" data-i18n="autoChainSwitch">Enable auto copy (Keycode → Prometric → Code)</span>
       </label>
     </div>
+    <section id="cloud-tools" class="cloud-controls" dir="rtl" hidden>
+      <div class="cloud-popover">
+        <div class="cloud-identity-text"><strong>الحساب الحالي</strong><span id="signed-in"></span></div>
+        <p id="cloud-status" class="cloud-status" role="status" aria-live="polite"></p>
+        <div class="cloud-actions">
+          <button id="refresh-data" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M5.7 9A7 7 0 0 1 18 7l2 5M4 12l2 5a7 7 0 0 0 12.3-2"/></svg>تحديث</button>
+          <button id="sign-out" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4M14 7l5 5-5 5M9 12h10"/></svg>خروج</button>
+        </div>
+        <details id="admin-tools" class="cloud-admin"><summary>إدارة البيانات والمستخدمين</summary>
+          <div class="cloud-admin-content">
+            <div class="cloud-admin-actions"><button id="import-legacy" type="button">استيراد بيانات المتصفح القديمة</button><button id="export-data" type="button">تنزيل نسخة احتياطية</button></div>
+            <label for="member-email">بريد مستخدم جديد</label><input id="member-email" type="email" placeholder="user@example.com">
+            <button id="add-member" type="button">اعتماد المستخدم</button>
+          </div>
+        </details>
+      </div>
+    </section>
   </section>
 
   <div class="reset-link" id="reset-btn" data-i18n="resetLink">Reset all copy marks</div>
