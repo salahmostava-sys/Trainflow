@@ -65,12 +65,6 @@
     transition:background .15s, color .15s;
   }
   nav.tabs button.active{background:var(--blue); color:#fff; box-shadow:0 3px 10px rgba(0,112,243,.3);}
-  #app.dual-view{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);align-items:start;column-gap:12px;}
-  #app.dual-view>.app-sticky-bar{grid-column:1/-1;width:100%;}
-  #app.dual-view>#panel-keycodes.active,#app.dual-view>#panel-codes.active{height:calc(100vh - 150px);height:calc(100dvh - 150px);min-width:0;overflow-y:auto;overscroll-behavior:contain;padding:0 5px 14px;scrollbar-gutter:stable;}
-  #app.dual-view>#panel-keycodes.active{grid-column:1;grid-row:2;}
-  #app.dual-view>#panel-codes.active{grid-column:2;grid-row:2;}
-  @media(max-width:760px){#app.dual-view{grid-template-columns:minmax(0,1fr);row-gap:12px;}#app.dual-view>.app-sticky-bar{grid-column:1;}#app.dual-view>#panel-keycodes.active,#app.dual-view>#panel-codes.active{height:calc(50vh - 85px);height:calc(50dvh - 85px);min-height:240px;grid-column:1; padding-inline:0;}#app.dual-view>#panel-keycodes.active{grid-row:2;}#app.dual-view>#panel-codes.active{grid-row:3;}}
 
   section.panel{display:none;}
   section.panel.active{display:block; animation:fade .18s ease;}
@@ -448,7 +442,6 @@
     <button data-tab="keycodes" class="active" data-i18n="tabKeycodes">Keycodes</button>
     <button data-tab="prometric" data-i18n="tabPrometric">Prometric</button>
     <button data-tab="codes" data-i18n="tabCodes">Codes</button>
-    <button data-tab="overview" data-i18n="tabOverview">Overview</button>
   </nav>
   </div>
 
@@ -556,7 +549,7 @@ const TRANSLATIONS = {
     copyBtn:"Copy", copyFailed:"Copy failed. Please try again.", enterCredential:"Enter the value first.",
     sessionCredentials:"The Prometric credentials are prefilled for this session.",
     appTitle:"IBTA Tools",
-    tabKeycodes:"Keycodes", tabPrometric:"Prometric", tabCodes:"Codes", tabOverview:"Overview",
+    tabKeycodes:"Keycodes", tabPrometric:"Prometric", tabCodes:"Codes",
     settingsTitle:"Settings",
     examTitleCol:"Exam Title", langCol:"Language", keycodeCol:"Keycode", moveCategoryCol:"Move Category",
     noExams:"No exams in this category",
@@ -642,7 +635,7 @@ const TRANSLATIONS = {
     copyBtn:"نسخ", copyFailed:"تعذر النسخ. حاول مرة أخرى.", enterCredential:"أدخل القيمة أولًا.",
     sessionCredentials:"بيانات دخول Prometric موجودة مسبقًا لهذه الجلسة.",
     appTitle:"أدوات IBTA",
-    tabKeycodes:"مفاتيح الأكواد", tabPrometric:"بروميترك", tabCodes:"الأكواد", tabOverview:"نظرة عامة",
+    tabKeycodes:"مفاتيح الأكواد", tabPrometric:"بروميترك", tabCodes:"الأكواد",
     settingsTitle:"الإعدادات",
     examTitleCol:"اسم الامتحان", langCol:"اللغة", keycodeCol:"مفتاح الكود", moveCategoryCol:"نقل الفئة",
     noExams:"لا توجد امتحانات في هذه الفئة",
@@ -935,22 +928,16 @@ document.getElementById('auth-lang-btn').addEventListener('click',toggleLanguage
 
 // ---------- TABS ----------
 function showPanel(id){
-  const dualView = id === 'overview';
-  if(id === 'keycodes' || dualView) renderKeycodes();
+  if(id === 'keycodes') renderKeycodes();
   document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.remove('active'));
   document.querySelectorAll('section.panel').forEach(p=>p.classList.remove('active'));
   document.getElementById('settings-btn').classList.remove('active');
-  document.getElementById('app').classList.toggle('dual-view',dualView);
-  if(dualView){
-    document.getElementById('panel-keycodes').classList.add('active');
-    document.getElementById('panel-codes').classList.add('active');
-  }else document.getElementById('panel-'+id).classList.add('active');
-  const activeTab=document.querySelector(`nav.tabs button[data-tab="${id}"]`);
-  if(activeTab) activeTab.classList.add('active');
+  document.getElementById('panel-'+id).classList.add('active');
 }
 document.querySelectorAll('nav.tabs button').forEach(btn=>{
-  btn.addEventListener('click', ()=>{
+  btn.addEventListener('click', async ()=>{
     showPanel(btn.dataset.tab);
+    btn.classList.add('active');
   });
 });
 document.getElementById('settings-btn').addEventListener('click', async ()=>{
@@ -1710,7 +1697,6 @@ try{
   state.uiLang=currentLang;
 }catch{currentLang='ar';state.uiLang='ar';}
 applyLanguage();
-showPanel('overview');
 Cloud.boot();
 </script>
 </body>
