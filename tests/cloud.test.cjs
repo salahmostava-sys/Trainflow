@@ -4,6 +4,7 @@ class Element {
   constructor(){this.children=[];this.listeners={};this.style={};this.dataset={};this.value='';this.hidden=false;this.textContent='';this.classList={add(){},remove(){},toggle(){},contains(){return false}};}
   appendChild(e){this.children.push(e);} removeChild(e){this.children=this.children.filter(x=>x!==e);}
   addEventListener(event,fn){this.listeners[event]=fn;} select(){} focus(){} matches(){return false;}
+  setAttribute(name,value){this[name]=value;}
   set innerHTML(v){this.children=[];} get innerHTML(){return '';}
 }
 const els={},storage=new Map(),events=[];
@@ -35,10 +36,25 @@ vm.runInContext(fs.readFileSync(path.join(__dirname,'../cloud.js'),'utf8'),ctx);
 const html=fs.readFileSync(path.join(__dirname,'../ibta-ops.html'),'utf8');
 for(const [,script] of html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g))vm.runInContext(script,ctx);
 const run=s=>vm.runInContext(s,ctx);
+const englishKeys=JSON.parse(run('JSON.stringify(Object.keys(TRANSLATIONS.en))'));
+const arabicKeys=JSON.parse(run('JSON.stringify(Object.keys(TRANSLATIONS.ar))'));
+assert.deepEqual(englishKeys.sort(),arabicKeys.sort());
+const usedKeys=[...html.matchAll(/data-i18n="([^"]+)"|\bt\('([^']+)'\)/g),
+  ...fs.readFileSync(path.join(__dirname,'../cloud.js'),'utf8').matchAll(/\bt\('([^']+)'\)/g)]
+  .map(match=>match[1] || match[2] || match[3]);
+for(const key of usedKeys) assert(englishKeys.includes(key),`Missing translation: ${key}`);
 (async()=>{
   await new Promise(setImmediate);
   assert.equal(els['auth-box'].hidden,true);assert.equal(els.app.hidden,false);
   assert.equal(els['cred-account-val'].textContent,'test-account');
+  assert.match(els['cloud-status'].textContent,/متصل/);
+  run('toggleLanguage()');
+  assert.equal(els['signed-in'].textContent,'test@example.invalid · Admin');
+  assert.equal(els['cloud-status'].textContent,'Connected to the database');
+  assert.equal(els['auth-password'].placeholder,'Enter your password');
+  assert.equal(JSON.parse(storage.get('ibta_ui_preferences')).uiLang,'en');
+  run('toggleLanguage()');
+  assert.match(els['cloud-status'].textContent,/متصل/);
   els['add-codes-input'].value='unsaved code';
   assert.equal(await run('Cloud.refresh(true)'),false);
   assert.equal(codeReads,1);
@@ -56,5 +72,42 @@ const run=s=>vm.runInContext(s,ctx);
   assert.match(els['cloud-status'].textContent,/تم حجز/);
   assert(!storage.has('ibta_ops_state_v4'));
   const count=events.length;const row=els['code-grid'].children[0];await row.listeners.click({target:{closest:()=>true}});assert.equal(events.length,count);
-  console.log('PASS: authenticated rendering, persisted notes, claim-before-copy, conflict recovery, clipboard failure reservation, selection isolation, no local operational storage.');
+  db.settings.payload.dateColors={'27/09/2026':'#FFC000','28/09/2026':'#FFC000'};
+  db.codes.push({code:'PREVIOUS-DAY',category:'Foundation-100',notes:'',used_on:'27/09/2026',used_by:'user-1',version:1});
+  db.codes.push({code:'CURRENT-DAY-A',category:'Foundation-100',notes:'',used_on:'28/09/2026',used_by:'user-1',version:1});
+  db.codes.push({code:'CURRENT-DAY-B',category:'Master-100',notes:'',used_on:'28/09/2026',used_by:'user-1',version:1});
+  await run('Cloud.refresh()');
+  const colors=run('getDayColors()');
+  assert.notEqual(colors['27/09/2026'],colors['28/09/2026']);
+  const paintedCode=code=>els['code-grid'].children.find(row=>row.children[2]?.textContent===code)?.style.background;
+  run("activeCategory='Foundation-100';renderCodeGrid()");
+  assert.equal(paintedCode('CURRENT-DAY-A'),colors['28/09/2026']);
+  run("activeCategory='Master-100';renderCodeGrid()");
+  assert.equal(paintedCode('CURRENT-DAY-B'),colors['28/09/2026']);
+  const keycodesPanel=els['panel-keycodes'];
+  let addCategory=keycodesPanel.children.at(-1);
+  addCategory.children[2].children[0].value='New Category';
+  addCategory.children[4].children[0].value='First Test Exam';
+  addCategory.children[4].children[1].value='Arabic';
+  addCategory.children[4].children[2].value='FIRST-KEY-1';
+  addCategory.children[4].children[3].value='New Category';
+  await addCategory.children[2].children[1].listeners.click();
+  assert(db.settings.payload.categoryOrder.includes('New Category'));
+  assert.equal(db.settings.payload.keycodes[0].code,'FIRST-KEY-1');
+  let newBlock=keycodesPanel.children.find(block=>block.children[0]?.children[0]?.textContent?.includes('New Category'));
+  let examForm=newBlock.children[2].children[1];
+  const [examTitle,language,keycode,destination]=examForm.children[0].children;
+  examTitle.value='New Test Exam';language.value='English';keycode.value='TEST-KEY-1';destination.value='New Category';
+  await examForm.listeners.submit({preventDefault(){}});
+  assert.deepEqual(db.settings.payload.keycodes[1],{title:'New Test Exam',lang:'English',code:'TEST-KEY-1',category:'New Category'});
+  await run('Cloud.refresh()');
+  assert.equal(run('DEFAULT_KEYCODES[1].code'),'TEST-KEY-1');
+  newBlock=keycodesPanel.children.find(block=>block.children[0]?.children[0]?.textContent?.includes('New Category'));
+  assert(newBlock.children[1].children.some(row=>row.children?.[3]?.textContent==='TEST-KEY-1'));
+  examForm=newBlock.children[2].children[1];
+  examForm.children[0].children[0].value='Duplicate';
+  examForm.children[0].children[2].value='test-key-1';
+  await examForm.listeners.submit({preventDefault(){}});
+  assert.equal(db.settings.payload.keycodes.length,2);
+  console.log('PASS: authenticated rendering, cloud persistence, copy isolation, shared day colors, new categories and keycodes, reload, and duplicate validation.');
 })().catch(e=>{console.error(e);process.exitCode=1;});
