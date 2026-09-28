@@ -4,9 +4,9 @@ Connected project: `xaeffreqwtozsgqajzpc` (IBTA Ops). The existing Muhimmat proj
 
 ## First sign-in
 
-Open `ibta-ops.html` with `cloud.js` beside it and an internet connection, or use the local HTTP preview. Choose **إنشاء حساب**, using `salah@gmail.ru`, choose your own password, and confirm your email. Return to the app and sign in. The administrator email is already allowlisted; its authentication account still needs to be created by its owner.
+Open the live application at <https://ibta-ops.pages.dev/>. The administrator account for `salah@gmail.ru` already exists; sign in with its password. New team members must first be allowlisted by an administrator, then create their own accounts and confirm their email addresses.
 
-Supabase's email confirmation redirect should be configured to the final HTTPS website URL before publishing. If verification redirects to the default localhost address, return to this app after confirming the email and sign in here. This application does not need access to your email password.
+Supabase Auth's Site URL is configured as <https://ibta-ops.pages.dev/> for confirmation and recovery emails. This application does not need access to your email password.
 
 Administrators can allowlist another email from **إدارة البيانات والمستخدمين**. That person then creates an account and confirms the same address. Other signups cannot access operational data. Operators can copy codes, edit notes, and release their own codes. Only administrators can add/delete codes, manage categories, and allowlist users. Membership can be deactivated in the Supabase `ibta_members` table by setting `active=false`.
 
