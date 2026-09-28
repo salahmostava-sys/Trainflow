@@ -1,0 +1,1433 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr" id="html-root">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<title id="doc-title">IBTA Tools</title>
+<style>
+  :root{
+    --bg:#F4F7FC;
+    --surface:#FFFFFF;
+    --surface-2:#EFF5FF;
+    --border:#E1E9F5;
+    --blue:#0070F3;
+    --blue-600:#0058C7;
+    --blue-50:#EAF2FF;
+    --blue-100:#DCEBFF;
+    --text:#0F1B2E;
+    --muted:#6B7B93;
+    --danger:#E5484D;
+    --mono:'Calibri', 'Segoe UI', Tahoma, Arial, sans-serif;
+    --radius-lg:18px;
+    --radius-md:12px;
+    --radius-sm:8px;
+    --shadow:0 1px 2px rgba(15,27,46,.04), 0 4px 14px rgba(15,27,46,.06);
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:'Calibri', 'Segoe UI', Tahoma, Arial, sans-serif;
+    min-height:100vh;
+  }
+  body.lang-ar{font-family:'Calibri', 'Segoe UI', Tahoma, Arial, sans-serif;}
+  .wrap{max-width:920px; margin:0 auto; padding:24px 16px 70px;}
+
+  header.top{display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; gap:10px;}
+  .brand{display:flex; align-items:center; gap:11px; min-width:0;}
+  .brand-mark{
+    width:40px; height:40px; border-radius:12px; background:linear-gradient(135deg, var(--blue), var(--blue-600));
+    display:flex; align-items:center; justify-content:center; font-weight:700; color:#fff; font-size:17px; flex:none;
+    box-shadow:0 4px 12px rgba(0,112,243,.28);
+  }
+  .brand h1{font-size:19.5px; margin:0; font-weight:700; letter-spacing:-.2px;}
+
+  .header-actions{display:flex; align-items:center; gap:8px; flex:none;}
+  .icon-pill-btn{
+    height:38px; padding:0 12px; border-radius:10px; border:1px solid var(--border); background:var(--surface);
+    color:var(--muted); font-size:14.5px; font-weight:700; font-family:inherit; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; box-shadow:var(--shadow);
+    transition:background .12s, color .12s, border-color .12s; flex:none;
+  }
+  .icon-pill-btn.square{width:38px; padding:0; font-size:19px;}
+  .icon-pill-btn:hover, .icon-pill-btn.active{background:var(--blue); color:#fff; border-color:var(--blue);}
+
+  nav.tabs{
+    display:flex; gap:4px; background:var(--surface); border:1px solid var(--border);
+    border-radius:999px; padding:5px; margin-bottom:22px; box-shadow:var(--shadow);
+  }
+  nav.tabs button{
+    flex:1; padding:10px 8px; border:none; background:transparent; color:var(--muted);
+    font-family:inherit; font-size:15.5px; font-weight:600; border-radius:999px; cursor:pointer;
+    transition:background .15s, color .15s;
+  }
+  nav.tabs button.active{background:var(--blue); color:#fff; box-shadow:0 3px 10px rgba(0,112,243,.3);}
+
+  section.panel{display:none;}
+  section.panel.active{display:block; animation:fade .18s ease;}
+  @keyframes fade{from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:translateY(0);}}
+
+  /* ---- Keycodes ---- */
+  .kc-block{
+    margin-bottom:8px; border:1px solid var(--border); border-radius:var(--radius-sm);
+    overflow:hidden; box-shadow:var(--shadow); background:var(--surface);
+  }
+  .kc-title-row{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    background:var(--blue-50); padding:5px 10px; border-bottom:1px solid var(--border);
+  }
+  .kc-title{font-weight:700; font-size:16px;}
+  .kc-link{
+    font-size:14px; font-weight:700; color:var(--blue-600); background:var(--surface);
+    border:1px solid var(--blue-100); padding:3px 10px; border-radius:999px; cursor:pointer;
+    white-space:nowrap; transition:background .12s;
+  }
+  .kc-link:hover{background:var(--blue-100);}
+  .kc-order-btns{display:flex; align-items:center; gap:3px; flex:none;}
+  .kc-order-btn{
+    width:22px; height:22px; border-radius:5px; border:1px solid var(--blue-100); background:var(--surface);
+    color:var(--blue-600); font-size:12px; display:flex; align-items:center; justify-content:center;
+    cursor:pointer; line-height:1; transition:background .12s;
+  }
+  .kc-order-btn:hover{background:var(--blue-100);}
+  .kc-order-btn:disabled{opacity:.3; cursor:default; pointer-events:none;}
+  .kc-title-actions{display:flex; align-items:center; gap:8px; flex:none;}
+  .kc-scroll{overflow-x:auto;}
+  .kc-head-row{
+    display:flex; min-width:552px; background:var(--surface-2); font-size:13px; font-weight:700;
+    color:var(--muted); border-bottom:1px solid var(--border);
+  }
+  .kc-head-row>div, .kc-row>div{padding:5px 8px; border-inline-start:1px solid var(--border);}
+  .kc-head-row>div:first-child, .kc-row>div:first-child{border-inline-start:none;}
+  .kc-col-title{flex:1.7; min-width:0;}
+  .kc-col-lang{flex:none; width:70px;}
+  .kc-col-code{flex:none; width:126px;}
+  .kc-col-cat{flex:none; width:140px;}
+  .kc-row{
+    display:flex; align-items:center; min-width:552px; font-size:15.5px; cursor:pointer;
+    border-bottom:1px solid var(--border); transition:background .1s;
+  }
+  .kc-row:last-child{border-bottom:none;}
+  .kc-row:nth-child(even){background:#FAFCFF;}
+  .kc-row:hover{background:var(--blue-50);}
+  .kc-row.copied{background:var(--blue-100);}
+  .kc-row .kc-col-title{font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .kc-row .kc-col-lang{color:var(--muted); font-size:14px;}
+  .kc-row .kc-col-code{font-family:var(--mono); font-weight:600; color:var(--blue-600); font-size:15px;}
+  .kc-row .kc-col-cat select{
+    width:100%; font-family:inherit; font-size:14px; border:1px solid var(--border);
+    border-radius:5px; padding:4px 4px; background:var(--surface); color:var(--text); cursor:pointer;
+  }
+  .kc-empty{padding:10px; text-align:center; font-size:14.5px; color:var(--muted);}
+  .kc-add-cat-row{display:flex; gap:8px; margin-top:8px;}
+  .kc-add-cat-input{
+    flex:1; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm);
+    padding:8px 11px; font-family:inherit; font-size:13.5px; color:var(--text);
+  }
+  .kc-add-cat-input:focus{outline:none; border-color:var(--blue);}
+  .kc-remove-cat-btn{
+    width:20px; height:20px; border-radius:5px; border:1px solid var(--border); background:var(--surface);
+    color:var(--muted); font-size:11px; display:flex; align-items:center; justify-content:center;
+    cursor:pointer; transition:background .12s, color .12s, border-color .12s;
+  }
+  .kc-remove-cat-btn:hover{background:#FDEBEC; color:var(--danger); border-color:#F6C9CB;}
+  .kc-drag-handle{
+    width:22px; flex:none; display:flex; align-items:center; justify-content:center;
+    cursor:grab; color:var(--muted); font-size:14px; user-select:none; letter-spacing:-1px;
+  }
+  .kc-drag-handle:active{cursor:grabbing;}
+  .kc-col-drag{width:22px; flex:none;}
+  .kc-row.dragging{opacity:.4;}
+  .kc-row.drag-over{background:var(--blue-100); outline:2px dashed var(--blue);}
+
+  /* ---- Prometric ---- */
+  .cred-card{
+    background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg);
+    padding:18px; margin-bottom:14px; cursor:pointer; transition:border-color .15s, box-shadow .15s;
+    box-shadow:var(--shadow);
+  }
+  .cred-card:hover{border-color:var(--blue);}
+  .cred-label{font-size:14px; color:var(--muted); margin-bottom:7px; font-weight:600;}
+  .cred-value{font-family:var(--mono); font-size:19px; font-weight:600; word-break:break-all; direction:ltr; unicode-bidi:plaintext; text-align:start;}
+
+  .switch-row{display:flex; align-items:center; gap:11px; cursor:pointer;}
+  .switch{position:relative; width:42px; height:24px; flex:none;}
+  .switch input{opacity:0; width:0; height:0; position:absolute;}
+  .switch-track{
+    position:absolute; inset:0; background:var(--border); border-radius:999px; transition:background .15s;
+  }
+  .switch-track::before{
+    content:''; position:absolute; width:18px; height:18px; border-radius:50%; background:#fff;
+    top:3px; inset-inline-start:3px; transition:transform .15s; box-shadow:0 1px 3px rgba(0,0,0,.25);
+  }
+  .switch input:checked + .switch-track{background:var(--blue);}
+  html[dir="ltr"] .switch input:checked + .switch-track::before{transform:translateX(18px);}
+  html[dir="rtl"] .switch input:checked + .switch-track::before{transform:translateX(-18px);}
+  .switch-label{font-size:15px; font-weight:600;}
+
+  .toast{
+    position:fixed; bottom:22px; left:50%; transform:translateX(-50%) translateY(20px);
+    background:var(--blue); color:#fff; font-weight:700; font-size:15.5px;
+    padding:10px 20px; border-radius:999px; opacity:0; pointer-events:none;
+    transition:opacity .18s, transform .18s; z-index:50; white-space:nowrap;
+    box-shadow:0 6px 18px rgba(0,112,243,.35);
+  }
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+
+  /* ---- Codes tab ---- */
+  .code-tabs{display:flex; gap:6px; overflow-x:auto; margin-bottom:14px; padding-bottom:2px;}
+  .code-tabs button{
+    flex:none; padding:9px 16px; border-radius:999px; border:1px solid var(--border);
+    background:var(--surface); color:var(--muted); font-family:inherit; font-weight:600;
+    font-size:14.5px; cursor:pointer; white-space:nowrap; transition:background .12s, color .12s;
+  }
+  .code-tabs button.active{background:var(--blue); color:#fff; border-color:var(--blue);}
+
+  .bulk-bar{
+    display:none; align-items:center; justify-content:space-between; gap:10px;
+    background:#FDEBEC; border:1px solid #F6C9CB; padding:9px 14px; border-radius:var(--radius-sm);
+    margin-bottom:10px; font-size:14.5px; color:var(--danger); font-weight:600;
+  }
+  .bulk-bar.show{display:flex;}
+  .bulk-bar-left{display:flex; align-items:center; gap:10px;}
+  .bulk-bar button.confirm-btn{
+    background:var(--danger); color:#fff; border:none; font-weight:700; font-size:14px;
+    padding:7px 14px; border-radius:999px; cursor:pointer; font-family:inherit;
+  }
+  .bulk-bar .clear-sel{
+    background:transparent; color:var(--danger); text-decoration:underline; font-weight:600;
+    border:none; cursor:pointer; font-size:13.5px; padding:0; font-family:inherit;
+  }
+
+  /* Spreadsheet-style grid: columns sized to their own content */
+  .code-sheet{
+    border:1px solid var(--border); border-radius:var(--radius-md); overflow:hidden;
+    background:var(--surface); box-shadow:var(--shadow);
+  }
+  .code-sheet-scroll{overflow-x:auto;}
+  .code-sheet-head{
+    display:flex; align-items:center; background:var(--surface-2); min-width:480px;
+    border-bottom:1px solid var(--border); font-size:12.5px; font-weight:700;
+    color:var(--muted); letter-spacing:.2px;
+  }
+  .code-sheet-head > div, .code-row > div{
+    padding:6px 8px; border-inline-start:1px solid var(--border);
+  }
+  .code-sheet-head > div:first-child, .code-row > div:first-child{border-inline-start:none;}
+  .col-check{width:30px; flex:none; text-align:center; display:flex; align-items:center; justify-content:center;}
+  .col-n{width:30px; flex:none; text-align:center;}
+  .col-code{width:182px; flex:none;}         /* sized to fit the code text exactly */
+  .col-date{width:84px; flex:none;}          /* sized to fit dd/mm/yyyy */
+  .col-notes{flex:1; min-width:70px;}        /* takes whatever space is left */
+  .col-actions{width:58px; flex:none; text-align:center;}  /* room for exactly 2 icon buttons */
+
+  .code-list{display:flex; flex-direction:column; min-width:480px;}
+  .code-row{
+    display:flex; align-items:center; cursor:pointer;
+    border-bottom:1px solid var(--border); transition:background .1s; font-size:14px;
+  }
+  .code-row:last-child{border-bottom:none;}
+  .code-row:nth-child(even){background:#FAFCFF;}
+  .code-row:hover{background:var(--blue-50);}
+  .code-row .col-n{color:var(--muted); font-family:var(--mono); font-size:12.5px;}
+  .code-row .col-code{font-family:var(--mono); font-weight:600; font-size:14px; white-space:nowrap; direction:ltr;}
+  .code-row .col-date{color:var(--blue-600); font-size:12px; font-weight:600; font-family:var(--mono); direction:ltr;}
+  .code-row .col-notes{padding:3px 4px;}
+  .code-row .col-notes input{
+    width:100%; border:1px solid transparent; background:transparent; font-family:inherit;
+    font-size:13px; color:var(--text); padding:4px 6px; border-radius:6px; transition:border-color .12s, background .12s;
+  }
+  .code-row .col-notes input:hover{background:var(--surface); border-color:var(--border);}
+  .code-row .col-notes input:focus{background:var(--surface); border-color:var(--blue); outline:none;}
+  .code-row .col-notes input::placeholder{color:#B7C3D6;}
+  .code-row.used{background:var(--blue-50);}
+  .code-row.used:nth-child(even){background:#E4EFFF;}
+  .code-row.used .col-code{color:var(--blue-600);}
+  .code-row .col-actions{display:flex; align-items:center; justify-content:center; gap:4px; padding:4px 4px;}
+  .icon-btn{
+    width:22px; height:22px; border-radius:6px; border:1px solid var(--border); background:var(--surface);
+    color:var(--muted); display:flex; align-items:center; justify-content:center; cursor:pointer;
+    font-size:13px; line-height:1; transition:background .12s, color .12s, border-color .12s; flex:none;
+  }
+  .icon-btn:hover{background:var(--blue-100); color:var(--blue-600); border-color:var(--blue-100);}
+  .icon-btn.danger:hover{background:#FDEBEC; color:var(--danger); border-color:#F6C9CB;}
+
+  .add-box{
+    background:var(--surface); border:1px dashed var(--border); border-radius:var(--radius-lg);
+    padding:16px; margin-top:16px;
+  }
+  .add-box summary{cursor:pointer; font-size:15px; font-weight:600; color:var(--blue-600);}
+  .add-box textarea{
+    width:100%; margin-top:10px; background:var(--bg); border:1px solid var(--border);
+    color:var(--text); border-radius:var(--radius-sm); padding:11px; font-family:var(--mono); font-size:14.5px;
+    min-height:80px; resize:vertical; direction:ltr;
+  }
+  .add-box .hint{font-size:13px; color:var(--muted); margin:7px 0 11px;}
+  .add-box button.save{
+    background:var(--blue); color:#fff; border:none; font-weight:700; font-size:15px;
+    padding:9px 18px; border-radius:999px; cursor:pointer; font-family:inherit;
+  }
+  .stats-row{display:flex; align-items:flex-start; gap:8px; flex-wrap:wrap; margin-bottom:12px;}
+  .stats{display:flex; gap:8px; flex-wrap:wrap;}
+  .stat{
+    background:var(--surface); border:1px solid var(--border); border-radius:999px;
+    padding:8px 15px; font-size:14px; color:var(--muted); box-shadow:var(--shadow);
+  }
+  .stat b{color:var(--blue-600); font-family:var(--mono); font-size:15px;}
+
+  .day-legend-box{
+    background:var(--surface); border:1px solid var(--border); border-radius:999px;
+    box-shadow:var(--shadow); overflow:hidden; flex:none; align-self:flex-start;
+  }
+  .day-legend-box[open]{border-radius:var(--radius-md);}
+  .day-legend-box summary{
+    padding:9px 14px; cursor:pointer; font-size:12.5px; font-weight:700; color:var(--blue-600);
+    list-style:none; display:flex; align-items:center; justify-content:space-between; gap:8px;
+    white-space:nowrap;
+  }
+  .day-legend-box summary::-webkit-details-marker{display:none;}
+  .day-legend-box summary::after{content:'▾'; font-size:10px; color:var(--muted); transition:transform .15s;}
+  .day-legend-box[open] summary::after{transform:rotate(180deg);}
+  .day-legend-groups{padding:2px 14px 12px; border-top:1px solid var(--border); min-width:220px;}
+  .day-legend-month{margin-top:10px;}
+  .day-legend-month:first-child{margin-top:8px;}
+  .day-legend-month-title{font-size:11px; font-weight:700; color:var(--muted); margin-bottom:6px;}
+  .day-legend-pills{display:flex; flex-wrap:wrap; gap:6px;}
+  .day-pill{
+    display:flex; align-items:center; gap:6px; background:var(--surface-2); border:1px solid var(--border);
+    border-radius:999px; padding:5px 10px; font-size:11px; font-weight:600; font-family:var(--mono);
+  }
+  .day-pill-dot{width:8px; height:8px; border-radius:50%; flex:none;}
+
+  .reset-link{
+    display:block; text-align:center; margin-top:28px; font-size:13.5px; color:var(--muted);
+    cursor:pointer; text-decoration:underline; text-decoration-style:dotted;
+  }
+  .empty-state{
+    color:var(--muted); font-size:15px; padding:26px; text-align:center;
+    border:1px dashed var(--border); border-radius:var(--radius-lg); background:var(--surface);
+  }
+  .settings-desc{font-size:14.5px; color:var(--muted); margin-bottom:14px; line-height:1.7;}
+  [hidden]{display:none!important;}
+  .cloud-box{max-width:888px;margin:20px auto;padding:20px;border:1px solid var(--border);border-radius:18px;background:var(--surface);font-family:inherit;}
+  .cloud-box input{display:block;width:100%;max-width:400px;margin:8px 0 16px;padding:10px;border:1px solid var(--border);border-radius:8px;font:inherit;direction:ltr;}
+  .cloud-box button{padding:9px 13px;border:1px solid var(--border);border-radius:8px;background:var(--blue);color:white;cursor:pointer;font:inherit;}
+  #auth-message,#cloud-status{font-size:14px;line-height:1.6;}
+  #auth-box{font-family:'Tajawal','Segoe UI',Tahoma,sans-serif;min-height:100svh;padding:36px 24px;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at 90% 5%,#e2eeff 0,transparent 45%),#f5f7fb;}
+  .auth-shell{width:100%;max-width:1040px;display:grid;grid-template-columns:1fr 1fr;background:white;border:1px solid #e2e9f3;border-radius:28px;overflow:hidden;box-shadow:0 24px 80px -28px #233b6b30;}
+  .auth-story{position:relative;overflow:hidden;padding:44px 42px;background:linear-gradient(145deg,#12396e,#0c2450);color:white;display:flex;flex-direction:column;justify-content:space-between;min-height:620px;}
+  .auth-story::after{content:'';position:absolute;width:430px;height:430px;border:1px solid #ffffff0f;border-radius:50%;left:-220px;bottom:-160px;box-shadow:0 0 0 58px #ffffff04,0 0 0 116px #ffffff03;pointer-events:none;}
+  .auth-brand{display:flex;align-items:center;gap:12px;position:relative;z-index:1;}
+  .auth-logo{width:44px;height:44px;border-radius:13px;background:#ffffff15;border:1px solid #ffffff25;display:grid;place-items:center;font-family:'Segoe UI',sans-serif;font-size:19px;font-weight:700;letter-spacing:-1px;}
+  .auth-brand strong{font-family:'Segoe UI',sans-serif;font-size:20px;letter-spacing:.3px;}
+  .auth-brand small{display:block;font-size:12px;color:#afc6e6;margin-top:3px;}
+  .auth-intro{position:relative;z-index:1;margin:46px 0 40px;}
+  .auth-eyebrow{font-size:12px;font-weight:700;letter-spacing:1.5px;color:#8cbcff;direction:ltr;text-align:right;}
+  .auth-intro h2{font-size:36px;line-height:1.5;letter-spacing:-.7px;margin:12px 0 14px;font-weight:800;}
+  .auth-intro>p{font-size:16px;line-height:1.9;color:#c0d1e8;margin:0;max-width:340px;}
+  .auth-features{display:grid;gap:18px;margin-top:30px;}
+  .auth-feature{display:flex;align-items:center;gap:12px;font-size:14px;color:#e1ebf9;}
+  .auth-feature svg{width:32px;height:32px;flex:none;padding:7px;border:1px solid #ffffff18;border-radius:9px;background:#ffffff08;stroke:#9cc6ff;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;}
+  .auth-story-footer{position:relative;z-index:1;font-size:12px;color:#91accf;border-top:1px solid #ffffff15;padding-top:20px;}
+  .auth-main{padding:56px 48px;display:flex;flex-direction:column;justify-content:center;}
+  .auth-welcome{font-size:12px;font-weight:700;color:#3171c5;margin:0 0 10px;}
+  .auth-main h1{font-size:30px;font-weight:800;line-height:1.4;color:#152c4c;margin:0 0 8px;}
+  .auth-subtitle{font-size:15px;line-height:1.8;color:#718198;margin:0 0 32px;}
+  #auth-form label{display:block;font-size:14px;font-weight:700;color:#30425c;margin-bottom:9px;}
+  .auth-field{position:relative;margin-bottom:22px;}
+  #auth-form input{display:block;width:100%;height:52px;border:1px solid #dce4ee;border-radius:10px;background:#fafbfd;padding:0 15px 0 44px;font:500 15px 'Tajawal','Segoe UI',Tahoma,sans-serif;direction:ltr;color:#152c4c;transition:border-color .15s,box-shadow .15s;}
+  #auth-form input::placeholder{color:#a1adbc;font-weight:400;}
+  #auth-form input:focus{outline:none;border-color:#327ce3;background:white;box-shadow:0 0 0 4px #327ce312;}
+  .auth-field svg{position:absolute;left:15px;top:17px;width:18px;height:18px;stroke:#8495ab;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;pointer-events:none;}
+  #auth-actions{margin-top:28px;}
+  #auth-actions button{font-family:inherit;font-size:15px;font-weight:700;cursor:pointer;transition:background .15s,transform .15s;}
+  .auth-submit{width:100%;height:52px;border:0;border-radius:10px;background:#1765cf;color:white;display:flex;align-items:center;justify-content:center;gap:12px;box-shadow:0 6px 14px #1765cf20;}
+  .auth-submit:hover{background:#1057b9;}
+  .auth-submit svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+  .auth-register{text-align:center;font-size:14px;color:#7c899a;margin-top:24px;}
+  #sign-up{background:none;border:0;color:#1765cf;padding:6px;}
+  #sign-up:hover{text-decoration:underline;}
+  #auth-box button:focus-visible{outline:3px solid #91bafa;outline-offset:4px;}
+  #auth-message{min-height:44px;font-size:12px;line-height:1.9;color:#78879b;text-align:center;border-top:1px solid #edf0f5;padding-top:18px;margin:22px 0 0;overflow-wrap:anywhere;}
+  #auth-actions[inert]{opacity:.55;}
+  @media(max-width:760px){#auth-box{padding:20px 14px;align-items:flex-start;}.auth-shell{max-width:480px;grid-template-columns:1fr;border-radius:20px;}.auth-story{min-height:0;padding:25px 28px;}.auth-intro{margin:20px 0 0;}.auth-intro h2{font-size:25px;margin:0;}.auth-eyebrow,.auth-intro>p,.auth-features,.auth-story-footer{display:none;}.auth-main{padding:32px 28px;}.auth-main h1{font-size:27px;}.auth-subtitle{margin-bottom:24px;}}
+</style>
+</head>
+<body>
+<section id="auth-box" dir="rtl" lang="ar">
+  <div class="auth-shell">
+    <aside class="auth-story" aria-label="عن البرنامج">
+      <div class="auth-brand"><span class="auth-logo" aria-hidden="true">IB</span><div><strong dir="ltr">IBTA Tools</strong><small>مساحة عمل فريقك</small></div></div>
+      <div class="auth-intro">
+        <div class="auth-eyebrow">IBTA OPERATIONS</div>
+        <h2>أكوادك منظّمة.<br>وفريقك على اتصال.</h2>
+        <p>مساحة واحدة لإدارة الأكواد ومتابعة استخدامها، أينما كنت.</p>
+        <div class="auth-features">
+          <div class="auth-feature"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="m8 12 3 3 5-6"/></svg><span>متابعة واضحة للأكواد المتاحة والمستخدمة</span></div>
+          <div class="auth-feature"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3 20v-2a6 6 0 0 1 12 0v2M16 5a3 3 0 0 1 0 6m2 3a5 5 0 0 1 3 4v2"/></svg><span>بيانات مشتركة وصلاحيات لكل مستخدم</span></div>
+          <div class="auth-feature"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8m-4-4v4"/></svg><span>وصول من أي جهاز متصل بالإنترنت</span></div>
+        </div>
+      </div>
+      <div class="auth-story-footer">إدارة أبسط. متابعة أوضح.</div>
+    </aside>
+    <main class="auth-main">
+      <p class="auth-welcome">مرحبًا بعودتك</p>
+      <h1>تسجيل الدخول</h1>
+      <p class="auth-subtitle">ادخل إلى حسابك لمتابعة أعمال فريقك.</p>
+      <form id="auth-form">
+        <label for="auth-email">البريد الإلكتروني</label>
+        <div class="auth-field"><input id="auth-email" type="email" autocomplete="username" placeholder="name@example.com" required><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="m4 7 8 6 8-6"/></svg></div>
+        <label for="auth-password">كلمة المرور</label>
+        <div class="auth-field"><input id="auth-password" type="password" autocomplete="current-password" placeholder="أدخل كلمة المرور" minlength="8" required><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="3"/><path d="M8 10V7a4 4 0 0 1 8 0v3m-4 4v3"/></svg></div>
+        <div id="auth-actions">
+          <button class="auth-submit" type="submit">تسجيل الدخول<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5m6-6-6 6 6 6"/></svg></button>
+          <div class="auth-register">ليس لديك حساب؟ <button type="button" id="sign-up">إنشاء حساب</button></div>
+        </div>
+      </form>
+      <p id="auth-message" role="status" aria-live="polite">الوصول متاح للحسابات المعتمدة من مدير الفريق.<br>عند إنشاء حساب جديد، يُرجى تأكيد بريدك الإلكتروني.</p>
+    </main>
+  </div>
+</section>
+<section id="cloud-tools" class="cloud-box" dir="rtl" hidden>
+  <span id="signed-in"></span> <button id="refresh-data">تحديث البيانات</button> <button id="sign-out">تسجيل الخروج</button>
+  <p id="cloud-status" role="status"></p>
+  <details id="admin-tools"><summary>إدارة البيانات والمستخدمين</summary>
+    <p><button id="import-legacy">استيراد بيانات المتصفح القديمة</button> <button id="export-data">تنزيل نسخة احتياطية</button></p>
+    <label for="member-email">بريد مستخدم جديد</label><input id="member-email" type="email" placeholder="user@example.com">
+    <button id="add-member">اعتماد المستخدم</button>
+  </details>
+</section>
+<div class="wrap" id="app" hidden>
+
+  <header class="top">
+    <div class="brand">
+      <div class="brand-mark">IB</div>
+      <div>
+        <h1 data-i18n="appTitle">IBTA Tools</h1>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button class="icon-pill-btn" id="lang-btn">AR</button>
+      <button class="icon-pill-btn square" id="settings-btn" title="Settings">⚙️</button>
+    </div>
+  </header>
+
+  <nav class="tabs">
+    <button data-tab="keycodes" class="active" data-i18n="tabKeycodes">Keycodes</button>
+    <button data-tab="prometric" data-i18n="tabPrometric">Prometric</button>
+    <button data-tab="codes" data-i18n="tabCodes">Codes</button>
+  </nav>
+
+  <!-- TAB 1: KEYCODES -->
+  <section class="panel active" id="panel-keycodes"></section>
+
+  <!-- TAB 2: PROMETRIC -->
+  <section class="panel" id="panel-prometric">
+    <div class="cred-card" id="cred-account">
+      <div class="cred-label" data-i18n="prometricAccount">Prometric Account</div>
+      <div class="cred-value" id="cred-account-val"></div>
+    </div>
+    <div class="cred-card" id="cred-password">
+      <div class="cred-label" data-i18n="prometricPassword">Prometric Password</div>
+      <div class="cred-value" id="cred-password-val"></div>
+    </div>
+  </section>
+
+  <!-- TAB 3: CODES -->
+  <section class="panel" id="panel-codes">
+    <div class="stats-row">
+      <div class="stats" id="code-stats"></div>
+      <details class="day-legend-box" id="day-legend-details" style="display:none;">
+        <summary id="day-legend-summary">📅</summary>
+        <div id="day-legend-groups" class="day-legend-groups"></div>
+      </details>
+    </div>
+    <div class="code-tabs" id="code-cat-tabs"></div>
+    <div class="bulk-bar" id="bulk-bar">
+      <div class="bulk-bar-left">
+        <button class="clear-sel" id="clear-sel-btn" data-i18n="clear">Clear</button>
+        <span id="bulk-count"></span>
+      </div>
+      <button class="confirm-btn" id="bulk-delete-btn" data-i18n="deleteSelected">Delete Selected</button>
+    </div>
+    <div class="code-sheet">
+      <div class="code-sheet-scroll">
+        <div class="code-sheet-head">
+          <div class="col-check"><input type="checkbox" id="select-all-codes"></div>
+          <div class="col-n">#</div>
+          <div class="col-code" data-i18n="colCode">Code</div>
+          <div class="col-date" data-i18n="colDate">Date</div>
+          <div class="col-notes" data-i18n="colNotes">Notes</div>
+          <div class="col-actions"></div>
+        </div>
+        <div class="code-list" id="code-grid"></div>
+      </div>
+    </div>
+    <details class="add-box">
+      <summary data-i18n="addNewCodes">+ Add new codes to this category</summary>
+      <div class="hint" data-i18n="pasteHint">Paste codes, one per line</div>
+      <textarea id="add-codes-input" placeholder="IBTAMEAF-XXXX-XXXX"></textarea>
+      <br>
+      <button class="save" id="add-codes-btn" data-i18n="addBtn">Add</button>
+    </details>
+  </section>
+
+  <!-- SETTINGS (standalone panel, opened only from the header gear icon) -->
+  <section class="panel" id="panel-settings">
+
+
+    <div class="cred-card" style="cursor:default;">
+      <div class="cred-label" style="margin-bottom:2px;" data-i18n="autoChainTitle">Auto Chain Copy</div>
+      <div class="settings-desc" data-i18n="autoChainDesc">
+        When enabled: copying a Keycode, then copying anything from Prometric, will automatically copy the first available code from the linked codes category — no need to tap it yourself.
+      </div>
+      <label class="switch-row">
+        <span class="switch">
+          <input type="checkbox" id="autochain-toggle">
+          <span class="switch-track"></span>
+        </span>
+        <span class="switch-label" data-i18n="autoChainSwitch">Enable auto copy (Keycode → Prometric → Code)</span>
+      </label>
+    </div>
+  </section>
+
+  <div class="reset-link" id="reset-btn" data-i18n="resetLink">Reset all copy marks</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.116.0/dist/umd/supabase.js"></script>
+<script src="cloud.js"></script>
+<script>
+// ---------- TRANSLATIONS ----------
+const TRANSLATIONS = {
+  en: {
+    copyBtn:"Copy", copyFailed:"Copy failed. Please try again.", enterCredential:"Enter the value first.",
+    sessionCredentials:"The Prometric credentials are prefilled for this session.",
+    appTitle:"IBTA Tools",
+    tabKeycodes:"Keycodes", tabPrometric:"Prometric", tabCodes:"Codes",
+    settingsTitle:"Settings",
+    examTitleCol:"Exam Title", langCol:"Language", keycodeCol:"Keycode", moveCategoryCol:"Move Category",
+    noExams:"No exams in this category",
+    remaining:"Remaining",
+    prometricAccount:"Prometric Account", prometricPassword:"Prometric Password",
+    accountCopied:"Prometric Account — Copied", passwordCopied:"Prometric Password — Copied",
+    copiedColon:code=>"Copied: "+code,
+    movedTo:(title,cat)=>title+" moved to "+cat,
+    total:"Total", copiedStat:"Copied", remainingStat:"Remaining",
+    colCode:"Code", colDate:"Date", colNotes:"Notes",
+    addNewCodes:"+ Add new codes to this category",
+    pasteHint:"Paste codes, one per line",
+    addBtn:"Add",
+    newCodesAdded:n=>n+" new code(s) added",
+    removeMark:"Remove mark", markRemoved:"Mark removed",
+    deleteCode:"Delete code", codeDeleted:"Code deleted",
+    noCodesAvailable:cat=>"No codes available in "+cat,
+    autoCopied:code=>"Auto-copied: "+code,
+    noCodesYet:"No codes in this category yet — add some below",
+    selected:n=>n+" selected",
+    clear:"Clear", deleteSelected:"Delete Selected",
+    confirmBulkDelete:n=>"Delete "+n+" selected code(s)? This cannot be undone.",
+    codesDeleted:n=>n+" code(s) deleted",
+    resetLink:"Reset all copy marks",
+    confirmReset:"Reset all copy marks and dates? (The codes themselves will remain)",
+    resetDone:"Reset done",
+    autoChainTitle:"Auto Chain Copy",
+    autoChainDesc:"When enabled: copying a Keycode, then copying anything from Prometric, will automatically copy the first available code from the linked codes category — no need to tap it yourself.",
+    autoChainSwitch:"Enable auto copy (Keycode → Prometric → Code)",
+    autoEnabled:"Auto copy enabled", autoDisabled:"Auto copy disabled",
+    notePlaceholder:"Note...",
+    copiedGeneric:"Copied",
+    moveUp:"Move up", moveDown:"Move down",
+    confirmDeleteCode:code=>"Delete code \""+code+"\"? This cannot be undone.",
+    recoveredCodes:n=>n+" code(s) recovered from an earlier version of this tool",
+    datesLegend:n=>"Dates ("+n+")",
+    monthNames:["January","February","March","April","May","June","July","August","September","October","November","December"],
+    addCategory:"+ Add category",
+    categoryNameHint:"Give it a short, clear name — it'll also become a matching tab on the Codes page.",
+    categoryNamePlaceholder:"Category name",
+    categoryCodesHint:"Optional: paste codes for this category now, one per line (you can always add more later).",
+    categoryExists:"That category already exists",
+    categoryAdded:"Category added",
+    removeCategory:"Remove category",
+    confirmRemoveCategory:cat=>"Remove category \""+cat+"\"? Its exams will move back to their original category.",
+    categoryRemoved:"Category removed",
+  },
+  ar: {
+    copyBtn:"نسخ", copyFailed:"تعذر النسخ. حاول مرة أخرى.", enterCredential:"أدخل القيمة أولًا.",
+    sessionCredentials:"بيانات دخول Prometric موجودة مسبقًا لهذه الجلسة.",
+    appTitle:"أدوات IBTA",
+    tabKeycodes:"Keycodes", tabPrometric:"Prometric", tabCodes:"الأكواد",
+    settingsTitle:"الإعدادات",
+    examTitleCol:"اسم الامتحان", langCol:"اللغة", keycodeCol:"Keycode", moveCategoryCol:"نقل الفئة",
+    noExams:"لا توجد امتحانات في هذه الفئة",
+    remaining:"متبقي",
+    prometricAccount:"Prometric Account", prometricPassword:"Prometric Password",
+    accountCopied:"Prometric Account — تم النسخ", passwordCopied:"Prometric Password — تم النسخ",
+    copiedColon:code=>"تم نسخ الكود: "+code,
+    movedTo:(title,cat)=>title+" نُقل إلى "+cat,
+    total:"الإجمالي", copiedStat:"تم نسخه", remainingStat:"متبقي",
+    colCode:"الكود", colDate:"التاريخ", colNotes:"ملاحظات",
+    addNewCodes:"+ إضافة أكواد جديدة لهذه الفئة",
+    pasteHint:"الصق الأكواد، كل كود في سطر منفصل",
+    addBtn:"إضافة",
+    newCodesAdded:n=>n+" كود جديد تم إضافته",
+    removeMark:"إلغاء العلامة", markRemoved:"تم إلغاء العلامة",
+    deleteCode:"حذف الكود", codeDeleted:"تم حذف الكود",
+    noCodesAvailable:cat=>"مفيش أكواد متاحة في "+cat,
+    autoCopied:code=>"تم نسخ الكود تلقائيًا: "+code,
+    noCodesYet:"لا توجد أكواد في هذه الفئة بعد — أضف أكواد من الأسفل",
+    selected:n=>n+" محدد",
+    clear:"إلغاء التحديد", deleteSelected:"حذف المحدد",
+    confirmBulkDelete:n=>"حذف "+n+" كود محدد؟ الإجراء ده مش هينفع يتراجع فيه.",
+    codesDeleted:n=>"تم حذف "+n+" كود",
+    resetLink:"تصفير كل علامات النسخ",
+    confirmReset:"تصفير كل علامات النسخ والتواريخ؟ (الأكواد نفسها هتفضل موجودة)",
+    resetDone:"تم التصفير",
+    autoChainTitle:"النسخ التلقائي المتسلسل",
+    autoChainDesc:"لما تفعّل الخيار ده: نسخ Keycode ثم نسخ أي بيانات من Prometric، هياخد تلقائيًا كوبي لأول كود متاح من فئة الأكواد المرتبطة، من غير ما تدوس عليه بنفسك.",
+    autoChainSwitch:"تفعيل النسخ التلقائي (Keycode ← Prometric ← كود)",
+    autoEnabled:"تم تفعيل النسخ التلقائي", autoDisabled:"تم إيقاف النسخ التلقائي",
+    notePlaceholder:"اكتب ملاحظة...",
+    copiedGeneric:"تم النسخ",
+    moveUp:"تحريك لأعلى", moveDown:"تحريك لأسفل",
+    confirmDeleteCode:code=>"حذف الكود \""+code+"\"؟ الإجراء ده مش هينفع يتراجع فيه.",
+    recoveredCodes:n=>"تم استرجاع "+n+" كود من نسخة سابقة من الأداة",
+    datesLegend:n=>"التواريخ ("+n+")",
+    monthNames:["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"],
+    addCategory:"+ إضافة فئة",
+    categoryNameHint:"اكتب اسم قصير وواضح — هيظهر كمان تاب جديد في صفحة الأكواد.",
+    categoryNamePlaceholder:"اسم الفئة",
+    categoryCodesHint:"اختياري: الصق أكواد للفئة دي دلوقتي، كل كود في سطر (تقدر تضيف المزيد بعدين برضه).",
+    categoryExists:"الفئة دي موجودة بالفعل",
+    categoryAdded:"تم إضافة الفئة",
+    removeCategory:"حذف الفئة",
+    confirmRemoveCategory:cat=>"حذف فئة \""+cat+"\"؟ الامتحانات اللي جواها هترجع لفئتها الأصلية.",
+    categoryRemoved:"تم حذف الفئة",
+  }
+};
+let currentLang = 'en';
+function t(key){ return TRANSLATIONS[currentLang][key]; }
+
+// ---------- DATA ----------
+const CATEGORY_ORDER = ["Foundation","Master","BIS","CYBP","Corporate"];
+const CATEGORY_LINK = {"Foundation":"Foundation-100","Master":"Master-10","BIS":"BIS-40","CYBP":"CYBP-5","Corporate":"Corporate"};
+// Display-only helper: strips the trailing "-NN" quota number from a codes category
+// key so the user sees "Foundation" instead of "Foundation-100". The full key (with
+// the number) is still used internally for all state lookups — only the label changes.
+function displayCatName(cat){
+  return cat.replace(/-\d+$/, '');
+}
+
+let DEFAULT_KEYCODES = [];
+let PROMETRIC_ACCOUNT = '', PROMETRIC_PASSWORD = '';
+async function saveState(){ return Cloud.persist(); }
+let state = {usedCodes:{},codesByCategory:{},keycodeOverrides:{},dateColors:{},settings:{autoChain:false},codeNotes:{},uiLang:'en',categoryOrder:[],keycodeOrder:{}};
+function getLinkedCodesCat(cat){
+  return CATEGORY_LINK[cat] || cat;
+}
+state.categoryOrder.forEach(c=>{
+  const linked = getLinkedCodesCat(c);
+  if(!state.codesByCategory[linked]) state.codesByCategory[linked] = [];
+});
+if(!state.keycodeOrder) state.keycodeOrder = {};
+currentLang = state.uiLang;
+let pendingChain = null;
+let selectedCodes = new Set();
+let draggedKcCode = null;
+let draggedKcCat = null;
+
+function getOrderedKeycodeItems(cat, items){
+  const order = state.keycodeOrder[cat];
+  if(!order || !order.length) return items;
+  const byCode = {};
+  items.forEach(it=>byCode[it.code]=it);
+  const ordered = [];
+  order.forEach(code=>{
+    if(byCode[code]){ ordered.push(byCode[code]); delete byCode[code]; }
+  });
+  items.forEach(it=>{ if(byCode[it.code]) ordered.push(it); });
+  return ordered;
+}
+
+// Clear, unmistakable day colors: red, green, blue, yellow first, then more vivid hues to cycle through.
+// Matches the spreadsheet's own highlight-color style (Excel-like fills):
+// yellow, red, purple, dark green, maroon, blue, salmon/pink, teal, orange, light green, gray, gold.
+const DAY_COLOR_PALETTE = ["#FFC000","#FF0000","#7030A0","#375623","#C00000","#0070C0","#FF99CC","#00B0A0","#ED7D31","#92D050","#7F7F7F","#FFD966"];
+function getColorForDate(dateStr){
+  if(!state.dateColors) state.dateColors = {};
+  if(!state.dateColors[dateStr]){
+    const hash = [...dateStr].reduce((n,c)=>(n*31+c.charCodeAt(0))>>>0,0);
+    state.dateColors[dateStr] = DAY_COLOR_PALETTE[hash % DAY_COLOR_PALETTE.length];
+  }
+  return state.dateColors[dateStr];
+}
+function hexToRgba(hex, alpha){
+  const h = hex.replace('#','');
+  const r = parseInt(h.substring(0,2),16), g = parseInt(h.substring(2,4),16), b = parseInt(h.substring(4,6),16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+// Picks black or white text so it stays readable against a solid fill of any color
+// in the palette — same idea as Excel auto-contrasting text on a colored cell fill.
+function getContrastText(hex){
+  const h = hex.replace('#','');
+  const r = parseInt(h.substring(0,2),16), g = parseInt(h.substring(2,4),16), b = parseInt(h.substring(4,6),16);
+  const luminance = (0.299*r + 0.587*g + 0.114*b) / 255;
+  return luminance > 0.6 ? '#1A1A1A' : '#FFFFFF';
+}
+function todayStr(){
+  const d = new Date();
+  return formatEnglishDate(d.getDate(), d.getMonth()+1, d.getFullYear());
+}
+
+// ---------- Unified English-numeral date formatting ----------
+const ARABIC_DIGITS = ['٠','١','٢','٣','٤','٥','٦','٧','٨','٩'];
+function toWesternDigits(str){
+  return String(str).replace(/[٠-٩]/g, d => ARABIC_DIGITS.indexOf(d));
+}
+function formatEnglishDate(day, month, year){
+  const pad = n => String(n).padStart(2,'0');
+  return `${pad(day)}/${pad(month)}/${year}`;
+}
+// Parses either DD/MM/YYYY or YYYY/MM/DD (Western or Arabic-Indic digits) — formats
+// this tool has produced across earlier versions — using the 4-digit year
+// (always > 31) to detect which slot is the year, regardless of position.
+function parseAnyDateString(str){
+  const western = toWesternDigits(str);
+  const parts = western.split('/').map(p=>parseInt(p,10));
+  if(parts.length !== 3 || parts.some(isNaN)) return null;
+  let day, month, year;
+  if(parts[0] > 31){ year = parts[0]; month = parts[1]; day = parts[2]; }
+  else { day = parts[0]; month = parts[1]; year = parts[2]; }
+  return { day, month, year };
+}
+function normalizeAllDates(){
+  let changed = false;
+  const newUsedCodes = {};
+  for(const code in state.usedCodes){
+    const raw = state.usedCodes[code];
+    const parsed = parseAnyDateString(raw);
+    const formatted = parsed ? formatEnglishDate(parsed.day, parsed.month, parsed.year) : raw;
+    if(formatted !== raw) changed = true;
+    newUsedCodes[code] = formatted;
+  }
+  state.usedCodes = newUsedCodes;
+
+  const newDateColors = {};
+  for(const key in state.dateColors){
+    const parsed = parseAnyDateString(key);
+    const newKey = parsed ? formatEnglishDate(parsed.day, parsed.month, parsed.year) : key;
+    if(newKey !== key) changed = true;
+    if(!newDateColors[newKey]) newDateColors[newKey] = state.dateColors[key];
+  }
+  state.dateColors = newDateColors;
+
+  // Date normalization is persisted only by an explicit import or edit.
+}
+normalizeAllDates();
+
+// ---------- TOAST ----------
+let toastTimer;
+function showToast(msg){
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>el.classList.remove('show'), 1400);
+}
+async function copyText(text){
+  try{
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  }catch(e){}
+  if(fallbackCopy(text)) return true;
+  showToast(t('copyFailed'));
+  return false;
+}
+function fallbackCopy(text){
+  const focused = document.activeElement;
+  const ta = document.createElement('textarea');
+  ta.value = text; ta.style.position='fixed'; ta.style.opacity='0';
+  document.body.appendChild(ta); ta.select();
+  try{ return document.execCommand('copy') === true; }
+  catch(e){ return false; }
+  finally{
+    document.body.removeChild(ta);
+    if(focused && focused.focus) focused.focus();
+  }
+}
+
+// ---------- LANGUAGE ----------
+function applyLanguage(){
+  const html = document.getElementById('html-root');
+  html.lang = currentLang;
+  html.dir = currentLang === 'ar' ? 'rtl' : 'ltr';
+  document.body.classList.toggle('lang-ar', currentLang === 'ar');
+  document.getElementById('doc-title').textContent = t('appTitle');
+  document.title = t('appTitle');
+  document.getElementById('lang-btn').textContent = currentLang === 'en' ? 'AR' : 'EN';
+  document.getElementById('settings-btn').title = t('settingsTitle');
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    el.textContent = t(el.dataset.i18n);
+  });
+  document.getElementById('add-codes-input').placeholder = 'IBTAMEAF-XXXX-XXXX';
+  renderKeycodes();
+  renderCodeTabs();
+  renderCodeGrid();
+}
+document.getElementById('lang-btn').addEventListener('click', async ()=>{
+  currentLang = currentLang === 'en' ? 'ar' : 'en';
+  state.uiLang = currentLang;
+  if(!await saveState()) return;
+  applyLanguage();
+});
+
+// ---------- TABS ----------
+function showPanel(id){
+  if(id === 'keycodes') renderKeycodes();
+  document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('section.panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('settings-btn').classList.remove('active');
+  document.getElementById('panel-'+id).classList.add('active');
+}
+document.querySelectorAll('nav.tabs button').forEach(btn=>{
+  btn.addEventListener('click', async ()=>{
+    showPanel(btn.dataset.tab);
+    btn.classList.add('active');
+  });
+});
+document.getElementById('settings-btn').addEventListener('click', async ()=>{
+  showPanel('settings');
+  document.getElementById('settings-btn').classList.add('active');
+});
+
+// ---------- PANEL 1: KEYCODES ----------
+function goToCodesCategory(codesCat){
+  showPanel('codes');
+  document.querySelector('nav.tabs button[data-tab="codes"]').classList.add('active');
+  activeCategory = codesCat;
+  selectedCodes.clear();
+  renderCodeTabs();
+  renderCodeGrid();
+}
+
+async function autoCopyNextCode(linkedCat){
+  const nextCode = (state.codesByCategory[linkedCat] || []).find(c=>!state.usedCodes[c]);
+  if(!nextCode){ showToast(t('noCodesAvailable')(displayCatName(linkedCat))); return; }
+  await Cloud.copyCode(nextCode);
+}
+
+function buildAddCategoryBox(){
+  const box = document.createElement('details');
+  box.className = 'add-box';
+  box.style.marginTop = '0';
+  box.style.marginBottom = '12px';
+  const summary = document.createElement('summary');
+  summary.textContent = t('addCategory');
+  const hint = document.createElement('div');
+  hint.className = 'hint';
+  hint.textContent = t('categoryNameHint');
+  const row = document.createElement('div');
+  row.className = 'kc-add-cat-row';
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.className = 'kc-add-cat-input';
+  input.placeholder = t('categoryNamePlaceholder');
+  const addBtn = document.createElement('button');
+  addBtn.className = 'save';
+  addBtn.textContent = t('addBtn');
+
+  const codesHint = document.createElement('div');
+  codesHint.className = 'hint';
+  codesHint.textContent = t('categoryCodesHint');
+  const codesTa = document.createElement('textarea');
+  codesTa.placeholder = 'IBTAMEAF-XXXX-XXXX';
+  codesTa.style.marginTop = '0';
+
+  async function submit(){
+    const name = input.value.trim();
+    if(!name) return;
+    const isNew = !state.categoryOrder.includes(name);
+    if(isNew) state.categoryOrder.push(name);
+    const codesCat = getLinkedCodesCat(name);
+    if(!state.codesByCategory[codesCat]) state.codesByCategory[codesCat] = [];
+
+    const lines = codesTa.value.split('\n').map(s=>s.trim()).filter(Boolean);
+    const existing = new Set(state.codesByCategory[codesCat]);
+    let added = 0;
+    lines.forEach(code=>{
+      if(!existing.has(code)){
+        state.codesByCategory[codesCat].push(code);
+        existing.add(code);
+        added++;
+      }
+    });
+
+    if(!isNew && added === 0){ showToast(t('categoryExists')); return; }
+
+    if(!await saveState()) return;
+    showToast(isNew ? t('categoryAdded') : t('newCodesAdded')(added));
+    renderKeycodes();
+    renderCodeTabs();
+  }
+  addBtn.addEventListener('click', submit);
+  input.addEventListener('keydown', async e=>{ if(e.key === 'Enter'){ e.preventDefault(); submit(); } });
+  row.appendChild(input);
+  row.appendChild(addBtn);
+  box.appendChild(summary);
+  box.appendChild(hint);
+  box.appendChild(row);
+  box.appendChild(codesHint);
+  box.appendChild(codesTa);
+  return box;
+}
+
+function renderKeycodes(){
+  const panel = document.getElementById('panel-keycodes');
+  panel.innerHTML = '';
+
+  const groups = {};
+  state.categoryOrder.forEach(c=>groups[c] = []);
+  DEFAULT_KEYCODES.forEach(item=>{
+    const cat = state.keycodeOverrides[item.code] || item.category;
+    if(!groups[cat]) groups[cat] = [];
+    groups[cat].push(item);
+  });
+
+  state.categoryOrder.forEach((cat, catIndex)=>{
+    let items = groups[cat] || [];
+    items = getOrderedKeycodeItems(cat, items);
+    const linkedCodesCat = getLinkedCodesCat(cat);
+    const codesList = (state.codesByCategory[linkedCodesCat] || []);
+    const usedCount = codesList.filter(c => state.usedCodes[c]).length;
+    const remaining = codesList.length - usedCount;
+
+    const block = document.createElement('div');
+    block.className = 'kc-block';
+
+    const titleRow = document.createElement('div');
+    titleRow.className = 'kc-title-row';
+    const titleEl = document.createElement('div');
+    titleEl.className = 'kc-title';
+    titleEl.textContent = cat + ' (' + items.length + ')';
+
+    const titleActions = document.createElement('div');
+    titleActions.className = 'kc-title-actions';
+
+    const orderBtns = document.createElement('div');
+    orderBtns.className = 'kc-order-btns';
+    const upBtn = document.createElement('button');
+    upBtn.className = 'kc-order-btn';
+    upBtn.textContent = '▲';
+    upBtn.title = t('moveUp');
+    upBtn.disabled = catIndex === 0;
+    upBtn.addEventListener('click', async ()=>{
+      const arr = state.categoryOrder;
+      [arr[catIndex-1], arr[catIndex]] = [arr[catIndex], arr[catIndex-1]];
+      if(!await saveState()) return;
+      renderKeycodes();
+    });
+    const downBtn = document.createElement('button');
+    downBtn.className = 'kc-order-btn';
+    downBtn.textContent = '▼';
+    downBtn.title = t('moveDown');
+    downBtn.disabled = catIndex === state.categoryOrder.length - 1;
+    downBtn.addEventListener('click', async ()=>{
+      const arr = state.categoryOrder;
+      [arr[catIndex+1], arr[catIndex]] = [arr[catIndex], arr[catIndex+1]];
+      if(!await saveState()) return;
+      renderKeycodes();
+    });
+    orderBtns.appendChild(upBtn);
+    orderBtns.appendChild(downBtn);
+
+    const linkBtn = document.createElement('button');
+    linkBtn.className = 'kc-link';
+    linkBtn.textContent = '🔗 ' + displayCatName(linkedCodesCat) + ' · ' + t('remaining') + ' ' + remaining;
+    linkBtn.addEventListener('click', ()=> goToCodesCategory(linkedCodesCat));
+
+    titleActions.appendChild(orderBtns);
+    titleActions.appendChild(linkBtn);
+
+    if(!CATEGORY_ORDER.includes(cat)){
+      const removeBtn = document.createElement('button');
+      removeBtn.className = 'kc-remove-cat-btn';
+      removeBtn.textContent = '✕';
+      removeBtn.title = t('removeCategory');
+      removeBtn.addEventListener('click', async ()=>{
+        if(!confirm(t('confirmRemoveCategory')(cat))) return;
+        Object.keys(state.keycodeOverrides).forEach(code=>{
+          if(state.keycodeOverrides[code] === cat) delete state.keycodeOverrides[code];
+        });
+        state.categoryOrder = state.categoryOrder.filter(c=>c!==cat);
+        delete state.keycodeOrder[cat];
+        if(!await saveState()) return;
+        renderKeycodes();
+        showToast(t('categoryRemoved'));
+      });
+      titleActions.appendChild(removeBtn);
+    }
+
+    titleRow.appendChild(titleEl);
+    titleRow.appendChild(titleActions);
+    block.appendChild(titleRow);
+
+    const scroll = document.createElement('div');
+    scroll.className = 'kc-scroll';
+
+    const headRow = document.createElement('div');
+    headRow.className = 'kc-head-row';
+    headRow.innerHTML = `
+      <div class="kc-col-drag"></div>
+      <div class="kc-col-title">${t('examTitleCol')}</div>
+      <div class="kc-col-lang">${t('langCol')}</div>
+      <div class="kc-col-code">${t('keycodeCol')}</div>
+      <div class="kc-col-cat">${t('moveCategoryCol')}</div>
+    `;
+    scroll.appendChild(headRow);
+
+    if(items.length === 0){
+      const empty = document.createElement('div');
+      empty.className = 'kc-empty';
+      empty.textContent = t('noExams');
+      scroll.appendChild(empty);
+    }
+
+    items.forEach(item=>{
+      const row = document.createElement('div');
+      row.className = 'kc-row';
+
+      const handle = document.createElement('div');
+      handle.className = 'kc-drag-handle';
+      handle.textContent = '⋮⋮';
+      handle.draggable = true;
+      handle.addEventListener('dragstart', async (e)=>{
+        draggedKcCode = item.code;
+        draggedKcCat = cat;
+        row.classList.add('dragging');
+        try{ e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', item.code); }catch(err){}
+      });
+      handle.addEventListener('dragend', async ()=>{
+        row.classList.remove('dragging');
+        draggedKcCode = null;
+        draggedKcCat = null;
+        scroll.querySelectorAll('.kc-row.drag-over').forEach(r=>r.classList.remove('drag-over'));
+      });
+
+      row.addEventListener('dragover', async (e)=>{
+        if(draggedKcCat !== cat || draggedKcCode === null) return;
+        e.preventDefault();
+        row.classList.add('drag-over');
+      });
+      row.addEventListener('dragleave', async ()=>{
+        row.classList.remove('drag-over');
+      });
+      row.addEventListener('drop', async (e)=>{
+        e.preventDefault();
+        row.classList.remove('drag-over');
+        if(draggedKcCat !== cat || draggedKcCode === null || draggedKcCode === item.code) return;
+        const codesInOrder = items.map(it=>it.code);
+        const fromIdx = codesInOrder.indexOf(draggedKcCode);
+        if(fromIdx === -1) return;
+        codesInOrder.splice(fromIdx, 1);
+        const toIdx = codesInOrder.indexOf(item.code);
+        codesInOrder.splice(toIdx, 0, draggedKcCode);
+        state.keycodeOrder[cat] = codesInOrder;
+        if(!await saveState()) return;
+        draggedKcCode = null;
+        draggedKcCat = null;
+        renderKeycodes();
+      });
+
+      const titleCell = document.createElement('div');
+      titleCell.className = 'kc-col-title';
+      titleCell.textContent = item.title;
+
+      const langCell = document.createElement('div');
+      langCell.className = 'kc-col-lang';
+      langCell.textContent = item.lang;
+
+      const codeCell = document.createElement('div');
+      codeCell.className = 'kc-col-code';
+      codeCell.textContent = item.code;
+
+      const catCell = document.createElement('div');
+      catCell.className = 'kc-col-cat';
+      const select = document.createElement('select');
+      state.categoryOrder.forEach(c=>{
+        const opt = document.createElement('option');
+        opt.value = c;
+        opt.textContent = c;
+        if(c === cat) opt.selected = true;
+        select.appendChild(opt);
+      });
+      select.addEventListener('click', e=> e.stopPropagation());
+      select.addEventListener('change', async e=>{
+        state.keycodeOverrides[item.code] = e.target.value;
+        if(!await saveState()) return;
+        renderKeycodes();
+        showToast(t('movedTo')(item.title, e.target.value));
+      });
+      catCell.appendChild(select);
+
+      row.appendChild(handle);
+      row.appendChild(titleCell);
+      row.appendChild(langCell);
+      row.appendChild(codeCell);
+      row.appendChild(catCell);
+
+      row.addEventListener('click', async ()=>{
+        if(!await copyText(item.code)) return;
+        row.classList.add('copied');
+        showToast(t('copiedColon')(item.code));
+        setTimeout(()=>row.classList.remove('copied'), 900);
+        if(state.settings.autoChain){
+          pendingChain = { linkedCat: getLinkedCodesCat(cat) };
+        }
+      });
+
+      scroll.appendChild(row);
+    });
+
+    block.appendChild(scroll);
+    panel.appendChild(block);
+  });
+
+  // Keep category management after the complete list of keycode groups.
+  panel.appendChild(buildAddCategoryBox());
+  Cloud.decorate();
+}
+
+// ---------- PANEL 2: PROMETRIC ----------
+document.getElementById('cred-account-val').textContent = PROMETRIC_ACCOUNT;
+document.getElementById('cred-password-val').textContent = PROMETRIC_PASSWORD;
+async function handlePrometricCopy(inputId, labelKey){
+  const value = document.getElementById(inputId).textContent;
+  if(!value){ showToast(t('enterCredential')); return; }
+  if(!await copyText(value)) return;
+  showToast(t(labelKey));
+  if(state.settings.autoChain && pendingChain){
+    const linkedCat = pendingChain.linkedCat;
+    pendingChain = null;
+    setTimeout(()=> autoCopyNextCode(linkedCat), 550);
+  }
+}
+document.getElementById('cred-account').addEventListener('click', async ()=>{
+  handlePrometricCopy('cred-account-val', 'accountCopied');
+});
+document.getElementById('cred-password').addEventListener('click', async ()=>{
+  handlePrometricCopy('cred-password-val', 'passwordCopied');
+});
+
+// ---------- PANEL 3: CODES ----------
+let activeCategory = Object.keys(state.codesByCategory)[0];
+
+function renderCodeTabs(){
+  const wrap = document.getElementById('code-cat-tabs');
+  wrap.innerHTML = '';
+  Object.keys(state.codesByCategory).forEach(cat=>{
+    const b = document.createElement('button');
+    b.textContent = displayCatName(cat);
+    if(cat === activeCategory) b.classList.add('active');
+    b.addEventListener('click', async ()=>{
+      activeCategory = cat;
+      selectedCodes.clear();
+      renderCodeTabs();
+      renderCodeGrid();
+    });
+    wrap.appendChild(b);
+  });
+}
+
+function renderStats(){
+  const list = state.codesByCategory[activeCategory] || [];
+  const usedCount = list.filter(c => state.usedCodes[c]).length;
+  const el = document.getElementById('code-stats');
+  el.innerHTML = `
+    <div class="stat">${t('total')}: <b>${list.length}</b></div>
+    <div class="stat">${t('copiedStat')}: <b>${usedCount}</b></div>
+    <div class="stat">${t('remainingStat')}: <b>${list.length - usedCount}</b></div>
+  `;
+}
+
+function renderDayLegend(){
+  const list = state.codesByCategory[activeCategory] || [];
+  const dates = [];
+  list.forEach(code=>{
+    const used = state.usedCodes[code];
+    if(used && !dates.includes(used)) dates.push(used);
+  });
+
+  const detailsEl = document.getElementById('day-legend-details');
+  const summaryEl = document.getElementById('day-legend-summary');
+  const groupsEl = document.getElementById('day-legend-groups');
+
+  if(dates.length === 0){
+    detailsEl.style.display = 'none';
+    groupsEl.innerHTML = '';
+    return;
+  }
+  detailsEl.style.display = '';
+  summaryEl.textContent = '📅 ' + t('datesLegend')(dates.length);
+
+  // Group dates by month/year so the list stays compact instead of growing
+  // sideways or pushing the page down as more dates accumulate.
+  const groups = {};
+  dates.forEach(dateStr=>{
+    const parts = dateStr.split('/'); // DD/MM/YYYY
+    if(parts.length !== 3) return;
+    const key = parts[1] + '/' + parts[2];
+    if(!groups[key]) groups[key] = [];
+    groups[key].push(dateStr);
+  });
+
+  const sortedKeys = Object.keys(groups).sort((a, b)=>{
+    const [am, ay] = a.split('/').map(Number);
+    const [bm, by] = b.split('/').map(Number);
+    return (by * 12 + bm) - (ay * 12 + am); // most recent month first
+  });
+
+  groupsEl.innerHTML = '';
+  sortedKeys.forEach(key=>{
+    const [m, y] = key.split('/').map(Number);
+    const monthName = t('monthNames')[m - 1] || key;
+
+    const groupWrap = document.createElement('div');
+    groupWrap.className = 'day-legend-month';
+
+    const header = document.createElement('div');
+    header.className = 'day-legend-month-title';
+    header.textContent = monthName + ' ' + y;
+    groupWrap.appendChild(header);
+
+    const pillsWrap = document.createElement('div');
+    pillsWrap.className = 'day-legend-pills';
+    groups[key].sort().forEach(dateStr=>{
+      const color = getColorForDate(dateStr);
+      const pill = document.createElement('div');
+      pill.className = 'day-pill';
+      const dot = document.createElement('span');
+      dot.className = 'day-pill-dot';
+      dot.style.background = color;
+      const label = document.createElement('span');
+      label.textContent = dateStr;
+      label.style.direction = 'ltr';
+      pill.appendChild(dot);
+      pill.appendChild(label);
+      pillsWrap.appendChild(pill);
+    });
+    groupWrap.appendChild(pillsWrap);
+    groupsEl.appendChild(groupWrap);
+  });
+}
+
+function updateBulkBar(){
+  const bar = document.getElementById('bulk-bar');
+  const count = selectedCodes.size;
+  document.getElementById('bulk-count').textContent = t('selected')(count);
+  bar.classList.toggle('show', count > 0);
+  const selectAll = document.getElementById('select-all-codes');
+  const list = state.codesByCategory[activeCategory] || [];
+  selectAll.checked = list.length > 0 && list.every(c => selectedCodes.has(c));
+}
+
+function renderCodeGrid(){
+  renderKeycodes();
+  const grid = document.getElementById('code-grid');
+  grid.innerHTML = '';
+  const list = state.codesByCategory[activeCategory] || [];
+  renderStats();
+  renderDayLegend();
+  updateBulkBar();
+  if(list.length === 0){
+    grid.innerHTML = `<div class="empty-state" style="border:none; box-shadow:none;">${t('noCodesYet')}</div>`;
+    return;
+  }
+  list.forEach((code, i)=>{
+    const used = state.usedCodes[code];
+    const row = document.createElement('div');
+    row.className = 'code-row' + (used ? ' used' : '');
+
+    const checkCell = document.createElement('div');
+    checkCell.className = 'col-check';
+    checkCell.addEventListener('click', e=>e.stopPropagation());
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.checked = selectedCodes.has(code);
+    // The checkbox is only for selecting codes for bulk deletion. It must
+    // never bubble into the row's copy action.
+    checkbox.addEventListener('mousedown', e=> e.stopPropagation());
+    checkbox.addEventListener('click', e=> e.stopPropagation());
+    checkbox.addEventListener('change', async e=>{
+      if(e.target.checked) selectedCodes.add(code);
+      else selectedCodes.delete(code);
+      updateBulkBar();
+    });
+    checkCell.appendChild(checkbox);
+
+    const n = document.createElement('div');
+    n.className = 'col-n';
+    n.textContent = i + 1;
+
+    const c = document.createElement('div');
+    c.className = 'col-code';
+    c.textContent = code;
+
+    const d = document.createElement('div');
+    d.className = 'col-date';
+    d.textContent = used || '';
+
+    if(used){
+      const dayColor = getColorForDate(used);
+      const fg = getContrastText(dayColor);
+      row.style.background = dayColor;
+      c.style.textDecoration = 'line-through';
+      c.style.textDecorationColor = fg;
+      c.style.color = fg;
+      d.style.color = fg;
+    }
+
+    const notesCell = document.createElement('div');
+    notesCell.className = 'col-notes';
+    const notesInput = document.createElement('input');
+    notesInput.type = 'text';
+    notesInput.placeholder = t('notePlaceholder');
+    notesInput.value = state.codeNotes[code] || '';
+    notesInput.addEventListener('click', e=> e.stopPropagation());
+    notesInput.addEventListener('mousedown', e=> e.stopPropagation());
+    notesInput.addEventListener('change', async e=>{
+      const val = e.target.value;
+      if(val.trim() === ''){ delete state.codeNotes[code]; }
+      else { state.codeNotes[code] = val; }
+      if(!await saveState()) return;
+    });
+    notesCell.appendChild(notesInput);
+
+    const actions = document.createElement('div');
+    actions.className = 'col-actions';
+
+    if(used){
+      const unmarkBtn = document.createElement('button');
+      unmarkBtn.className = 'icon-btn';
+      unmarkBtn.title = t('removeMark');
+      unmarkBtn.textContent = '↺';
+      unmarkBtn.addEventListener('click', async (e)=>{
+        e.stopPropagation();
+        delete state.usedCodes[code];
+        if(!await saveState()) return;
+        renderCodeGrid();
+        showToast(t('markRemoved'));
+      });
+      actions.appendChild(unmarkBtn);
+    }
+
+    const delBtn = document.createElement('button');
+    delBtn.className = 'icon-btn danger';
+    delBtn.title = t('deleteCode');
+    delBtn.textContent = '✕';
+    delBtn.addEventListener('click', async (e)=>{
+      e.stopPropagation();
+      if(!confirm(t('confirmDeleteCode')(code))) return;
+      state.codesByCategory[activeCategory] = state.codesByCategory[activeCategory].filter(x=>x!==code);
+      delete state.usedCodes[code];
+      delete state.codeNotes[code];
+      selectedCodes.delete(code);
+      if(!await saveState()) return;
+      renderCodeGrid();
+      showToast(t('codeDeleted'));
+    });
+    actions.appendChild(delBtn);
+
+    row.addEventListener('click', async e=>{
+      if(e.target.closest('.col-check, .col-notes, .col-actions, input, button, select, textarea')) return;
+      await Cloud.copyCode(code);
+    });
+
+    row.appendChild(checkCell);
+    row.appendChild(n);
+    row.appendChild(c);
+    row.appendChild(d);
+    row.appendChild(notesCell);
+    row.appendChild(actions);
+    grid.appendChild(row);
+  });
+  Cloud.decorate();
+}
+
+document.getElementById('select-all-codes').addEventListener('change', async (e)=>{
+  const list = state.codesByCategory[activeCategory] || [];
+  if(e.target.checked){ list.forEach(c=>selectedCodes.add(c)); }
+  else { list.forEach(c=>selectedCodes.delete(c)); }
+  renderCodeGrid();
+});
+
+document.getElementById('clear-sel-btn').addEventListener('click', async ()=>{
+  selectedCodes.clear();
+  renderCodeGrid();
+});
+
+document.getElementById('bulk-delete-btn').addEventListener('click', async ()=>{
+  const count = selectedCodes.size;
+  if(count === 0) return;
+  if(confirm(t('confirmBulkDelete')(count))){
+    state.codesByCategory[activeCategory] = (state.codesByCategory[activeCategory] || []).filter(c => !selectedCodes.has(c));
+    selectedCodes.forEach(c=>{
+      delete state.usedCodes[c];
+      delete state.codeNotes[c];
+    });
+    selectedCodes.clear();
+    if(!await saveState()) return;
+    renderCodeGrid();
+    showToast(t('codesDeleted')(count));
+  }
+});
+
+document.getElementById('add-codes-btn').addEventListener('click', async ()=>{
+  const ta = document.getElementById('add-codes-input');
+  const lines = ta.value.split('\n').map(s=>s.trim()).filter(Boolean);
+  if(lines.length === 0) return;
+  if(!state.codesByCategory[activeCategory]) state.codesByCategory[activeCategory] = [];
+  const existing = new Set(state.codesByCategory[activeCategory]);
+  let added = 0;
+  lines.forEach(code=>{
+    if(!existing.has(code)){
+      state.codesByCategory[activeCategory].push(code);
+      existing.add(code);
+      added++;
+    }
+  });
+  if(!await saveState()) return;
+  ta.value = '';
+  renderCodeGrid();
+  showToast(t('newCodesAdded')(added));
+});
+
+document.getElementById('reset-btn').addEventListener('click', async ()=>{
+  if(confirm(t('confirmReset'))){
+    state.usedCodes = {};
+    if(!await saveState()) return;
+    renderCodeGrid();
+    showToast(t('resetDone'));
+  }
+});
+
+// ---------- SETTINGS ----------
+const autoChainToggle = document.getElementById('autochain-toggle');
+autoChainToggle.checked = !!state.settings.autoChain;
+autoChainToggle.addEventListener('change', async (e)=>{
+  state.settings.autoChain = e.target.checked;
+  pendingChain = null;
+  if(!await saveState()) return;
+  showToast(e.target.checked ? t('autoEnabled') : t('autoDisabled'));
+});
+
+// ---------- init ----------
+Cloud.boot();
+</script>
+</body>
+</html>
+
