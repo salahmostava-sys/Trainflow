@@ -345,8 +345,10 @@
   .auth-logo{width:44px;height:44px;border-radius:13px;background:#ffffff15;border:1px solid #ffffff25;display:grid;place-items:center;font-family:'Segoe UI',sans-serif;font-size:19px;font-weight:700;letter-spacing:-1px;}
   .auth-brand strong{font-family:'Segoe UI',sans-serif;font-size:20px;letter-spacing:.3px;}
   .auth-brand small{display:block;font-size:12px;color:#afc6e6;margin-top:3px;}
+  .auth-lang-btn{margin-inline-start:auto;z-index:1;border:1px solid #ffffff40;border-radius:9px;background:#ffffff18;color:#fff;padding:8px 11px;font:700 13px 'Segoe UI',sans-serif;cursor:pointer;}
   .auth-intro{position:relative;z-index:1;margin:46px 0 40px;}
   .auth-eyebrow{font-size:12px;font-weight:700;letter-spacing:1.5px;color:#8cbcff;direction:ltr;text-align:right;}
+  #auth-box[lang="en"] .auth-eyebrow{text-align:left;}
   .auth-intro h2{font-size:36px;line-height:1.5;letter-spacing:-.7px;margin:12px 0 14px;font-weight:800;}
   .auth-intro>p{font-size:16px;line-height:1.9;color:#c0d1e8;margin:0;max-width:340px;}
   .auth-features{display:grid;gap:18px;margin-top:30px;}
@@ -372,7 +374,7 @@
   #sign-up{background:none;border:0;color:#1765cf;padding:6px;}
   #sign-up:hover{text-decoration:underline;}
   #auth-box button:focus-visible{outline:3px solid #91bafa;outline-offset:4px;}
-  #auth-message{min-height:44px;font-size:12px;line-height:1.9;color:#78879b;text-align:center;border-top:1px solid #edf0f5;padding-top:18px;margin:22px 0 0;overflow-wrap:anywhere;}
+  #auth-message{min-height:44px;font-size:12px;line-height:1.9;color:#78879b;text-align:center;border-top:1px solid #edf0f5;padding-top:18px;margin:22px 0 0;overflow-wrap:anywhere;white-space:pre-line;}
   #auth-actions[inert]{opacity:.55;}
   @media(max-width:760px){#auth-box{padding:20px 14px;align-items:flex-start;}.auth-shell{max-width:480px;grid-template-columns:1fr;border-radius:20px;}.auth-story{min-height:0;padding:25px 28px;}.auth-intro{margin:20px 0 0;}.auth-intro h2{font-size:25px;margin:0;}.auth-eyebrow,.auth-intro>p,.auth-features,.auth-story-footer{display:none;}.auth-main{padding:32px 28px;}.auth-main h1{font-size:27px;}.auth-subtitle{margin-bottom:24px;}}
 </style>
@@ -381,34 +383,34 @@
 <section id="auth-box" dir="rtl" lang="ar">
   <div class="auth-shell">
     <aside class="auth-story" aria-label="عن البرنامج">
-      <div class="auth-brand"><span class="auth-logo" aria-hidden="true">IB</span><div><strong dir="ltr">IBTA Tools</strong><small>مساحة عمل فريقك</small></div></div>
+      <div class="auth-brand"><span class="auth-logo" aria-hidden="true">IB</span><div><strong data-i18n="appTitle">أدوات IBTA</strong><small data-i18n="authBrandTagline">مساحة عمل فريقك</small></div><button id="auth-lang-btn" class="auth-lang-btn" type="button">EN</button></div>
       <div class="auth-intro">
-        <div class="auth-eyebrow">IBTA OPERATIONS</div>
-        <h2>أكوادك منظّمة.<br>وفريقك على اتصال.</h2>
-        <p>مساحة واحدة لإدارة الأكواد ومتابعة استخدامها، أينما كنت.</p>
+        <div class="auth-eyebrow" data-i18n="authEyebrow">عمليات IBTA</div>
+        <h2><span data-i18n="authHeadline1">أكوادك منظّمة.</span><br><span data-i18n="authHeadline2">وفريقك على اتصال.</span></h2>
+        <p data-i18n="authIntro">مساحة واحدة لإدارة الأكواد ومتابعة استخدامها، أينما كنت.</p>
         <div class="auth-features">
-          <div class="auth-feature"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="m8 12 3 3 5-6"/></svg><span>متابعة واضحة للأكواد المتاحة والمستخدمة</span></div>
-          <div class="auth-feature"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3 20v-2a6 6 0 0 1 12 0v2M16 5a3 3 0 0 1 0 6m2 3a5 5 0 0 1 3 4v2"/></svg><span>بيانات مشتركة وصلاحيات لكل مستخدم</span></div>
-          <div class="auth-feature"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8m-4-4v4"/></svg><span>وصول من أي جهاز متصل بالإنترنت</span></div>
+          <div class="auth-feature"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="m8 12 3 3 5-6"/></svg><span data-i18n="authFeatureCodes">متابعة واضحة للأكواد المتاحة والمستخدمة</span></div>
+          <div class="auth-feature"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3 20v-2a6 6 0 0 1 12 0v2M16 5a3 3 0 0 1 0 6m2 3a5 5 0 0 1 3 4v2"/></svg><span data-i18n="authFeatureTeam">بيانات مشتركة وصلاحيات لكل مستخدم</span></div>
+          <div class="auth-feature"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8m-4-4v4"/></svg><span data-i18n="authFeatureAccess">وصول من أي جهاز متصل بالإنترنت</span></div>
         </div>
       </div>
-      <div class="auth-story-footer">إدارة أبسط. متابعة أوضح.</div>
+      <div class="auth-story-footer" data-i18n="authFooter">إدارة أبسط. متابعة أوضح.</div>
     </aside>
     <main class="auth-main">
-      <p class="auth-welcome">مرحبًا بعودتك</p>
-      <h1>تسجيل الدخول</h1>
-      <p class="auth-subtitle">ادخل إلى حسابك لمتابعة أعمال فريقك.</p>
+      <p class="auth-welcome" data-i18n="authWelcome">مرحبًا بعودتك</p>
+      <h1 data-i18n="authSignIn">تسجيل الدخول</h1>
+      <p class="auth-subtitle" data-i18n="authSubtitle">ادخل إلى حسابك لمتابعة أعمال فريقك.</p>
       <form id="auth-form">
-        <label for="auth-email">البريد الإلكتروني</label>
+        <label for="auth-email" data-i18n="authEmail">البريد الإلكتروني</label>
         <div class="auth-field"><input id="auth-email" type="email" autocomplete="username" placeholder="name@example.com" required><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="m4 7 8 6 8-6"/></svg></div>
-        <label for="auth-password">كلمة المرور</label>
+        <label for="auth-password" data-i18n="authPassword">كلمة المرور</label>
         <div class="auth-field"><input id="auth-password" type="password" autocomplete="current-password" placeholder="أدخل كلمة المرور" minlength="8" required><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="3"/><path d="M8 10V7a4 4 0 0 1 8 0v3m-4 4v3"/></svg></div>
         <div id="auth-actions">
-          <button class="auth-submit" type="submit">تسجيل الدخول<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5m6-6-6 6 6 6"/></svg></button>
-          <div class="auth-register">ليس لديك حساب؟ <button type="button" id="sign-up">إنشاء حساب</button></div>
+          <button class="auth-submit" type="submit"><span data-i18n="authSignIn">تسجيل الدخول</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5m6-6-6 6 6 6"/></svg></button>
+          <div class="auth-register"><span data-i18n="authNoAccount">ليس لديك حساب؟</span> <button type="button" id="sign-up" data-i18n="authCreateAccount">إنشاء حساب</button></div>
         </div>
       </form>
-      <p id="auth-message" role="status" aria-live="polite">الوصول متاح للحسابات المعتمدة من مدير الفريق.<br>عند إنشاء حساب جديد، يُرجى تأكيد بريدك الإلكتروني.</p>
+      <p id="auth-message" role="status" aria-live="polite"></p>
     </main>
   </div>
 </section>
@@ -504,19 +506,19 @@
         <span class="switch-label" data-i18n="autoChainSwitch">Enable auto copy (Keycode → Prometric → Code)</span>
       </label>
     </div>
-    <section id="cloud-tools" class="cloud-controls" dir="rtl" hidden>
+    <section id="cloud-tools" class="cloud-controls" hidden>
       <div class="cloud-popover">
-        <div class="cloud-identity-text"><strong>الحساب الحالي</strong><span id="signed-in"></span></div>
+        <div class="cloud-identity-text"><strong data-i18n="currentAccount">الحساب الحالي</strong><span id="signed-in"></span></div>
         <p id="cloud-status" class="cloud-status" role="status" aria-live="polite"></p>
         <div class="cloud-actions">
-          <button id="refresh-data" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M5.7 9A7 7 0 0 1 18 7l2 5M4 12l2 5a7 7 0 0 0 12.3-2"/></svg>تحديث</button>
-          <button id="sign-out" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4M14 7l5 5-5 5M9 12h10"/></svg>خروج</button>
+          <button id="refresh-data" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M5.7 9A7 7 0 0 1 18 7l2 5M4 12l2 5a7 7 0 0 0 12.3-2"/></svg><span data-i18n="refresh">تحديث</span></button>
+          <button id="sign-out" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4M14 7l5 5-5 5M9 12h10"/></svg><span data-i18n="signOut">خروج</span></button>
         </div>
-        <details id="admin-tools" class="cloud-admin"><summary>إدارة البيانات والمستخدمين</summary>
+        <details id="admin-tools" class="cloud-admin"><summary><span data-i18n="manageDataUsers">إدارة البيانات والمستخدمين</span></summary>
           <div class="cloud-admin-content">
-            <div class="cloud-admin-actions"><button id="import-legacy" type="button">استيراد بيانات المتصفح القديمة</button><button id="export-data" type="button">تنزيل نسخة احتياطية</button></div>
-            <label for="member-email">بريد مستخدم جديد</label><input id="member-email" type="email" placeholder="user@example.com">
-            <button id="add-member" type="button">اعتماد المستخدم</button>
+            <div class="cloud-admin-actions"><button id="import-legacy" type="button" data-i18n="importLegacy">استيراد بيانات المتصفح القديمة</button><button id="export-data" type="button" data-i18n="exportBackup">تنزيل نسخة احتياطية</button></div>
+            <label for="member-email" data-i18n="newMemberEmail">بريد مستخدم جديد</label><input id="member-email" type="email" placeholder="user@example.com">
+            <button id="add-member" type="button" data-i18n="addMember">اعتماد المستخدم</button>
           </div>
         </details>
       </div>
@@ -584,18 +586,50 @@ const TRANSLATIONS = {
     removeCategory:"Remove category",
     confirmRemoveCategory:cat=>"Remove category \""+cat+"\"? Its exams will move back to their original category.",
     categoryRemoved:"Category removed",
+    authBrandTagline:"Your team's workspace", authHeadline1:"Your codes, organized.", authHeadline2:"Your team, connected.",
+    authEyebrow:"IBTA OPERATIONS",
+    authIntro:"One place to manage codes and track their use, wherever you are.",
+    authFeatureCodes:"Clearly track available and used codes", authFeatureTeam:"Shared data and individual access",
+    authFeatureAccess:"Access from any internet-connected device", authFooter:"Simpler management. Clearer tracking.",
+    authWelcome:"Welcome back", authSignIn:"Sign in", authSubtitle:"Sign in to keep your team's work moving.",
+    authEmail:"Email address", authPassword:"Password", authPasswordPlaceholder:"Enter your password",
+    authNoAccount:"Don't have an account?", authCreateAccount:"Create account",
+    authAccessHelp:"Access is available to team members approved by an administrator.\nIf you create an account, confirm your email address.",
+    authConnecting:"Connecting…", authInvalidInput:"Enter an email and a password of at least 8 characters.",
+    authSignupRequested:"Account requested. Confirm your email, then return here and sign in.",
+    authNotApproved:"Your account is not approved. Ask an administrator to add your email address.",
+    authInvalidCredentials:"Invalid email or password.", authEmailNotConfirmed:"Confirm your email address before signing in.",
+    authEmailLimit:"Too many emails were sent. Please try again later.", authAlreadyRegistered:"An account with this email already exists.",
+    currentAccount:"Current account", adminRole:"Admin", userRole:"User", refresh:"Refresh", signOut:"Sign out",
+    manageDataUsers:"Manage data and users", importLegacy:"Import old browser data", exportBackup:"Download backup",
+    newMemberEmail:"New user's email", addMember:"Approve user",
+    dbConnected:"Connected to the database", saving:"Saving…", saved:"Saved to the database", refreshed:"Data refreshed",
+    copyRecorded:"Code copied and marked as used", copyReserved:"Code reserved for your account, but copying failed. Click it to retry or remove the used mark.",
+    codeNotFound:"Code not found. Refresh the data.", codeUsedByOther:"This code was used by someone else.",
+    confirmCopyUsed:"This code was already used. Copy it again?", conflict:"Another user changed the data. The latest version has been loaded; please try again.",
+    operationFailed:"Could not complete the operation: ", genericError:"An unexpected error occurred. Please try again.",
+    duplicateCode:code=>"Code appears in more than one category: "+code,
+    noLegacyData:"No old data was found in this browser. Open the new version in the browser you used before.",
+    invalidLegacyData:"The old data format is invalid.",
+    confirmImportLegacy:"Merge old codes, notes, and usage marks into the database? No cloud codes will be deleted.",
+    legacyImported:"Old data merged. The original local copy was kept.",
+    memberAdded:email=>email+" was approved and can create an account and confirm their email.",
+    libraryLoadFailed:"Could not load the connection library. Check your internet connection and reload the page.",
+    authStoryLabel:"About the application",
+    categoryNames:{Foundation:"Foundation",Master:"Master",BIS:"BIS",CYBP:"CYBP",Corporate:"Corporate"},
+    languageNames:{Arabic:"Arabic",English:"English",العربية:"Arabic",الإنجليزية:"English"},
   },
   ar: {
     copyBtn:"نسخ", copyFailed:"تعذر النسخ. حاول مرة أخرى.", enterCredential:"أدخل القيمة أولًا.",
     sessionCredentials:"بيانات دخول Prometric موجودة مسبقًا لهذه الجلسة.",
     appTitle:"أدوات IBTA",
-    tabKeycodes:"Keycodes", tabPrometric:"Prometric", tabCodes:"الأكواد",
+    tabKeycodes:"مفاتيح الأكواد", tabPrometric:"بروميترك", tabCodes:"الأكواد",
     settingsTitle:"الإعدادات",
-    examTitleCol:"اسم الامتحان", langCol:"اللغة", keycodeCol:"Keycode", moveCategoryCol:"نقل الفئة",
+    examTitleCol:"اسم الامتحان", langCol:"اللغة", keycodeCol:"مفتاح الكود", moveCategoryCol:"نقل الفئة",
     noExams:"لا توجد امتحانات في هذه الفئة",
     remaining:"متبقي",
-    prometricAccount:"Prometric Account", prometricPassword:"Prometric Password",
-    accountCopied:"Prometric Account — تم النسخ", passwordCopied:"Prometric Password — تم النسخ",
+    prometricAccount:"حساب بروميترك", prometricPassword:"كلمة مرور بروميترك",
+    accountCopied:"تم نسخ حساب بروميترك", passwordCopied:"تم نسخ كلمة مرور بروميترك",
     copiedColon:code=>"تم نسخ الكود: "+code,
     movedTo:(title,cat)=>title+" نُقل إلى "+cat,
     total:"الإجمالي", copiedStat:"تم نسخه", remainingStat:"متبقي",
@@ -617,8 +651,8 @@ const TRANSLATIONS = {
     confirmReset:"تصفير كل علامات النسخ والتواريخ؟ (الأكواد نفسها هتفضل موجودة)",
     resetDone:"تم التصفير",
     autoChainTitle:"النسخ التلقائي المتسلسل",
-    autoChainDesc:"لما تفعّل الخيار ده: نسخ Keycode ثم نسخ أي بيانات من Prometric، هياخد تلقائيًا كوبي لأول كود متاح من فئة الأكواد المرتبطة، من غير ما تدوس عليه بنفسك.",
-    autoChainSwitch:"تفعيل النسخ التلقائي (Keycode ← Prometric ← كود)",
+    autoChainDesc:"عند تفعيل الخيار: نسخ مفتاح الكود ثم نسخ أي بيانات من بروميترك ينسخ تلقائيًا أول كود متاح من الفئة المرتبطة.",
+    autoChainSwitch:"تفعيل النسخ التلقائي (مفتاح الكود ← بروميترك ← الكود)",
     autoEnabled:"تم تفعيل النسخ التلقائي", autoDisabled:"تم إيقاف النسخ التلقائي",
     notePlaceholder:"اكتب ملاحظة...",
     copiedGeneric:"تم النسخ",
@@ -636,6 +670,38 @@ const TRANSLATIONS = {
     removeCategory:"حذف الفئة",
     confirmRemoveCategory:cat=>"حذف فئة \""+cat+"\"؟ الامتحانات اللي جواها هترجع لفئتها الأصلية.",
     categoryRemoved:"تم حذف الفئة",
+    authBrandTagline:"مساحة عمل فريقك", authHeadline1:"أكوادك منظّمة.", authHeadline2:"وفريقك على اتصال.",
+    authEyebrow:"عمليات IBTA",
+    authIntro:"مساحة واحدة لإدارة الأكواد ومتابعة استخدامها، أينما كنت.",
+    authFeatureCodes:"متابعة واضحة للأكواد المتاحة والمستخدمة", authFeatureTeam:"بيانات مشتركة وصلاحيات لكل مستخدم",
+    authFeatureAccess:"وصول من أي جهاز متصل بالإنترنت", authFooter:"إدارة أبسط. متابعة أوضح.",
+    authWelcome:"مرحبًا بعودتك", authSignIn:"تسجيل الدخول", authSubtitle:"ادخل إلى حسابك لمتابعة أعمال فريقك.",
+    authEmail:"البريد الإلكتروني", authPassword:"كلمة المرور", authPasswordPlaceholder:"أدخل كلمة المرور",
+    authNoAccount:"ليس لديك حساب؟", authCreateAccount:"إنشاء حساب",
+    authAccessHelp:"الوصول متاح للحسابات المعتمدة من مدير الفريق.\nعند إنشاء حساب جديد، يُرجى تأكيد بريدك الإلكتروني.",
+    authConnecting:"جارٍ الاتصال…", authInvalidInput:"أدخل البريد وكلمة مرور من 8 أحرف على الأقل.",
+    authSignupRequested:"تم طلب إنشاء الحساب. أكّد بريدك الإلكتروني، ثم ارجع وسجّل الدخول.",
+    authNotApproved:"حسابك غير معتمد. اطلب من المدير إضافة بريدك إلى المستخدمين.",
+    authInvalidCredentials:"البريد الإلكتروني أو كلمة المرور غير صحيحين.", authEmailNotConfirmed:"أكّد بريدك الإلكتروني قبل تسجيل الدخول.",
+    authEmailLimit:"تم تجاوز حد رسائل البريد الإلكتروني. حاول مرة أخرى لاحقًا.", authAlreadyRegistered:"يوجد حساب مسجل بهذا البريد الإلكتروني.",
+    currentAccount:"الحساب الحالي", adminRole:"مدير", userRole:"مستخدم", refresh:"تحديث", signOut:"خروج",
+    manageDataUsers:"إدارة البيانات والمستخدمين", importLegacy:"استيراد بيانات المتصفح القديمة", exportBackup:"تنزيل نسخة احتياطية",
+    newMemberEmail:"بريد مستخدم جديد", addMember:"اعتماد المستخدم",
+    dbConnected:"متصل بقاعدة البيانات", saving:"جارٍ الحفظ…", saved:"تم الحفظ في قاعدة البيانات", refreshed:"تم تحديث البيانات",
+    copyRecorded:"تم نسخ الكود وتسجيل استخدامه", copyReserved:"تم حجز الكود لحسابك لكن النسخ فشل. اضغط عليه لإعادة النسخ أو ألغِ علامة الاستخدام.",
+    codeNotFound:"الكود غير موجود. حدّث البيانات.", codeUsedByOther:"هذا الكود مستخدم بواسطة شخص آخر.",
+    confirmCopyUsed:"هذا الكود مستخدم بالفعل. هل تريد نسخه مرة أخرى؟", conflict:"تغيّرت البيانات بواسطة مستخدم آخر. تم تحميل أحدث نسخة؛ أعد تنفيذ التعديل.",
+    operationFailed:"تعذر إكمال العملية: ", genericError:"حدث خطأ غير متوقع. حاول مرة أخرى.",
+    duplicateCode:code=>"الكود موجود في أكثر من فئة: "+code,
+    noLegacyData:"لا توجد بيانات قديمة في هذا المتصفح. افتح النسخة الجديدة في المتصفح الذي استخدمت فيه البرنامج سابقًا.",
+    invalidLegacyData:"صيغة البيانات القديمة غير صحيحة.",
+    confirmImportLegacy:"دمج الأكواد القديمة والملاحظات وعلامات الاستخدام مع قاعدة البيانات؟ لن تُحذف أي أكواد سحابية.",
+    legacyImported:"تم دمج البيانات القديمة. النسخة المحلية الأصلية محفوظة.",
+    memberAdded:email=>"تم اعتماد "+email+"؛ يستطيع إنشاء حسابه وتأكيد بريده.",
+    libraryLoadFailed:"تعذر تحميل مكتبة الاتصال. تحقق من الإنترنت ثم أعد تحميل الصفحة.",
+    authStoryLabel:"عن البرنامج",
+    categoryNames:{Foundation:"التأسيسي",Master:"المتقدم",BIS:"BIS",CYBP:"CYBP",Corporate:"المؤسسي"},
+    languageNames:{Arabic:"العربية",English:"الإنجليزية",العربية:"العربية",الإنجليزية:"الإنجليزية"},
   }
 };
 let currentLang = 'en';
@@ -648,7 +714,8 @@ const CATEGORY_LINK = {"Foundation":"Foundation-100","Master":"Master-10","BIS":
 // key so the user sees "Foundation" instead of "Foundation-100". The full key (with
 // the number) is still used internally for all state lookups — only the label changes.
 function displayCatName(cat){
-  return cat.replace(/-\d+$/, '');
+  const name=cat.replace(/-\d+$/, '');
+  return t('categoryNames')[name] || name;
 }
 
 let DEFAULT_KEYCODES = [];
@@ -813,25 +880,37 @@ function applyLanguage(){
   const html = document.getElementById('html-root');
   html.lang = currentLang;
   html.dir = currentLang === 'ar' ? 'rtl' : 'ltr';
+  const authBox = document.getElementById('auth-box');
+  authBox.lang = currentLang;
+  authBox.dir = html.dir;
+  document.querySelector('.auth-story').setAttribute('aria-label',t('authStoryLabel'));
   document.body.classList.toggle('lang-ar', currentLang === 'ar');
   document.getElementById('doc-title').textContent = t('appTitle');
   document.title = t('appTitle');
   document.getElementById('lang-btn').textContent = currentLang === 'en' ? 'AR' : 'EN';
+  document.getElementById('auth-lang-btn').textContent = currentLang === 'en' ? 'AR' : 'EN';
   document.getElementById('settings-btn').title = t('settingsTitle');
   document.querySelectorAll('[data-i18n]').forEach(el=>{
     el.textContent = t(el.dataset.i18n);
   });
   document.getElementById('add-codes-input').placeholder = 'IBTAMEAF-XXXX-XXXX';
+  document.getElementById('auth-password').placeholder = t('authPasswordPlaceholder');
+  Cloud.translateUi();
   renderKeycodes();
   renderCodeTabs();
   renderCodeGrid();
 }
-document.getElementById('lang-btn').addEventListener('click', async ()=>{
+function toggleLanguage(){
   currentLang = currentLang === 'en' ? 'ar' : 'en';
   state.uiLang = currentLang;
-  if(!await saveState()) return;
+  try{
+    const prefs=JSON.parse(localStorage.getItem('ibta_ui_preferences') || '{}') || {};
+    localStorage.setItem('ibta_ui_preferences',JSON.stringify({...prefs,uiLang:currentLang}));
+  }catch{}
   applyLanguage();
-});
+}
+document.getElementById('lang-btn').addEventListener('click',toggleLanguage);
+document.getElementById('auth-lang-btn').addEventListener('click',toggleLanguage);
 
 // ---------- TABS ----------
 function showPanel(id){
@@ -960,7 +1039,7 @@ function renderKeycodes(){
     titleRow.className = 'kc-title-row';
     const titleEl = document.createElement('div');
     titleEl.className = 'kc-title';
-    titleEl.textContent = cat + ' (' + items.length + ')';
+    titleEl.textContent = displayCatName(cat) + ' (' + items.length + ')';
 
     const titleActions = document.createElement('div');
     titleActions.className = 'kc-title-actions';
@@ -1096,7 +1175,7 @@ function renderKeycodes(){
 
       const langCell = document.createElement('div');
       langCell.className = 'kc-col-lang';
-      langCell.textContent = item.lang;
+      langCell.textContent = t('languageNames')[item.lang] || item.lang;
 
       const codeCell = document.createElement('div');
       codeCell.className = 'kc-col-code';
@@ -1108,7 +1187,7 @@ function renderKeycodes(){
       state.categoryOrder.forEach(c=>{
         const opt = document.createElement('option');
         opt.value = c;
-        opt.textContent = c;
+        opt.textContent = displayCatName(c);
         if(c === cat) opt.selected = true;
         select.appendChild(opt);
       });
@@ -1117,7 +1196,7 @@ function renderKeycodes(){
         state.keycodeOverrides[item.code] = e.target.value;
         if(!await saveState()) return;
         renderKeycodes();
-        showToast(t('movedTo')(item.title, e.target.value));
+        showToast(t('movedTo')(item.title, displayCatName(e.target.value)));
       });
       catCell.appendChild(select);
 
@@ -1474,6 +1553,12 @@ autoChainToggle.addEventListener('change', async (e)=>{
 });
 
 // ---------- init ----------
+try{
+  const prefs=JSON.parse(localStorage.getItem('ibta_ui_preferences') || '{}') || {};
+  currentLang=prefs.uiLang==='en'?'en':'ar';
+  state.uiLang=currentLang;
+}catch{currentLang='ar';state.uiLang='ar';}
+applyLanguage();
 Cloud.boot();
 </script>
 </body>
