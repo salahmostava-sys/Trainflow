@@ -94,7 +94,7 @@ const Cloud = (() => {
   }
   function decorate(){
     const admin=role==='admin';
-    document.querySelectorAll('.kc-remove-cat-btn,.kc-order-btn,.kc-col-cat select,.kc-drag-handle,.add-box,#bulk-delete-btn,#reset-btn,.icon-btn.danger').forEach(el=>{
+    document.querySelectorAll('.kc-remove-cat-btn,.kc-order-btn,.kc-col-cat select,.kc-drag-handle,.kc-add-exam,.add-box,#bulk-delete-btn,#reset-btn,.icon-btn.danger').forEach(el=>{
       el.hidden=!admin;
     });
     $('admin-tools').hidden=!admin;
@@ -108,7 +108,7 @@ const Cloud = (() => {
     project();
   }
   function metadata(){
-    return {...clone(config.payload),categoryOrder:clone(state.categoryOrder),keycodeOverrides:clone(state.keycodeOverrides),
+    return {...clone(config.payload),keycodes:clone(DEFAULT_KEYCODES),categoryOrder:clone(state.categoryOrder),keycodeOverrides:clone(state.keycodeOverrides),
       keycodeOrder:clone(state.keycodeOrder),codeCategories:Object.keys(state.codesByCategory)};
   }
   async function persist(){
@@ -265,4 +265,3 @@ const Cloud = (() => {
   }
   return {boot,persist,copyCode,decorate,refresh,translateUi};
 })();
-

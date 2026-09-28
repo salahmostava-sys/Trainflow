@@ -34,6 +34,7 @@
   }
   body.lang-ar{font-family:'Calibri', 'Segoe UI', Tahoma, Arial, sans-serif;}
   .wrap{max-width:920px; margin:0 auto; padding:24px 16px 70px;}
+  .app-sticky-bar{position:sticky; top:0; z-index:30; background:var(--bg); margin-top:-24px; padding-top:24px; padding-bottom:1px;}
 
   header.top{display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; gap:10px;}
   .brand{display:flex; align-items:center; gap:11px; min-width:0;}
@@ -141,6 +142,14 @@
   .kc-col-drag{width:22px; flex:none;}
   .kc-row.dragging{opacity:.4;}
   .kc-row.drag-over{background:var(--blue-100); outline:2px dashed var(--blue);}
+  .kc-add-exam{padding:9px 8px; border-top:1px solid var(--border); background:var(--surface);}
+  .kc-add-exam summary{color:var(--blue-600);font-size:13px;font-weight:700;cursor:pointer;}
+  .kc-add-exam-fields{display:grid;grid-template-columns:minmax(130px,1.7fr) 100px minmax(115px,1fr) minmax(115px,1fr);gap:8px;margin-top:9px;}
+  .kc-add-exam-fields input,.kc-add-exam-fields select{width:100%;min-width:0;height:34px;padding:5px 7px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);font:inherit;font-size:13px;}
+  .kc-add-exam-fields input:focus,.kc-add-exam-fields select:focus{outline:2px solid var(--blue-100);border-color:var(--blue);}
+  .kc-add-exam-fields input[name="keycode"]{direction:ltr;}
+  .kc-add-exam button{margin-top:8px;padding:7px 14px;border:0;border-radius:7px;background:var(--blue);color:white;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;}
+  @media(max-width:600px){.kc-add-exam-fields{grid-template-columns:repeat(2,minmax(0,1fr));}}
 
   /* ---- Prometric ---- */
   .cred-card{
@@ -415,7 +424,7 @@
   </div>
 </section>
 <div class="wrap" id="app" hidden>
-
+  <div class="app-sticky-bar">
   <header class="top">
     <div class="brand">
       <div class="brand-mark">IB</div>
@@ -434,6 +443,7 @@
     <button data-tab="prometric" data-i18n="tabPrometric">Prometric</button>
     <button data-tab="codes" data-i18n="tabCodes">Codes</button>
   </nav>
+  </div>
 
   <!-- TAB 1: KEYCODES -->
   <section class="panel active" id="panel-keycodes"></section>
@@ -583,6 +593,8 @@ const TRANSLATIONS = {
     categoryCodesHint:"Optional: paste codes for this category now, one per line (you can always add more later).",
     categoryExists:"That category already exists",
     categoryAdded:"Category added",
+    addExam:"+ Add exam", examAdded:"Exam added", examRequired:"Enter an exam title and keycode", keycodeExists:"This keycode already exists",
+    firstExamHint:"First exam (optional): enter its title and keycode, then choose the language and category.",
     removeCategory:"Remove category",
     confirmRemoveCategory:cat=>"Remove category \""+cat+"\"? Its exams will move back to their original category.",
     categoryRemoved:"Category removed",
@@ -667,6 +679,8 @@ const TRANSLATIONS = {
     categoryCodesHint:"اختياري: الصق أكواد للفئة دي دلوقتي، كل كود في سطر (تقدر تضيف المزيد بعدين برضه).",
     categoryExists:"الفئة دي موجودة بالفعل",
     categoryAdded:"تم إضافة الفئة",
+    addExam:"+ إضافة امتحان", examAdded:"تم إضافة الامتحان", examRequired:"أدخل اسم الامتحان ومفتاح الكود", keycodeExists:"مفتاح الكود موجود بالفعل",
+    firstExamHint:"أول امتحان (اختياري): أدخل اسمه ومفتاح الكود، وحدد اللغة والفئة.",
     removeCategory:"حذف الفئة",
     confirmRemoveCategory:cat=>"حذف فئة \""+cat+"\"؟ الامتحانات اللي جواها هترجع لفئتها الأصلية.",
     categoryRemoved:"تم حذف الفئة",
@@ -967,6 +981,48 @@ function buildAddCategoryBox(){
   addBtn.className = 'save';
   addBtn.textContent = t('addBtn');
 
+  const examHint = document.createElement('div');
+  examHint.className = 'hint';
+  examHint.textContent = t('firstExamHint');
+  const examFields = document.createElement('div');
+  examFields.className = 'kc-add-exam-fields';
+  const examTitle = document.createElement('input');
+  examTitle.type = 'text';
+  examTitle.maxLength = 200;
+  examTitle.placeholder = t('examTitleCol');
+  examTitle.setAttribute('aria-label', t('examTitleCol'));
+  const examLanguage = document.createElement('select');
+  examLanguage.setAttribute('aria-label', t('langCol'));
+  ['Arabic','English'].forEach(value=>{
+    const option = document.createElement('option');
+    option.value = value;
+    option.textContent = t('languageNames')[value];
+    examLanguage.appendChild(option);
+  });
+  const examCode = document.createElement('input');
+  examCode.type = 'text';
+  examCode.maxLength = 200;
+  examCode.placeholder = t('keycodeCol');
+  examCode.setAttribute('aria-label', t('keycodeCol'));
+  const examDestination = document.createElement('select');
+  examDestination.setAttribute('aria-label', t('moveCategoryCol'));
+  state.categoryOrder.forEach(value=>{
+    const option = document.createElement('option');
+    option.value = value;
+    option.textContent = displayCatName(value);
+    examDestination.appendChild(option);
+  });
+  const newCategoryOption = document.createElement('option');
+  newCategoryOption.selected = true;
+  examDestination.appendChild(newCategoryOption);
+  function updateNewCategoryOption(){
+    newCategoryOption.value = input.value.trim();
+    newCategoryOption.textContent = input.value.trim() || t('categoryNamePlaceholder');
+  }
+  input.addEventListener('input', updateNewCategoryOption);
+  updateNewCategoryOption();
+  [examTitle,examLanguage,examCode,examDestination].forEach(field=>examFields.appendChild(field));
+
   const codesHint = document.createElement('div');
   codesHint.className = 'hint';
   codesHint.textContent = t('categoryCodesHint');
@@ -977,8 +1033,18 @@ function buildAddCategoryBox(){
   async function submit(){
     const name = input.value.trim();
     if(!name) return;
+    const title = examTitle.value.trim();
+    const keycode = examCode.value.trim();
+    if((title && !keycode) || (!title && keycode)){ showToast(t('examRequired')); return; }
+    if(keycode && DEFAULT_KEYCODES.some(item=>item.code.toLowerCase() === keycode.toLowerCase())){
+      showToast(t('keycodeExists')); return;
+    }
     const isNew = !state.categoryOrder.includes(name);
     if(isNew) state.categoryOrder.push(name);
+    if(title && keycode){
+      DEFAULT_KEYCODES.push({title,lang:examLanguage.value,code:keycode,category:name});
+      if(examDestination.value && examDestination.value !== name) state.keycodeOverrides[keycode] = examDestination.value;
+    }
     const codesCat = getLinkedCodesCat(name);
     if(!state.codesByCategory[codesCat]) state.codesByCategory[codesCat] = [];
 
@@ -993,7 +1059,7 @@ function buildAddCategoryBox(){
       }
     });
 
-    if(!isNew && added === 0){ showToast(t('categoryExists')); return; }
+    if(!isNew && added === 0 && !keycode){ showToast(t('categoryExists')); return; }
 
     if(!await saveState()) return;
     showToast(isNew ? t('categoryAdded') : t('newCodesAdded')(added));
@@ -1007,8 +1073,76 @@ function buildAddCategoryBox(){
   box.appendChild(summary);
   box.appendChild(hint);
   box.appendChild(row);
+  box.appendChild(examHint);
+  box.appendChild(examFields);
   box.appendChild(codesHint);
   box.appendChild(codesTa);
+  return box;
+}
+
+function buildAddExamBox(cat){
+  const box = document.createElement('details');
+  box.className = 'kc-add-exam';
+  const summary = document.createElement('summary');
+  summary.textContent = t('addExam');
+  const form = document.createElement('form');
+  const fields = document.createElement('div');
+  fields.className = 'kc-add-exam-fields';
+  const title = document.createElement('input');
+  title.name = 'examTitle';
+  title.type = 'text';
+  title.maxLength = 200;
+  title.required = true;
+  title.placeholder = t('examTitleCol');
+  title.setAttribute('aria-label', t('examTitleCol'));
+  const language = document.createElement('select');
+  language.name = 'language';
+  language.setAttribute('aria-label', t('langCol'));
+  ['Arabic','English'].forEach(value=>{
+    const option = document.createElement('option');
+    option.value = value;
+    option.textContent = t('languageNames')[value];
+    language.appendChild(option);
+  });
+  const keycode = document.createElement('input');
+  keycode.name = 'keycode';
+  keycode.type = 'text';
+  keycode.maxLength = 200;
+  keycode.required = true;
+  keycode.placeholder = t('keycodeCol');
+  keycode.setAttribute('aria-label', t('keycodeCol'));
+  const destination = document.createElement('select');
+  destination.name = 'moveCategory';
+  destination.setAttribute('aria-label', t('moveCategoryCol'));
+  state.categoryOrder.forEach(value=>{
+    const option = document.createElement('option');
+    option.value = value;
+    option.textContent = displayCatName(value);
+    option.selected = value === cat;
+    destination.appendChild(option);
+  });
+  [title,language,keycode,destination].forEach(field=>fields.appendChild(field));
+  const button = document.createElement('button');
+  button.type = 'submit';
+  button.textContent = t('addBtn');
+  form.addEventListener('submit', async event=>{
+    event.preventDefault();
+    const examTitle = title.value.trim();
+    const code = keycode.value.trim();
+    if(!examTitle || !code){ showToast(t('examRequired')); return; }
+    if(DEFAULT_KEYCODES.some(item=>item.code.toLowerCase() === code.toLowerCase())){
+      showToast(t('keycodeExists')); return;
+    }
+    DEFAULT_KEYCODES.push({title:examTitle,lang:language.value,code,category:cat});
+    if(destination.value !== cat) state.keycodeOverrides[code] = destination.value;
+    if(!await saveState()) return;
+    renderKeycodes();
+    showToast(t('examAdded'));
+  });
+  form.appendChild(fields);
+  form.appendChild(button);
+  box.appendChild(summary);
+  box.appendChild(form);
   return box;
 }
 
@@ -1086,6 +1220,9 @@ function renderKeycodes(){
       removeBtn.title = t('removeCategory');
       removeBtn.addEventListener('click', async ()=>{
         if(!confirm(t('confirmRemoveCategory')(cat))) return;
+        DEFAULT_KEYCODES.forEach(item=>{
+          if(item.category === cat) item.category = state.keycodeOverrides[item.code] || CATEGORY_ORDER[0];
+        });
         Object.keys(state.keycodeOverrides).forEach(code=>{
           if(state.keycodeOverrides[code] === cat) delete state.keycodeOverrides[code];
         });
@@ -1220,6 +1357,7 @@ function renderKeycodes(){
     });
 
     block.appendChild(scroll);
+    block.appendChild(buildAddExamBox(cat));
     panel.appendChild(block);
   });
 
@@ -1563,4 +1701,3 @@ Cloud.boot();
 </script>
 </body>
 </html>
-
