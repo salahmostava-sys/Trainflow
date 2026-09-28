@@ -4,6 +4,7 @@ class Element {
   constructor(){this.children=[];this.listeners={};this.style={};this.dataset={};this.value='';this.hidden=false;this.textContent='';this.classList={add(){},remove(){},toggle(){},contains(){return false}};}
   appendChild(e){this.children.push(e);} removeChild(e){this.children=this.children.filter(x=>x!==e);}
   addEventListener(event,fn){this.listeners[event]=fn;} select(){} focus(){} matches(){return false;}
+  setAttribute(name,value){this[name]=value;}
   set innerHTML(v){this.children=[];} get innerHTML(){return '';}
 }
 const els={},storage=new Map(),events=[];
@@ -35,10 +36,25 @@ vm.runInContext(fs.readFileSync(path.join(__dirname,'../cloud.js'),'utf8'),ctx);
 const html=fs.readFileSync(path.join(__dirname,'../ibta-ops.html'),'utf8');
 for(const [,script] of html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g))vm.runInContext(script,ctx);
 const run=s=>vm.runInContext(s,ctx);
+const englishKeys=JSON.parse(run('JSON.stringify(Object.keys(TRANSLATIONS.en))'));
+const arabicKeys=JSON.parse(run('JSON.stringify(Object.keys(TRANSLATIONS.ar))'));
+assert.deepEqual(englishKeys.sort(),arabicKeys.sort());
+const usedKeys=[...html.matchAll(/data-i18n="([^"]+)"|\bt\('([^']+)'\)/g),
+  ...fs.readFileSync(path.join(__dirname,'../cloud.js'),'utf8').matchAll(/\bt\('([^']+)'\)/g)]
+  .map(match=>match[1] || match[2] || match[3]);
+for(const key of usedKeys) assert(englishKeys.includes(key),`Missing translation: ${key}`);
 (async()=>{
   await new Promise(setImmediate);
   assert.equal(els['auth-box'].hidden,true);assert.equal(els.app.hidden,false);
   assert.equal(els['cred-account-val'].textContent,'test-account');
+  assert.match(els['cloud-status'].textContent,/متصل/);
+  run('toggleLanguage()');
+  assert.equal(els['signed-in'].textContent,'test@example.invalid · Admin');
+  assert.equal(els['cloud-status'].textContent,'Connected to the database');
+  assert.equal(els['auth-password'].placeholder,'Enter your password');
+  assert.equal(JSON.parse(storage.get('ibta_ui_preferences')).uiLang,'en');
+  run('toggleLanguage()');
+  assert.match(els['cloud-status'].textContent,/متصل/);
   els['add-codes-input'].value='unsaved code';
   assert.equal(await run('Cloud.refresh(true)'),false);
   assert.equal(codeReads,1);
