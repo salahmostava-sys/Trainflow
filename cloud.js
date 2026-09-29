@@ -180,13 +180,13 @@ const Cloud = (() => {
       .some(input => input.value.trim());
   }
   async function enter(session){
-    if(!session){ready=false;$('app').hidden=true;$('cloud-tools').hidden=true;$('auth-box').hidden=false;return;}
+    if(!session){ready=false;$('app').hidden=true;$('cloud-tools').hidden=true;$('sign-out').hidden=true;$('auth-box').hidden=false;return;}
     user=session.user;
     const {data,error}=await client.from('ibta_members').select('role,active').eq('email',user.email.toLowerCase()).single();
     if(error || !data?.active){throw Error('IBTA_NOT_APPROVED');}
     role=data.role;
     await load();ready=true;
-    $('auth-box').hidden=true;$('app').hidden=false;$('cloud-tools').hidden=false;
+    $('auth-box').hidden=true;$('app').hidden=false;$('cloud-tools').hidden=false;$('sign-out').hidden=false;
     setStatus('dbConnected');
   }
   async function authenticate(signup){
@@ -253,7 +253,7 @@ const Cloud = (() => {
         location.reload();
       });
       client.auth.onAuthStateChange((event,session)=>{
-        if(event==='SIGNED_OUT'){ready=false;$('app').hidden=true;$('cloud-tools').hidden=true;$('auth-box').hidden=false;}
+        if(event==='SIGNED_OUT'){ready=false;$('app').hidden=true;$('cloud-tools').hidden=true;$('sign-out').hidden=true;$('auth-box').hidden=false;}
       });
       const {data,error}=await client.auth.getSession();if(error)throw error;
       await enter(data.session);

@@ -46,6 +46,8 @@
   .brand h1{font-size:19.5px; margin:0; font-weight:700; letter-spacing:-.2px;}
 
   .header-actions{display:flex; align-items:center; gap:8px; flex:none;}
+  .header-sign-out{gap:7px; padding:0 11px; color:var(--blue-600); font-size:13px; white-space:nowrap;}
+  .header-sign-out svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
   .icon-pill-btn{
     height:38px; padding:0 12px; border-radius:10px; border:1px solid var(--border); background:var(--surface);
     color:var(--muted); font-size:14.5px; font-weight:700; font-family:inherit; cursor:pointer;
@@ -334,7 +336,6 @@
   .cloud-popover button:focus-visible,.cloud-admin summary:focus-visible{outline:3px solid var(--blue-100);outline-offset:2px;}
   .cloud-actions button{display:flex;align-items:center;justify-content:center;gap:6px;flex:1;white-space:nowrap;}
   .cloud-actions svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
-  #sign-out{color:var(--muted);}
   .cloud-admin{margin-top:15px;border-top:1px solid var(--border);}
   .cloud-admin summary{display:flex;align-items:center;gap:7px;padding:13px 0 0;cursor:pointer;color:var(--blue-600);font-size:12.5px;font-weight:700;list-style:none;}
   .cloud-admin summary::before{content:'⌄';display:grid;place-items:center;width:17px;height:17px;border-radius:5px;background:var(--blue-50);font-size:15px;line-height:1;transition:transform .15s;}
@@ -346,6 +347,7 @@
   .cloud-popover input:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-50);}
   #auth-message{font-size:14px;line-height:1.6;}
   @media(max-width:600px){.cloud-popover{padding:17px;}}
+  @media(max-width:400px){header.top{flex-wrap:wrap}.header-actions{width:100%;justify-content:flex-end}.header-sign-out{margin-inline-end:auto}}
   #auth-box{font-family:'Tajawal','Segoe UI',Tahoma,sans-serif;min-height:100svh;padding:36px 24px;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at 90% 5%,#e2eeff 0,transparent 45%),#f5f7fb;}
   .auth-shell{width:100%;max-width:1040px;display:grid;grid-template-columns:1fr 1fr;background:white;border:1px solid #e2e9f3;border-radius:28px;overflow:hidden;box-shadow:0 24px 80px -28px #233b6b30;}
   .auth-story{position:relative;overflow:hidden;padding:44px 42px;background:linear-gradient(145deg,#12396e,#0c2450);color:white;display:flex;flex-direction:column;justify-content:space-between;min-height:620px;}
@@ -433,6 +435,7 @@
       </div>
     </div>
     <div class="header-actions">
+      <button class="icon-pill-btn header-sign-out" id="sign-out" type="button" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4M14 7l5 5-5 5M9 12h10"/></svg><span data-i18n="signOut">تسجيل الخروج</span></button>
       <button class="icon-pill-btn" id="lang-btn">AR</button>
       <button class="icon-pill-btn square" id="settings-btn" title="Settings">⚙️</button>
     </div>
@@ -522,7 +525,6 @@
         <p id="cloud-status" class="cloud-status" role="status" aria-live="polite"></p>
         <div class="cloud-actions">
           <button id="refresh-data" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M5.7 9A7 7 0 0 1 18 7l2 5M4 12l2 5a7 7 0 0 0 12.3-2"/></svg><span data-i18n="refresh">تحديث</span></button>
-          <button id="sign-out" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4M14 7l5 5-5 5M9 12h10"/></svg><span data-i18n="signOut">خروج</span></button>
         </div>
         <details id="admin-tools" class="cloud-admin"><summary><span data-i18n="manageDataUsers">إدارة البيانات والمستخدمين</span></summary>
           <div class="cloud-admin-content">
@@ -698,7 +700,7 @@ const TRANSLATIONS = {
     authNotApproved:"حسابك غير معتمد. اطلب من المدير إضافة بريدك إلى المستخدمين.",
     authInvalidCredentials:"البريد الإلكتروني أو كلمة المرور غير صحيحين.", authEmailNotConfirmed:"أكّد بريدك الإلكتروني قبل تسجيل الدخول.",
     authEmailLimit:"تم تجاوز حد رسائل البريد الإلكتروني. حاول مرة أخرى لاحقًا.", authAlreadyRegistered:"يوجد حساب مسجل بهذا البريد الإلكتروني.",
-    currentAccount:"الحساب الحالي", adminRole:"مدير", userRole:"مستخدم", refresh:"تحديث", signOut:"خروج",
+    currentAccount:"الحساب الحالي", adminRole:"مدير", userRole:"مستخدم", refresh:"تحديث", signOut:"تسجيل الخروج",
     manageDataUsers:"إدارة البيانات والمستخدمين", importLegacy:"استيراد بيانات المتصفح القديمة", exportBackup:"تنزيل نسخة احتياطية",
     newMemberEmail:"بريد مستخدم جديد", addMember:"اعتماد المستخدم",
     dbConnected:"متصل بقاعدة البيانات", saving:"جارٍ الحفظ…", saved:"تم الحفظ في قاعدة البيانات", refreshed:"تم تحديث البيانات",
