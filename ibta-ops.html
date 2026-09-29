@@ -195,6 +195,11 @@
   .report-card summary::after{content:'⌄';color:var(--blue-600);font-size:17px;transition:transform .15s;}
   .report-card[open] summary::after{transform:rotate(180deg);}
   .report-card[open] summary{border-bottom:1px solid var(--border);}
+  .report-shortcuts{display:contents;}
+  .report-shortcuts .report-card{margin:0;border-radius:10px;max-width:100%;}
+  .report-shortcuts .report-card[open]{flex:1 0 100%;}
+  .report-shortcuts .report-card summary{min-height:34px;padding:7px 11px;font-size:12.5px;}
+  .report-shortcuts .report-card summary::after{font-size:13px;}
   .report-body{padding:14px 16px;}
   .remaining-summary-body{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;}
   .remaining-summary-message{font-size:13px;line-height:1.65;color:var(--text);white-space:pre-line;}
@@ -565,11 +570,7 @@
   <section class="panel" id="panel-codes">
     <div class="stats-row">
       <div class="stats" id="code-stats"></div>
-      <details class="day-legend-box" id="day-legend-details" style="display:none;">
-        <summary id="day-legend-summary">📅</summary>
-        <div id="day-legend-groups" class="day-legend-groups"></div>
-      </details>
-    </div>
+    <div class="report-shortcuts">
     <details class="report-card" id="remaining-summary-details">
       <summary data-i18n="remainingSummaryTitle">Remaining codes by category</summary>
       <div class="report-body remaining-summary-body">
@@ -584,6 +585,12 @@
         <div id="daily-used-results"></div>
       </div>
     </details>
+    </div>
+      <details class="day-legend-box" id="day-legend-details" style="display:none;">
+        <summary id="day-legend-summary">📅</summary>
+        <div id="day-legend-groups" class="day-legend-groups"></div>
+      </details>
+    </div>
     <div class="code-tabs" id="code-cat-tabs"></div>
     <div class="bulk-bar" id="bulk-bar">
       <div class="bulk-bar-left">
