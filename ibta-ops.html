@@ -177,6 +177,13 @@
   .resource-card:hover{border-color:var(--border);}
   .resource-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
   .resource-value{min-width:0;flex:1 1 250px;font-size:13px;line-height:1.6;word-break:break-all;direction:ltr;unicode-bidi:plaintext;text-align:start;}
+  #prometric-link-val{font-size:14px;font-weight:700;}
+  #prometric-login-card:focus-visible{outline:3px solid var(--blue-100);outline-offset:2px;}
+  .remaining-summary{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:13px 16px;margin:0 0 15px;box-shadow:var(--shadow);}
+  .remaining-summary strong{display:block;font-size:13px;margin-bottom:7px;color:var(--text);}
+  .remaining-summary-message{font-size:13px;line-height:1.65;color:var(--text);white-space:pre-line;}
+  .remaining-summary button{border:1px solid var(--blue-100);background:var(--blue-50);color:var(--blue-600);border-radius:8px;padding:8px 12px;font:inherit;font-size:12px;font-weight:700;cursor:pointer;}
+  .remaining-summary button:hover{background:var(--blue-100);}
   .resource-btn{display:inline-flex;align-items:center;justify-content:center;min-height:36px;padding:7px 13px;border:1px solid var(--blue);border-radius:var(--radius-sm);background:var(--blue);color:#fff;font:inherit;font-size:13px;font-weight:700;text-decoration:none;white-space:nowrap;cursor:pointer;}
   .resource-btn:hover{background:var(--blue-600);border-color:var(--blue-600);}
   .resource-btn:disabled,a.resource-btn:not([href]){opacity:.55;cursor:not-allowed;}
@@ -511,6 +518,10 @@
 
   <!-- TAB 2: PROMETRIC -->
   <section class="panel" id="panel-prometric">
+    <div class="cred-card resource-card" id="prometric-login-card" role="button" tabindex="0">
+      <div class="cred-label" data-i18n="prometricLoginLink">Prometric login link</div>
+      <div class="resource-value" id="prometric-link-val"></div>
+    </div>
     <div class="cred-card" id="cred-account">
       <div class="cred-label" data-i18n="prometricAccount">Prometric Account</div>
       <div class="cred-value" id="cred-account-val"></div>
@@ -523,10 +534,6 @@
       <div class="cred-label" data-i18n="zoomMeeting">Zoom meeting</div>
       <div class="resource-row"><div class="resource-value" id="zoom-link-val"></div><a class="resource-btn" id="open-zoom" target="_blank" rel="noopener noreferrer" data-i18n="openZoom">Open Zoom</a></div>
     </div>
-    <div class="cred-card resource-card" id="prometric-login-card">
-      <div class="cred-label" data-i18n="prometricLoginLink">Prometric login link</div>
-      <div class="resource-row"><div class="resource-value" id="prometric-link-val"></div><button class="resource-btn" id="copy-prometric-link" type="button" data-i18n="copyLink">Copy link</button></div>
-    </div>
   </section>
 
   <!-- TAB 3: CODES -->
@@ -537,6 +544,10 @@
         <summary id="day-legend-summary">📅</summary>
         <div id="day-legend-groups" class="day-legend-groups"></div>
       </details>
+    </div>
+    <div class="remaining-summary">
+      <div><strong data-i18n="remainingSummaryTitle">Remaining codes by category</strong><div class="remaining-summary-message" id="remaining-summary-message"></div></div>
+      <button id="copy-remaining-summary" type="button" data-i18n="copyRemainingSummary">Copy summary</button>
     </div>
     <div class="code-tabs" id="code-cat-tabs"></div>
     <div class="bulk-bar" id="bulk-bar">
@@ -688,7 +699,8 @@ const TRANSLATIONS = {
     noExams:"No exams in this category",
     remaining:"Remaining",
     prometricAccount:"Prometric Account", prometricPassword:"Prometric Password",
-    zoomMeeting:"Zoom meeting", openZoom:"Open Zoom", prometricLoginLink:"Prometric login link", copyLink:"Copy link",
+    zoomMeeting:"Zoom meeting", openZoom:"Open Zoom", prometricLoginLink:"Prometric login link", prometricLinkCopyHint:"Copy Prometric login link",
+    remainingSummaryTitle:"Remaining codes by category", copyRemainingSummary:"Copy summary", summaryCopied:"Remaining-code summary copied",
     sharedSettingsTitle:"Shared Prometric settings", sharedSettingsDesc:"Administrators can change the account, password, and links for the team.", saveSharedSettings:"Save changes", notConfigured:"Not configured",
     invalidZoomUrl:"Enter a valid HTTPS Zoom link.", invalidPrometricUrl:"Enter a valid HTTPS Prometric link.", prometricLinkCopied:"Prometric login link copied",
     accountCopied:"Prometric Account — Copied", passwordCopied:"Prometric Password — Copied",
@@ -780,7 +792,8 @@ const TRANSLATIONS = {
     noExams:"لا توجد امتحانات في هذه الفئة",
     remaining:"متبقي",
     prometricAccount:"حساب بروميترك", prometricPassword:"كلمة مرور بروميترك",
-    zoomMeeting:"رابط اجتماع زوم", openZoom:"فتح زوم", prometricLoginLink:"رابط دخول بروميترك", copyLink:"نسخ الرابط",
+    zoomMeeting:"رابط اجتماع زوم", openZoom:"فتح زوم", prometricLoginLink:"رابط دخول بروميترك", prometricLinkCopyHint:"نسخ رابط دخول بروميترك",
+    remainingSummaryTitle:"الأكواد المتبقية حسب الفئة", copyRemainingSummary:"نسخ الملخص", summaryCopied:"تم نسخ ملخص الأكواد المتبقية",
     sharedSettingsTitle:"إعدادات بروميترك المشتركة", sharedSettingsDesc:"يستطيع المدير تعديل الحساب وكلمة المرور والروابط لجميع المستخدمين.", saveSharedSettings:"حفظ التغييرات", notConfigured:"غير مُعدّ",
     invalidZoomUrl:"أدخل رابط زوم صحيحًا يبدأ بـ HTTPS.", invalidPrometricUrl:"أدخل رابط بروميترك صحيحًا يبدأ بـ HTTPS.", prometricLinkCopied:"تم نسخ رابط دخول بروميترك",
     accountCopied:"تم نسخ حساب بروميترك", passwordCopied:"تم نسخ كلمة مرور بروميترك",
@@ -1143,6 +1156,7 @@ function applyLanguage(){
   document.getElementById('settings-btn').title = t('settingsTitle');
   document.getElementById('account-menu-btn').title = t('accountMenu');
   document.getElementById('account-menu-btn').setAttribute('aria-label',t('accountMenu'));
+  document.getElementById('prometric-login-card').setAttribute('aria-label',t('prometricLinkCopyHint'));
   document.querySelectorAll('[data-i18n]').forEach(el=>{
     el.textContent = t(el.dataset.i18n);
   });
@@ -1198,6 +1212,7 @@ document.querySelectorAll('nav.tabs button').forEach(btn=>{
   btn.addEventListener('click', async ()=>{
     showPanel(btn.dataset.tab);
     btn.classList.add('active');
+    if(btn.dataset.tab==='codes')await Cloud.refresh();
   });
 });
 document.getElementById('settings-btn').addEventListener('click', async ()=>{
@@ -1205,13 +1220,14 @@ document.getElementById('settings-btn').addEventListener('click', async ()=>{
 });
 
 // ---------- PANEL 1: KEYCODES ----------
-function goToCodesCategory(codesCat){
+async function goToCodesCategory(codesCat){
   showPanel('codes');
   document.querySelector('nav.tabs button[data-tab="codes"]').classList.add('active');
   activeCategory = codesCat;
   selectedCodes.clear();
   renderCodeTabs();
   renderCodeGrid();
+  await Cloud.refresh();
 }
 
 async function autoCopyNextCode(linkedCat){
@@ -1651,8 +1667,10 @@ async function copyPrometricLogin(){
   if(!PROMETRIC_LOGIN_URL){showToast(t('notConfigured'));return;}
   if(await copyText(PROMETRIC_LOGIN_URL)) showToast(t('prometricLinkCopied'));
 }
-document.getElementById('copy-prometric-link').addEventListener('click',async e=>{e.stopPropagation();await copyPrometricLogin();});
 document.getElementById('prometric-login-card').addEventListener('click',copyPrometricLogin);
+document.getElementById('prometric-login-card').addEventListener('keydown',async e=>{
+  if(e.key==='Enter' || e.key===' '){e.preventDefault();await copyPrometricLogin();}
+});
 
 // ---------- PANEL 3: CODES ----------
 let activeCategory = Object.keys(state.codesByCategory)[0];
@@ -1683,7 +1701,16 @@ function renderStats(){
     <div class="stat">${t('copiedStat')}: <b>${usedCount}</b></div>
     <div class="stat">${t('remainingStat')}: <b>${list.length - usedCount}</b></div>
   `;
+  document.getElementById('remaining-summary-message').textContent=remainingSummaryLines().join('\n');
 }
+function remainingSummaryLines(){
+  return Object.entries(state.codesByCategory).map(([cat,codes])=>
+    displayCatName(cat)+': '+codes.filter(code=>!state.usedCodes[code]).length);
+}
+document.getElementById('copy-remaining-summary').addEventListener('click',async()=>{
+  const message=t('remainingSummaryTitle')+'\n'+remainingSummaryLines().join('\n');
+  if(await copyText(message))showToast(t('summaryCopied'));
+});
 
 function renderDayLegend(dayColors){
   const list = state.codesByCategory[activeCategory] || [];

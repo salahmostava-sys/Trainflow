@@ -46,7 +46,10 @@ const ctx=vm.createContext({document,URL,localStorage:{getItem:k=>storage.get(k)
 els['account-menu-popover']=new Element();els['account-menu-popover'].hidden=true;
 vm.runInContext(fs.readFileSync(path.join(__dirname,'../cloud.js'),'utf8'),ctx);
 const html=fs.readFileSync(path.join(__dirname,'../ibta-ops.html'),'utf8');
-assert.match(html,/id="prometric-login-card">\s*<div[^>]*data-i18n="prometricLoginLink"/);
+assert.match(html,/id="prometric-login-card"[^>]*>\s*<div[^>]*data-i18n="prometricLoginLink"/);
+assert(html.indexOf('id="prometric-login-card"')<html.indexOf('id="cred-account"'));
+assert.match(html,/#prometric-link-val\{[^}]*font-weight:700/);
+assert(!html.includes('id="copy-prometric-link"'));
 for(const [,script] of html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g))vm.runInContext(script,ctx);
 const run=s=>vm.runInContext(s,ctx);
 const englishKeys=JSON.parse(run('JSON.stringify(Object.keys(TRANSLATIONS.en))'));
@@ -96,6 +99,7 @@ for(const key of usedKeys) assert(englishKeys.includes(key),`Missing translation
   db.codes.push({code:'PREVIOUS-DAY',category:'Foundation-100',notes:'',used_on:'27/09/2026',used_by:'user-1',version:1});
   db.codes.push({code:'CURRENT-DAY-A',category:'Foundation-100',notes:'',used_on:'28/09/2026',used_by:'user-1',version:1});
   db.codes.push({code:'CURRENT-DAY-B',category:'Master-100',notes:'',used_on:'28/09/2026',used_by:'user-1',version:1});
+  db.codes.push({code:'AVAILABLE-NOW',category:'Foundation-100',notes:'',used_on:null,used_by:null,version:1});
   await run('Cloud.refresh()');
   const colors=run('getDayColors()');
   assert.notEqual(colors['27/09/2026'],colors['28/09/2026']);
@@ -168,11 +172,17 @@ for(const key of usedKeys) assert(englishKeys.includes(key),`Missing translation
   assert.equal(db.settings.payload.links.prometric,'https://tcnet1.prometric.com/Login.aspx?updated=1');
   assert.equal(els['zoom-link-val'].textContent,'https://us02web.zoom.us/j/updated');
   clipboardFails=false;
-  await els['copy-prometric-link'].listeners.click({stopPropagation(){}});
+  await els['prometric-login-card'].listeners.click();
   assert(events.some(event=>event.name==='clipboard' && event.text===db.settings.payload.links.prometric));
   const copiedLinks=events.filter(event=>event.name==='clipboard' && event.text===db.settings.payload.links.prometric).length;
-  await els['prometric-login-card'].listeners.click();
+  await els['prometric-login-card'].listeners.keydown({key:'Enter',preventDefault(){}});
   assert.equal(events.filter(event=>event.name==='clipboard' && event.text===db.settings.payload.links.prometric).length,copiedLinks+1);
+  const summaryLines=JSON.parse(run('JSON.stringify(remainingSummaryLines())'));
+  assert.equal(els['remaining-summary-message'].textContent,summaryLines.join('\n'));
+  assert(summaryLines.some(line=>line.includes(': ')));
+  assert(summaryLines.includes(run("displayCatName('Foundation-100')")+': 1'));
+  await els['copy-remaining-summary'].listeners.click();
+  assert(events.some(event=>event.name==='clipboard' && event.text.includes(summaryLines[0])));
   const deleteDecision=run("confirmDelete('Delete test?')");
   assert.equal(els['delete-dialog'].open,true);
   els['delete-cancel'].onclick();
@@ -202,5 +212,5 @@ for(const key of usedKeys) assert(englishKeys.includes(key),`Missing translation
   els['delete-confirm'].onclick();
   await deleting;
   assert(!db.codes.some(r=>r.code==='REVISED-CODE'));
-  console.log('PASS: account profile, custom deletion, Prometric link copy, cloud persistence, copy isolation, shared day colors, categories, and keycodes.');
+  console.log('PASS: account profile, custom deletion, Prometric link copy, remaining-code summary, cloud persistence, copy isolation, categories, and keycodes.');
 })().catch(e=>{console.error(e);process.exitCode=1;});

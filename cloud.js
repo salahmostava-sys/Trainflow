@@ -73,7 +73,6 @@ const Cloud = (() => {
     $('prometric-link-val').textContent=PROMETRIC_LOGIN_URL || t('notConfigured');
     if(ZOOM_URL) $('open-zoom').setAttribute('href',ZOOM_URL);
     else $('open-zoom').removeAttribute('href');
-    $('copy-prometric-link').disabled=!PROMETRIC_LOGIN_URL;
     renderStatus();
     setAuthStatus(authStatusKey,...authStatusArgs);
   }
