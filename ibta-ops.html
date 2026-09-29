@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
 <title id="doc-title">IBTA Tools</title>
 <style>
   :root{
@@ -20,7 +20,8 @@
     --text:#0F1B2E;
     --muted:#6B7B93;
     --danger:#E5484D;
-    --mono:'Calibri', 'Segoe UI', Tahoma, Arial, sans-serif;
+    --ui-font:'IBM Plex Sans Arabic', 'Segoe UI', Tahoma, Arial, sans-serif;
+    --mono:var(--ui-font);
     --radius-lg:18px;
     --radius-md:12px;
     --radius-sm:8px;
@@ -29,10 +30,10 @@
   *{box-sizing:border-box;}
   body{
     margin:0; background:var(--bg); color:var(--text);
-    font-family:'Calibri', 'Segoe UI', Tahoma, Arial, sans-serif;
+    font-family:var(--ui-font);
     min-height:100vh;
   }
-  body.lang-ar{font-family:'Calibri', 'Segoe UI', Tahoma, Arial, sans-serif;}
+  button,input,select,textarea{font-family:inherit;}
   .wrap{max-width:920px; margin:0 auto; padding:24px 16px 70px;}
   .app-sticky-bar{position:sticky; top:0; z-index:30; background:var(--bg); margin-top:-24px; padding-top:24px; padding-bottom:1px;}
 
@@ -425,19 +426,19 @@
   .cloud-popover input:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-50);}
   #auth-message{font-size:14px;line-height:1.6;}
   @media(max-width:600px){.cloud-popover{padding:17px;}}
-  #auth-box{font-family:'Tajawal','Segoe UI',Tahoma,sans-serif;min-height:100svh;padding:36px 24px;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at 90% 5%,#e2eeff 0,transparent 45%),#f5f7fb;}
+  #auth-box{font-family:var(--ui-font);min-height:100svh;padding:36px 24px;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at 90% 5%,#e2eeff 0,transparent 45%),#f5f7fb;}
   .auth-shell{width:100%;max-width:1040px;display:grid;grid-template-columns:1fr 1fr;background:white;border:1px solid #e2e9f3;border-radius:28px;overflow:hidden;box-shadow:0 24px 80px -28px #233b6b30;}
   .auth-story{position:relative;overflow:hidden;padding:44px 42px;background:linear-gradient(145deg,#12396e,#0c2450);color:white;display:flex;flex-direction:column;justify-content:space-between;min-height:620px;}
   .auth-story::after{content:'';position:absolute;width:430px;height:430px;border:1px solid #ffffff0f;border-radius:50%;left:-220px;bottom:-160px;box-shadow:0 0 0 58px #ffffff04,0 0 0 116px #ffffff03;pointer-events:none;}
   .auth-brand{display:flex;align-items:center;gap:12px;position:relative;z-index:1;}
-  .auth-logo{width:44px;height:44px;border-radius:13px;background:#ffffff15;border:1px solid #ffffff25;display:grid;place-items:center;font-family:'Segoe UI',sans-serif;font-size:19px;font-weight:700;letter-spacing:-1px;}
-  .auth-brand strong{font-family:'Segoe UI',sans-serif;font-size:20px;letter-spacing:.3px;}
+  .auth-logo{width:44px;height:44px;border-radius:13px;background:#ffffff15;border:1px solid #ffffff25;display:grid;place-items:center;font-family:inherit;font-size:19px;font-weight:700;letter-spacing:-1px;}
+  .auth-brand strong{font-family:inherit;font-size:20px;letter-spacing:.3px;}
   .auth-brand small{display:block;font-size:12px;color:#afc6e6;margin-top:3px;}
-  .auth-lang-btn{margin-inline-start:auto;z-index:1;border:1px solid #ffffff40;border-radius:9px;background:#ffffff18;color:#fff;padding:8px 11px;font:700 13px 'Segoe UI',sans-serif;cursor:pointer;}
+  .auth-lang-btn{margin-inline-start:auto;z-index:1;border:1px solid #ffffff40;border-radius:9px;background:#ffffff18;color:#fff;padding:8px 11px;font:700 13px var(--ui-font);cursor:pointer;}
   .auth-intro{position:relative;z-index:1;margin:46px 0 40px;}
   .auth-eyebrow{font-size:12px;font-weight:700;letter-spacing:1.5px;color:#8cbcff;direction:ltr;text-align:right;}
   #auth-box[lang="en"] .auth-eyebrow{text-align:left;}
-  .auth-intro h2{font-size:36px;line-height:1.5;letter-spacing:-.7px;margin:12px 0 14px;font-weight:800;}
+  .auth-intro h2{font-size:36px;line-height:1.5;letter-spacing:-.7px;margin:12px 0 14px;font-weight:700;}
   .auth-intro>p{font-size:16px;line-height:1.9;color:#c0d1e8;margin:0;max-width:340px;}
   .auth-features{display:grid;gap:18px;margin-top:30px;}
   .auth-feature{display:flex;align-items:center;gap:12px;font-size:14px;color:#e1ebf9;}
@@ -445,11 +446,11 @@
   .auth-story-footer{position:relative;z-index:1;font-size:12px;color:#91accf;border-top:1px solid #ffffff15;padding-top:20px;}
   .auth-main{padding:56px 48px;display:flex;flex-direction:column;justify-content:center;}
   .auth-welcome{font-size:12px;font-weight:700;color:#3171c5;margin:0 0 10px;}
-  .auth-main h1{font-size:30px;font-weight:800;line-height:1.4;color:#152c4c;margin:0 0 8px;}
+  .auth-main h1{font-size:30px;font-weight:700;line-height:1.4;color:#152c4c;margin:0 0 8px;}
   .auth-subtitle{font-size:15px;line-height:1.8;color:#718198;margin:0 0 32px;}
   #auth-form label{display:block;font-size:14px;font-weight:700;color:#30425c;margin-bottom:9px;}
   .auth-field{position:relative;margin-bottom:22px;}
-  #auth-form input{display:block;width:100%;height:52px;border:1px solid #dce4ee;border-radius:10px;background:#fafbfd;padding:0 15px 0 44px;font:500 15px 'Tajawal','Segoe UI',Tahoma,sans-serif;direction:ltr;color:#152c4c;transition:border-color .15s,box-shadow .15s;}
+  #auth-form input{display:block;width:100%;height:52px;border:1px solid #dce4ee;border-radius:10px;background:#fafbfd;padding:0 15px 0 44px;font:500 15px var(--ui-font);direction:ltr;color:#152c4c;transition:border-color .15s,box-shadow .15s;}
   #auth-form input::placeholder{color:#a1adbc;font-weight:400;}
   #auth-form input:focus{outline:none;border-color:#327ce3;background:white;box-shadow:0 0 0 4px #327ce312;}
   .auth-field svg{position:absolute;left:15px;top:17px;width:18px;height:18px;stroke:#8495ab;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;pointer-events:none;}

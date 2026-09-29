@@ -47,6 +47,10 @@ const ctx=vm.createContext({document,URL,localStorage:{getItem:k=>storage.get(k)
 els['account-menu-popover']=new Element();els['account-menu-popover'].hidden=true;
 vm.runInContext(fs.readFileSync(path.join(__dirname,'../cloud.js'),'utf8'),ctx);
 const html=fs.readFileSync(path.join(__dirname,'../ibta-ops.html'),'utf8');
+assert.match(html,/family=IBM\+Plex\+Sans\+Arabic/);
+assert.match(html,/--ui-font:'IBM Plex Sans Arabic'/);
+assert.match(html,/#auth-box\{font-family:var\(--ui-font\)/);
+assert(!/Tajawal|Calibri/.test(html));
 assert.match(html,/id="prometric-login-card"[^>]*>\s*<div[^>]*data-i18n="prometricLoginLink"/);
 assert(html.indexOf('id="prometric-login-card"')<html.indexOf('id="cred-account"'));
 assert.match(html,/\.cred-value,\.resource-value\{[^}]*font-size:16px;[^}]*font-weight:600/);
