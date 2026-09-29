@@ -172,12 +172,11 @@
   }
   .cred-card:hover{border-color:var(--blue);}
   .cred-label{font-size:14px; color:var(--muted); margin-bottom:7px; font-weight:600;}
-  .cred-value{font-family:var(--mono); font-size:19px; font-weight:600; word-break:break-all; direction:ltr; unicode-bidi:plaintext; text-align:start;}
+  .cred-value,.resource-value{font-family:inherit;font-size:16px;font-weight:600;line-height:1.6;word-break:break-all;direction:ltr;unicode-bidi:plaintext;text-align:start;}
   .resource-card{cursor:default;}
   .resource-card:hover{border-color:var(--border);}
   .resource-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
-  .resource-value{min-width:0;flex:1 1 250px;font-size:13px;line-height:1.6;word-break:break-all;direction:ltr;unicode-bidi:plaintext;text-align:start;}
-  #prometric-link-val{font-size:14px;font-weight:700;}
+  .resource-value{min-width:0;flex:1 1 250px;}
   #prometric-login-card:focus-visible{outline:3px solid var(--blue-100);outline-offset:2px;}
   .report-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);margin:0 0 12px;box-shadow:var(--shadow);}
   .report-card summary{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 16px;cursor:pointer;font-size:14px;font-weight:700;list-style:none;color:var(--text);}
@@ -195,8 +194,8 @@
   .daily-used-total{font-size:14px;font-weight:700;color:var(--blue-600);margin-bottom:10px;}
   .daily-used-group{padding:10px 0;border-top:1px solid var(--border);}
   .daily-used-group strong{font-size:13px;}
-  .daily-used-codes{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;}
-  .daily-used-codes span{font-family:var(--mono);font-size:12px;direction:ltr;padding:5px 8px;border-radius:6px;background:var(--blue-50);color:var(--text);}
+  .daily-used-codes{display:grid;gap:6px;margin-top:8px;}
+  .daily-used-codes span{font-family:var(--mono);font-size:14px;direction:ltr;text-align:start;padding:8px 10px;border-radius:6px;background:var(--blue-50);color:var(--text);word-break:break-all;}
   .daily-used-none{font-size:13px;color:var(--muted);}
   .resource-btn{display:inline-flex;align-items:center;justify-content:center;min-height:36px;padding:7px 13px;border:1px solid var(--blue);border-radius:var(--radius-sm);background:var(--blue);color:#fff;font:inherit;font-size:13px;font-weight:700;text-decoration:none;white-space:nowrap;cursor:pointer;}
   .resource-btn:hover{background:var(--blue-600);border-color:var(--blue-600);}
@@ -1760,7 +1759,7 @@ function renderDailyUsed(){
   const total=groups.reduce((sum,group)=>sum+group.codes.length,0);
   const totalEl=document.createElement('div');totalEl.className='daily-used-total';totalEl.textContent=t('dailyUsedTotal')(total);box.appendChild(totalEl);
   if(total===0){const empty=document.createElement('div');empty.className='daily-used-none';empty.textContent=t('dailyUsedNone');box.appendChild(empty);}
-  groups.forEach(group=>{
+  groups.filter(group=>group.codes.length).forEach(group=>{
     const section=document.createElement('div');section.className='daily-used-group';
     const title=document.createElement('strong');title.textContent=displayCatName(group.cat)+': '+group.codes.length;section.appendChild(title);
     if(group.codes.length){
