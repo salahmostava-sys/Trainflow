@@ -87,6 +87,20 @@
   .settings-tabs button[aria-selected="true"]{background:var(--blue);border-color:var(--blue);color:#fff;}
   .settings-tabs button:focus-visible{outline:3px solid var(--blue-100);outline-offset:2px;}
   .settings-pane[hidden],.settings-tabs button[hidden]{display:none;}
+  .ops-card{margin-top:16px;padding:18px;border:1px solid var(--border);border-radius:var(--radius-md);background:var(--surface);box-shadow:var(--shadow);}
+  .ops-card h3{margin:0 0 10px;font-size:16px;}
+  .ops-card label{display:grid;gap:5px;font-size:13px;font-weight:700;color:var(--muted);}
+  .ops-card input,.ops-card select{min-height:36px;padding:7px 9px;border:1px solid var(--border);border-radius:7px;background:var(--surface);color:var(--text);font:inherit;}
+  .ops-row{display:flex;align-items:end;gap:10px;flex-wrap:wrap;margin:10px 0;}
+  .ops-row label{min-width:180px;flex:1;}
+  .ops-card button{padding:8px 13px;border:1px solid var(--border);border-radius:8px;background:var(--blue-50);color:var(--blue-600);font:inherit;font-weight:700;cursor:pointer;}
+  .ops-card button:disabled{opacity:.5;cursor:not-allowed;}
+  .ops-status{font-size:13px;line-height:1.6;color:var(--muted);white-space:pre-line;}
+  .ops-list{display:grid;gap:7px;margin-top:10px;max-height:300px;overflow:auto;}
+  .ops-list-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;}
+  .ops-list-row span{flex:1;min-width:180px;overflow-wrap:anywhere;}
+  .ops-list-row select{min-width:135px;}
+  .low-stock-alert{margin:0 0 12px;padding:10px 13px;border-radius:9px;background:#fff4df;color:#78500a;font-size:13px;font-weight:700;}
   @keyframes fade{from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:translateY(0);}}
 
   /* ---- Keycodes ---- */
@@ -591,6 +605,7 @@
         <div id="day-legend-groups" class="day-legend-groups"></div>
       </details>
     </div>
+    <div id="low-stock-alert" class="low-stock-alert" hidden></div>
     <div class="code-tabs" id="code-cat-tabs"></div>
     <div class="bulk-bar" id="bulk-bar">
       <div class="bulk-bar-left">
@@ -667,6 +682,17 @@
       </div>
     </section>
     <div id="settings-add-forms"></div>
+    <section class="ops-card" id="code-bulk-tools" hidden>
+      <h3 data-i18n="bulkImportTitle">Import codes from a file</h3>
+      <div class="ops-row">
+        <label><span data-i18n="bulkImportCategory">Category</span><select id="bulk-import-category"></select></label>
+        <label><span data-i18n="bulkImportFile">CSV or text file</span><input id="bulk-import-file" type="file" accept=".csv,.txt,text/csv,text/plain"></label>
+      </div>
+      <div id="bulk-import-preview" class="ops-status" role="status" aria-live="polite"></div>
+      <button id="bulk-import-submit" type="button" disabled data-i18n="bulkImportButton">Import valid codes</button>
+      <button id="export-codes-csv" type="button" data-i18n="exportCodesCsv">Export codes CSV</button>
+      <div class="ops-row"><label><span data-i18n="lowStockLabel">Low-stock warning at or below</span><input id="low-stock-threshold" type="number" min="0" max="10000" step="1"></label><button id="low-stock-save" type="button" data-i18n="saveBtn">Save</button></div>
+    </section>
     </div>
 
     <div class="settings-pane" id="settings-pane-prometric" role="tabpanel" aria-labelledby="settings-tab-prometric" hidden>
@@ -710,7 +736,16 @@
           <div class="cloud-admin-content">
             <div class="cloud-admin-actions"><button id="import-legacy" type="button" data-i18n="importLegacy">استيراد بيانات المتصفح القديمة</button><button id="export-data" type="button" data-i18n="exportBackup">تنزيل نسخة احتياطية</button></div>
             <label for="member-email" data-i18n="newMemberEmail">بريد مستخدم جديد</label><input id="member-email" type="email" placeholder="user@example.com">
+            <label for="member-role" data-i18n="memberRole">Role</label><select id="member-role"><option value="copy_only" data-i18n="roleCopyOnly">Copy codes only</option><option value="operator" data-i18n="roleOperator" selected>Operator</option><option value="admin" data-i18n="roleAdmin">Administrator</option></select>
             <button id="add-member" type="button" data-i18n="addMember">اعتماد المستخدم</button>
+            <div id="member-list" class="ops-list"></div>
+            <div class="ops-card">
+              <h3 data-i18n="restoreTitle">Restore a backup</h3>
+              <label><span data-i18n="restoreFile">Choose an IBTA backup JSON file</span><input id="restore-file" type="file" accept=".json,application/json"></label>
+              <p id="restore-preview" class="ops-status" role="status" aria-live="polite"></p>
+              <button id="restore-button" type="button" disabled data-i18n="restoreButton">Restore data</button>
+            </div>
+            <details class="ops-card" id="audit-details"><summary data-i18n="activityTitle">Recent activity</summary><div id="audit-list" class="ops-list"></div></details>
           </div>
         </details>
       </div>
@@ -825,6 +860,10 @@ const TRANSLATIONS = {
     currentAccount:"Current account", accountMenu:"Account menu", adminRole:"Admin", userRole:"User", refresh:"Refresh", signOut:"Sign out",
     manageDataUsers:"Manage data and users", importLegacy:"Import old browser data", exportBackup:"Download backup",
     newMemberEmail:"New user's email", addMember:"Approve user",
+    memberRole:"Role",roleCopyOnly:"Copy codes only",roleOperator:"Operator",roleAdmin:"Administrator",memberInactive:"Inactive",memberActive:"Active",memberSave:"Save member",activityTitle:"Recent activity",activityEmpty:"No activity found.",
+    auditInsert:"Added",auditUpdate:"Updated",auditDelete:"Deleted",auditCodes:"Code",auditMembers:"Team member",auditSettings:"System settings",
+    restoreTitle:"Restore a backup",restoreFile:"Choose an IBTA backup JSON file",restoreButton:"Restore data",restorePreview:n=>"This backup contains "+n+" codes. Restoring replaces the current codes and shared settings.",restoreDone:"Backup restored successfully.",restoreInvalid:"The backup file is invalid.",restoreConfirm:n=>"Replace all current codes and shared settings with the "+n+" codes in this backup?",
+    bulkImportTitle:"Import codes from a file",bulkImportCategory:"Category",bulkImportFile:"CSV or text file",bulkImportButton:"Import valid codes",exportCodesCsv:"Export codes CSV",bulkImportPreview:(valid,duplicates,invalid)=>valid+" new codes ready · "+duplicates+" duplicates skipped · "+invalid+" invalid rows",bulkImportDone:n=>n+" codes imported.",lowStockLabel:"Low-stock warning at or below",lowStockWarning:items=>"Low stock: "+items,saveBtn:"Save",
     dbConnected:"Connected to the database", saving:"Saving…", saved:"Saved to the database", refreshed:"Data refreshed",
     copyRecorded:"Code copied and marked as used", copyReserved:"Code reserved for your account, but copying failed. Click it to retry or remove the used mark.",
     codeNotFound:"Code not found. Refresh the data.", codeUsedByOther:"This code was used by someone else.",
@@ -919,6 +958,10 @@ const TRANSLATIONS = {
     currentAccount:"الحساب الحالي", accountMenu:"قائمة الحساب", adminRole:"مدير", userRole:"مستخدم", refresh:"تحديث", signOut:"تسجيل الخروج",
     manageDataUsers:"إدارة البيانات والمستخدمين", importLegacy:"استيراد بيانات المتصفح القديمة", exportBackup:"تنزيل نسخة احتياطية",
     newMemberEmail:"بريد مستخدم جديد", addMember:"اعتماد المستخدم",
+    memberRole:"الصلاحية",roleCopyOnly:"نسخ الأكواد فقط",roleOperator:"مشغّل",roleAdmin:"مدير",memberInactive:"معطّل",memberActive:"نشط",memberSave:"حفظ المستخدم",activityTitle:"آخر النشاطات",activityEmpty:"لا يوجد نشاط مسجل.",
+    auditInsert:"إضافة",auditUpdate:"تعديل",auditDelete:"حذف",auditCodes:"كود",auditMembers:"مستخدم",auditSettings:"إعدادات النظام",
+    restoreTitle:"استعادة نسخة احتياطية",restoreFile:"اختر ملف نسخة IBTA بصيغة JSON",restoreButton:"استعادة البيانات",restorePreview:n=>"النسخة تحتوي على "+n+" كود. الاستعادة ستستبدل الأكواد والإعدادات المشتركة الحالية.",restoreDone:"تمت استعادة النسخة الاحتياطية.",restoreInvalid:"ملف النسخة الاحتياطية غير صالح.",restoreConfirm:n=>"استبدال كل الأكواد والإعدادات المشتركة الحالية بـ "+n+" كود من النسخة الاحتياطية؟",
+    bulkImportTitle:"استيراد أكواد من ملف",bulkImportCategory:"الفئة",bulkImportFile:"ملف CSV أو نص",bulkImportButton:"استيراد الأكواد الصالحة",exportCodesCsv:"تصدير الأكواد CSV",bulkImportPreview:(valid,duplicates,invalid)=>valid+" كود جديد جاهز · "+duplicates+" مكرر تم تجاهله · "+invalid+" صف غير صالح",bulkImportDone:n=>"تم استيراد "+n+" كود.",lowStockLabel:"تنبيه انخفاض الرصيد عند",lowStockWarning:items=>"رصيد منخفض: "+items,saveBtn:"حفظ",
     dbConnected:"متصل بقاعدة البيانات", saving:"جارٍ الحفظ…", saved:"تم الحفظ في قاعدة البيانات", refreshed:"تم تحديث البيانات",
     copyRecorded:"تم نسخ الكود وتسجيل استخدامه", copyReserved:"تم حجز الكود لحسابك لكن النسخ فشل. اضغط عليه لإعادة النسخ أو ألغِ علامة الاستخدام.",
     codeNotFound:"الكود غير موجود. حدّث البيانات.", codeUsedByOther:"هذا الكود مستخدم بواسطة شخص آخر.",
@@ -972,6 +1015,7 @@ function renderManageData(){
   fillManageSelect('manage-code',(state.codesByCategory[cat] || []).map(code=>[code,code]));
   document.getElementById('manage-exam-edit').disabled=!DEFAULT_KEYCODES.length;
   document.getElementById('manage-code-edit').disabled=!(state.codesByCategory[cat] || []).length;
+  fillManageSelect('bulk-import-category',Object.keys(state.codesByCategory).map(cat=>[cat,displayCatName(cat)]));
 }
 document.getElementById('manage-code-category').addEventListener('change',renderManageData);
 document.getElementById('manage-category-edit').addEventListener('click',()=>openEdit('category',document.getElementById('manage-category').value));
@@ -1229,6 +1273,8 @@ function applyLanguage(){
   renderCodeTabs();
   renderCodeGrid();
   renderManageData();
+  if(typeof renderMemberList==='function' && document.getElementById('admin-tools').open)renderMemberList();
+  if(typeof renderAuditList==='function' && document.getElementById('audit-details').open)renderAuditList();
 }
 function toggleLanguage(){
   currentLang = currentLang === 'en' ? 'ar' : 'en';
@@ -1810,6 +1856,12 @@ function renderStats(){
     <div class="stat">${t('remainingStat')}: <b>${list.length - usedCount}</b></div>
   `;
   document.getElementById('remaining-summary-message').textContent=remainingSummaryLines().join('\n');
+  const threshold=Number.isInteger(state.lowStockThreshold)?state.lowStockThreshold:10;
+  const low=Object.entries(state.codesByCategory).map(([cat,codes])=>[cat,codes.filter(code=>!state.usedCodes[code]).length])
+    .filter(([,count])=>count<=threshold);
+  const alert=document.getElementById('low-stock-alert');
+  alert.hidden=!low.length;
+  alert.textContent=low.length?t('lowStockWarning')(low.map(([cat,count])=>displayCatName(cat)+': '+count).join(' · ')):'';
   renderDailyUsed();
 }
 function remainingSummaryLines(){
@@ -2139,5 +2191,6 @@ try{
 applyLanguage();
 Cloud.boot();
 </script>
+<script src="ops-ui.js"></script>
 </body>
 </html>

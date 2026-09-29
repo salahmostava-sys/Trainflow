@@ -60,7 +60,7 @@ const Cloud = (() => {
     if(user){
       const email=user.email || '';
       const name=accountName();
-      $('signed-in').textContent=(name?name+' · ':'')+email+' · '+(role==='admin'?t('adminRole'):t('userRole'));
+      $('signed-in').textContent=(name?name+' · ':'')+email+' · '+(role==='admin'?t('adminRole'):role==='copy_only'?t('roleCopyOnly'):t('userRole'));
       $('account-menu-name').textContent=name || t('currentAccount');
       $('account-menu-email').textContent=email;
       $('account-avatar').textContent=(name || email).trim().charAt(0).toUpperCase() || 'IB';
@@ -101,7 +101,7 @@ const Cloud = (() => {
     try{prefs=JSON.parse(localStorage.getItem('ibta_ui_preferences') || '{}') || {};}catch{}
     state={usedCodes:{},codesByCategory:{},codeNotes:{},categoryLabels:clone(p.categoryLabels || {}),keycodeOverrides:clone(p.keycodeOverrides || {}),
       keycodeOrder:clone(p.keycodeOrder || {}),categoryOrder:clone(p.categoryOrder),dateColors:clone(p.dateColors || {}),
-      settings:{autoChain:!!prefs.autoChain},uiLang:prefs.uiLang==='en'?'en':'ar'};
+      settings:{autoChain:!!prefs.autoChain},lowStockThreshold:Number.isInteger(p.lowStockThreshold)?p.lowStockThreshold:10,uiLang:prefs.uiLang==='en'?'en':'ar'};
     for(const cat of p.codeCategories || []) state.codesByCategory[cat]=[];
     for(const r of rows.values()){
       (state.codesByCategory[r.category] ||= []).push(r.code);
@@ -119,6 +119,7 @@ const Cloud = (() => {
     $('settings-prometric-password').value=PROMETRIC_PASSWORD;
     $('settings-zoom-link').value=p.links?.zoom || '';
     $('settings-prometric-link').value=p.links?.prometric || '';
+    $('low-stock-threshold').value=state.lowStockThreshold;
     $('profile-name').value=accountName();
     $('profile-email').value=user?.email || '';
     currentLang=state.uiLang;
@@ -139,6 +140,9 @@ const Cloud = (() => {
     $('prometric-settings').hidden=!admin;
     $('settings-tab-data').hidden=!admin;
     $('settings-tab-prometric').hidden=!admin;
+    $('code-bulk-tools').hidden=!admin;
+    document.querySelectorAll('.col-notes input').forEach(el=>{el.disabled=role==='copy_only';});
+    document.querySelectorAll('.code-unmark-btn').forEach(el=>{el.hidden=role==='copy_only';});
     if(!admin && ($('settings-tab-data').getAttribute('aria-selected')==='true' || $('settings-tab-prometric').getAttribute('aria-selected')==='true')) activateSettingsTab('profile');
     translateUi();
   }
@@ -151,7 +155,8 @@ const Cloud = (() => {
   }
   function metadata(){
     return {...clone(config.payload),keycodes:clone(DEFAULT_KEYCODES),categoryOrder:clone(state.categoryOrder),categoryLabels:clone(state.categoryLabels),keycodeOverrides:clone(state.keycodeOverrides),
-      keycodeOrder:clone(state.keycodeOrder),codeCategories:Object.keys(state.codesByCategory)};
+      keycodeOrder:clone(state.keycodeOrder),codeCategories:Object.keys(state.codesByCategory),
+      ...(Object.hasOwn(config.payload,'lowStockThreshold') || state.lowStockThreshold!==10 ? {lowStockThreshold:state.lowStockThreshold} : {})};
   }
   async function persist(){
     if(!ready) return true;
@@ -376,14 +381,68 @@ const Cloud = (() => {
     if(role!=='admin') return;
     const email=$('member-email').value.trim().toLowerCase();
     if(!email || !email.includes('@')) return;
-    const {error}=await client.from('ibta_members').insert({email,role:'operator',active:true});
-    if(error) fail(error);else {setStatus('memberAdded',false,email);$('member-email').value='';}
+    const memberRole=$('member-role').value;
+    if(!['copy_only','operator','admin'].includes(memberRole))return;
+    const {error}=await client.from('ibta_members').insert({email,role:memberRole,active:true});
+    if(error) fail(error);else {setStatus('memberAdded',false,email);$('member-email').value='';if(typeof renderMemberList==='function')renderMemberList();}
   }
   async function exportData(){
     if(role!=='admin') return;
-    await refresh();
-    const blob=new Blob([JSON.stringify({exportedAt:new Date().toISOString(),settings:config.payload,codes:[...rows.values()]},null,2)],{type:'application/json'});
+    if(!await refresh())return;
+    const blob=new Blob([JSON.stringify({format:'ibta-ops-backup',version:1,exportedAt:new Date().toISOString(),settings:config.payload,codes:[...rows.values()]},null,2)],{type:'application/json'});
     const url=window.URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='ibta-backup-'+new Date().toISOString().slice(0,10)+'.json';a.click();window.URL.revokeObjectURL(url);
+  }
+  async function exportCodesCsv(){
+    if(role!=='admin')return;
+    if(!await refresh())return;
+    const csvCell=value=>{
+      let text=String(value ?? '');
+      if(/^[=+@\-\t\r]/.test(text))text="'"+text;
+      return '"'+text.replaceAll('"','""')+'"';
+    };
+    const lines=[['Code','Category','Used On'],...[...rows.values()].map(row=>[row.code,row.category,row.used_on || ''])];
+    const blob=new Blob(['\uFEFF'+lines.map(line=>line.map(csvCell).join(',')).join('\r\n')],{type:'text/csv;charset=utf-8'});
+    const url=window.URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='ibta-codes-'+new Date().toISOString().slice(0,10)+'.csv';a.click();window.URL.revokeObjectURL(url);
+  }
+  async function restoreData(backup){
+    if(!ready || role!=='admin')throw Error('IBTA_NOT_APPROVED');
+    if(backup?.format && backup.format!=='ibta-ops-backup')throw Error('IBTA_INVALID_BACKUP');
+    if(!Array.isArray(backup?.settings?.categoryOrder) || !Array.isArray(backup?.settings?.codeCategories) ||
+       !Array.isArray(backup?.settings?.keycodes) || !Array.isArray(backup.codes))throw Error('IBTA_INVALID_BACKUP');
+    lock(true);setStatus('saving');
+    try{
+      const {error}=await client.rpc('ibta_restore_backup',{backup,expected_version:config.version});
+      if(error)throw error;
+      await load();setStatus('saved');return true;
+    }catch(error){fail(error);throw error;}
+    finally{lock(false);}
+  }
+  async function importCodes(category,codes){
+    if(!ready || role!=='admin')throw Error('IBTA_NOT_APPROVED');
+    if(!Object.hasOwn(state.codesByCategory,category))throw Error('IBTA_INVALID_CATEGORY');
+    lock(true);setStatus('saving');
+    try{
+      const {data,error}=await client.rpc('ibta_import_codes',{target_category:category,new_codes:codes});
+      if(error)throw error;
+      await load();setStatus('saved');return data;
+    }catch(error){fail(error);throw error;}
+    finally{lock(false);}
+  }
+  async function listMembers(){
+    if(role!=='admin')return [];
+    const {data,error}=await client.from('ibta_members').select('email,role,active,user_id').order('email');
+    if(error)throw error;return data;
+  }
+  async function updateMember(email,nextRole,active){
+    if(role!=='admin')throw Error('IBTA_NOT_APPROVED');
+    if(!['copy_only','operator','admin'].includes(nextRole))throw Error('IBTA_INVALID_ROLE');
+    const {error}=await client.from('ibta_members').update({role:nextRole,active}).eq('email',email);
+    if(error)throw error;
+  }
+  async function auditEvents(){
+    if(role!=='admin')return [];
+    const {data,error}=await client.from('ibta_audit').select('id,actor,action,entity,record_key,happened_at').order('happened_at',{ascending:false}).limit(100);
+    if(error)throw error;return data;
   }
   async function boot(){
     try{
@@ -394,6 +453,7 @@ const Cloud = (() => {
       $('refresh-data').addEventListener('click',refresh);
       $('import-legacy').addEventListener('click',importLegacy);
       $('export-data').addEventListener('click',exportData);
+      $('export-codes-csv').addEventListener('click',exportCodesCsv);
       $('add-member').addEventListener('click',addMember);
       $('prometric-settings-form').addEventListener('submit',savePrometricSettings);
       $('profile-name-form').addEventListener('submit',saveProfileName);
@@ -415,5 +475,6 @@ const Cloud = (() => {
       window.addEventListener('beforeunload',e=>{if(busy){e.preventDefault();e.returnValue='';}});
     }catch(e){setAuthStatus('error',e);}
   }
-  return {boot,persist,copyCode,editCode,decorate,refresh,translateUi};
+  return {boot,persist,copyCode,editCode,decorate,refresh,translateUi,restoreData,importCodes,listMembers,updateMember,auditEvents,exportCodesCsv,
+    role:()=>role,email:()=>user?.email || '',existingCodes:()=>[...rows.keys()]};
 })();

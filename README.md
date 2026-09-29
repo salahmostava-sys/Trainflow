@@ -14,7 +14,7 @@ Administrators add exams and categories under **Settings → System data**. The 
 
 The interface and sign-in page share the IBM Plex Sans Arabic font, loaded from Google Fonts with local system-font fallbacks.
 
-Administrators can allowlist another email from **إدارة البيانات والمستخدمين**. That person then creates an account and confirms the same address. Other signups cannot access operational data. Operators can copy codes, edit notes, and release their own codes. Only administrators can add/delete codes, manage categories, and allowlist users. Membership can be deactivated in the Supabase `ibta_members` table by setting `active=false`.
+Administrators can allowlist another email from **إدارة البيانات والمستخدمين**, assign a role, and later change or deactivate it. That person then creates an account and confirms the same address. Other signups cannot access operational data. Copy-only users can claim and copy unused codes; operators can also edit notes and release their own codes; administrators can add/delete codes, manage categories, and manage users. The database enforces these roles independently of the interface.
 
 ## Data
 
@@ -35,7 +35,11 @@ Old localStorage was not erased. Sign in as administrator **in the browser and a
 
 Verify the merged counts and marks before putting the team into operation. The original embedded seed did not contain browser-only usage history.
 
-**تنزيل نسخة احتياطية** exports the shared configuration and codes. The resulting JSON includes Prometric credentials and the Zoom meeting link; keep it private. There is no scheduled backup service configured.
+**تنزيل نسخة احتياطية** exports the shared configuration and codes. **استعادة نسخة احتياطية** previews the JSON and asks for confirmation before replacing both in one database transaction; a stale settings version or invalid row cancels the whole restore. The backup includes Prometric credentials and the Zoom meeting link; keep it private. Auth accounts are managed separately and are not restored from this file. There is no scheduled backup service configured. Supabase recommends regular off-site database dumps for Free projects; the app backup is an additional operational export, not a substitute for a full database dump.
+
+Settings → System data includes file import for up to 5,000 codes at a time. CSV files use the first `Code` column and the selected destination category; exact or case-insensitive duplicates are skipped. The same panel exports a CSV inventory for Google Sheets and lets administrators choose a remaining-stock warning threshold. This is file interchange; direct Google authorization and sheet synchronization require the target sheet and OAuth configuration.
+
+Settings → Team and sync includes a recent activity view (last 100 database audit entries) and team role/activation controls. Audit records identify actions, actors, and record keys without containing password or note contents.
 
 ## Concurrent use
 
@@ -57,5 +61,5 @@ For Cloudflare Pages Git integration, use `main` as the production branch, `node
 
 ## Verification
 
-Run `node tests/cloud.test.cjs` for frontend storage and reservation regression checks. `database-tests.sql` checks RLS, claims, stale updates, role restrictions, and audit inside a transaction that rolls back all fixtures. `database.sql` records the schema already applied to this project; it is not an idempotent setup script and should not be rerun on the provisioned database.
+Run `node tests/cloud.test.cjs` for frontend storage, import, and backup-restore regression checks. `database-tests.sql` checks RLS, claims, stale updates, role restrictions, import, restore, and audit inside a transaction that rolls back all fixtures. Apply `migrations/20260929_ops_hardening.sql` and `migrations/20260929_settings_shape.sql` before deploying the new frontend; both have been applied to the current project. `database.sql` records the original schema already applied to this project; it is not an idempotent setup script and should not be rerun on the provisioned database.
 

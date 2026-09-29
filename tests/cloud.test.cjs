@@ -14,16 +14,40 @@ class Element {
 }
 const els={},storage=new Map(),events=[];
 const document={listeners:{},addEventListener(event,fn){this.listeners[event]=fn;},getElementById:id=>els[id] ||= new Element(),createElement:()=>new Element(),querySelectorAll:()=>[],querySelector:()=>new Element(),body:new Element(),execCommand:()=>false,hidden:false};
-const db={settings:{id:1,version:1,payload:{keycodes:[],categoryOrder:['Foundation'],codeCategories:['Foundation-100'],keycodeOrder:{},keycodeOverrides:{},dateColors:{},credentials:{account:'test-account',password:'test-password'},links:{zoom:'https://us02web.zoom.us/j/demo',prometric:'https://tcnet1.prometric.com/Login.aspx?demo=1'}}},codes:[{code:'TEST',category:'Foundation-100',notes:'',used_on:null,used_by:null,version:1}]};
+const db={settings:{id:1,version:1,payload:{keycodes:[],categoryOrder:['Foundation'],codeCategories:['Foundation-100'],keycodeOrder:{},keycodeOverrides:{},dateColors:{},credentials:{account:'test-account',password:'test-password'},links:{zoom:'https://us02web.zoom.us/j/demo',prometric:'https://tcnet1.prometric.com/Login.aspx?demo=1'}}},codes:[{code:'TEST',category:'Foundation-100',notes:'',used_on:null,used_by:null,version:1}],members:[{email:'test@example.invalid',role:'admin',active:true,user_id:'user-1'},{email:'member@example.invalid',role:'operator',active:true,user_id:null}]};
 const clone=x=>JSON.parse(JSON.stringify(x));
 let conflict=false,clipboardFails=false,codeReads=0;
 const authUser={id:'user-1',email:'test@example.invalid',user_metadata:{}};
 const client={
   auth:{getSession:async()=>({data:{session:{user:clone(authUser)}}}),onAuthStateChange(){},signOut:async()=>({}),updateUser:async args=>{events.push({name:'auth_update',args:clone(args)});if(args.data)authUser.user_metadata={...authUser.user_metadata,...args.data};return {data:{user:clone(authUser)}};}},
-  from(table){return {select(){return this;},eq(){return this;},order(){return this;},single:async()=>table==='ibta_members'?{data:{role:'admin',active:true,user_id:'user-1'}}:{data:clone(db.settings)},maybeSingle:async()=>({data:{role:'admin',active:true,user_id:'user-1'}}),range:async()=>{codeReads++;return {data:clone(db.codes)};}};},
+  from(table){
+    if(table==='ibta_members'){
+      let filter;
+      return {select(){return this;},eq(field,value){filter=[field,value];return this;},
+        maybeSingle:async()=>({data:clone(db.members.find(row=>row[filter?.[0]]===filter?.[1]) || null)}),
+        order:async()=>({data:clone(db.members)}),
+        insert:async row=>{db.members.push(clone(row));return {error:null};},
+        update(changes){return {eq:async(field,value)=>{const row=db.members.find(item=>item[field]===value);Object.assign(row,changes);return {error:null};}};}
+      };
+    }
+    return {select(){return this;},eq(){return this;},order(){return this;},single:async()=>({data:clone(db.settings)}),range:async()=>{codeReads++;return {data:clone(db.codes)};}};
+  },
   async rpc(name,args){
     events.push({name,args:clone(args)});
     if(conflict)return {error:{message:'CONFLICT: reload required'}};
+    if(name==='ibta_import_codes'){
+      let added=0;
+      for(const code of args.new_codes)if(!db.codes.some(row=>row.code.toLowerCase()===code.toLowerCase())){
+        db.codes.push({code,category:args.target_category,notes:'',used_on:null,used_by:null,version:1});added++;
+      }
+      return {data:added};
+    }
+    if(name==='ibta_restore_backup'){
+      if(args.expected_version!==db.settings.version)return {error:{message:'CONFLICT: reload required'}};
+      db.settings.payload=clone(args.backup.settings);db.settings.version++;
+      db.codes=clone(args.backup.codes).map(row=>({...row,version:1000000}));
+      return {};
+    }
     if(name==='ibta_claim_code'){
       const row=db.codes.find(r=>r.code===args.target_code&&r.version===args.expected_version&&!r.used_on);
       if(!row)return {data:[]};row.used_on=args.use_date;row.used_by='user-1';row.version++;return {data:[clone(row)]};
@@ -63,7 +87,12 @@ for(const tab of ['profile','data','prometric','preferences','sync']){
 }
 assert(!html.includes('id="copy-prometric-link"'));
 for(const [,script] of html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g))vm.runInContext(script,ctx);
+vm.runInContext(fs.readFileSync(path.join(__dirname,'../ops-ui.js'),'utf8'),ctx);
 const run=s=>vm.runInContext(s,ctx);
+assert.equal(run("validBackup({format:'ibta-ops-backup',settings:{categoryOrder:[],codeCategories:[],keycodes:[]},codes:[{code:'A',category:'Foundation-100'}]})"),true);
+assert.equal(run("validBackup({settings:{},codes:[{code:'A',category:'X'}]})"),false);
+assert.equal(run("validBackup({settings:{categoryOrder:[],codeCategories:[],keycodes:[]},codes:[{code:'A',category:'X'},{code:'a',category:'X'}]})"),false);
+assert.deepEqual(JSON.parse(run("JSON.stringify(parseCodeFile('Code\\nNEW-A\\nNEW-A\\nTEST\\n,BAD'))")),{codes:['NEW-A','TEST'],duplicates:1,invalid:1});
 const englishKeys=JSON.parse(run('JSON.stringify(Object.keys(TRANSLATIONS.en))'));
 const arabicKeys=JSON.parse(run('JSON.stringify(Object.keys(TRANSLATIONS.ar))'));
 assert.deepEqual(englishKeys.sort(),arabicKeys.sort());
@@ -83,6 +112,10 @@ for(const key of usedKeys) assert(englishKeys.includes(key),`Missing translation
   els['settings-tab-profile'].listeners.click();
   assert.equal(els['settings-pane-profile'].hidden,false);
   assert.equal(els['account-menu-email'].textContent,'test@example.invalid');
+  assert.equal((await run('Cloud.listMembers()')).length,2);
+  await run("Cloud.updateMember('member@example.invalid','copy_only',false)");
+  assert.equal(db.members[1].role,'copy_only');
+  assert.equal(db.members[1].active,false);
   assert.equal(els['account-avatar'].textContent,'T');
   els['account-menu-btn'].listeners.click();
   assert.equal(els['account-menu-popover'].hidden,false);
@@ -253,5 +286,21 @@ for(const key of usedKeys) assert(englishKeys.includes(key),`Missing translation
   els['delete-confirm'].onclick();
   await deleting;
   assert(!db.codes.some(r=>r.code==='REVISED-CODE'));
-  console.log('PASS: account profile, custom deletion, Prometric link copy, collapsible remaining summary, daily used-code report, cloud persistence, and categories.');
+  els['low-stock-threshold'].value='3';
+  await els['low-stock-save'].listeners.click();
+  assert.equal(db.settings.payload.lowStockThreshold,3);
+  els['bulk-import-category'].value='Foundation-100';
+  await els['bulk-import-file'].listeners.change({target:{files:[{size:30,text:async()=>"Code\nBULK-ONE\nBULK-TWO\nBULK-ONE"}]}});
+  assert.match(els['bulk-import-preview'].textContent,/2 كود جديد/);
+  await els['bulk-import-submit'].listeners.click();
+  assert(db.codes.some(row=>row.code==='BULK-ONE'));
+  const backup={format:'ibta-ops-backup',settings:clone(db.settings.payload),codes:clone(db.codes)};
+  await els['restore-file'].listeners.change({target:{files:[{size:20,text:async()=>'{"invalid":true}'}]}});
+  assert.equal(els['restore-button'].disabled,true);
+  await els['restore-file'].listeners.change({target:{files:[{size:100,text:async()=>JSON.stringify(backup)}]}});
+  assert.equal(els['restore-button'].disabled,false);
+  await els['restore-button'].listeners.click();
+  assert.equal(els['restore-button'].disabled,true);
+  assert(db.codes.some(row=>row.code==='BULK-TWO'));
+  console.log('PASS: backup restore, bulk code import, account profile, reports, cloud persistence, and categories.');
 })().catch(e=>{console.error(e);process.exitCode=1;});
