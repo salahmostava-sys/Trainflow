@@ -33,7 +33,7 @@ Verify the merged counts and marks before putting the team into operation. The o
 
 The server atomically claims a code before copying it. Another user with a stale version cannot claim or overwrite it. If clipboard access fails, the code stays reserved for the same user; they can retry copying or release it. Previously used codes require confirmation before recopying, and operators cannot recopy another person's used code.
 
-The Codes page shows the remaining unused code count for every category and can copy the full summary as a multiline message. Opening the Codes page refreshes the shared counts first. On the Prometric page, the login-link card is the first item; clicking it copies the link directly.
+The Codes page has a collapsible remaining-code summary for every category, with a button to copy it as a multiline message. A second collapsible report lets the user choose a date and see the total, category counts, and codes used that day. Opening the Codes page refreshes the shared data first. On the Prometric page, the login-link card is the first item; clicking it copies the link directly.
 
 Changes are transactional and version-checked. On conflict, the UI reloads current server data and asks the user to repeat the operation; it never silently overwrites a colleague. Data refreshes on changes, manually, and approximately every two minutes while the page is visible and the user has no unsaved input or selected rows. Rate-limited or unavailable background requests pause for five minutes. This is polling, not push realtime. This version loads the current code inventory into memory, with paginated API reads; a very large inventory should use server-side search and paginated UI.
 

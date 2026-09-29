@@ -179,11 +179,25 @@
   .resource-value{min-width:0;flex:1 1 250px;font-size:13px;line-height:1.6;word-break:break-all;direction:ltr;unicode-bidi:plaintext;text-align:start;}
   #prometric-link-val{font-size:14px;font-weight:700;}
   #prometric-login-card:focus-visible{outline:3px solid var(--blue-100);outline-offset:2px;}
-  .remaining-summary{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:13px 16px;margin:0 0 15px;box-shadow:var(--shadow);}
-  .remaining-summary strong{display:block;font-size:13px;margin-bottom:7px;color:var(--text);}
+  .report-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);margin:0 0 12px;box-shadow:var(--shadow);}
+  .report-card summary{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 16px;cursor:pointer;font-size:14px;font-weight:700;list-style:none;color:var(--text);}
+  .report-card summary::-webkit-details-marker{display:none;}
+  .report-card summary::after{content:'⌄';color:var(--blue-600);font-size:17px;transition:transform .15s;}
+  .report-card[open] summary::after{transform:rotate(180deg);}
+  .report-card[open] summary{border-bottom:1px solid var(--border);}
+  .report-body{padding:14px 16px;}
+  .remaining-summary-body{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;}
   .remaining-summary-message{font-size:13px;line-height:1.65;color:var(--text);white-space:pre-line;}
-  .remaining-summary button{border:1px solid var(--blue-100);background:var(--blue-50);color:var(--blue-600);border-radius:8px;padding:8px 12px;font:inherit;font-size:12px;font-weight:700;cursor:pointer;}
-  .remaining-summary button:hover{background:var(--blue-100);}
+  .report-body button{border:1px solid var(--blue-100);background:var(--blue-50);color:var(--blue-600);border-radius:8px;padding:8px 12px;font:inherit;font-size:12px;font-weight:700;cursor:pointer;}
+  .report-body button:hover{background:var(--blue-100);}
+  .daily-used-date{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:13px;font-weight:700;margin-bottom:13px;}
+  .daily-used-date input{padding:7px 10px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font:inherit;}
+  .daily-used-total{font-size:14px;font-weight:700;color:var(--blue-600);margin-bottom:10px;}
+  .daily-used-group{padding:10px 0;border-top:1px solid var(--border);}
+  .daily-used-group strong{font-size:13px;}
+  .daily-used-codes{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;}
+  .daily-used-codes span{font-family:var(--mono);font-size:12px;direction:ltr;padding:5px 8px;border-radius:6px;background:var(--blue-50);color:var(--text);}
+  .daily-used-none{font-size:13px;color:var(--muted);}
   .resource-btn{display:inline-flex;align-items:center;justify-content:center;min-height:36px;padding:7px 13px;border:1px solid var(--blue);border-radius:var(--radius-sm);background:var(--blue);color:#fff;font:inherit;font-size:13px;font-weight:700;text-decoration:none;white-space:nowrap;cursor:pointer;}
   .resource-btn:hover{background:var(--blue-600);border-color:var(--blue-600);}
   .resource-btn:disabled,a.resource-btn:not([href]){opacity:.55;cursor:not-allowed;}
@@ -545,10 +559,20 @@
         <div id="day-legend-groups" class="day-legend-groups"></div>
       </details>
     </div>
-    <div class="remaining-summary">
-      <div><strong data-i18n="remainingSummaryTitle">Remaining codes by category</strong><div class="remaining-summary-message" id="remaining-summary-message"></div></div>
-      <button id="copy-remaining-summary" type="button" data-i18n="copyRemainingSummary">Copy summary</button>
-    </div>
+    <details class="report-card" id="remaining-summary-details">
+      <summary data-i18n="remainingSummaryTitle">Remaining codes by category</summary>
+      <div class="report-body remaining-summary-body">
+        <div class="remaining-summary-message" id="remaining-summary-message"></div>
+        <button id="copy-remaining-summary" type="button" data-i18n="copyRemainingSummary">Copy summary</button>
+      </div>
+    </details>
+    <details class="report-card" id="daily-used-details">
+      <summary data-i18n="dailyUsedTitle">Codes used on a day</summary>
+      <div class="report-body">
+        <label class="daily-used-date"><span data-i18n="chooseUsedDate">Choose a date</span><input id="daily-used-date" type="date"></label>
+        <div id="daily-used-results"></div>
+      </div>
+    </details>
     <div class="code-tabs" id="code-cat-tabs"></div>
     <div class="bulk-bar" id="bulk-bar">
       <div class="bulk-bar-left">
@@ -701,6 +725,7 @@ const TRANSLATIONS = {
     prometricAccount:"Prometric Account", prometricPassword:"Prometric Password",
     zoomMeeting:"Zoom meeting", openZoom:"Open Zoom", prometricLoginLink:"Prometric login link", prometricLinkCopyHint:"Copy Prometric login link",
     remainingSummaryTitle:"Remaining codes by category", copyRemainingSummary:"Copy summary", summaryCopied:"Remaining-code summary copied",
+    dailyUsedTitle:"Codes used on a day", chooseUsedDate:"Choose a date", dailyUsedTotal:n=>"Total used: "+n, dailyUsedNone:"No codes were used on this date.",
     sharedSettingsTitle:"Shared Prometric settings", sharedSettingsDesc:"Administrators can change the account, password, and links for the team.", saveSharedSettings:"Save changes", notConfigured:"Not configured",
     invalidZoomUrl:"Enter a valid HTTPS Zoom link.", invalidPrometricUrl:"Enter a valid HTTPS Prometric link.", prometricLinkCopied:"Prometric login link copied",
     accountCopied:"Prometric Account — Copied", passwordCopied:"Prometric Password — Copied",
@@ -794,6 +819,7 @@ const TRANSLATIONS = {
     prometricAccount:"حساب بروميترك", prometricPassword:"كلمة مرور بروميترك",
     zoomMeeting:"رابط اجتماع زوم", openZoom:"فتح زوم", prometricLoginLink:"رابط دخول بروميترك", prometricLinkCopyHint:"نسخ رابط دخول بروميترك",
     remainingSummaryTitle:"الأكواد المتبقية حسب الفئة", copyRemainingSummary:"نسخ الملخص", summaryCopied:"تم نسخ ملخص الأكواد المتبقية",
+    dailyUsedTitle:"الأكواد المستخدمة في يوم", chooseUsedDate:"اختر التاريخ", dailyUsedTotal:n=>"إجمالي الأكواد المستخدمة: "+n, dailyUsedNone:"لم تُستخدم أكواد في هذا التاريخ.",
     sharedSettingsTitle:"إعدادات بروميترك المشتركة", sharedSettingsDesc:"يستطيع المدير تعديل الحساب وكلمة المرور والروابط لجميع المستخدمين.", saveSharedSettings:"حفظ التغييرات", notConfigured:"غير مُعدّ",
     invalidZoomUrl:"أدخل رابط زوم صحيحًا يبدأ بـ HTTPS.", invalidPrometricUrl:"أدخل رابط بروميترك صحيحًا يبدأ بـ HTTPS.", prometricLinkCopied:"تم نسخ رابط دخول بروميترك",
     accountCopied:"تم نسخ حساب بروميترك", passwordCopied:"تم نسخ كلمة مرور بروميترك",
@@ -1702,6 +1728,7 @@ function renderStats(){
     <div class="stat">${t('remainingStat')}: <b>${list.length - usedCount}</b></div>
   `;
   document.getElementById('remaining-summary-message').textContent=remainingSummaryLines().join('\n');
+  renderDailyUsed();
 }
 function remainingSummaryLines(){
   return Object.entries(state.codesByCategory).map(([cat,codes])=>
@@ -1711,6 +1738,40 @@ document.getElementById('copy-remaining-summary').addEventListener('click',async
   const message=t('remainingSummaryTitle')+'\n'+remainingSummaryLines().join('\n');
   if(await copyText(message))showToast(t('summaryCopied'));
 });
+function dailyUsedGroups(iso){
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return [];
+  const [year,month,day]=iso.split('-').map(Number);
+  return Object.entries(state.codesByCategory).map(([cat,codes])=>({
+    cat,
+    codes:codes.filter(code=>{
+      const used=state.usedCodes[code];
+      if(!used)return false;
+      const date=parseAnyDateString(used);
+      return date && date.day===day && date.month===month && date.year===year;
+    })
+  }));
+}
+function renderDailyUsed(){
+  const box=document.getElementById('daily-used-results');
+  box.innerHTML='';
+  const iso=document.getElementById('daily-used-date').value;
+  if(!iso){const prompt=document.createElement('div');prompt.className='daily-used-none';prompt.textContent=t('chooseUsedDate');box.appendChild(prompt);return;}
+  const groups=dailyUsedGroups(iso);
+  const total=groups.reduce((sum,group)=>sum+group.codes.length,0);
+  const totalEl=document.createElement('div');totalEl.className='daily-used-total';totalEl.textContent=t('dailyUsedTotal')(total);box.appendChild(totalEl);
+  if(total===0){const empty=document.createElement('div');empty.className='daily-used-none';empty.textContent=t('dailyUsedNone');box.appendChild(empty);}
+  groups.forEach(group=>{
+    const section=document.createElement('div');section.className='daily-used-group';
+    const title=document.createElement('strong');title.textContent=displayCatName(group.cat)+': '+group.codes.length;section.appendChild(title);
+    if(group.codes.length){
+      const list=document.createElement('div');list.className='daily-used-codes';
+      group.codes.forEach(code=>{const pill=document.createElement('span');pill.textContent=code;list.appendChild(pill);});
+      section.appendChild(list);
+    }
+    box.appendChild(section);
+  });
+}
+document.getElementById('daily-used-date').addEventListener('change',renderDailyUsed);
 
 function renderDayLegend(dayColors){
   const list = state.codesByCategory[activeCategory] || [];
@@ -1986,6 +2047,8 @@ autoChainToggle.addEventListener('change', async (e)=>{
 });
 
 // ---------- init ----------
+const [initialDay,initialMonth,initialYear]=todayStr().split('/');
+document.getElementById('daily-used-date').value=initialYear+'-'+initialMonth+'-'+initialDay;
 try{
   const prefs=JSON.parse(localStorage.getItem('ibta_ui_preferences') || '{}') || {};
   currentLang=prefs.uiLang==='en'?'en':'ar';
