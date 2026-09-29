@@ -56,6 +56,7 @@ assert(html.indexOf('id="prometric-login-card"')<html.indexOf('id="cred-account"
 assert.match(html,/\.cred-value,\.resource-value\{[^}]*font-size:16px;[^}]*font-weight:600/);
 assert.match(html,/<details class="report-card" id="remaining-summary-details">/);
 assert.match(html,/<details class="report-card" id="daily-used-details">/);
+assert.match(html,/#daily-used-results\{display:grid;grid-template-columns:repeat\(auto-fit,minmax\(220px,1fr\)\)/);
 for(const tab of ['profile','data','prometric','preferences','sync']){
   assert(html.includes(`id="settings-tab-${tab}"`));
   assert(html.includes(`id="settings-pane-${tab}"`));
