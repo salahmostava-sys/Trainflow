@@ -13,7 +13,7 @@ Administrators can allowlist another email from **إدارة البيانات و
 ## Data
 
 - `ibta_codes`: one row per unique code, notes, usage date, actor, and optimistic version.
-- `ibta_settings`: shared keycode catalog, category ordering/overrides, and Prometric credentials. RLS restricts reads to approved users; these credentials are no longer in public HTML/JavaScript.
+- `ibta_settings`: shared keycode catalog, category labels/ordering/overrides, Prometric credentials, and Zoom/Prometric links. RLS restricts reads to approved users; these values are not embedded in public HTML/JavaScript. Administrators can edit existing categories, exams, codes, and the shared connection details from Settings. Category names are editable display labels; the underlying category IDs stay stable so existing codes and links remain attached.
 - `ibta_members`: approved email addresses and roles.
 - `ibta_audit`: database-generated actor/action/time log. Audit entries deliberately do not include passwords or note contents.
 
@@ -25,7 +25,7 @@ Old localStorage was not erased. Sign in as administrator **in the browser and a
 
 Verify the merged counts and marks before putting the team into operation. The original embedded seed did not contain browser-only usage history.
 
-**تنزيل نسخة احتياطية** exports the shared configuration and codes. The resulting JSON includes Prometric credentials; keep it private. There is no scheduled backup service configured.
+**تنزيل نسخة احتياطية** exports the shared configuration and codes. The resulting JSON includes Prometric credentials and the Zoom meeting link; keep it private. There is no scheduled backup service configured.
 
 ## Concurrent use
 
@@ -34,6 +34,8 @@ The server atomically claims a code before copying it. Another user with a stale
 Changes are transactional and version-checked. On conflict, the UI reloads current server data and asks the user to repeat the operation; it never silently overwrites a colleague. Data refreshes on changes, manually, and approximately every two minutes while the page is visible and the user has no unsaved input or selected rows. Rate-limited or unavailable background requests pause for five minutes. This is polling, not push realtime. This version loads the current code inventory into memory, with paginated API reads; a very large inventory should use server-side search and paginated UI.
 
 The database rejects change batches over 250 operations, settings payloads over 64 KiB, notes over 2,000 characters, and claim targets over 200 characters. These limits reduce accidental or abusive database work; they do not stop a distributed denial-of-service attack against the public Supabase endpoint. Before public deployment, review Supabase Auth rate limits and enable Auth CAPTCHA. Protecting the Data API from high-volume traffic would require a server-side gateway with per-client limits and an architecture that prevents direct access to the same operations.
+
+Existing-code edits use an administrator-only atomic database operation. It preserves the recorded user and date when changing a code's value or category, and checks the row version before committing. The live project has migration `migrations/20260929_edit_code.sql` applied; fresh installations can use the matching function in `database.sql`.
 
 ## Hosting
 

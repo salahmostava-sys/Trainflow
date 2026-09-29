@@ -5,11 +5,15 @@ class Element {
   appendChild(e){this.children.push(e);} removeChild(e){this.children=this.children.filter(x=>x!==e);}
   addEventListener(event,fn){this.listeners[event]=fn;} select(){} focus(){} matches(){return false;}
   setAttribute(name,value){this[name]=value;}
+  removeAttribute(name){delete this[name];}
+  get options(){return this.children;}
+  showModal(){this.open=true;}
+  close(){this.open=false;}
   set innerHTML(v){this.children=[];} get innerHTML(){return '';}
 }
 const els={},storage=new Map(),events=[];
-const document={getElementById:id=>els[id] ||= new Element(),createElement:()=>new Element(),querySelectorAll:()=>[],querySelector:()=>new Element(),body:new Element(),execCommand:()=>false,hidden:false};
-const db={settings:{id:1,version:1,payload:{keycodes:[],categoryOrder:['Foundation'],codeCategories:['Foundation-100'],keycodeOrder:{},keycodeOverrides:{},dateColors:{},credentials:{account:'test-account',password:'test-password'}}},codes:[{code:'TEST',category:'Foundation-100',notes:'',used_on:null,used_by:null,version:1}]};
+const document={listeners:{},addEventListener(event,fn){this.listeners[event]=fn;},getElementById:id=>els[id] ||= new Element(),createElement:()=>new Element(),querySelectorAll:()=>[],querySelector:()=>new Element(),body:new Element(),execCommand:()=>false,hidden:false};
+const db={settings:{id:1,version:1,payload:{keycodes:[],categoryOrder:['Foundation'],codeCategories:['Foundation-100'],keycodeOrder:{},keycodeOverrides:{},dateColors:{},credentials:{account:'test-account',password:'test-password'},links:{zoom:'https://us02web.zoom.us/j/demo',prometric:'https://tcnet1.prometric.com/Login.aspx?demo=1'}}},codes:[{code:'TEST',category:'Foundation-100',notes:'',used_on:null,used_by:null,version:1}]};
 const clone=x=>JSON.parse(JSON.stringify(x));
 let conflict=false,clipboardFails=false,codeReads=0;
 const client={
@@ -26,12 +30,19 @@ const client={
       if(c.op==='update'){const r=db.codes.find(r=>r.code===c.code);assert.equal(c.version,r.version);r.notes=c.notes;r.used_on=c.used_on;r.version++;}
       if(c.op==='insert')db.codes.push({...c,version:1});
       if(c.op==='delete')db.codes=db.codes.filter(r=>r.code!==c.code);
+      if(c.op==='replace'){
+        const r=db.codes.find(r=>r.code===c.code);assert.equal(c.version,r.version);
+        r.code=c.new_code;r.category=c.new_category;r.notes=c.notes;
+        if(r.used_on!==c.used_on)r.used_by=c.used_on?'user-1':null;
+        r.used_on=c.used_on;r.version++;
+      }
     }
     if(args.settings_payload){db.settings.payload=clone(args.settings_payload);db.settings.version++;}
     return {};
   }
 };
-const ctx=vm.createContext({document,localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v)},sessionStorage:{},window:{supabase:{createClient:()=>client},addEventListener(){}},navigator:{clipboard:{writeText:async()=>{if(clipboardFails)throw Error('denied');events.push({name:'clipboard'});}}},setInterval(){},setTimeout(){},clearTimeout(){},confirm:()=>true,location:{reload(){}}});
+const ctx=vm.createContext({document,URL,localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v)},sessionStorage:{},window:{supabase:{createClient:()=>client},addEventListener(){}},navigator:{clipboard:{writeText:async text=>{if(clipboardFails)throw Error('denied');events.push({name:'clipboard',text});}}},setInterval(){},setTimeout(){},clearTimeout(){},confirm:()=>true,location:{reload(){}}});
+els['account-menu-popover']=new Element();els['account-menu-popover'].hidden=true;
 vm.runInContext(fs.readFileSync(path.join(__dirname,'../cloud.js'),'utf8'),ctx);
 const html=fs.readFileSync(path.join(__dirname,'../ibta-ops.html'),'utf8');
 for(const [,script] of html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g))vm.runInContext(script,ctx);
@@ -46,6 +57,13 @@ for(const key of usedKeys) assert(englishKeys.includes(key),`Missing translation
 (async()=>{
   await new Promise(setImmediate);
   assert.equal(els['auth-box'].hidden,true);assert.equal(els.app.hidden,false);
+  assert.equal(els['account-menu-email'].textContent,'test@example.invalid');
+  assert.equal(els['account-avatar'].textContent,'T');
+  els['account-menu-btn'].listeners.click();
+  assert.equal(els['account-menu-popover'].hidden,false);
+  assert.equal(els['account-menu-btn']['aria-expanded'],'true');
+  document.listeners.keydown({key:'Escape'});
+  assert.equal(els['account-menu-popover'].hidden,true);
   assert.equal(els['cred-account-val'].textContent,'test-account');
   assert.match(els['cloud-status'].textContent,/متصل/);
   run('toggleLanguage()');
@@ -109,5 +127,46 @@ for(const key of usedKeys) assert(englishKeys.includes(key),`Missing translation
   examForm.children[0].children[2].value='test-key-1';
   await examForm.listeners.submit({preventDefault(){}});
   assert.equal(db.settings.payload.keycodes.length,2);
-  console.log('PASS: authenticated rendering, cloud persistence, copy isolation, shared day colors, new categories and keycodes, reload, and duplicate validation.');
+  assert.equal(els['manage-data'].hidden,false);
+  els['manage-category'].value='New Category';
+  els['manage-category-edit'].listeners.click();
+  assert.equal(els['edit-dialog'].open,true);
+  els['edit-name'].value='Renamed Category';
+  await els['edit-form'].listeners.submit({preventDefault(){}});
+  assert.equal(db.settings.payload.categoryLabels['New Category'],'Renamed Category');
+  assert.equal(run("displayCatName('New Category')"),'Renamed Category');
+  els['manage-exam'].value='TEST-KEY-1';
+  els['manage-exam-edit'].listeners.click();
+  els['edit-title'].value='Revised Exam';els['edit-code'].value='REVISED-KEY-1';
+  await els['edit-form'].listeners.submit({preventDefault(){}});
+  assert.equal(db.settings.payload.keycodes[1].title,'Revised Exam');
+  assert.equal(db.settings.payload.keycodes[1].code,'REVISED-KEY-1');
+  els['manage-code-category'].value='Foundation-100';els['manage-code-category'].listeners.change();
+  els['manage-code'].value='CURRENT-DAY-A';els['manage-code-edit'].listeners.click();
+  els['edit-code'].value='REVISED-CODE';els['edit-category'].value='Master-100';els['edit-notes'].value='updated';
+  await els['edit-form'].listeners.submit({preventDefault(){}});
+  assert.equal(db.codes.find(r=>r.code==='REVISED-CODE').used_by,'user-1');
+  assert.equal(db.codes.find(r=>r.code==='REVISED-CODE').category,'Master-100');
+  assert.equal(db.codes.find(r=>r.code==='REVISED-CODE').used_on,'28/09/2026');
+  assert.equal(els['prometric-settings'].hidden,false);
+  assert.equal(run('ZOOM_URL'),'https://us02web.zoom.us/j/demo');
+  assert.equal(els['open-zoom'].href,'https://us02web.zoom.us/j/demo');
+  assert.equal(els['prometric-link-val'].textContent,'https://tcnet1.prometric.com/Login.aspx?demo=1');
+  els['settings-zoom-link'].value='http://us02web.zoom.us/j/unsafe';
+  await els['prometric-settings-form'].listeners.submit({preventDefault(){}});
+  assert.equal(db.settings.payload.links.zoom,'https://us02web.zoom.us/j/demo');
+  els['settings-zoom-link'].value='https://us02web.zoom.us/j/updated';
+  els['settings-prometric-account'].value='updated-account';
+  els['settings-prometric-password'].value='updated-password';
+  els['settings-prometric-link'].value='https://tcnet1.prometric.com/Login.aspx?updated=1';
+  await els['prometric-settings-form'].listeners.submit({preventDefault(){}});
+  assert.equal(db.settings.payload.credentials.account,'updated-account');
+  assert.equal(db.settings.payload.credentials.password,'updated-password');
+  assert.equal(db.settings.payload.links.zoom,'https://us02web.zoom.us/j/updated');
+  assert.equal(db.settings.payload.links.prometric,'https://tcnet1.prometric.com/Login.aspx?updated=1');
+  assert.equal(els['zoom-link-val'].textContent,'https://us02web.zoom.us/j/updated');
+  clipboardFails=false;
+  await els['copy-prometric-link'].listeners.click();
+  assert(events.some(event=>event.name==='clipboard' && event.text===db.settings.payload.links.prometric));
+  console.log('PASS: authenticated rendering, shared settings, link safety, cloud persistence, copy isolation, shared day colors, categories, and keycodes.');
 })().catch(e=>{console.error(e);process.exitCode=1;});

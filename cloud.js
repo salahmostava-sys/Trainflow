@@ -1,6 +1,6 @@
 /* Supabase publishable key: public by design. Access is enforced by database RLS. */
 const Cloud = (() => {
-  const URL = 'https://xaeffreqwtozsgqajzpc.supabase.co';
+  const SUPABASE_URL = 'https://xaeffreqwtozsgqajzpc.supabase.co';
   const KEY = 'sb_publishable_TB0SB3SNFP1ygpRvMoeSGg_s8o0mHeO';
   let client, rows = new Map(), config, user, role, busy = false, ready = false;
   let nextBackgroundRefresh = 0;
@@ -9,6 +9,13 @@ const Cloud = (() => {
   const $ = id => document.getElementById(id);
   const clone = value => JSON.parse(JSON.stringify(value));
   const same = (a,b) => JSON.stringify(a) === JSON.stringify(b);
+  function validHttpsUrl(value,domain){
+    try{
+      const url=new URL(value);
+      return url.protocol==='https:' && !url.username && !url.password &&
+        (url.hostname===domain || url.hostname.endsWith('.'+domain));
+    }catch{return false;}
+  }
   function message(text, error = false){
     $('cloud-status').textContent = text;
     $('cloud-status').style.color = error ? '#b42318' : '';
@@ -25,6 +32,10 @@ const Cloud = (() => {
     if(raw==='IBTA_CODE_USED_BY_OTHER') return t('codeUsedByOther');
     if(raw==='IBTA_NO_LEGACY_DATA') return t('noLegacyData');
     if(raw==='IBTA_INVALID_LEGACY_DATA') return t('invalidLegacyData');
+    if(raw==='IBTA_INVALID_ZOOM_URL') return t('invalidZoomUrl');
+    if(raw==='IBTA_INVALID_PROMETRIC_URL') return t('invalidPrometricUrl');
+    if(raw==='IBTA_CREDENTIAL_REQUIRED') return t('enterCredential');
+    if(raw==='IBTA_INVALID_CODE_EDIT') return t('invalidCodeEdit');
     if(raw==='IBTA_LIBRARY_LOAD_FAILED') return t('libraryLoadFailed');
     if(raw.startsWith('IBTA_DUPLICATE_CODE:')) return t('duplicateCode')(raw.slice(20));
     if(/invalid login credentials|invalid credentials/i.test(raw) || error?.code==='invalid_credentials') return t('authInvalidCredentials');
@@ -44,7 +55,17 @@ const Cloud = (() => {
     $('auth-message').textContent=key==='error' ? errorText(args[0]) : translated(key,...args);
   }
   function translateUi(){
-    if(user) $('signed-in').textContent=(user.email || '')+' · '+(role==='admin'?t('adminRole'):t('userRole'));
+    if(user){
+      const email=user.email || '';
+      $('signed-in').textContent=email+' · '+(role==='admin'?t('adminRole'):t('userRole'));
+      $('account-menu-email').textContent=email;
+      $('account-avatar').textContent=email.trim().charAt(0).toUpperCase() || 'IB';
+    }
+    $('zoom-link-val').textContent=ZOOM_URL || t('notConfigured');
+    $('prometric-link-val').textContent=PROMETRIC_LOGIN_URL || t('notConfigured');
+    if(ZOOM_URL) $('open-zoom').setAttribute('href',ZOOM_URL);
+    else $('open-zoom').removeAttribute('href');
+    $('copy-prometric-link').disabled=!PROMETRIC_LOGIN_URL;
     renderStatus();
     setAuthStatus(authStatusKey,...authStatusArgs);
   }
@@ -71,7 +92,7 @@ const Cloud = (() => {
     const p=config.payload;
     let prefs={};
     try{prefs=JSON.parse(localStorage.getItem('ibta_ui_preferences') || '{}') || {};}catch{}
-    state={usedCodes:{},codesByCategory:{},codeNotes:{},keycodeOverrides:clone(p.keycodeOverrides || {}),
+    state={usedCodes:{},codesByCategory:{},codeNotes:{},categoryLabels:clone(p.categoryLabels || {}),keycodeOverrides:clone(p.keycodeOverrides || {}),
       keycodeOrder:clone(p.keycodeOrder || {}),categoryOrder:clone(p.categoryOrder),dateColors:clone(p.dateColors || {}),
       settings:{autoChain:!!prefs.autoChain},uiLang:prefs.uiLang==='en'?'en':'ar'};
     for(const cat of p.codeCategories || []) state.codesByCategory[cat]=[];
@@ -83,8 +104,14 @@ const Cloud = (() => {
     DEFAULT_KEYCODES=clone(p.keycodes || []);
     PROMETRIC_ACCOUNT=p.credentials?.account || '';
     PROMETRIC_PASSWORD=p.credentials?.password || '';
+    ZOOM_URL=validHttpsUrl(p.links?.zoom,'zoom.us') ? p.links.zoom : '';
+    PROMETRIC_LOGIN_URL=validHttpsUrl(p.links?.prometric,'prometric.com') ? p.links.prometric : '';
     $('cred-account-val').textContent=PROMETRIC_ACCOUNT;
     $('cred-password-val').textContent=PROMETRIC_PASSWORD;
+    $('settings-prometric-account').value=PROMETRIC_ACCOUNT;
+    $('settings-prometric-password').value=PROMETRIC_PASSWORD;
+    $('settings-zoom-link').value=p.links?.zoom || '';
+    $('settings-prometric-link').value=p.links?.prometric || '';
     currentLang=state.uiLang;
     autoChainToggle.checked=state.settings.autoChain;
     if(!Object.hasOwn(state.codesByCategory,activeCategory)) activeCategory=Object.keys(state.codesByCategory)[0];
@@ -98,6 +125,8 @@ const Cloud = (() => {
       el.hidden=!admin;
     });
     $('admin-tools').hidden=!admin;
+    $('manage-data').hidden=!admin;
+    $('prometric-settings').hidden=!admin;
     translateUi();
   }
   async function load(){
@@ -108,7 +137,7 @@ const Cloud = (() => {
     project();
   }
   function metadata(){
-    return {...clone(config.payload),keycodes:clone(DEFAULT_KEYCODES),categoryOrder:clone(state.categoryOrder),keycodeOverrides:clone(state.keycodeOverrides),
+    return {...clone(config.payload),keycodes:clone(DEFAULT_KEYCODES),categoryOrder:clone(state.categoryOrder),categoryLabels:clone(state.categoryLabels),keycodeOverrides:clone(state.keycodeOverrides),
       keycodeOrder:clone(state.keycodeOrder),codeCategories:Object.keys(state.codesByCategory)};
   }
   async function persist(){
@@ -162,6 +191,24 @@ const Cloud = (() => {
       fail(error);return false;
     }finally{lock(false);}
   }
+  async function editCode(oldCode,newCode,category,usedOn,notes){
+    if(!ready || busy || role!=='admin') return false;
+    const prior=rows.get(oldCode);
+    if(!prior) return false;
+    if(!newCode || newCode.length>200 || !Object.hasOwn(state.codesByCategory,category) ||
+       (usedOn && !/^\d{2}\/\d{2}\/\d{4}$/.test(usedOn)) ||
+       (newCode!==oldCode && [...rows.keys()].some(code=>code.toLowerCase()===newCode.toLowerCase()))){
+      fail(Error('IBTA_INVALID_CODE_EDIT')); return false;
+    }
+    if(newCode===oldCode && category===prior.category && usedOn===(prior.used_on || '') && notes===prior.notes) return true;
+    lock(true);setStatus('saving');
+    try{
+      const {error}=await client.rpc('ibta_apply_changes',{changes:[{op:'replace',code:oldCode,version:prior.version,new_code:newCode,new_category:category,used_on:usedOn || null,notes}],settings_payload:null,settings_version:config.version});
+      if(error) throw error;
+      await load();setStatus('saved');return true;
+    }catch(error){try{await load();}catch{}fail(error);return false;}
+    finally{lock(false);}
+  }
   async function refresh(background = false){
     if(!ready || busy) return false;
     if(background === true && (Date.now() < nextBackgroundRefresh || hasDraftInput())) return false;
@@ -175,9 +222,41 @@ const Cloud = (() => {
     }finally{lock(false);}
   }
   function hasDraftInput(){
+    if($('edit-dialog')?.open) return true;
     if($('add-codes-input')?.value.trim()) return true;
+    if(role==='admin' && config){
+      const p=config.payload;
+      const shared=[['settings-prometric-account',p.credentials?.account || ''],['settings-prometric-password',p.credentials?.password || ''],
+        ['settings-zoom-link',p.links?.zoom || ''],['settings-prometric-link',p.links?.prometric || '']];
+      if(shared.some(([id,value])=>$(id).value!==value)) return true;
+    }
     return [...document.querySelectorAll('.kc-add-cat-input, .add-box textarea')]
       .some(input => input.value.trim());
+  }
+  async function savePrometricSettings(event){
+    event.preventDefault();
+    if(role!=='admin' || busy || !ready) return false;
+    const account=$('settings-prometric-account').value.trim();
+    const password=$('settings-prometric-password').value;
+    const zoom=$('settings-zoom-link').value.trim();
+    const prometric=$('settings-prometric-link').value.trim();
+    try{
+      if(!account || !password) throw Error('IBTA_CREDENTIAL_REQUIRED');
+      if(!validHttpsUrl(zoom,'zoom.us')) throw Error('IBTA_INVALID_ZOOM_URL');
+      if(!validHttpsUrl(prometric,'prometric.com')) throw Error('IBTA_INVALID_PROMETRIC_URL');
+      const payload=clone(config.payload);
+      payload.credentials={...(payload.credentials || {}),account,password};
+      payload.links={...(payload.links || {}),zoom,prometric};
+      if(same(payload,config.payload)) return true;
+      lock(true);setStatus('saving');
+      const {error}=await client.rpc('ibta_apply_changes',{changes:[],settings_payload:payload,settings_version:config.version});
+      if(error) throw error;
+      await load();setStatus('saved');showToast(t('saved'));
+      return true;
+    }catch(error){
+      if(/CONFLICT/.test(error.message || '')) try{await load();}catch{}
+      fail(error);return false;
+    }finally{lock(false);}
   }
   async function enter(session){
     if(!session){ready=false;$('app').hidden=true;$('cloud-tools').hidden=true;$('sign-out').hidden=true;$('auth-box').hidden=false;return;}
@@ -241,13 +320,14 @@ const Cloud = (() => {
   async function boot(){
     try{
       if(!window.supabase) throw Error('IBTA_LIBRARY_LOAD_FAILED');
-      client=window.supabase.createClient(URL,KEY,{auth:{storage:sessionStorage,persistSession:true,detectSessionInUrl:false}});
+      client=window.supabase.createClient(SUPABASE_URL,KEY,{auth:{storage:sessionStorage,persistSession:true,detectSessionInUrl:false}});
       $('auth-form').addEventListener('submit',e=>{e.preventDefault();authenticate(false);});
       $('sign-up').addEventListener('click',()=>authenticate(true));
       $('refresh-data').addEventListener('click',refresh);
       $('import-legacy').addEventListener('click',importLegacy);
       $('export-data').addEventListener('click',exportData);
       $('add-member').addEventListener('click',addMember);
+      $('prometric-settings-form').addEventListener('submit',savePrometricSettings);
       $('sign-out').addEventListener('click',async()=>{
         ready=false;pendingChain=null;await client.auth.signOut({scope:'local'});
         location.reload();
@@ -263,5 +343,5 @@ const Cloud = (() => {
       window.addEventListener('beforeunload',e=>{if(busy){e.preventDefault();e.returnValue='';}});
     }catch(e){setAuthStatus('error',e);}
   }
-  return {boot,persist,copyCode,decorate,refresh,translateUi};
+  return {boot,persist,copyCode,editCode,decorate,refresh,translateUi};
 })();

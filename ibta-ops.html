@@ -46,8 +46,6 @@
   .brand h1{font-size:19.5px; margin:0; font-weight:700; letter-spacing:-.2px;}
 
   .header-actions{display:flex; align-items:center; gap:8px; flex:none;}
-  .header-sign-out{gap:7px; padding:0 11px; color:var(--blue-600); font-size:13px; white-space:nowrap;}
-  .header-sign-out svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
   .icon-pill-btn{
     height:38px; padding:0 12px; border-radius:10px; border:1px solid var(--border); background:var(--surface);
     color:var(--muted); font-size:14.5px; font-weight:700; font-family:inherit; cursor:pointer;
@@ -56,6 +54,19 @@
   }
   .icon-pill-btn.square{width:38px; padding:0; font-size:19px;}
   .icon-pill-btn:hover, .icon-pill-btn.active{background:var(--blue); color:#fff; border-color:var(--blue);}
+  .account-menu{position:relative;flex:none;}
+  .account-trigger{width:40px;height:40px;padding:3px;border-radius:50%;}
+  .account-trigger[aria-expanded="true"]{background:var(--blue);border-color:var(--blue);}
+  .account-avatar{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:var(--blue);color:#fff;font-size:14px;font-weight:700;line-height:1;}
+  .account-trigger:hover .account-avatar,.account-trigger.active .account-avatar,.account-trigger[aria-expanded="true"] .account-avatar{background:#fff;color:var(--blue);}
+  .account-popover{position:absolute;inset-block-start:calc(100% + 9px);inset-inline-end:0;z-index:40;width:min(268px,calc(100vw - 32px));padding:8px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:0 14px 35px rgba(15,27,46,.16);}
+  .account-summary{padding:10px 11px 12px;margin-bottom:4px;border-bottom:1px solid var(--border);}
+  .account-summary strong{display:block;font-size:12px;color:var(--muted);margin-bottom:4px;}
+  .account-summary span{display:block;font-size:13px;font-weight:700;overflow-wrap:anywhere;unicode-bidi:plaintext;}
+  .account-option{display:flex;align-items:center;gap:9px;width:100%;padding:10px 11px;border:0;border-radius:var(--radius-sm);background:transparent;color:var(--text);font:inherit;font-size:13.5px;font-weight:700;text-align:start;cursor:pointer;}
+  .account-option:hover{background:var(--blue-50);color:var(--blue-600);}
+  .account-option:focus-visible,.account-trigger:focus-visible{outline:3px solid var(--blue-100);outline-offset:2px;}
+  .account-option svg{width:17px;height:17px;flex:none;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
 
   nav.tabs{
     display:flex; gap:4px; background:var(--surface); border:1px solid var(--border);
@@ -162,6 +173,19 @@
   .cred-card:hover{border-color:var(--blue);}
   .cred-label{font-size:14px; color:var(--muted); margin-bottom:7px; font-weight:600;}
   .cred-value{font-family:var(--mono); font-size:19px; font-weight:600; word-break:break-all; direction:ltr; unicode-bidi:plaintext; text-align:start;}
+  .resource-card{cursor:default;}
+  .resource-card:hover{border-color:var(--border);}
+  .resource-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+  .resource-value{min-width:0;flex:1 1 250px;font-size:13px;line-height:1.6;word-break:break-all;direction:ltr;unicode-bidi:plaintext;text-align:start;}
+  .resource-btn{display:inline-flex;align-items:center;justify-content:center;min-height:36px;padding:7px 13px;border:1px solid var(--blue);border-radius:var(--radius-sm);background:var(--blue);color:#fff;font:inherit;font-size:13px;font-weight:700;text-decoration:none;white-space:nowrap;cursor:pointer;}
+  .resource-btn:hover{background:var(--blue-600);border-color:var(--blue-600);}
+  .resource-btn:disabled,a.resource-btn:not([href]){opacity:.55;cursor:not-allowed;}
+  .resource-btn:focus-visible{outline:3px solid var(--blue-100);outline-offset:2px;}
+  .shared-settings-form{display:grid;gap:12px;}
+  .shared-settings-form label{display:grid;gap:6px;font-size:13px;font-weight:700;color:var(--text);}
+  .shared-settings-form input{width:100%;min-width:0;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);font:inherit;font-size:14px;direction:ltr;text-align:left;}
+  .shared-settings-form input:focus{outline:2px solid var(--blue-100);border-color:var(--blue);}
+  .shared-settings-form .resource-btn{justify-self:start;margin-top:3px;}
 
   .switch-row{display:flex; align-items:center; gap:11px; cursor:pointer;}
   .switch{position:relative; width:42px; height:24px; flex:none;}
@@ -264,6 +288,19 @@
   }
   .icon-btn:hover{background:var(--blue-100); color:var(--blue-600); border-color:var(--blue-100);}
   .icon-btn.danger:hover{background:#FDEBEC; color:var(--danger); border-color:#F6C9CB;}
+  .edit-dialog{border:1px solid var(--border);border-radius:16px;padding:24px;width:min(420px,calc(100vw - 32px));box-shadow:0 20px 60px #10295735;color:var(--text);background:var(--surface);}
+  .edit-dialog::backdrop{background:#10295780;}
+  .edit-dialog h2{margin:0 0 18px;font-size:19px;}
+  .edit-dialog label{display:block;margin:12px 0 5px;font-size:13px;font-weight:700;}
+  .edit-dialog input,.edit-dialog select{width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font:inherit;}
+  .edit-dialog-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:20px;}
+  .edit-dialog-actions button{padding:8px 15px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font:inherit;cursor:pointer;}
+  .edit-dialog-actions .save{background:var(--blue);color:#fff;border-color:var(--blue);}
+  .manage-grid{display:grid;gap:12px;margin-top:14px;}
+  .manage-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:end;}
+  .manage-row label{font-size:13px;font-weight:700;min-width:0;}
+  .manage-row select{display:block;width:100%;margin-top:5px;padding:9px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font:inherit;}
+  .manage-row button{padding:9px 14px;border:1px solid var(--blue-100);border-radius:8px;background:var(--blue-50);color:var(--blue-600);font:inherit;font-weight:700;cursor:pointer;}
 
   .add-box{
     background:var(--surface); border:1px dashed var(--border); border-radius:var(--radius-lg);
@@ -347,7 +384,6 @@
   .cloud-popover input:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-50);}
   #auth-message{font-size:14px;line-height:1.6;}
   @media(max-width:600px){.cloud-popover{padding:17px;}}
-  @media(max-width:400px){header.top{flex-wrap:wrap}.header-actions{width:100%;justify-content:flex-end}.header-sign-out{margin-inline-end:auto}}
   #auth-box{font-family:'Tajawal','Segoe UI',Tahoma,sans-serif;min-height:100svh;padding:36px 24px;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at 90% 5%,#e2eeff 0,transparent 45%),#f5f7fb;}
   .auth-shell{width:100%;max-width:1040px;display:grid;grid-template-columns:1fr 1fr;background:white;border:1px solid #e2e9f3;border-radius:28px;overflow:hidden;box-shadow:0 24px 80px -28px #233b6b30;}
   .auth-story{position:relative;overflow:hidden;padding:44px 42px;background:linear-gradient(145deg,#12396e,#0c2450);color:white;display:flex;flex-direction:column;justify-content:space-between;min-height:620px;}
@@ -435,9 +471,15 @@
       </div>
     </div>
     <div class="header-actions">
-      <button class="icon-pill-btn header-sign-out" id="sign-out" type="button" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4M14 7l5 5-5 5M9 12h10"/></svg><span data-i18n="signOut">تسجيل الخروج</span></button>
       <button class="icon-pill-btn" id="lang-btn">AR</button>
-      <button class="icon-pill-btn square" id="settings-btn" title="Settings">⚙️</button>
+      <div class="account-menu" id="account-menu">
+        <button class="icon-pill-btn account-trigger" id="account-menu-btn" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="account-menu-popover"><span class="account-avatar" id="account-avatar" aria-hidden="true">IB</span></button>
+        <div class="account-popover" id="account-menu-popover" hidden>
+          <div class="account-summary"><strong data-i18n="currentAccount">الحساب الحالي</strong><span id="account-menu-email" dir="ltr"></span></div>
+          <button class="account-option" id="settings-btn" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"/><path d="M19.4 15a1.8 1.8 0 0 0 .36 1.98l.07.07-1.78 1.78-.07-.07A1.8 1.8 0 0 0 16 18.4a1.8 1.8 0 0 0-1 1.66V20h-2v-.06a1.8 1.8 0 0 0-1-1.66 1.8 1.8 0 0 0-1.98.36l-.07.07-1.78-1.78.07-.07A1.8 1.8 0 0 0 8.6 15a1.8 1.8 0 0 0-1.66-1H7v-2h-.06A1.8 1.8 0 0 0 8.6 11a1.8 1.8 0 0 0-.36-1.98l-.07-.07 1.78-1.78.07.07A1.8 1.8 0 0 0 12 7.6a1.8 1.8 0 0 0 1-1.66V6h2v.06a1.8 1.8 0 0 0 1 1.66 1.8 1.8 0 0 0 1.98-.36l.07-.07 1.78 1.78-.07.07A1.8 1.8 0 0 0 19.4 11a1.8 1.8 0 0 0 1.66 1H21v2h.06A1.8 1.8 0 0 0 19.4 15Z"/></svg><span data-i18n="settingsTitle">الإعدادات</span></button>
+          <button class="account-option" id="sign-out" type="button" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4M14 7l5 5-5 5M9 12h10"/></svg><span data-i18n="signOut">تسجيل الخروج</span></button>
+        </div>
+      </div>
     </div>
   </header>
 
@@ -460,6 +502,14 @@
     <div class="cred-card" id="cred-password">
       <div class="cred-label" data-i18n="prometricPassword">Prometric Password</div>
       <div class="cred-value" id="cred-password-val"></div>
+    </div>
+    <div class="cred-card resource-card">
+      <div class="cred-label" data-i18n="zoomMeeting">Zoom meeting</div>
+      <div class="resource-row"><div class="resource-value" id="zoom-link-val"></div><a class="resource-btn" id="open-zoom" target="_blank" rel="noopener noreferrer" data-i18n="openZoom">Open Zoom</a></div>
+    </div>
+    <div class="cred-card resource-card">
+      <div class="cred-label" data-i18n="prometricLoginLink">Prometric login link</div>
+      <div class="resource-row"><div class="resource-value" id="prometric-link-val"></div><button class="resource-btn" id="copy-prometric-link" type="button" data-i18n="copyLink">Copy link</button></div>
     </div>
   </section>
 
@@ -502,9 +552,31 @@
     </details>
   </section>
 
-  <!-- SETTINGS (standalone panel, opened only from the header gear icon) -->
+  <!-- SETTINGS (opened from the account menu) -->
   <section class="panel" id="panel-settings">
 
+    <section class="cred-card" id="manage-data" hidden style="cursor:default;">
+      <div class="cred-label" data-i18n="manageRecords">Edit system data</div>
+      <div class="settings-desc" data-i18n="manageRecordsDesc">Choose a record here to edit it without adding controls to the daily work screen.</div>
+      <div class="manage-grid">
+        <div class="manage-row"><label><span data-i18n="categoryNamePlaceholder">Category</span><select id="manage-category"></select></label><button type="button" id="manage-category-edit" data-i18n="editBtn">Edit</button></div>
+        <div class="manage-row"><label><span data-i18n="examTitleCol">Exam</span><select id="manage-exam"></select></label><button type="button" id="manage-exam-edit" data-i18n="editBtn">Edit</button></div>
+        <div class="manage-row"><label><span data-i18n="moveCategoryCol">Code category</span><select id="manage-code-category"></select></label><span></span></div>
+        <div class="manage-row"><label><span data-i18n="colCode">Code</span><select id="manage-code"></select></label><button type="button" id="manage-code-edit" data-i18n="editBtn">Edit</button></div>
+      </div>
+    </section>
+
+    <section class="cred-card" id="prometric-settings" hidden style="cursor:default;">
+      <div class="cred-label" data-i18n="sharedSettingsTitle">Prometric and meeting details</div>
+      <div class="settings-desc" data-i18n="sharedSettingsDesc">Administrators can change these shared values.</div>
+      <form class="shared-settings-form" id="prometric-settings-form">
+        <label><span data-i18n="prometricAccount">Prometric Account</span><input id="settings-prometric-account" type="text" autocomplete="off" maxlength="300" required></label>
+        <label><span data-i18n="prometricPassword">Prometric Password</span><input id="settings-prometric-password" type="text" autocomplete="off" maxlength="300" required></label>
+        <label><span data-i18n="zoomMeeting">Zoom meeting</span><input id="settings-zoom-link" type="url" autocomplete="off" maxlength="2000" required></label>
+        <label><span data-i18n="prometricLoginLink">Prometric login link</span><input id="settings-prometric-link" type="url" autocomplete="off" maxlength="2000" required></label>
+        <button class="resource-btn" type="submit" data-i18n="saveSharedSettings">Save changes</button>
+      </form>
+    </section>
 
     <div class="cred-card" style="cursor:default;">
       <div class="cred-label" style="margin-bottom:2px;" data-i18n="autoChainTitle">Auto Chain Copy</div>
@@ -541,6 +613,19 @@
 </div>
 
 <div class="toast" id="toast"></div>
+<dialog id="edit-dialog" class="edit-dialog">
+  <form id="edit-form">
+    <h2 id="edit-heading"></h2>
+    <div id="edit-name-field"><label for="edit-name" data-i18n="categoryNamePlaceholder">Category name</label><input id="edit-name" maxlength="100"></div>
+    <div id="edit-title-field"><label for="edit-title" data-i18n="examTitleCol">Exam Title</label><input id="edit-title" maxlength="200"></div>
+    <div id="edit-language-field"><label for="edit-language" data-i18n="langCol">Language</label><select id="edit-language"><option value="English">English</option><option value="Arabic">Arabic</option></select></div>
+    <div id="edit-code-field"><label for="edit-code" id="edit-code-label"></label><input id="edit-code" maxlength="200" required></div>
+    <div id="edit-category-field"><label for="edit-category" data-i18n="moveCategoryCol">Move Category</label><select id="edit-category"></select></div>
+    <div id="edit-date-field"><label for="edit-date" data-i18n="colDate">Date</label><input id="edit-date" placeholder="DD/MM/YYYY" inputmode="numeric"></div>
+    <div id="edit-notes-field"><label for="edit-notes" data-i18n="colNotes">Notes</label><input id="edit-notes" maxlength="2000"></div>
+    <div class="edit-dialog-actions"><button type="button" id="edit-cancel" data-i18n="cancelBtn">Cancel</button><button type="submit" class="save" data-i18n="saveSharedSettings">Save changes</button></div>
+  </form>
+</dialog>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.116.0/dist/umd/supabase.js"></script>
 <script src="cloud.js"></script>
@@ -557,6 +642,9 @@ const TRANSLATIONS = {
     noExams:"No exams in this category",
     remaining:"Remaining",
     prometricAccount:"Prometric Account", prometricPassword:"Prometric Password",
+    zoomMeeting:"Zoom meeting", openZoom:"Open Zoom", prometricLoginLink:"Prometric login link", copyLink:"Copy link",
+    sharedSettingsTitle:"Shared Prometric settings", sharedSettingsDesc:"Administrators can change the account, password, and links for the team.", saveSharedSettings:"Save changes", notConfigured:"Not configured",
+    invalidZoomUrl:"Enter a valid HTTPS Zoom link.", invalidPrometricUrl:"Enter a valid HTTPS Prometric link.", prometricLinkCopied:"Prometric login link copied",
     accountCopied:"Prometric Account — Copied", passwordCopied:"Prometric Password — Copied",
     copiedColon:code=>"Copied: "+code,
     movedTo:(title,cat)=>title+" moved to "+cat,
@@ -600,6 +688,7 @@ const TRANSLATIONS = {
     removeCategory:"Remove category",
     confirmRemoveCategory:cat=>"Remove category \""+cat+"\"? Its exams will move back to their original category.",
     categoryRemoved:"Category removed",
+    editBtn:"Edit", editCategory:"Edit category", editExam:"Edit exam", editCode:"Edit code", cancelBtn:"Cancel", invalidCodeEdit:"Enter a unique code and a date in DD/MM/YYYY format.", itemUpdated:"Changes saved", manageRecords:"Edit system data", manageRecordsDesc:"Choose a record here to edit it without adding controls to the daily work screen.",
     authBrandTagline:"Your team's workspace", authHeadline1:"Your codes, organized.", authHeadline2:"Your team, connected.",
     authEyebrow:"IBTA OPERATIONS",
     authIntro:"One place to manage codes and track their use, wherever you are.",
@@ -614,7 +703,7 @@ const TRANSLATIONS = {
     authNotApproved:"Your account is not approved. Ask an administrator to add your email address.",
     authInvalidCredentials:"Invalid email or password.", authEmailNotConfirmed:"Confirm your email address before signing in.",
     authEmailLimit:"Too many emails were sent. Please try again later.", authAlreadyRegistered:"An account with this email already exists.",
-    currentAccount:"Current account", adminRole:"Admin", userRole:"User", refresh:"Refresh", signOut:"Sign out",
+    currentAccount:"Current account", accountMenu:"Account menu", adminRole:"Admin", userRole:"User", refresh:"Refresh", signOut:"Sign out",
     manageDataUsers:"Manage data and users", importLegacy:"Import old browser data", exportBackup:"Download backup",
     newMemberEmail:"New user's email", addMember:"Approve user",
     dbConnected:"Connected to the database", saving:"Saving…", saved:"Saved to the database", refreshed:"Data refreshed",
@@ -643,6 +732,9 @@ const TRANSLATIONS = {
     noExams:"لا توجد امتحانات في هذه الفئة",
     remaining:"متبقي",
     prometricAccount:"حساب بروميترك", prometricPassword:"كلمة مرور بروميترك",
+    zoomMeeting:"رابط اجتماع زوم", openZoom:"فتح زوم", prometricLoginLink:"رابط دخول بروميترك", copyLink:"نسخ الرابط",
+    sharedSettingsTitle:"إعدادات بروميترك المشتركة", sharedSettingsDesc:"يستطيع المدير تعديل الحساب وكلمة المرور والروابط لجميع المستخدمين.", saveSharedSettings:"حفظ التغييرات", notConfigured:"غير مُعدّ",
+    invalidZoomUrl:"أدخل رابط زوم صحيحًا يبدأ بـ HTTPS.", invalidPrometricUrl:"أدخل رابط بروميترك صحيحًا يبدأ بـ HTTPS.", prometricLinkCopied:"تم نسخ رابط دخول بروميترك",
     accountCopied:"تم نسخ حساب بروميترك", passwordCopied:"تم نسخ كلمة مرور بروميترك",
     copiedColon:code=>"تم نسخ الكود: "+code,
     movedTo:(title,cat)=>title+" نُقل إلى "+cat,
@@ -686,6 +778,7 @@ const TRANSLATIONS = {
     removeCategory:"حذف الفئة",
     confirmRemoveCategory:cat=>"حذف فئة \""+cat+"\"؟ الامتحانات اللي جواها هترجع لفئتها الأصلية.",
     categoryRemoved:"تم حذف الفئة",
+    editBtn:"تعديل", editCategory:"تعديل الفئة", editExam:"تعديل الامتحان", editCode:"تعديل الكود", cancelBtn:"إلغاء", invalidCodeEdit:"أدخل كودًا غير مكرر، واكتب التاريخ بصيغة يوم/شهر/سنة.", itemUpdated:"تم حفظ التعديل", manageRecords:"تعديل بيانات النظام", manageRecordsDesc:"اختر البيانات المطلوب تعديلها هنا، بعيدًا عن شاشة العمل اليومية.",
     authBrandTagline:"مساحة عمل فريقك", authHeadline1:"أكوادك منظّمة.", authHeadline2:"وفريقك على اتصال.",
     authEyebrow:"عمليات IBTA",
     authIntro:"مساحة واحدة لإدارة الأكواد ومتابعة استخدامها، أينما كنت.",
@@ -700,7 +793,7 @@ const TRANSLATIONS = {
     authNotApproved:"حسابك غير معتمد. اطلب من المدير إضافة بريدك إلى المستخدمين.",
     authInvalidCredentials:"البريد الإلكتروني أو كلمة المرور غير صحيحين.", authEmailNotConfirmed:"أكّد بريدك الإلكتروني قبل تسجيل الدخول.",
     authEmailLimit:"تم تجاوز حد رسائل البريد الإلكتروني. حاول مرة أخرى لاحقًا.", authAlreadyRegistered:"يوجد حساب مسجل بهذا البريد الإلكتروني.",
-    currentAccount:"الحساب الحالي", adminRole:"مدير", userRole:"مستخدم", refresh:"تحديث", signOut:"تسجيل الخروج",
+    currentAccount:"الحساب الحالي", accountMenu:"قائمة الحساب", adminRole:"مدير", userRole:"مستخدم", refresh:"تحديث", signOut:"تسجيل الخروج",
     manageDataUsers:"إدارة البيانات والمستخدمين", importLegacy:"استيراد بيانات المتصفح القديمة", exportBackup:"تنزيل نسخة احتياطية",
     newMemberEmail:"بريد مستخدم جديد", addMember:"اعتماد المستخدم",
     dbConnected:"متصل بقاعدة البيانات", saving:"جارٍ الحفظ…", saved:"تم الحفظ في قاعدة البيانات", refreshed:"تم تحديث البيانات",
@@ -731,16 +824,97 @@ const CATEGORY_LINK = {"Foundation":"Foundation-100","Master":"Master-10","BIS":
 // the number) is still used internally for all state lookups — only the label changes.
 function displayCatName(cat){
   const name=cat.replace(/-\d+$/, '');
-  return t('categoryNames')[name] || name;
+  return state?.categoryLabels?.[cat] || state?.categoryLabels?.[name] || t('categoryNames')[name] || name;
 }
 
 let DEFAULT_KEYCODES = [];
-let PROMETRIC_ACCOUNT = '', PROMETRIC_PASSWORD = '';
+let PROMETRIC_ACCOUNT = '', PROMETRIC_PASSWORD = '', ZOOM_URL = '', PROMETRIC_LOGIN_URL = '';
 async function saveState(){ return Cloud.persist(); }
-let state = {usedCodes:{},codesByCategory:{},keycodeOverrides:{},dateColors:{},settings:{autoChain:false},codeNotes:{},uiLang:'en',categoryOrder:[],keycodeOrder:{}};
+let state = {usedCodes:{},codesByCategory:{},categoryLabels:{},keycodeOverrides:{},dateColors:{},settings:{autoChain:false},codeNotes:{},uiLang:'en',categoryOrder:[],keycodeOrder:{}};
 function getLinkedCodesCat(cat){
   return CATEGORY_LINK[cat] || cat;
 }
+function fillManageSelect(id,entries){
+  const select=document.getElementById(id),selected=select.value;
+  select.innerHTML='';
+  entries.forEach(([value,label])=>{const option=document.createElement('option');option.value=value;option.textContent=label;select.appendChild(option);});
+  if(entries.some(([value])=>value===selected))select.value=selected;
+  else select.value=entries[0]?.[0] || '';
+}
+function renderManageData(){
+  fillManageSelect('manage-category',state.categoryOrder.map(cat=>[cat,displayCatName(cat)]));
+  fillManageSelect('manage-exam',DEFAULT_KEYCODES.map(item=>[item.code,displayCatName(state.keycodeOverrides[item.code] || item.category)+' · '+item.title+' · '+item.code]));
+  fillManageSelect('manage-code-category',Object.keys(state.codesByCategory).map(cat=>[cat,displayCatName(cat)]));
+  const cat=document.getElementById('manage-code-category').value;
+  fillManageSelect('manage-code',(state.codesByCategory[cat] || []).map(code=>[code,code]));
+  document.getElementById('manage-exam-edit').disabled=!DEFAULT_KEYCODES.length;
+  document.getElementById('manage-code-edit').disabled=!(state.codesByCategory[cat] || []).length;
+}
+document.getElementById('manage-code-category').addEventListener('change',renderManageData);
+document.getElementById('manage-category-edit').addEventListener('click',()=>openEdit('category',document.getElementById('manage-category').value));
+document.getElementById('manage-exam-edit').addEventListener('click',()=>{
+  const item=DEFAULT_KEYCODES.find(item=>item.code===document.getElementById('manage-exam').value);if(item)openEdit('exam',item);
+});
+document.getElementById('manage-code-edit').addEventListener('click',()=>{
+  const code=document.getElementById('manage-code').value;if(code)openEdit('code',code);
+});
+let editTarget=null;
+function openEdit(kind,target){
+  editTarget={kind,target};
+  const dialog=document.getElementById('edit-dialog');
+  const isCategory=kind==='category',isExam=kind==='exam';
+  document.getElementById('edit-heading').textContent=t(isCategory?'editCategory':isExam?'editExam':'editCode');
+  document.getElementById('edit-name-field').hidden=!isCategory;
+  document.getElementById('edit-title-field').hidden=!isExam;
+  document.getElementById('edit-language-field').hidden=!isExam;
+  document.getElementById('edit-code-field').hidden=isCategory;
+  document.getElementById('edit-category-field').hidden=isCategory;
+  document.getElementById('edit-date-field').hidden=kind!=='code';
+  document.getElementById('edit-notes-field').hidden=kind!=='code';
+  document.getElementById('edit-code').required=!isCategory;
+  document.getElementById('edit-code-label').textContent=t(isExam?'keycodeCol':'colCode');
+  document.getElementById('edit-name').value=isCategory?displayCatName(target):'';
+  document.getElementById('edit-title').value=isExam?target.title:'';
+  document.getElementById('edit-language').value=isExam?target.lang:'English';
+  [...document.getElementById('edit-language').options].forEach(option=>option.textContent=t('languageNames')[option.value]);
+  document.getElementById('edit-code').value=isCategory?'':isExam?target.code:target;
+  document.getElementById('edit-date').value=kind==='code'?(state.usedCodes[target] || ''):'';
+  document.getElementById('edit-notes').value=kind==='code'?(state.codeNotes[target] || ''):'';
+  const select=document.getElementById('edit-category');
+  select.innerHTML='';
+  (isExam?state.categoryOrder:Object.keys(state.codesByCategory)).forEach(cat=>{
+    const option=document.createElement('option');option.value=cat;option.textContent=displayCatName(cat);select.appendChild(option);
+  });
+  if(!isCategory) select.value=isExam?(state.keycodeOverrides[target.code] || target.category):Object.keys(state.codesByCategory).find(cat=>state.codesByCategory[cat].includes(target));
+  dialog.showModal();
+}
+document.getElementById('edit-cancel').addEventListener('click',()=>document.getElementById('edit-dialog').close());
+document.getElementById('edit-form').addEventListener('submit',async e=>{
+  e.preventDefault();
+  if(!editTarget)return;
+  const {kind,target}=editTarget,code=document.getElementById('edit-code').value.trim(),cat=document.getElementById('edit-category').value;
+  let saved=false;
+  if(kind==='category'){
+    const name=document.getElementById('edit-name').value.trim();
+    if(!name || state.categoryOrder.some(other=>other!==target && displayCatName(other).toLowerCase()===name.toLowerCase())){showToast(t('categoryExists'));return;}
+    state.categoryLabels[target]=name;
+    saved=await saveState();
+  }else if(kind==='exam'){
+    const title=document.getElementById('edit-title').value.trim();
+    if(!title || !code){showToast(t('examRequired'));return;}
+    if(DEFAULT_KEYCODES.some(item=>item!==target && item.code.toLowerCase()===code.toLowerCase())){showToast(t('keycodeExists'));return;}
+    const oldCode=target.code;
+    target.title=title;target.lang=document.getElementById('edit-language').value;target.code=code;target.category=cat;
+    delete state.keycodeOverrides[oldCode];
+    Object.values(state.keycodeOrder).forEach(order=>{const i=order.indexOf(oldCode);if(i!==-1)order.splice(i,1);});
+    saved=await saveState();
+  }else{
+    const date=document.getElementById('edit-date').value.trim();
+    const notes=document.getElementById('edit-notes').value.trim();
+    saved=await Cloud.editCode(target,code,cat,date,notes);
+  }
+  if(saved){document.getElementById('edit-dialog').close();editTarget=null;renderCodeTabs();renderCodeGrid();renderManageData();showToast(t('itemUpdated'));}
+});
 state.categoryOrder.forEach(c=>{
   const linked = getLinkedCodesCat(c);
   if(!state.codesByCategory[linked]) state.codesByCategory[linked] = [];
@@ -906,6 +1080,8 @@ function applyLanguage(){
   document.getElementById('lang-btn').textContent = currentLang === 'en' ? 'AR' : 'EN';
   document.getElementById('auth-lang-btn').textContent = currentLang === 'en' ? 'AR' : 'EN';
   document.getElementById('settings-btn').title = t('settingsTitle');
+  document.getElementById('account-menu-btn').title = t('accountMenu');
+  document.getElementById('account-menu-btn').setAttribute('aria-label',t('accountMenu'));
   document.querySelectorAll('[data-i18n]').forEach(el=>{
     el.textContent = t(el.dataset.i18n);
   });
@@ -915,6 +1091,7 @@ function applyLanguage(){
   renderKeycodes();
   renderCodeTabs();
   renderCodeGrid();
+  renderManageData();
 }
 function toggleLanguage(){
   currentLang = currentLang === 'en' ? 'ar' : 'en';
@@ -929,11 +1106,31 @@ document.getElementById('lang-btn').addEventListener('click',toggleLanguage);
 document.getElementById('auth-lang-btn').addEventListener('click',toggleLanguage);
 
 // ---------- TABS ----------
+function closeAccountMenu(){
+  document.getElementById('account-menu-popover').hidden=true;
+  document.getElementById('account-menu-btn').setAttribute('aria-expanded','false');
+}
+document.getElementById('account-menu-btn').addEventListener('click',()=>{
+  const menu=document.getElementById('account-menu-popover');
+  const opening=menu.hidden;
+  menu.hidden=!opening;
+  document.getElementById('account-menu-btn').setAttribute('aria-expanded',String(opening));
+});
+document.addEventListener('click',e=>{
+  if(!document.getElementById('account-menu').contains(e.target)) closeAccountMenu();
+});
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'&&!document.getElementById('account-menu-popover').hidden){
+    closeAccountMenu();
+    document.getElementById('account-menu-btn').focus();
+  }
+});
 function showPanel(id){
+  closeAccountMenu();
   if(id === 'keycodes') renderKeycodes();
   document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.remove('active'));
   document.querySelectorAll('section.panel').forEach(p=>p.classList.remove('active'));
-  document.getElementById('settings-btn').classList.remove('active');
+  document.getElementById('account-menu-btn').classList.toggle('active',id==='settings');
   document.getElementById('panel-'+id).classList.add('active');
 }
 document.querySelectorAll('nav.tabs button').forEach(btn=>{
@@ -944,7 +1141,6 @@ document.querySelectorAll('nav.tabs button').forEach(btn=>{
 });
 document.getElementById('settings-btn').addEventListener('click', async ()=>{
   showPanel('settings');
-  document.getElementById('settings-btn').classList.add('active');
 });
 
 // ---------- PANEL 1: KEYCODES ----------
@@ -1229,6 +1425,7 @@ function renderKeycodes(){
           if(state.keycodeOverrides[code] === cat) delete state.keycodeOverrides[code];
         });
         state.categoryOrder = state.categoryOrder.filter(c=>c!==cat);
+        delete state.categoryLabels[cat];
         delete state.keycodeOrder[cat];
         if(!await saveState()) return;
         renderKeycodes();
@@ -1387,6 +1584,10 @@ document.getElementById('cred-account').addEventListener('click', async ()=>{
 });
 document.getElementById('cred-password').addEventListener('click', async ()=>{
   handlePrometricCopy('cred-password-val', 'passwordCopied');
+});
+document.getElementById('copy-prometric-link').addEventListener('click',async()=>{
+  if(!PROMETRIC_LOGIN_URL){showToast(t('notConfigured'));return;}
+  if(await copyText(PROMETRIC_LOGIN_URL)) showToast(t('prometricLinkCopied'));
 });
 
 // ---------- PANEL 3: CODES ----------
