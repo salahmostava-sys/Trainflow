@@ -135,6 +135,7 @@ const Cloud = (() => {
     });
     $('admin-tools').hidden=!admin;
     $('manage-data').hidden=!admin;
+    $('settings-add-forms').hidden=!admin;
     $('prometric-settings').hidden=!admin;
     $('settings-tab-data').hidden=!admin;
     $('settings-tab-prometric').hidden=!admin;

@@ -166,6 +166,11 @@
   .kc-add-exam-fields{display:grid;grid-template-columns:minmax(130px,1.7fr) 100px minmax(115px,1fr) minmax(115px,1fr);gap:8px;margin-top:9px;}
   .kc-add-exam-fields input,.kc-add-exam-fields select{width:100%;min-width:0;height:34px;padding:5px 7px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);font:inherit;font-size:13px;}
   .kc-add-exam-fields input:focus,.kc-add-exam-fields select:focus{outline:2px solid var(--blue-100);border-color:var(--blue);}
+  .kc-add-exam-category{display:grid;gap:5px;margin-top:10px;color:var(--muted);font-size:12px;font-weight:700;}
+  .kc-add-exam-category select{width:100%;max-width:320px;height:34px;padding:5px 7px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);font:inherit;font-size:13px;}
+  #settings-add-forms{display:grid;gap:12px;margin-top:16px;}
+  #settings-add-forms[hidden]{display:none;}
+  #settings-add-forms .kc-add-exam,#settings-add-forms .add-box{border:1px solid var(--border);border-radius:var(--radius-md);background:var(--surface);box-shadow:var(--shadow);}
   .kc-add-exam-fields input[name="keycode"]{direction:ltr;}
   .kc-add-exam button{margin-top:8px;padding:7px 14px;border:0;border-radius:7px;background:var(--blue);color:white;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;}
   @media(max-width:600px){.kc-add-exam-fields{grid-template-columns:repeat(2,minmax(0,1fr));}}
@@ -654,6 +659,7 @@
         <div class="manage-row"><label><span data-i18n="colCode">Code</span><select id="manage-code"></select></label><button type="button" id="manage-code-edit" data-i18n="editBtn">Edit</button></div>
       </div>
     </section>
+    <div id="settings-add-forms"></div>
     </div>
 
     <div class="settings-pane" id="settings-pane-prometric" role="tabpanel" aria-labelledby="settings-tab-prometric" hidden>
@@ -1023,7 +1029,7 @@ document.getElementById('edit-form').addEventListener('submit',async e=>{
     const notes=document.getElementById('edit-notes').value.trim();
     saved=await Cloud.editCode(target,code,cat,date,notes);
   }
-  if(saved){document.getElementById('edit-dialog').close();editTarget=null;renderCodeTabs();renderCodeGrid();renderManageData();showToast(t('itemUpdated'));}
+  if(saved){document.getElementById('edit-dialog').close();editTarget=null;renderKeycodes();renderCodeTabs();renderCodeGrid();renderManageData();showToast(t('itemUpdated'));}
 });
 state.categoryOrder.forEach(c=>{
   const linked = getLinkedCodesCat(c);
@@ -1429,12 +1435,26 @@ function buildAddCategoryBox(){
   return box;
 }
 
-function buildAddExamBox(cat){
+function buildAddExamBox(){
   const box = document.createElement('details');
   box.className = 'kc-add-exam';
   const summary = document.createElement('summary');
   summary.textContent = t('addExam');
   const form = document.createElement('form');
+  const categoryLabel = document.createElement('label');
+  categoryLabel.className = 'kc-add-exam-category';
+  const categoryName = document.createElement('span');
+  categoryName.textContent = t('categoryNamePlaceholder');
+  const category = document.createElement('select');
+  category.name = 'category';
+  state.categoryOrder.forEach(value=>{
+    const option = document.createElement('option');
+    option.value = value;
+    option.textContent = displayCatName(value);
+    category.appendChild(option);
+  });
+  categoryLabel.appendChild(categoryName);
+  categoryLabel.appendChild(category);
   const fields = document.createElement('div');
   fields.className = 'kc-add-exam-fields';
   const title = document.createElement('input');
@@ -1467,9 +1487,9 @@ function buildAddExamBox(cat){
     const option = document.createElement('option');
     option.value = value;
     option.textContent = displayCatName(value);
-    option.selected = value === cat;
     destination.appendChild(option);
   });
+  category.addEventListener('change',()=>{destination.value=category.value;});
   [title,language,keycode,destination].forEach(field=>fields.appendChild(field));
   const button = document.createElement('button');
   button.type = 'submit';
@@ -1478,6 +1498,7 @@ function buildAddExamBox(cat){
     event.preventDefault();
     const examTitle = title.value.trim();
     const code = keycode.value.trim();
+    const cat = category.value;
     if(!examTitle || !code){ showToast(t('examRequired')); return; }
     if(DEFAULT_KEYCODES.some(item=>item.code.toLowerCase() === code.toLowerCase())){
       showToast(t('keycodeExists')); return;
@@ -1488,11 +1509,19 @@ function buildAddExamBox(cat){
     renderKeycodes();
     showToast(t('examAdded'));
   });
+  form.appendChild(categoryLabel);
   form.appendChild(fields);
   form.appendChild(button);
   box.appendChild(summary);
   box.appendChild(form);
   return box;
+}
+
+function renderSettingsAddForms(){
+  const container=document.getElementById('settings-add-forms');
+  container.innerHTML='';
+  container.appendChild(buildAddExamBox());
+  container.appendChild(buildAddCategoryBox());
 }
 
 function renderKeycodes(){
@@ -1708,12 +1737,10 @@ function renderKeycodes(){
     });
 
     block.appendChild(scroll);
-    block.appendChild(buildAddExamBox(cat));
     panel.appendChild(block);
   });
 
-  // Keep category management after the complete list of keycode groups.
-  panel.appendChild(buildAddCategoryBox());
+  renderSettingsAddForms();
   Cloud.decorate();
 }
 

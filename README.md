@@ -10,6 +10,8 @@ Supabase Auth's Site URL is configured as <https://ibta-ops.pages.dev/> for conf
 
 The Settings screen uses separate tabs for account details, system data, Prometric details, preferences, and team/sync tools. System-data and Prometric-edit tabs are visible only to administrators; the database enforces those permissions independently of the interface.
 
+Administrators add exams and categories under **Settings → System data**. The Keycodes screen remains focused on viewing and using keycodes.
+
 The interface and sign-in page share the IBM Plex Sans Arabic font, loaded from Google Fonts with local system-font fallbacks.
 
 Administrators can allowlist another email from **إدارة البيانات والمستخدمين**. That person then creates an account and confirms the same address. Other signups cannot access operational data. Operators can copy codes, edit notes, and release their own codes. Only administrators can add/delete codes, manage categories, and allowlist users. Membership can be deactivated in the Supabase `ibta_members` table by setting `active=false`.
