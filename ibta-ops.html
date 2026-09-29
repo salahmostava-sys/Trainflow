@@ -186,6 +186,10 @@
   .shared-settings-form input{width:100%;min-width:0;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);font:inherit;font-size:14px;direction:ltr;text-align:left;}
   .shared-settings-form input:focus{outline:2px solid var(--blue-100);border-color:var(--blue);}
   .shared-settings-form .resource-btn{justify-self:start;margin-top:3px;}
+  .profile-forms{display:grid;gap:17px;}
+  .profile-forms form+form{border-top:1px solid var(--border);padding-top:16px;}
+  .profile-forms .shared-settings-form{gap:9px;}
+  .profile-status{font-size:13px;line-height:1.6;color:var(--blue-600);margin:14px 0 0;}
 
   .switch-row{display:flex; align-items:center; gap:11px; cursor:pointer;}
   .switch{position:relative; width:42px; height:24px; flex:none;}
@@ -288,6 +292,18 @@
   }
   .icon-btn:hover{background:var(--blue-100); color:var(--blue-600); border-color:var(--blue-100);}
   .icon-btn.danger:hover{background:#FDEBEC; color:var(--danger); border-color:#F6C9CB;}
+  .icon-btn svg,.kc-remove-cat-btn svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+  #prometric-login-card{cursor:pointer;}
+  #prometric-login-card:hover{border-color:var(--blue-600);}
+  .delete-dialog{border:1px solid var(--border);border-radius:18px;padding:24px;width:min(390px,calc(100vw - 32px));box-shadow:0 20px 60px #10295735;background:var(--surface);color:var(--text);}
+  .delete-dialog::backdrop{background:#10295780;}
+  .delete-dialog-icon{width:42px;height:42px;display:grid;place-items:center;border-radius:12px;background:#FDEBEC;color:var(--danger);margin-bottom:14px;}
+  .delete-dialog-icon svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+  .delete-dialog h2{font-size:19px;margin:0 0 8px;}
+  .delete-dialog p{font-size:14px;line-height:1.55;color:var(--muted);overflow-wrap:anywhere;margin:0;}
+  .delete-dialog-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:22px;}
+  .delete-dialog-actions button{padding:9px 16px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font:inherit;cursor:pointer;}
+  .delete-dialog-actions .danger{background:var(--danger);border-color:var(--danger);color:#fff;}
   .edit-dialog{border:1px solid var(--border);border-radius:16px;padding:24px;width:min(420px,calc(100vw - 32px));box-shadow:0 20px 60px #10295735;color:var(--text);background:var(--surface);}
   .edit-dialog::backdrop{background:#10295780;}
   .edit-dialog h2{margin:0 0 18px;font-size:19px;}
@@ -475,7 +491,7 @@
       <div class="account-menu" id="account-menu">
         <button class="icon-pill-btn account-trigger" id="account-menu-btn" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="account-menu-popover"><span class="account-avatar" id="account-avatar" aria-hidden="true">IB</span></button>
         <div class="account-popover" id="account-menu-popover" hidden>
-          <div class="account-summary"><strong data-i18n="currentAccount">الحساب الحالي</strong><span id="account-menu-email" dir="ltr"></span></div>
+          <div class="account-summary"><strong id="account-menu-name" data-i18n="currentAccount">الحساب الحالي</strong><span id="account-menu-email" dir="ltr"></span></div>
           <button class="account-option" id="settings-btn" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"/><path d="M19.4 15a1.8 1.8 0 0 0 .36 1.98l.07.07-1.78 1.78-.07-.07A1.8 1.8 0 0 0 16 18.4a1.8 1.8 0 0 0-1 1.66V20h-2v-.06a1.8 1.8 0 0 0-1-1.66 1.8 1.8 0 0 0-1.98.36l-.07.07-1.78-1.78.07-.07A1.8 1.8 0 0 0 8.6 15a1.8 1.8 0 0 0-1.66-1H7v-2h-.06A1.8 1.8 0 0 0 8.6 11a1.8 1.8 0 0 0-.36-1.98l-.07-.07 1.78-1.78.07.07A1.8 1.8 0 0 0 12 7.6a1.8 1.8 0 0 0 1-1.66V6h2v.06a1.8 1.8 0 0 0 1 1.66 1.8 1.8 0 0 0 1.98-.36l.07-.07 1.78 1.78-.07.07A1.8 1.8 0 0 0 19.4 11a1.8 1.8 0 0 0 1.66 1H21v2h.06A1.8 1.8 0 0 0 19.4 15Z"/></svg><span data-i18n="settingsTitle">الإعدادات</span></button>
           <button class="account-option" id="sign-out" type="button" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4M14 7l5 5-5 5M9 12h10"/></svg><span data-i18n="signOut">تسجيل الخروج</span></button>
         </div>
@@ -507,7 +523,7 @@
       <div class="cred-label" data-i18n="zoomMeeting">Zoom meeting</div>
       <div class="resource-row"><div class="resource-value" id="zoom-link-val"></div><a class="resource-btn" id="open-zoom" target="_blank" rel="noopener noreferrer" data-i18n="openZoom">Open Zoom</a></div>
     </div>
-    <div class="cred-card resource-card">
+    <div class="cred-card resource-card" id="prometric-login-card">
       <div class="cred-label" data-i18n="prometricLoginLink">Prometric login link</div>
       <div class="resource-row"><div class="resource-value" id="prometric-link-val"></div><button class="resource-btn" id="copy-prometric-link" type="button" data-i18n="copyLink">Copy link</button></div>
     </div>
@@ -554,6 +570,29 @@
 
   <!-- SETTINGS (opened from the account menu) -->
   <section class="panel" id="panel-settings">
+
+    <section class="cred-card" style="cursor:default;">
+      <div class="cred-label" data-i18n="profileTitle">My account</div>
+      <div class="settings-desc" data-i18n="profileDesc">Change your name, sign-in email, or password.</div>
+      <div class="profile-forms">
+        <form class="shared-settings-form" id="profile-name-form">
+          <label><span data-i18n="profileName">Name</span><input id="profile-name" type="text" autocomplete="name" maxlength="100" required></label>
+          <button class="resource-btn" type="submit" data-i18n="saveName">Save name</button>
+        </form>
+        <form class="shared-settings-form" id="profile-email-form">
+          <label><span data-i18n="profileLoginEmail">Sign-in email</span><input id="profile-email" type="email" autocomplete="email" maxlength="254" required></label>
+          <button class="resource-btn" type="submit" data-i18n="changeEmail">Change email</button>
+          <div class="settings-desc" data-i18n="emailConfirmHint">Confirm the new address from the verification email before using it to sign in.</div>
+        </form>
+        <form class="shared-settings-form" id="profile-password-form">
+          <label><span data-i18n="currentPassword">Current password</span><input id="profile-current-password" type="password" autocomplete="current-password" required></label>
+          <label><span data-i18n="newPassword">New password</span><input id="profile-new-password" type="password" autocomplete="new-password" minlength="8" required></label>
+          <label><span data-i18n="confirmNewPassword">Confirm new password</span><input id="profile-confirm-password" type="password" autocomplete="new-password" minlength="8" required></label>
+          <button class="resource-btn" type="submit" data-i18n="changePassword">Change password</button>
+        </form>
+      </div>
+      <p class="profile-status" id="profile-status" role="status" aria-live="polite"></p>
+    </section>
 
     <section class="cred-card" id="manage-data" hidden style="cursor:default;">
       <div class="cred-label" data-i18n="manageRecords">Edit system data</div>
@@ -613,6 +652,12 @@
 </div>
 
 <div class="toast" id="toast"></div>
+<dialog id="delete-dialog" class="delete-dialog" aria-labelledby="delete-dialog-title" aria-describedby="delete-dialog-message">
+  <div class="delete-dialog-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 7h16M10 7V4h4v3M6 7l1 13h10l1-13M10 11v6m4-6v6"/></svg></div>
+  <h2 id="delete-dialog-title" data-i18n="deleteConfirmTitle">Delete item?</h2>
+  <p id="delete-dialog-message"></p>
+  <div class="delete-dialog-actions"><button id="delete-cancel" type="button" data-i18n="cancelBtn">Cancel</button><button id="delete-confirm" class="danger" type="button" data-i18n="deleteBtn">Delete</button></div>
+</dialog>
 <dialog id="edit-dialog" class="edit-dialog">
   <form id="edit-form">
     <h2 id="edit-heading"></h2>
@@ -638,6 +683,7 @@ const TRANSLATIONS = {
     appTitle:"IBTA Tools",
     tabKeycodes:"Keycodes", tabPrometric:"Prometric", tabCodes:"Codes",
     settingsTitle:"Settings",
+    profileTitle:"My account", profileDesc:"Change your name, sign-in email, or password.", profileName:"Name", profileLoginEmail:"Username (sign-in email)", saveName:"Save name", changeEmail:"Change email", emailConfirmHint:"Confirm the new address from the verification email before using it to sign in.", currentPassword:"Current password", newPassword:"New password", confirmNewPassword:"Confirm new password", changePassword:"Change password", profileNameSaved:"Name saved", profileEmailSent:"Check your new email to confirm the change. Your current sign-in stays active until then.", profilePasswordSaved:"Password changed", profilePasswordMismatch:"The new passwords do not match.", profilePasswordShort:"Use a password with at least 8 characters.", profileSameEmail:"Enter a different email address.", profileInvalidEmail:"Enter a valid email address.",
     examTitleCol:"Exam Title", langCol:"Language", keycodeCol:"Keycode", moveCategoryCol:"Move Category",
     noExams:"No exams in this category",
     remaining:"Remaining",
@@ -656,6 +702,7 @@ const TRANSLATIONS = {
     newCodesAdded:n=>n+" new code(s) added",
     removeMark:"Remove mark", markRemoved:"Mark removed",
     deleteCode:"Delete code", codeDeleted:"Code deleted",
+    deleteConfirmTitle:"Delete this item?", deleteBtn:"Delete",
     noCodesAvailable:cat=>"No codes available in "+cat,
     autoCopied:code=>"Auto-copied: "+code,
     noCodesYet:"No codes in this category yet — add some below",
@@ -728,6 +775,7 @@ const TRANSLATIONS = {
     appTitle:"أدوات IBTA",
     tabKeycodes:"مفاتيح الأكواد", tabPrometric:"بروميترك", tabCodes:"الأكواد",
     settingsTitle:"الإعدادات",
+    profileTitle:"حسابي", profileDesc:"غيّر اسمك أو بريد الدخول أو كلمة المرور.", profileName:"الاسم", profileLoginEmail:"اسم المستخدم (بريد الدخول)", saveName:"حفظ الاسم", changeEmail:"تغيير البريد", emailConfirmHint:"أكد البريد الجديد من رسالة التحقق قبل استخدامه للدخول.", currentPassword:"كلمة المرور الحالية", newPassword:"كلمة المرور الجديدة", confirmNewPassword:"تأكيد كلمة المرور الجديدة", changePassword:"تغيير كلمة المرور", profileNameSaved:"تم حفظ الاسم", profileEmailSent:"افتح بريدك الجديد وأكد التغيير. سيبقى دخولك الحالي فعالًا حتى التأكيد.", profilePasswordSaved:"تم تغيير كلمة المرور", profilePasswordMismatch:"كلمتا المرور الجديدتان غير متطابقتين.", profilePasswordShort:"استخدم كلمة مرور لا تقل عن 8 أحرف.", profileSameEmail:"أدخل بريدًا مختلفًا.", profileInvalidEmail:"أدخل بريدًا إلكترونيًا صحيحًا.",
     examTitleCol:"اسم الامتحان", langCol:"اللغة", keycodeCol:"مفتاح الكود", moveCategoryCol:"نقل الفئة",
     noExams:"لا توجد امتحانات في هذه الفئة",
     remaining:"متبقي",
@@ -746,6 +794,7 @@ const TRANSLATIONS = {
     newCodesAdded:n=>n+" كود جديد تم إضافته",
     removeMark:"إلغاء العلامة", markRemoved:"تم إلغاء العلامة",
     deleteCode:"حذف الكود", codeDeleted:"تم حذف الكود",
+    deleteConfirmTitle:"هل تريد حذف هذا العنصر؟", deleteBtn:"حذف",
     noCodesAvailable:cat=>"مفيش أكواد متاحة في "+cat,
     autoCopied:code=>"تم نسخ الكود تلقائيًا: "+code,
     noCodesYet:"لا توجد أكواد في هذه الفئة بعد — أضف أكواد من الأسفل",
@@ -1040,6 +1089,18 @@ function showToast(msg){
   el.classList.add('show');
   clearTimeout(toastTimer);
   toastTimer = setTimeout(()=>el.classList.remove('show'), 1400);
+}
+const TRASH_ICON='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M10 7V4h4v3M6 7l1 13h10l1-13M10 11v6m4-6v6"/></svg>';
+function confirmDelete(message){
+  const dialog=document.getElementById('delete-dialog');
+  document.getElementById('delete-dialog-message').textContent=message;
+  dialog.showModal();
+  return new Promise(resolve=>{
+    const done=answer=>{dialog.close();resolve(answer);};
+    document.getElementById('delete-cancel').onclick=()=>done(false);
+    document.getElementById('delete-confirm').onclick=()=>done(true);
+    dialog.oncancel=e=>{e.preventDefault();done(false);};
+  });
 }
 async function copyText(text){
   try{
@@ -1414,10 +1475,11 @@ function renderKeycodes(){
     if(!CATEGORY_ORDER.includes(cat)){
       const removeBtn = document.createElement('button');
       removeBtn.className = 'kc-remove-cat-btn';
-      removeBtn.textContent = '✕';
+      removeBtn.innerHTML = TRASH_ICON;
       removeBtn.title = t('removeCategory');
+      removeBtn.setAttribute('aria-label',t('removeCategory'));
       removeBtn.addEventListener('click', async ()=>{
-        if(!confirm(t('confirmRemoveCategory')(cat))) return;
+        if(!await confirmDelete(t('confirmRemoveCategory')(cat))) return;
         DEFAULT_KEYCODES.forEach(item=>{
           if(item.category === cat) item.category = state.keycodeOverrides[item.code] || CATEGORY_ORDER[0];
         });
@@ -1585,10 +1647,12 @@ document.getElementById('cred-account').addEventListener('click', async ()=>{
 document.getElementById('cred-password').addEventListener('click', async ()=>{
   handlePrometricCopy('cred-password-val', 'passwordCopied');
 });
-document.getElementById('copy-prometric-link').addEventListener('click',async()=>{
+async function copyPrometricLogin(){
   if(!PROMETRIC_LOGIN_URL){showToast(t('notConfigured'));return;}
   if(await copyText(PROMETRIC_LOGIN_URL)) showToast(t('prometricLinkCopied'));
-});
+}
+document.getElementById('copy-prometric-link').addEventListener('click',async e=>{e.stopPropagation();await copyPrometricLogin();});
+document.getElementById('prometric-login-card').addEventListener('click',copyPrometricLogin);
 
 // ---------- PANEL 3: CODES ----------
 let activeCategory = Object.keys(state.codesByCategory)[0];
@@ -1796,10 +1860,11 @@ function renderCodeGrid(){
     const delBtn = document.createElement('button');
     delBtn.className = 'icon-btn danger';
     delBtn.title = t('deleteCode');
-    delBtn.textContent = '✕';
+    delBtn.setAttribute('aria-label',t('deleteCode'));
+    delBtn.innerHTML = TRASH_ICON;
     delBtn.addEventListener('click', async (e)=>{
       e.stopPropagation();
-      if(!confirm(t('confirmDeleteCode')(code))) return;
+      if(!await confirmDelete(t('confirmDeleteCode')(code))) return;
       state.codesByCategory[activeCategory] = state.codesByCategory[activeCategory].filter(x=>x!==code);
       delete state.usedCodes[code];
       delete state.codeNotes[code];
@@ -1841,7 +1906,7 @@ document.getElementById('clear-sel-btn').addEventListener('click', async ()=>{
 document.getElementById('bulk-delete-btn').addEventListener('click', async ()=>{
   const count = selectedCodes.size;
   if(count === 0) return;
-  if(confirm(t('confirmBulkDelete')(count))){
+  if(await confirmDelete(t('confirmBulkDelete')(count))){
     state.codesByCategory[activeCategory] = (state.codesByCategory[activeCategory] || []).filter(c => !selectedCodes.has(c));
     selectedCodes.forEach(c=>{
       delete state.usedCodes[c];
@@ -1875,7 +1940,7 @@ document.getElementById('add-codes-btn').addEventListener('click', async ()=>{
 });
 
 document.getElementById('reset-btn').addEventListener('click', async ()=>{
-  if(confirm(t('confirmReset'))){
+  if(await confirmDelete(t('confirmReset'))){
     state.usedCodes = {};
     if(!await saveState()) return;
     renderCodeGrid();

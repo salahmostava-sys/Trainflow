@@ -5,6 +5,7 @@ grant usage on schema private to authenticated;
 
 create table public.ibta_members (
   email text primary key check (email = lower(email)),
+  user_id uuid unique references auth.users(id) on delete set null,
   role text not null check (role in ('admin','operator')),
   active boolean not null default true
 );
@@ -12,8 +13,9 @@ alter table public.ibta_members enable row level security;
 
 create function private.ibta_role() returns text
 language sql stable security definer set search_path = '' as $$
-  select m.role from public.ibta_members m join auth.users u on lower(u.email)=m.email
-  where u.id=(select auth.uid()) and u.email_confirmed_at is not null and m.active
+  select m.role from public.ibta_members m join auth.users u on u.id=(select auth.uid())
+  where u.email_confirmed_at is not null and m.active
+    and (m.user_id=u.id or (m.user_id is null and m.email=lower(u.email)))
 $$;
 revoke all on function private.ibta_role() from public, anon;
 grant execute on function private.ibta_role() to authenticated;
@@ -56,7 +58,8 @@ grant update(notes,used_on) on public.ibta_codes to authenticated;
 grant select on public.ibta_audit to authenticated;
 
 create policy member_read on public.ibta_members for select to authenticated
-using (email=lower((select auth.jwt())->>'email') or (select private.ibta_role())='admin');
+using (user_id=(select auth.uid()) or (user_id is null and email=lower((select auth.jwt())->>'email'))
+  or (select private.ibta_role())='admin');
 create policy member_admin on public.ibta_members for all to authenticated
 using ((select private.ibta_role())='admin') with check ((select private.ibta_role())='admin');
 create policy settings_read on public.ibta_settings for select to authenticated using ((select private.ibta_role()) is not null);
@@ -100,6 +103,21 @@ revoke all on function private.ibta_audit_change() from public,anon,authenticate
 create trigger audit_codes after insert or update or delete on public.ibta_codes for each row execute function private.ibta_audit_change();
 create trigger audit_settings after update on public.ibta_settings for each row execute function private.ibta_audit_change();
 create trigger audit_members after insert or update or delete on public.ibta_members for each row execute function private.ibta_audit_change();
+
+-- Keep approved access bound to the Auth ID when a user confirms a new email.
+create function private.ibta_sync_member_identity() returns trigger
+language plpgsql security definer set search_path = '' as $$
+begin
+  if new.email is not null then
+    update public.ibta_members set user_id=new.id,email=lower(new.email)
+    where (user_id=new.id or (user_id is null and email=lower(new.email)))
+      and (user_id is distinct from new.id or email is distinct from lower(new.email));
+  end if;
+  return new;
+end $$;
+revoke all on function private.ibta_sync_member_identity() from public,anon,authenticated;
+create trigger ibta_sync_member_identity after insert or update of email,email_confirmed_at,last_sign_in_at on auth.users
+for each row execute function private.ibta_sync_member_identity();
 
 -- All edits in a batch succeed together or fail; stale versions never overwrite a colleague.
 create function public.ibta_apply_changes(changes jsonb, settings_payload jsonb default null, settings_version bigint default null)

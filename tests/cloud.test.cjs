@@ -9,16 +9,17 @@ class Element {
   get options(){return this.children;}
   showModal(){this.open=true;}
   close(){this.open=false;}
-  set innerHTML(v){this.children=[];} get innerHTML(){return '';}
+  set innerHTML(v){this.children=[];this._html=v;} get innerHTML(){return this._html||'';}
 }
 const els={},storage=new Map(),events=[];
 const document={listeners:{},addEventListener(event,fn){this.listeners[event]=fn;},getElementById:id=>els[id] ||= new Element(),createElement:()=>new Element(),querySelectorAll:()=>[],querySelector:()=>new Element(),body:new Element(),execCommand:()=>false,hidden:false};
 const db={settings:{id:1,version:1,payload:{keycodes:[],categoryOrder:['Foundation'],codeCategories:['Foundation-100'],keycodeOrder:{},keycodeOverrides:{},dateColors:{},credentials:{account:'test-account',password:'test-password'},links:{zoom:'https://us02web.zoom.us/j/demo',prometric:'https://tcnet1.prometric.com/Login.aspx?demo=1'}}},codes:[{code:'TEST',category:'Foundation-100',notes:'',used_on:null,used_by:null,version:1}]};
 const clone=x=>JSON.parse(JSON.stringify(x));
 let conflict=false,clipboardFails=false,codeReads=0;
+const authUser={id:'user-1',email:'test@example.invalid',user_metadata:{}};
 const client={
-  auth:{getSession:async()=>({data:{session:{user:{id:'user-1',email:'test@example.invalid'}}}}),onAuthStateChange(){},signOut:async()=>({})},
-  from(table){return {select(){return this;},eq(){return this;},order(){return this;},single:async()=>table==='ibta_members'?{data:{role:'admin',active:true}}:{data:clone(db.settings)},range:async()=>{codeReads++;return {data:clone(db.codes)};}};},
+  auth:{getSession:async()=>({data:{session:{user:clone(authUser)}}}),onAuthStateChange(){},signOut:async()=>({}),updateUser:async args=>{events.push({name:'auth_update',args:clone(args)});if(args.data)authUser.user_metadata={...authUser.user_metadata,...args.data};return {data:{user:clone(authUser)}};}},
+  from(table){return {select(){return this;},eq(){return this;},order(){return this;},single:async()=>table==='ibta_members'?{data:{role:'admin',active:true,user_id:'user-1'}}:{data:clone(db.settings)},maybeSingle:async()=>({data:{role:'admin',active:true,user_id:'user-1'}}),range:async()=>{codeReads++;return {data:clone(db.codes)};}};},
   async rpc(name,args){
     events.push({name,args:clone(args)});
     if(conflict)return {error:{message:'CONFLICT: reload required'}};
@@ -45,6 +46,7 @@ const ctx=vm.createContext({document,URL,localStorage:{getItem:k=>storage.get(k)
 els['account-menu-popover']=new Element();els['account-menu-popover'].hidden=true;
 vm.runInContext(fs.readFileSync(path.join(__dirname,'../cloud.js'),'utf8'),ctx);
 const html=fs.readFileSync(path.join(__dirname,'../ibta-ops.html'),'utf8');
+assert.match(html,/id="prometric-login-card">\s*<div[^>]*data-i18n="prometricLoginLink"/);
 for(const [,script] of html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g))vm.runInContext(script,ctx);
 const run=s=>vm.runInContext(s,ctx);
 const englishKeys=JSON.parse(run('JSON.stringify(Object.keys(TRANSLATIONS.en))'));
@@ -166,7 +168,39 @@ for(const key of usedKeys) assert(englishKeys.includes(key),`Missing translation
   assert.equal(db.settings.payload.links.prometric,'https://tcnet1.prometric.com/Login.aspx?updated=1');
   assert.equal(els['zoom-link-val'].textContent,'https://us02web.zoom.us/j/updated');
   clipboardFails=false;
-  await els['copy-prometric-link'].listeners.click();
+  await els['copy-prometric-link'].listeners.click({stopPropagation(){}});
   assert(events.some(event=>event.name==='clipboard' && event.text===db.settings.payload.links.prometric));
-  console.log('PASS: authenticated rendering, shared settings, link safety, cloud persistence, copy isolation, shared day colors, categories, and keycodes.');
+  const copiedLinks=events.filter(event=>event.name==='clipboard' && event.text===db.settings.payload.links.prometric).length;
+  await els['prometric-login-card'].listeners.click();
+  assert.equal(events.filter(event=>event.name==='clipboard' && event.text===db.settings.payload.links.prometric).length,copiedLinks+1);
+  const deleteDecision=run("confirmDelete('Delete test?')");
+  assert.equal(els['delete-dialog'].open,true);
+  els['delete-cancel'].onclick();
+  assert.equal(await deleteDecision,false);
+  els['profile-name'].value='Salah';
+  await els['profile-name-form'].listeners.submit({preventDefault(){}});
+  assert.equal(authUser.user_metadata.full_name,'Salah');
+  assert.equal(els['account-avatar'].textContent,'S');
+  assert.equal(els['account-menu-name'].textContent,'Salah');
+  els['profile-email'].value='new@example.invalid';
+  await els['profile-email-form'].listeners.submit({preventDefault(){}});
+  assert(events.some(e=>e.name==='auth_update'&&e.args.email==='new@example.invalid'));
+  assert.match(els['profile-status'].textContent,/أكد/);
+  els['profile-current-password'].value='old-password';els['profile-new-password'].value='new-password';els['profile-confirm-password'].value='different';
+  await els['profile-password-form'].listeners.submit({preventDefault(){}});
+  assert(!events.some(e=>e.name==='auth_update'&&e.args.password));
+  els['profile-confirm-password'].value='new-password';
+  await els['profile-password-form'].listeners.submit({preventDefault(){}});
+  assert(events.some(e=>e.name==='auth_update'&&e.args.password==='new-password'&&e.args.current_password==='old-password'));
+  assert.equal(els['profile-new-password'].value,'');
+  run("activeCategory='Master-100';renderCodeGrid()");
+  const rowToDelete=els['code-grid'].children.find(row=>row.children[2]?.textContent==='REVISED-CODE');
+  const deleteButton=rowToDelete.children[5].children.at(-1);
+  assert.match(deleteButton.innerHTML,/<svg/);
+  const deleting=deleteButton.listeners.click({stopPropagation(){}});
+  assert.equal(els['delete-dialog'].open,true);
+  els['delete-confirm'].onclick();
+  await deleting;
+  assert(!db.codes.some(r=>r.code==='REVISED-CODE'));
+  console.log('PASS: account profile, custom deletion, Prometric link copy, cloud persistence, copy isolation, shared day colors, categories, and keycodes.');
 })().catch(e=>{console.error(e);process.exitCode=1;});

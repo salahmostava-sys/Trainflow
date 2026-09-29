@@ -6,6 +6,14 @@ insert into auth.users(id,email,email_confirmed_at) values
  ('00000000-0000-4000-8000-000000000103','ibta-test-stranger@example.invalid',now());
 insert into public.ibta_members(email,role) values
  ('ibta-test-admin@example.invalid','admin'),('ibta-test-operator@example.invalid','operator');
+update auth.users set last_sign_in_at=now() where id='00000000-0000-4000-8000-000000000101';
+update auth.users set email='ibta-test-admin-new@example.invalid' where id='00000000-0000-4000-8000-000000000101';
+do $$ begin
+  if not exists(select 1 from public.ibta_members where user_id='00000000-0000-4000-8000-000000000101'
+    and email='ibta-test-admin-new@example.invalid' and role='admin') then
+    raise exception 'FAIL: confirmed email change lost membership';
+  end if;
+end $$;
 insert into public.ibta_codes(code,category) values ('IBTA-TEST-ONLY','Test');
 set local role authenticated;
 select set_config('request.jwt.claims','{"sub":"00000000-0000-4000-8000-000000000103","email":"ibta-test-stranger@example.invalid","role":"authenticated"}',true);
@@ -64,5 +72,5 @@ do $$ begin
   exception when insufficient_privilege then null; end;
 end $$;
 rollback;
-select 'PASS: anonymous isolation, membership, atomic claim, stale-write conflict, operator permissions, administrator access, audit, request limits' as result;
+select 'PASS: anonymous isolation, membership after email change, atomic claim, stale-write conflict, operator permissions, administrator access, audit, request limits' as result;
 

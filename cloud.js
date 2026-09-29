@@ -5,10 +5,12 @@ const Cloud = (() => {
   let client, rows = new Map(), config, user, role, busy = false, ready = false;
   let nextBackgroundRefresh = 0;
   let statusKey = '', statusArgs = [], statusError = false, authStatusKey = 'authAccessHelp', authStatusArgs = [];
+  let profileStatusKey='',profileStatusError=false;
   const BACKGROUND_REFRESH_MS = 120000;
   const $ = id => document.getElementById(id);
   const clone = value => JSON.parse(JSON.stringify(value));
   const same = (a,b) => JSON.stringify(a) === JSON.stringify(b);
+  const accountName = () => typeof user?.user_metadata?.full_name==='string' ? user.user_metadata.full_name.trim() : '';
   function validHttpsUrl(value,domain){
     try{
       const url=new URL(value);
@@ -57,9 +59,15 @@ const Cloud = (() => {
   function translateUi(){
     if(user){
       const email=user.email || '';
-      $('signed-in').textContent=email+' · '+(role==='admin'?t('adminRole'):t('userRole'));
+      const name=accountName();
+      $('signed-in').textContent=(name?name+' · ':'')+email+' · '+(role==='admin'?t('adminRole'):t('userRole'));
+      $('account-menu-name').textContent=name || t('currentAccount');
       $('account-menu-email').textContent=email;
-      $('account-avatar').textContent=email.trim().charAt(0).toUpperCase() || 'IB';
+      $('account-avatar').textContent=(name || email).trim().charAt(0).toUpperCase() || 'IB';
+    }
+    if(profileStatusKey){
+      $('profile-status').textContent=profileStatusKey==='error'?errorText(profileStatusError):t(profileStatusKey);
+      $('profile-status').style.color=profileStatusKey==='error'?'#b42318':'';
     }
     $('zoom-link-val').textContent=ZOOM_URL || t('notConfigured');
     $('prometric-link-val').textContent=PROMETRIC_LOGIN_URL || t('notConfigured');
@@ -112,6 +120,8 @@ const Cloud = (() => {
     $('settings-prometric-password').value=PROMETRIC_PASSWORD;
     $('settings-zoom-link').value=p.links?.zoom || '';
     $('settings-prometric-link').value=p.links?.prometric || '';
+    $('profile-name').value=accountName();
+    $('profile-email').value=user?.email || '';
     currentLang=state.uiLang;
     autoChainToggle.checked=state.settings.autoChain;
     if(!Object.hasOwn(state.codesByCategory,activeCategory)) activeCategory=Object.keys(state.codesByCategory)[0];
@@ -223,6 +233,9 @@ const Cloud = (() => {
   }
   function hasDraftInput(){
     if($('edit-dialog')?.open) return true;
+    if($('profile-name').value!==accountName() ||
+       $('profile-email').value!==(user?.email || '') ||
+       $('profile-current-password').value || $('profile-new-password').value || $('profile-confirm-password').value) return true;
     if($('add-codes-input')?.value.trim()) return true;
     if(role==='admin' && config){
       const p=config.payload;
@@ -258,12 +271,64 @@ const Cloud = (() => {
       fail(error);return false;
     }finally{lock(false);}
   }
+  function profileMessage(key,error=null){
+    profileStatusKey=key;profileStatusError=error;translateUi();
+  }
+  async function saveProfileName(event){
+    event.preventDefault();
+    if(!ready || busy)return;
+    const name=$('profile-name').value.trim();
+    if(!name)return;
+    if(name===accountName())return;
+    lock(true);
+    try{
+      const {data,error}=await client.auth.updateUser({data:{full_name:name}});
+      if(error)throw error;
+      user=data.user || user;
+      $('profile-name').value=name;
+      profileMessage('profileNameSaved');
+    }catch(error){profileMessage('error',error);}
+    finally{lock(false);}
+  }
+  async function saveProfileEmail(event){
+    event.preventDefault();
+    if(!ready || busy)return;
+    const email=$('profile-email').value.trim().toLowerCase();
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){profileMessage('profileInvalidEmail');return;}
+    if(email===(user.email || '').toLowerCase()){profileMessage('profileSameEmail');return;}
+    lock(true);
+    try{
+      const {data,error}=await client.auth.updateUser({email});
+      if(error)throw error;
+      user=data.user || user;
+      $('profile-email').value=user.email || '';
+      profileMessage('profileEmailSent');
+    }catch(error){profileMessage('error',error);}
+    finally{lock(false);}
+  }
+  async function saveProfilePassword(event){
+    event.preventDefault();
+    if(!ready || busy)return;
+    const current=$('profile-current-password').value,newPassword=$('profile-new-password').value,confirm=$('profile-confirm-password').value;
+    if(newPassword.length<8){profileMessage('profilePasswordShort');return;}
+    if(newPassword!==confirm){profileMessage('profilePasswordMismatch');return;}
+    lock(true);
+    try{
+      const {error}=await client.auth.updateUser({password:newPassword,current_password:current});
+      if(error)throw error;
+      $('profile-current-password').value='';$('profile-new-password').value='';$('profile-confirm-password').value='';
+      profileMessage('profilePasswordSaved');
+    }catch(error){profileMessage('error',error);}
+    finally{lock(false);}
+  }
   async function enter(session){
     if(!session){ready=false;$('app').hidden=true;$('cloud-tools').hidden=true;$('sign-out').hidden=true;$('auth-box').hidden=false;return;}
     user=session.user;
-    const {data,error}=await client.from('ibta_members').select('role,active').eq('email',user.email.toLowerCase()).single();
-    if(error || !data?.active){throw Error('IBTA_NOT_APPROVED');}
-    role=data.role;
+    let member=await client.from('ibta_members').select('role,active,user_id').eq('user_id',user.id).maybeSingle();
+    if(member.error)throw member.error;
+    if(!member.data)member=await client.from('ibta_members').select('role,active,user_id').eq('email',user.email.toLowerCase()).maybeSingle();
+    if(member.error || !member.data?.active || (member.data.user_id && member.data.user_id!==user.id))throw Error('IBTA_NOT_APPROVED');
+    role=member.data.role;
     await load();ready=true;
     $('auth-box').hidden=true;$('app').hidden=false;$('cloud-tools').hidden=false;$('sign-out').hidden=false;
     setStatus('dbConnected');
@@ -328,12 +393,16 @@ const Cloud = (() => {
       $('export-data').addEventListener('click',exportData);
       $('add-member').addEventListener('click',addMember);
       $('prometric-settings-form').addEventListener('submit',savePrometricSettings);
+      $('profile-name-form').addEventListener('submit',saveProfileName);
+      $('profile-email-form').addEventListener('submit',saveProfileEmail);
+      $('profile-password-form').addEventListener('submit',saveProfilePassword);
       $('sign-out').addEventListener('click',async()=>{
         ready=false;pendingChain=null;await client.auth.signOut({scope:'local'});
         location.reload();
       });
       client.auth.onAuthStateChange((event,session)=>{
         if(event==='SIGNED_OUT'){ready=false;$('app').hidden=true;$('cloud-tools').hidden=true;$('sign-out').hidden=true;$('auth-box').hidden=false;}
+        if(event==='USER_UPDATED' && session?.user){user=session.user;translateUi();}
       });
       const {data,error}=await client.auth.getSession();if(error)throw error;
       await enter(data.session);

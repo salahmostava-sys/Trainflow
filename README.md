@@ -14,10 +14,12 @@ Administrators can allowlist another email from **إدارة البيانات و
 
 - `ibta_codes`: one row per unique code, notes, usage date, actor, and optimistic version.
 - `ibta_settings`: shared keycode catalog, category labels/ordering/overrides, Prometric credentials, and Zoom/Prometric links. RLS restricts reads to approved users; these values are not embedded in public HTML/JavaScript. Administrators can edit existing categories, exams, codes, and the shared connection details from Settings. Category names are editable display labels; the underlying category IDs stay stable so existing codes and links remain attached.
-- `ibta_members`: approved email addresses and roles.
+- `ibta_members`: approved email addresses, immutable Auth user IDs, and roles. Confirming a new sign-in email updates the membership email while retaining the same role.
 - `ibta_audit`: database-generated actor/action/time log. Audit entries deliberately do not include passwords or note contents.
 
 The original 36 codes and 25 keycodes were seeded to the new database. Operational data is not stored in browser localStorage anymore. Only language and auto-chain preferences remain local. Authentication is stored in sessionStorage and requires logging in again when the browser session ends.
+
+Each signed-in team member can edit their own name, sign-in email, and password under **Settings → My account**. The display name is stored in Supabase Auth user metadata and never grants access. Email changes require confirmation from the new inbox; authorization remains attached to the Auth user ID. Password changes ask for the current password and are handled by Supabase Auth without storing either password in app settings. Administrators cannot read team members' passwords.
 
 ## Existing browser data
 
@@ -36,6 +38,8 @@ Changes are transactional and version-checked. On conflict, the UI reloads curre
 The database rejects change batches over 250 operations, settings payloads over 64 KiB, notes over 2,000 characters, and claim targets over 200 characters. These limits reduce accidental or abusive database work; they do not stop a distributed denial-of-service attack against the public Supabase endpoint. Before public deployment, review Supabase Auth rate limits and enable Auth CAPTCHA. Protecting the Data API from high-volume traffic would require a server-side gateway with per-client limits and an architecture that prevents direct access to the same operations.
 
 Existing-code edits use an administrator-only atomic database operation. It preserves the recorded user and date when changing a code's value or category, and checks the row version before committing. The live project has migration `migrations/20260929_edit_code.sql` applied; fresh installations can use the matching function in `database.sql`.
+
+Membership identity migrations `migrations/20260929_member_identity.sql` and `migrations/20260929_member_identity_skip_noop.sql` have also been applied to the live project. They keep access stable after a confirmed email change without writing an audit entry at every sign-in.
 
 ## Hosting
 
