@@ -8,6 +8,8 @@ Open the live application at <https://ibta-ops.pages.dev/>. The administrator ac
 
 Supabase Auth's Site URL is configured as <https://ibta-ops.pages.dev/> for confirmation and recovery emails. This application does not need access to your email password.
 
+The Settings screen uses separate tabs for account details, system data, Prometric details, preferences, and team/sync tools. System-data and Prometric-edit tabs are visible only to administrators; the database enforces those permissions independently of the interface.
+
 Administrators can allowlist another email from **إدارة البيانات والمستخدمين**. That person then creates an account and confirms the same address. Other signups cannot access operational data. Operators can copy codes, edit notes, and release their own codes. Only administrators can add/delete codes, manage categories, and allowlist users. Membership can be deactivated in the Supabase `ibta_members` table by setting `active=false`.
 
 ## Data
@@ -18,6 +20,8 @@ Administrators can allowlist another email from **إدارة البيانات و
 - `ibta_audit`: database-generated actor/action/time log. Audit entries deliberately do not include passwords or note contents.
 
 The original 36 codes and 25 keycodes were seeded to the new database. Operational data is not stored in browser localStorage anymore. Only language and auto-chain preferences remain local. Authentication is stored in sessionStorage and requires logging in again when the browser session ends.
+
+The deployed HTML and JavaScript contain interface code, the Supabase project URL, and a publishable key. They contain no operational codes, Prometric credentials, or secret/service-role key. Browser source is public by nature, so authorization depends on Supabase Auth and database RLS rather than hiding JavaScript. An approved user can inspect any values the application sends to their browser; a different access model would require a server-side API with narrower per-user responses.
 
 Each signed-in team member can edit their own name, sign-in email, and password under **Settings → My account**. The display name is stored in Supabase Auth user metadata and never grants access. Email changes require confirmation from the new inbox; authorization remains attached to the Auth user ID. Password changes ask for the current password and are handled by Supabase Auth without storing either password in app settings. Administrators cannot read team members' passwords.
 

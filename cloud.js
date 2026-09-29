@@ -136,6 +136,9 @@ const Cloud = (() => {
     $('admin-tools').hidden=!admin;
     $('manage-data').hidden=!admin;
     $('prometric-settings').hidden=!admin;
+    $('settings-tab-data').hidden=!admin;
+    $('settings-tab-prometric').hidden=!admin;
+    if(!admin && ($('settings-tab-data').getAttribute('aria-selected')==='true' || $('settings-tab-prometric').getAttribute('aria-selected')==='true')) activateSettingsTab('profile');
     translateUi();
   }
   async function load(){

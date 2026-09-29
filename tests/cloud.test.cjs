@@ -5,6 +5,7 @@ class Element {
   appendChild(e){this.children.push(e);} removeChild(e){this.children=this.children.filter(x=>x!==e);}
   addEventListener(event,fn){this.listeners[event]=fn;} select(){} focus(){} matches(){return false;}
   setAttribute(name,value){this[name]=value;}
+  getAttribute(name){return this[name] ?? null;}
   removeAttribute(name){delete this[name];}
   get options(){return this.children;}
   showModal(){this.open=true;}
@@ -51,6 +52,10 @@ assert(html.indexOf('id="prometric-login-card"')<html.indexOf('id="cred-account"
 assert.match(html,/\.cred-value,\.resource-value\{[^}]*font-size:16px;[^}]*font-weight:600/);
 assert.match(html,/<details class="report-card" id="remaining-summary-details">/);
 assert.match(html,/<details class="report-card" id="daily-used-details">/);
+for(const tab of ['profile','data','prometric','preferences','sync']){
+  assert(html.includes(`id="settings-tab-${tab}"`));
+  assert(html.includes(`id="settings-pane-${tab}"`));
+}
 assert(!html.includes('id="copy-prometric-link"'));
 for(const [,script] of html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g))vm.runInContext(script,ctx);
 const run=s=>vm.runInContext(s,ctx);
@@ -64,6 +69,14 @@ for(const key of usedKeys) assert(englishKeys.includes(key),`Missing translation
 (async()=>{
   await new Promise(setImmediate);
   assert.equal(els['auth-box'].hidden,true);assert.equal(els.app.hidden,false);
+  assert.equal(els['settings-tab-data'].hidden,false);
+  els['settings-tab-data'].listeners.click();
+  assert.equal(els['settings-pane-data'].hidden,false);
+  assert.equal(els['settings-pane-profile'].hidden,true);
+  els['settings-tab-data'].listeners.keydown({key:'ArrowRight',preventDefault(){}});
+  assert.equal(els['settings-pane-prometric'].hidden,false);
+  els['settings-tab-profile'].listeners.click();
+  assert.equal(els['settings-pane-profile'].hidden,false);
   assert.equal(els['account-menu-email'].textContent,'test@example.invalid');
   assert.equal(els['account-avatar'].textContent,'T');
   els['account-menu-btn'].listeners.click();
