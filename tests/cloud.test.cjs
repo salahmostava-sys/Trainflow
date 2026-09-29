@@ -123,6 +123,15 @@ for(const key of usedKeys) assert(englishKeys.includes(key),`Missing translation
   document.listeners.keydown({key:'Escape'});
   assert.equal(els['account-menu-popover'].hidden,true);
   assert.equal(els['cred-account-val'].textContent,'test-account');
+  els['remaining-summary-details'].open=true;
+  els['remaining-summary-details'].listeners.toggle();
+  assert.equal(els['remaining-summary-panel'].hidden,false);
+  assert.equal(els['daily-used-panel'].hidden,true);
+  els['daily-used-details'].open=true;
+  els['daily-used-details'].listeners.toggle();
+  assert.equal(els['remaining-summary-details'].open,false);
+  assert.equal(els['remaining-summary-panel'].hidden,true);
+  assert.equal(els['daily-used-panel'].hidden,false);
   assert.match(els['cloud-status'].textContent,/متصل/);
   run('toggleLanguage()');
   assert.equal(els['signed-in'].textContent,'test@example.invalid · Admin');

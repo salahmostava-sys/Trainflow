@@ -203,17 +203,15 @@
   .resource-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
   .resource-value{min-width:0;flex:1 1 250px;}
   #prometric-login-card:focus-visible{outline:3px solid var(--blue-100);outline-offset:2px;}
-  .report-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);margin:0 0 12px;box-shadow:var(--shadow);}
-  .report-card summary{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 16px;cursor:pointer;font-size:14px;font-weight:700;list-style:none;color:var(--text);}
+  .report-card{background:var(--surface);border:1px solid var(--border);border-radius:999px;box-shadow:var(--shadow);}
+  .report-card summary{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 15px;cursor:pointer;font-size:14px;color:var(--muted);list-style:none;white-space:nowrap;}
   .report-card summary::-webkit-details-marker{display:none;}
-  .report-card summary::after{content:'⌄';color:var(--blue-600);font-size:17px;transition:transform .15s;}
+  .report-card summary::after{content:'⌄';color:var(--blue-600);font-size:14px;transition:transform .15s;}
   .report-card[open] summary::after{transform:rotate(180deg);}
-  .report-card[open] summary{border-bottom:1px solid var(--border);}
   .report-shortcuts{display:contents;}
-  .report-shortcuts .report-card{margin:0;border-radius:10px;max-width:100%;}
-  .report-shortcuts .report-card[open]{flex:1 0 100%;}
-  .report-shortcuts .report-card summary{min-height:34px;padding:7px 11px;font-size:12.5px;}
-  .report-shortcuts .report-card summary::after{font-size:13px;}
+  .report-card[open]{border-color:var(--blue);}
+  .report-card summary:focus-visible{outline:3px solid var(--blue-100);outline-offset:2px;border-radius:999px;}
+  .report-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow);margin-bottom:12px;}
   .report-body{padding:14px 16px;}
   .remaining-summary-body{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;}
   .remaining-summary-message{font-size:13px;line-height:1.65;color:var(--text);white-space:pre-line;}
@@ -384,7 +382,7 @@
     background:var(--blue); color:#fff; border:none; font-weight:700; font-size:15px;
     padding:9px 18px; border-radius:999px; cursor:pointer; font-family:inherit;
   }
-  .stats-row{display:flex; align-items:flex-start; gap:8px; flex-wrap:wrap; margin-bottom:12px;}
+  .stats-row{display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:12px;}
   .stats{display:flex; gap:8px; flex-wrap:wrap;}
   .stat{
     background:var(--surface); border:1px solid var(--border); border-radius:999px;
@@ -584,26 +582,30 @@
   <section class="panel" id="panel-codes">
     <div class="stats-row">
       <div class="stats" id="code-stats"></div>
-    <div class="report-shortcuts">
-    <details class="report-card" id="remaining-summary-details">
-      <summary data-i18n="remainingSummaryTitle">Remaining codes by category</summary>
-      <div class="report-body remaining-summary-body">
-        <div class="remaining-summary-message" id="remaining-summary-message"></div>
-        <button id="copy-remaining-summary" type="button" data-i18n="copyRemainingSummary">Copy summary</button>
+      <div class="report-shortcuts">
+        <details class="report-card" id="remaining-summary-details">
+          <summary data-i18n="remainingSummaryTitle">Remaining codes by category</summary>
+        </details>
+        <details class="report-card" id="daily-used-details">
+          <summary data-i18n="dailyUsedTitle">Codes used on a day</summary>
+        </details>
       </div>
-    </details>
-    <details class="report-card" id="daily-used-details">
-      <summary data-i18n="dailyUsedTitle">Codes used on a day</summary>
-      <div class="report-body">
-        <label class="daily-used-date"><span data-i18n="chooseUsedDate">Choose a date</span><input id="daily-used-date" type="date"></label>
-        <div id="daily-used-results"></div>
-      </div>
-    </details>
-    </div>
       <details class="day-legend-box" id="day-legend-details" style="display:none;">
         <summary id="day-legend-summary">📅</summary>
         <div id="day-legend-groups" class="day-legend-groups"></div>
       </details>
+    </div>
+    <div class="report-panel" id="remaining-summary-panel" hidden>
+      <div class="report-body remaining-summary-body">
+        <div class="remaining-summary-message" id="remaining-summary-message"></div>
+        <button id="copy-remaining-summary" type="button" data-i18n="copyRemainingSummary">Copy summary</button>
+      </div>
+    </div>
+    <div class="report-panel" id="daily-used-panel" hidden>
+      <div class="report-body">
+        <label class="daily-used-date"><span data-i18n="chooseUsedDate">Choose a date</span><input id="daily-used-date" type="date"></label>
+        <div id="daily-used-results"></div>
+      </div>
     </div>
     <div id="low-stock-alert" class="low-stock-alert" hidden></div>
     <div class="code-tabs" id="code-cat-tabs"></div>
@@ -1872,6 +1874,14 @@ document.getElementById('copy-remaining-summary').addEventListener('click',async
   const message=t('remainingSummaryTitle')+'\n'+remainingSummaryLines().join('\n');
   if(await copyText(message))showToast(t('summaryCopied'));
 });
+const reportControls=[
+  [document.getElementById('remaining-summary-details'),document.getElementById('remaining-summary-panel')],
+  [document.getElementById('daily-used-details'),document.getElementById('daily-used-panel')]
+];
+reportControls.forEach(([details,panel])=>details.addEventListener('toggle',()=>{
+  if(details.open)reportControls.forEach(([other])=>{if(other!==details)other.open=false;});
+  reportControls.forEach(([control,content])=>{content.hidden=!control.open;});
+}));
 function dailyUsedGroups(iso){
   if(!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return [];
   const [year,month,day]=iso.split('-').map(Number);
