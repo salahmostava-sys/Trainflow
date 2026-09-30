@@ -102,11 +102,22 @@
   .ops-list-row span{flex:1;min-width:180px;overflow-wrap:anywhere;}
   .ops-list-row select{min-width:135px;}
   .inventory-intro{font-size:14px;color:var(--muted);line-height:1.7;margin:0 0 16px;}
-  .inventory-message{white-space:pre-line;line-height:1.8;font-size:14px;margin:12px 0;}
+  #panel-inventory .ops-card{margin-top:0;max-width:760px;}
+  .inventory-message{white-space:pre-line;line-height:1.85;font-size:14px;margin:14px 0;padding:16px 18px;border:1px solid var(--border);border-radius:12px;background:var(--surface-2);overflow-wrap:anywhere;}
   .inventory-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
   .inventory-actions a{display:inline-flex;align-items:center;justify-content:center;min-height:36px;padding:8px 13px;border-radius:8px;background:var(--blue);color:white;text-decoration:none;font-weight:700;font-size:13px;}
   .inventory-actions a[aria-disabled="true"]{opacity:.5;pointer-events:none;}
   .inventory-actions button{min-height:36px;}
+  .inventory-stock-list{display:grid;gap:0;margin:14px 0;border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+  .inventory-stock-row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 12px;font-size:13px;border-bottom:1px solid var(--border);}
+  .inventory-stock-row:last-child{border-bottom:0;}
+  .inventory-stock-row strong{font-family:var(--mono);font-size:14px;color:var(--blue-600);}
+  .inventory-stock-edit-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:14px;}
+  .inventory-stock-action{border:1px solid var(--border);border-radius:10px;padding:14px;background:var(--surface-2);display:grid;align-content:start;gap:9px;}
+  .inventory-stock-action p{margin:0;}
+  .inventory-stock-action label{min-width:0;}
+  .inventory-stock-action button{justify-self:start;}
+  @media(max-width:680px){.inventory-stock-edit-grid{grid-template-columns:1fr;}.inventory-stock-action button{width:100%;}}
   .low-stock-alert{margin:0 0 12px;padding:10px 13px;border-radius:9px;background:#fff4df;color:#78500a;font-size:13px;font-weight:700;}
   @keyframes fade{from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:translateY(0);}}
 
@@ -607,30 +618,15 @@
 
   <!-- SUPERVISOR INVENTORY -->
   <section class="panel" id="panel-inventory">
-    <p class="inventory-intro" data-i18n="inventoryIntro">Codes with you are unused codes in the system. Supervisor balances decrease automatically when new codes are added.</p>
     <div class="ops-card">
       <h3 data-i18n="inventoryWhatsAppTitle">WhatsApp inventory message</h3>
+      <p class="inventory-intro" data-i18n="inventoryIntro">Codes with you are unused codes in the system. Supervisor balances decrease automatically when new codes are added.</p>
       <p class="ops-status" id="inventory-message-hint"></p>
       <div class="inventory-message" id="inventory-message" dir="auto"></div>
       <div class="inventory-actions">
         <a id="inventory-whatsapp-link" target="_blank" rel="noopener noreferrer" aria-disabled="true" data-i18n="inventoryOpenWhatsApp">Open WhatsApp to send</a>
         <button id="inventory-copy-message" type="button" data-i18n="inventoryCopyMessage">Copy message</button>
       </div>
-    </div>
-    <div class="ops-card" id="inventory-admin" hidden>
-      <h3 data-i18n="inventoryUpdateTitle">Update supervisor stock</h3>
-      <div class="ops-row"><label><span data-i18n="inventoryCategory">Category</span><select id="inventory-category"></select></label></div>
-      <p class="ops-status" id="inventory-current-balance"></p>
-      <p class="ops-status" data-i18n="inventoryOpeningHint">Enter the supervisor's current balance, then add newly purchased codes separately.</p>
-      <div class="ops-row">
-        <label><span data-i18n="inventoryCurrentQuantity">Current number with supervisor</span><input id="inventory-current-quantity" type="number" min="0" max="1000000" step="1" inputmode="numeric"></label>
-        <button id="inventory-set-current" type="button" data-i18n="inventorySetCurrent">Save current balance</button>
-      </div>
-      <div class="ops-row">
-        <label><span data-i18n="inventoryPurchasedQuantity">Newly purchased codes</span><input id="inventory-purchased-quantity" type="number" min="1" max="1000000" step="1" inputmode="numeric"></label>
-        <button id="inventory-add-purchased" type="button" data-i18n="inventoryAddPurchased">Add to balance</button>
-      </div>
-      <p class="ops-status" id="inventory-update-status" role="status" aria-live="polite"></p>
     </div>
   </section>
 
@@ -714,6 +710,26 @@
     </div>
 
     <div class="settings-pane" id="settings-pane-inventory" role="tabpanel" aria-labelledby="settings-tab-inventory" hidden>
+    <section class="ops-card" id="inventory-admin" hidden>
+      <h3 data-i18n="inventoryUpdateTitle">Update supervisor stock</h3>
+      <p class="ops-status" data-i18n="inventoryOpeningHint">Enter the supervisor's current balance, then add newly purchased codes separately.</p>
+      <div class="inventory-stock-list" id="inventory-stock-list"></div>
+      <div class="ops-row"><label><span data-i18n="inventoryCategory">Category</span><select id="inventory-category"></select></label></div>
+      <p class="ops-status" id="inventory-current-balance"></p>
+      <div class="inventory-stock-edit-grid">
+        <div class="inventory-stock-action">
+          <label><span data-i18n="inventoryCurrentQuantity">Current number with supervisor</span><input id="inventory-current-quantity" type="number" min="0" max="1000000" step="1" inputmode="numeric"></label>
+          <p class="ops-status" data-i18n="inventorySetCurrentHint">Set the actual balance. This replaces the previous number.</p>
+          <button id="inventory-set-current" type="button" data-i18n="inventorySetCurrent">Save current balance</button>
+        </div>
+        <div class="inventory-stock-action">
+          <label><span data-i18n="inventoryPurchasedQuantity">Newly purchased codes</span><input id="inventory-purchased-quantity" type="number" min="1" max="1000000" step="1" inputmode="numeric"></label>
+          <p class="ops-status" data-i18n="inventoryAddPurchasedHint">Add this number to the existing supervisor balance.</p>
+          <button id="inventory-add-purchased" type="button" data-i18n="inventoryAddPurchased">Add to balance</button>
+        </div>
+      </div>
+      <p class="ops-status" id="inventory-update-status" role="status" aria-live="polite"></p>
+    </section>
     <section class="ops-card" id="inventory-whatsapp-settings" hidden>
       <h3 data-i18n="inventoryWhatsAppSettings">Inventory message settings</h3>
       <p class="ops-status" data-i18n="inventoryNumberHint">Enter the number with country code, digits only, for example 9665XXXXXXXX.</p>
@@ -806,7 +822,7 @@ const TRANSLATIONS = {
     tabKeycodes:"Keycodes", tabPrometric:"Prometric", tabCodes:"Codes", tabInventory:"Inventory",
     inventoryIntro:"Codes with you are unused codes in the system. Supervisor balances decrease automatically when new codes are added.",
     inventoryWithYou:"With you", inventoryWithSupervisor:"With supervisor", inventoryNotSet:"Not set",
-    inventoryUpdateTitle:"Update supervisor stock",inventoryOpeningHint:"Enter the current balance, then add newly purchased codes separately.",inventoryCurrentBalance:n=>"Current supervisor balance: "+n,inventoryCurrentQuantity:"Current number with supervisor",inventorySetCurrent:"Save current balance",inventoryPurchasedQuantity:"Newly purchased codes",inventoryAddPurchased:"Add to balance",
+    inventoryUpdateTitle:"Supervisor balances",inventoryOpeningHint:"Review each category, then choose whether to set its actual balance or add new codes.",inventoryCurrentBalance:n=>"Current supervisor balance: "+n,inventoryCurrentQuantity:"Current number with supervisor",inventorySetCurrent:"Save current balance",inventorySetCurrentHint:"This replaces the previous balance with the actual count.",inventoryPurchasedQuantity:"Newly purchased codes",inventoryAddPurchased:"Add to balance",inventoryAddPurchasedHint:"This number is added to the existing supervisor balance.",
     inventoryCategory:"Category",inventoryAction:"Action",inventoryQuantity:"Number of codes",inventoryOpening:"Set starting balance",inventoryReplenish:"Add company codes",inventoryCorrection:"Correct balance",
     inventoryWhatsAppTitle:"WhatsApp inventory message",inventoryMessageMine:"Codes with me",inventoryMessageSupervisor:name=>"Codes with "+name,inventoryMessageTotal:"Total codes",inventoryMessageOverall:"Overall total",inventorySupervisorFallback:"supervisor",
     inventoryMessageHint:"Set the starting balance for every category to send accurate counts.",inventoryPhoneMissing:"Add a WhatsApp number in Settings to open the prepared message.",
@@ -909,7 +925,7 @@ const TRANSLATIONS = {
     tabKeycodes:"مفاتيح الأكواد", tabPrometric:"بروميترك", tabCodes:"الأكواد", tabInventory:"المخزون",
     inventoryIntro:"اللي معاك هو الأكواد غير المستخدمة في النظام. رصيد المشرف ينقص تلقائيًا عند إضافة أكواد جديدة.",
     inventoryWithYou:"معايا",inventoryWithSupervisor:"مع المشرف",inventoryNotSet:"لم يُحدد",
-    inventoryUpdateTitle:"تحديث رصيد المشرف",inventoryOpeningHint:"سجّل الرصيد الحالي، وبعدها أضف الأكواد المشتراة حديثًا بشكل منفصل.",inventoryCurrentBalance:n=>"الرصيد الحالي عند المشرف: "+n,inventoryCurrentQuantity:"عدد الأكواد الحالي عند المشرف",inventorySetCurrent:"حفظ الرصيد الحالي",inventoryPurchasedQuantity:"الأكواد الجديدة المشتراة",inventoryAddPurchased:"إضافتها إلى الرصيد",
+    inventoryUpdateTitle:"أرصدة المشرف",inventoryOpeningHint:"راجع رصيد كل فئة، ثم حدّد الرصيد الفعلي أو أضف أكوادًا جديدة.",inventoryCurrentBalance:n=>"الرصيد الحالي عند المشرف: "+n,inventoryCurrentQuantity:"عدد الأكواد الحالي عند المشرف",inventorySetCurrent:"حفظ الرصيد الحالي",inventorySetCurrentHint:"يستبدل الرصيد السابق بالعدد الفعلي.",inventoryPurchasedQuantity:"الأكواد الجديدة المشتراة",inventoryAddPurchased:"إضافتها إلى الرصيد",inventoryAddPurchasedHint:"يُضاف هذا العدد إلى رصيد المشرف الحالي.",
     inventoryCategory:"الفئة",inventoryAction:"الإجراء",inventoryQuantity:"عدد الأكواد",inventoryOpening:"تحديد الرصيد المبدئي",inventoryReplenish:"إضافة أكواد وصلت للشركة",inventoryCorrection:"تصحيح الرصيد",
     inventoryWhatsAppTitle:"رسالة المخزون للواتساب",inventoryMessageMine:"الأكواد معايا",inventoryMessageSupervisor:name=>"الأكواد مع "+name,inventoryMessageTotal:"إجمالي الأكواد",inventoryMessageOverall:"الإجمالي الكلي",inventorySupervisorFallback:"المشرف",
     inventoryMessageHint:"حدد الرصيد المبدئي لكل فئة حتى تكون الأعداد في الرسالة دقيقة.",inventoryPhoneMissing:"أضف رقم الواتساب في الإعدادات لفتح الرسالة الجاهزة.",

@@ -105,6 +105,9 @@ assert(html.indexOf('id="prometric-login-card"')<html.indexOf('id="cred-account"
 assert.match(html,/\.cred-value,\.resource-value\{[^}]*font-size:16px;[^}]*font-weight:600/);
 assert(!html.includes('id="remaining-summary-details"'));
 assert(!html.includes('id="inventory-grid"'));
+assert(html.indexOf('id="panel-inventory"')<html.indexOf('id="settings-pane-inventory"'));
+assert(html.indexOf('id="settings-pane-inventory"')<html.indexOf('id="inventory-admin"'));
+assert(html.indexOf('id="inventory-admin"')<html.indexOf('id="inventory-whatsapp-settings"'));
 assert.match(html,/<details class="report-card" id="daily-used-details">/);
 assert.match(html,/#daily-used-results\{display:grid;grid-template-columns:repeat\(auto-fit,minmax\(220px,1fr\)\)/);
 for(const tab of ['profile','data','prometric','inventory','preferences','sync']){
@@ -152,11 +155,14 @@ for(const key of usedKeys) assert(englishKeys.includes(key),`Missing translation
   assert.match(els['cloud-status'].textContent,/متصل/);
   els['inventory-category'].value='Foundation-100';
   assert.match(els['inventory-current-balance'].textContent,/لم يُحدد/);
+  assert.equal(els['inventory-stock-list'].children.length,1);
+  assert.equal(els['inventory-stock-list'].children[0].children[1].textContent,'لم يُحدد');
   assert.equal(els['inventory-add-purchased'].disabled,true);
   els['inventory-current-quantity'].value='150';
   await els['inventory-set-current'].listeners.click();
   assert.equal(db.stock[0].remaining,150);
   assert.match(els['inventory-current-balance'].textContent,/150/);
+  assert.equal(els['inventory-stock-list'].children[0].children[1].textContent,'150');
   assert.equal(els['inventory-add-purchased'].disabled,false);
   els['inventory-purchased-quantity'].value='50';
   await els['inventory-add-purchased'].listeners.click();

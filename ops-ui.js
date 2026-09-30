@@ -175,6 +175,13 @@ function renderInventory(){
     const option=document.createElement('option');option.value=category;option.textContent=displayCatName(category);
     categorySelect.appendChild(option);
   });
+  const stockList=document.getElementById('inventory-stock-list');stockList.innerHTML='';
+  categories.forEach(category=>{
+    const row=document.createElement('div');row.className='inventory-stock-row';
+    const label=document.createElement('span');label.textContent=displayCatName(category);
+    const balance=document.createElement('strong');balance.textContent=String(Object.hasOwn(stock,category)?stock[category]:t('inventoryNotSet'));
+    row.appendChild(label);row.appendChild(balance);stockList.appendChild(row);
+  });
   categorySelect.value=categories.includes(previous)?previous:(categories[0] || '');
   syncInventoryAction();
   const complete=categories.length>0 && categories.every(category=>Object.hasOwn(stock,category));
@@ -198,7 +205,12 @@ function syncInventoryAction(){
   document.getElementById('inventory-purchased-quantity').disabled=!configured;
   document.getElementById('inventory-add-purchased').disabled=!configured;
 }
-document.getElementById('inventory-category').addEventListener('change',syncInventoryAction);
+document.getElementById('inventory-category').addEventListener('change',()=>{
+  document.getElementById('inventory-current-quantity').value='';
+  document.getElementById('inventory-purchased-quantity').value='';
+  document.getElementById('inventory-update-status').textContent='';
+  syncInventoryAction();
+});
 async function saveInventoryBalance(mode,field){
   const category=document.getElementById('inventory-category').value;
   const input=document.getElementById(field),raw=input.value.trim();
