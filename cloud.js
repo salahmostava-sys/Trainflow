@@ -2,7 +2,7 @@
 const Cloud = (() => {
   const SUPABASE_URL = 'https://xaeffreqwtozsgqajzpc.supabase.co';
   const KEY = 'sb_publishable_TB0SB3SNFP1ygpRvMoeSGg_s8o0mHeO';
-  let client, rows = new Map(), config, user, role, busy = false, ready = false;
+  let client, rows = new Map(), stock = new Map(), config, user, role, busy = false, ready = false;
   let nextBackgroundRefresh = 0;
   let statusKey = '', statusArgs = [], statusError = false, authStatusKey = 'authAccessHelp', authStatusArgs = [];
   let profileStatusKey='',profileStatusError=false;
@@ -38,6 +38,10 @@ const Cloud = (() => {
     if(raw==='IBTA_INVALID_PROMETRIC_URL') return t('invalidPrometricUrl');
     if(raw==='IBTA_CREDENTIAL_REQUIRED') return t('enterCredential');
     if(raw==='IBTA_INVALID_CODE_EDIT') return t('invalidCodeEdit');
+    if(raw==='IBTA_STOCK_NOT_SET') return t('inventoryStockNotSet');
+    if(raw==='IBTA_STOCK_INSUFFICIENT') return t('inventoryStockInsufficient');
+    if(raw==='IBTA_INVALID_STOCK_CHANGE') return t('inventoryInvalidChange');
+    if(raw==='IBTA_INVALID_PHONE') return t('inventoryPhoneInvalid');
     if(raw==='IBTA_LIBRARY_LOAD_FAILED') return t('libraryLoadFailed');
     if(raw.startsWith('IBTA_DUPLICATE_CODE:')) return t('duplicateCode')(raw.slice(20));
     if(/invalid login credentials|invalid credentials/i.test(raw) || error?.code==='invalid_credentials') return t('authInvalidCredentials');
@@ -119,6 +123,7 @@ const Cloud = (() => {
     $('settings-prometric-password').value=PROMETRIC_PASSWORD;
     $('settings-zoom-link').value=p.links?.zoom || '';
     $('settings-prometric-link').value=p.links?.prometric || '';
+    $('inventory-whatsapp-number').value=p.inventoryWhatsappNumber || '';
     $('low-stock-threshold').value=state.lowStockThreshold;
     $('profile-name').value=accountName();
     $('profile-email').value=user?.email || '';
@@ -128,6 +133,7 @@ const Cloud = (() => {
     selectedCodes.clear();
     applyLanguage();
     decorate();
+    if(typeof renderInventory==='function')renderInventory();
   }
   function decorate(){
     const admin=role==='admin';
@@ -141,16 +147,24 @@ const Cloud = (() => {
     $('settings-tab-data').hidden=!admin;
     $('settings-tab-prometric').hidden=!admin;
     $('code-bulk-tools').hidden=!admin;
+    $('reset-tools').hidden=!admin;
+    $('inventory-admin').hidden=!admin;
+    $('inventory-whatsapp-settings').hidden=!admin;
     document.querySelectorAll('.col-notes input').forEach(el=>{el.disabled=role==='copy_only';});
     document.querySelectorAll('.code-unmark-btn').forEach(el=>{el.hidden=role==='copy_only';});
     if(!admin && ($('settings-tab-data').getAttribute('aria-selected')==='true' || $('settings-tab-prometric').getAttribute('aria-selected')==='true')) activateSettingsTab('profile');
     translateUi();
   }
   async function load(){
-    const [settings,codes]=await Promise.all([client.from('ibta_settings').select('*').eq('id',1).single(),allRows()]);
+    const [settings,codes,stockResult]=await Promise.all([
+      client.from('ibta_settings').select('*').eq('id',1).single(),allRows(),
+      client.from('ibta_supervisor_stock').select('category,remaining')
+    ]);
     if(settings.error) throw settings.error;
+    if(stockResult.error) throw stockResult.error;
     config=settings.data;
     rows=new Map(codes.map(r=>[r.code,r]));
+    stock=new Map(stockResult.data.map(r=>[r.category,r.remaining]));
     project();
   }
   function metadata(){
@@ -248,7 +262,8 @@ const Cloud = (() => {
     if(role==='admin' && config){
       const p=config.payload;
       const shared=[['settings-prometric-account',p.credentials?.account || ''],['settings-prometric-password',p.credentials?.password || ''],
-        ['settings-zoom-link',p.links?.zoom || ''],['settings-prometric-link',p.links?.prometric || '']];
+        ['settings-zoom-link',p.links?.zoom || ''],['settings-prometric-link',p.links?.prometric || ''],
+        ['inventory-whatsapp-number',p.inventoryWhatsappNumber || '']];
       if(shared.some(([id,value])=>$(id).value!==value)) return true;
     }
     return [...document.querySelectorAll('.kc-add-cat-input, .add-box textarea')]
@@ -389,7 +404,7 @@ const Cloud = (() => {
   async function exportData(){
     if(role!=='admin') return;
     if(!await refresh())return;
-    const blob=new Blob([JSON.stringify({format:'ibta-ops-backup',version:1,exportedAt:new Date().toISOString(),settings:config.payload,codes:[...rows.values()]},null,2)],{type:'application/json'});
+    const blob=new Blob([JSON.stringify({format:'ibta-ops-backup',version:2,exportedAt:new Date().toISOString(),settings:config.payload,codes:[...rows.values()],supervisorStock:[...stock].map(([category,remaining])=>({category,remaining}))},null,2)],{type:'application/json'});
     const url=window.URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='ibta-backup-'+new Date().toISOString().slice(0,10)+'.json';a.click();window.URL.revokeObjectURL(url);
   }
   async function exportCodesCsv(){
@@ -409,6 +424,9 @@ const Cloud = (() => {
     if(backup?.format && backup.format!=='ibta-ops-backup')throw Error('IBTA_INVALID_BACKUP');
     if(!Array.isArray(backup?.settings?.categoryOrder) || !Array.isArray(backup?.settings?.codeCategories) ||
        !Array.isArray(backup?.settings?.keycodes) || !Array.isArray(backup.codes))throw Error('IBTA_INVALID_BACKUP');
+    if(backup.supervisorStock!==undefined && (!Array.isArray(backup.supervisorStock) ||
+       backup.supervisorStock.some(row=>!row || typeof row.category!=='string' ||
+         !Number.isInteger(row.remaining) || row.remaining<0 || row.remaining>1000000)))throw Error('IBTA_INVALID_BACKUP');
     lock(true);setStatus('saving');
     try{
       const {error}=await client.rpc('ibta_restore_backup',{backup,expected_version:config.version});
@@ -426,6 +444,32 @@ const Cloud = (() => {
       if(error)throw error;
       await load();setStatus('saved');return data;
     }catch(error){fail(error);throw error;}
+    finally{lock(false);}
+  }
+  async function changeSupervisorStock(category,mode,quantity){
+    if(!ready || role!=='admin')throw Error('IBTA_NOT_APPROVED');
+    if(!Object.hasOwn(state.codesByCategory,category) || !['opening','replenishment','correction'].includes(mode) ||
+       !Number.isInteger(quantity) || quantity<0 || quantity>1000000)throw Error('IBTA_INVALID_STOCK_CHANGE');
+    lock(true);setStatus('saving');
+    try{
+      const {error}=await client.rpc('ibta_change_supervisor_stock',{target_category:category,mode,quantity});
+      if(error)throw error;
+      await load();setStatus('saved');return true;
+    }catch(error){fail(error);throw error;}
+    finally{lock(false);}
+  }
+  async function saveInventoryWhatsApp(number){
+    if(!ready || role!=='admin')throw Error('IBTA_NOT_APPROVED');
+    if(number && !/^\d{8,15}$/.test(number))throw Error('IBTA_INVALID_PHONE');
+    const payload=clone(config.payload);
+    payload.inventoryWhatsappNumber=number;
+    if(same(payload,config.payload))return true;
+    lock(true);setStatus('saving');
+    try{
+      const {error}=await client.rpc('ibta_apply_changes',{changes:[],settings_payload:payload,settings_version:config.version});
+      if(error)throw error;
+      await load();setStatus('saved');return true;
+    }catch(error){try{await load();}catch{}fail(error);throw error;}
     finally{lock(false);}
   }
   async function listMembers(){
@@ -475,6 +519,6 @@ const Cloud = (() => {
       window.addEventListener('beforeunload',e=>{if(busy){e.preventDefault();e.returnValue='';}});
     }catch(e){setAuthStatus('error',e);}
   }
-  return {boot,persist,copyCode,editCode,decorate,refresh,translateUi,restoreData,importCodes,listMembers,updateMember,auditEvents,exportCodesCsv,
-    role:()=>role,email:()=>user?.email || '',existingCodes:()=>[...rows.keys()]};
+  return {boot,persist,copyCode,editCode,decorate,refresh,translateUi,restoreData,importCodes,listMembers,updateMember,auditEvents,exportCodesCsv,changeSupervisorStock,saveInventoryWhatsApp,
+    role:()=>role,email:()=>user?.email || '',existingCodes:()=>[...rows.keys()],stockSnapshot:()=>Object.fromEntries(stock),inventoryWhatsAppNumber:()=>config?.payload?.inventoryWhatsappNumber || ''};
 })();

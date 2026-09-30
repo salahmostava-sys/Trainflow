@@ -1,5 +1,8 @@
 -- Transactional fixtures: all test accounts, codes, and audit rows are rolled back.
 begin;
+update public.ibta_settings set payload=jsonb_set(payload,'{codeCategories}',
+  (payload->'codeCategories') || '["Test","Test-Opening"]'::jsonb) where id=1;
+insert into public.ibta_supervisor_stock(category,remaining) values ('Test',10);
 insert into auth.users(id,email,email_confirmed_at) values
  ('00000000-0000-4000-8000-000000000101','ibta-test-admin@example.invalid',now()),
  ('00000000-0000-4000-8000-000000000102','ibta-test-operator@example.invalid',now()),
@@ -18,10 +21,19 @@ do $$ begin
 end $$;
 insert into public.ibta_codes(code,category) values ('IBTA-TEST-ONLY','Test');
 insert into public.ibta_codes(code,category) values ('IBTA-TEST-COPY','Test');
+do $$ begin
+  if (select remaining from public.ibta_supervisor_stock where category='Test')<>8 then
+    raise exception 'FAIL: code allocation did not reduce supervisor stock';
+  end if;
+end $$;
 set local role authenticated;
 select set_config('request.jwt.claims','{"sub":"00000000-0000-4000-8000-000000000103","email":"ibta-test-stranger@example.invalid","role":"authenticated"}',true);
 do $$ begin
-  if exists(select 1 from public.ibta_codes) or exists(select 1 from public.ibta_settings) then raise exception 'FAIL: stranger can read data'; end if;
+  if exists(select 1 from public.ibta_codes) or exists(select 1 from public.ibta_settings)
+     or exists(select 1 from public.ibta_supervisor_stock)
+     or exists(select 1 from public.ibta_supervisor_stock_events) then
+    raise exception 'FAIL: stranger can read data';
+  end if;
 end $$;
 select set_config('request.jwt.claims','{"sub":"00000000-0000-4000-8000-000000000104","email":"ibta-test-copy@example.invalid","role":"authenticated"}',true);
 do $$ declare n int; begin
@@ -58,6 +70,8 @@ do $$ declare n int; begin
   if n<>0 then raise exception 'FAIL: operator can delete'; end if;
   update public.ibta_settings set payload=payload where id=1;get diagnostics n=row_count;
   if n<>0 then raise exception 'FAIL: operator can change settings'; end if;
+  update public.ibta_supervisor_stock set remaining=100 where category='Test';get diagnostics n=row_count;
+  if n<>0 then raise exception 'FAIL: operator can change supervisor stock'; end if;
 end $$;
 do $$ begin
   begin
@@ -69,6 +83,28 @@ do $$ begin
 end $$;
 select set_config('request.jwt.claims','{"sub":"00000000-0000-4000-8000-000000000101","email":"ibta-test-admin@example.invalid","role":"authenticated"}',true);
 do $$ begin
+  if public.ibta_change_supervisor_stock('Test-Opening','opening',4)<>4 then
+    raise exception 'FAIL: opening stock';
+  end if;
+  begin
+    perform public.ibta_change_supervisor_stock('Test-Opening','opening',9);
+    raise exception 'FAIL: opening stock overwritten';
+  exception when raise_exception then
+    if sqlerrm not like 'CONFLICT:%' then raise; end if;
+  end;
+  if public.ibta_change_supervisor_stock('Test','replenishment',2)<>10 then
+    raise exception 'FAIL: company replenishment';
+  end if;
+  if public.ibta_change_supervisor_stock('Test','correction',0)<>0 then
+    raise exception 'FAIL: stock correction';
+  end if;
+  begin
+    insert into public.ibta_codes(code,category) values ('IBTA-NO-STOCK','Test');
+    raise exception 'FAIL: imported beyond supervisor stock';
+  exception when raise_exception then
+    if sqlerrm<>'IBTA_STOCK_INSUFFICIENT' then raise; end if;
+  end;
+  perform public.ibta_change_supervisor_stock('Test','correction',8);
   if (select notes from public.ibta_codes where code='IBTA-TEST-ONLY')<>'saved note' then raise exception 'FAIL: saved note'; end if;
   if not exists(select 1 from public.ibta_audit where record_key='IBTA-TEST-ONLY' and actor='00000000-0000-4000-8000-000000000102') then raise exception 'FAIL: audit'; end if;
   begin
@@ -100,12 +136,14 @@ end $$;
 do $$ declare backup jsonb; current_version bigint; before_count int; restored int; begin
   restored:=public.ibta_import_codes('Test',array['IBTA-BULK-ONE','IBTA-BULK-TWO','IBTA-BULK-ONE']);
   if restored<>2 then raise exception 'FAIL: bulk import count'; end if;
+  if (select remaining from public.ibta_supervisor_stock where category='Test')<>6 then raise exception 'FAIL: import stock debit'; end if;
   select count(*) into before_count from public.ibta_codes;
   select version into current_version from public.ibta_settings where id=1;
   select jsonb_build_object('settings',(select payload from public.ibta_settings where id=1),
     'codes',coalesce(jsonb_agg(to_jsonb(c)),'[]'::jsonb)) into backup from public.ibta_codes c;
   perform public.ibta_restore_backup(backup,current_version);
   if (select count(*) from public.ibta_codes)<>before_count then raise exception 'FAIL: backup restore count'; end if;
+  if (select remaining from public.ibta_supervisor_stock where category='Test')<>6 then raise exception 'FAIL: restore debited stock'; end if;
   begin
     perform public.ibta_restore_backup(backup,current_version);
     raise exception 'FAIL: stale restore succeeded';
@@ -121,5 +159,5 @@ do $$ begin
   exception when insufficient_privilege then null; end;
 end $$;
 rollback;
-select 'PASS: anonymous isolation, member identity, copy-only and operator roles, atomic claims, import, backup restore, audit, and request limits' as result;
+select 'PASS: access isolation, member roles, claims, supervisor stock allocation, import, backup restore, audit, and request limits' as result;
 

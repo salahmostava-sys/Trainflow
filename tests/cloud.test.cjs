@@ -14,13 +14,14 @@ class Element {
 }
 const els={},storage=new Map(),events=[];
 const document={listeners:{},addEventListener(event,fn){this.listeners[event]=fn;},getElementById:id=>els[id] ||= new Element(),createElement:()=>new Element(),querySelectorAll:()=>[],querySelector:()=>new Element(),body:new Element(),execCommand:()=>false,hidden:false};
-const db={settings:{id:1,version:1,payload:{keycodes:[],categoryOrder:['Foundation'],codeCategories:['Foundation-100'],keycodeOrder:{},keycodeOverrides:{},dateColors:{},credentials:{account:'test-account',password:'test-password'},links:{zoom:'https://us02web.zoom.us/j/demo',prometric:'https://tcnet1.prometric.com/Login.aspx?demo=1'}}},codes:[{code:'TEST',category:'Foundation-100',notes:'',used_on:null,used_by:null,version:1}],members:[{email:'test@example.invalid',role:'admin',active:true,user_id:'user-1'},{email:'member@example.invalid',role:'operator',active:true,user_id:null}]};
+const db={settings:{id:1,version:1,payload:{keycodes:[],categoryOrder:['Foundation'],codeCategories:['Foundation-100'],keycodeOrder:{},keycodeOverrides:{},dateColors:{},credentials:{account:'test-account',password:'test-password'},links:{zoom:'https://us02web.zoom.us/j/demo',prometric:'https://tcnet1.prometric.com/Login.aspx?demo=1'}}},codes:[{code:'TEST',category:'Foundation-100',notes:'',used_on:null,used_by:null,version:1}],stock:[],members:[{email:'test@example.invalid',role:'admin',active:true,user_id:'user-1'},{email:'member@example.invalid',role:'operator',active:true,user_id:null}]};
 const clone=x=>JSON.parse(JSON.stringify(x));
 let conflict=false,clipboardFails=false,codeReads=0;
 const authUser={id:'user-1',email:'test@example.invalid',user_metadata:{}};
 const client={
   auth:{getSession:async()=>({data:{session:{user:clone(authUser)}}}),onAuthStateChange(){},signOut:async()=>({}),updateUser:async args=>{events.push({name:'auth_update',args:clone(args)});if(args.data)authUser.user_metadata={...authUser.user_metadata,...args.data};return {data:{user:clone(authUser)}};}},
   from(table){
+    if(table==='ibta_supervisor_stock')return {select:async()=>({data:clone(db.stock),error:null})};
     if(table==='ibta_members'){
       let filter;
       return {select(){return this;},eq(field,value){filter=[field,value];return this;},
@@ -35,9 +36,23 @@ const client={
   async rpc(name,args){
     events.push({name,args:clone(args)});
     if(conflict)return {error:{message:'CONFLICT: reload required'}};
+    if(name==='ibta_change_supervisor_stock'){
+      let row=db.stock.find(item=>item.category===args.target_category);
+      if(args.mode==='opening'){
+        if(row)return {error:{message:'CONFLICT: stock already initialized'}};
+        row={category:args.target_category,remaining:args.quantity};db.stock.push(row);
+      }else{
+        if(!row)return {error:{message:'IBTA_STOCK_NOT_SET'}};
+        row.remaining=args.mode==='replenishment'?row.remaining+args.quantity:args.quantity;
+      }
+      return {data:row.remaining};
+    }
     if(name==='ibta_import_codes'){
       let added=0;
       for(const code of args.new_codes)if(!db.codes.some(row=>row.code.toLowerCase()===code.toLowerCase())){
+        const stock=db.stock.find(item=>item.category===args.target_category);
+        if(!stock || stock.remaining<1)return {error:{message:stock?'IBTA_STOCK_INSUFFICIENT':'IBTA_STOCK_NOT_SET'}};
+        stock.remaining--;
         db.codes.push({code,category:args.target_category,notes:'',used_on:null,used_by:null,version:1});added++;
       }
       return {data:added};
@@ -46,6 +61,7 @@ const client={
       if(args.expected_version!==db.settings.version)return {error:{message:'CONFLICT: reload required'}};
       db.settings.payload=clone(args.backup.settings);db.settings.version++;
       db.codes=clone(args.backup.codes).map(row=>({...row,version:1000000}));
+      if(args.backup.supervisorStock)db.stock=clone(args.backup.supervisorStock);
       return {};
     }
     if(name==='ibta_claim_code'){
@@ -54,7 +70,11 @@ const client={
     }
     for(const c of args.changes){
       if(c.op==='update'){const r=db.codes.find(r=>r.code===c.code);assert.equal(c.version,r.version);r.notes=c.notes;r.used_on=c.used_on;r.version++;}
-      if(c.op==='insert')db.codes.push({...c,version:1});
+      if(c.op==='insert'){
+        const stock=db.stock.find(item=>item.category===c.category);
+        if(!stock || stock.remaining<1)return {error:{message:stock?'IBTA_STOCK_INSUFFICIENT':'IBTA_STOCK_NOT_SET'}};
+        stock.remaining--;db.codes.push({...c,version:1});
+      }
       if(c.op==='delete')db.codes=db.codes.filter(r=>r.code!==c.code);
       if(c.op==='replace'){
         const r=db.codes.find(r=>r.code===c.code);assert.equal(c.version,r.version);
@@ -69,6 +89,11 @@ const client={
 };
 const ctx=vm.createContext({document,URL,localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v)},sessionStorage:{},window:{supabase:{createClient:()=>client},addEventListener(){}},navigator:{clipboard:{writeText:async text=>{if(clipboardFails)throw Error('denied');events.push({name:'clipboard',text});}}},setInterval(){},setTimeout(){},clearTimeout(){},confirm:()=>true,location:{reload(){}}});
 els['account-menu-popover']=new Element();els['account-menu-popover'].hidden=true;
+for(const value of ['opening','replenishment','correction']){
+  const option=new Element();option.value=value;els['inventory-action'] ||= new Element();els['inventory-action'].appendChild(option);
+}
+els['inventory-quantity']=new Element();
+els['inventory-whatsapp-number']=new Element();
 vm.runInContext(fs.readFileSync(path.join(__dirname,'../cloud.js'),'utf8'),ctx);
 const html=fs.readFileSync(path.join(__dirname,'../ibta-ops.html'),'utf8');
 assert.match(html,/family=IBM\+Plex\+Sans\+Arabic/);
@@ -123,6 +148,19 @@ for(const key of usedKeys) assert(englishKeys.includes(key),`Missing translation
   document.listeners.keydown({key:'Escape'});
   assert.equal(els['account-menu-popover'].hidden,true);
   assert.equal(els['cred-account-val'].textContent,'test-account');
+  assert.match(els['cloud-status'].textContent,/متصل/);
+  assert.equal(els['inventory-grid'].children[0].children[1].children[1].children[1].textContent,'لم يُحدد');
+  els['inventory-category'].value='Foundation-100';
+  els['inventory-action'].value='opening';els['inventory-quantity'].value='150';
+  await els['inventory-save'].listeners.click();
+  assert.equal(db.stock[0].remaining,150);
+  els['inventory-action'].value='replenishment';els['inventory-quantity'].value='50';
+  await els['inventory-save'].listeners.click();
+  assert.equal(db.stock[0].remaining,200);
+  els['inventory-whatsapp-number'].value='966500000000';
+  await els['inventory-save-number'].listeners.click();
+  assert.equal(db.settings.payload.inventoryWhatsappNumber,'966500000000');
+  assert.match(els['inventory-whatsapp-link'].href,/^https:\/\/wa\.me\/966500000000\?text=/);
   els['remaining-summary-details'].open=true;
   els['remaining-summary-details'].listeners.toggle();
   assert.equal(els['remaining-summary-panel'].hidden,false);
@@ -132,22 +170,22 @@ for(const key of usedKeys) assert(englishKeys.includes(key),`Missing translation
   assert.equal(els['remaining-summary-details'].open,false);
   assert.equal(els['remaining-summary-panel'].hidden,true);
   assert.equal(els['daily-used-panel'].hidden,false);
-  assert.match(els['cloud-status'].textContent,/متصل/);
   run('toggleLanguage()');
   assert.equal(els['signed-in'].textContent,'test@example.invalid · Admin');
-  assert.equal(els['cloud-status'].textContent,'Connected to the database');
+  assert.equal(els['cloud-status'].textContent,'Saved to the database');
   assert.equal(els['auth-password'].placeholder,'Enter your password');
   assert.equal(JSON.parse(storage.get('ibta_ui_preferences')).uiLang,'en');
   run('toggleLanguage()');
-  assert.match(els['cloud-status'].textContent,/متصل/);
+  assert.match(els['cloud-status'].textContent,/حفظ/);
   els['add-codes-input'].value='unsaved code';
+  const readsBeforeRefresh=codeReads;
   assert.equal(await run('Cloud.refresh(true)'),false);
-  assert.equal(codeReads,1);
+  assert.equal(codeReads,readsBeforeRefresh);
   els['add-codes-input'].value='';
   assert.equal(await run('Cloud.refresh(true)'),true);
-  assert.equal(codeReads,2);
+  assert.equal(codeReads,readsBeforeRefresh+1);
   assert.equal(await run('Cloud.refresh(true)'),false);
-  assert.equal(codeReads,2);
+  assert.equal(codeReads,readsBeforeRefresh+1);
   run("state.codeNotes.TEST='hello'");assert.equal(await run('saveState()'),true);assert.equal(db.codes[0].notes,'hello');
   await run("Cloud.copyCode('TEST')");assert.equal(db.codes[0].used_by,'user-1');
   assert(events.findIndex(e=>e.name==='ibta_claim_code')<events.findIndex(e=>e.name==='clipboard'));
@@ -303,7 +341,8 @@ for(const key of usedKeys) assert(englishKeys.includes(key),`Missing translation
   assert.match(els['bulk-import-preview'].textContent,/2 كود جديد/);
   await els['bulk-import-submit'].listeners.click();
   assert(db.codes.some(row=>row.code==='BULK-ONE'));
-  const backup={format:'ibta-ops-backup',settings:clone(db.settings.payload),codes:clone(db.codes)};
+  assert.equal(db.stock[0].remaining,198);
+  const backup={format:'ibta-ops-backup',settings:clone(db.settings.payload),codes:clone(db.codes),supervisorStock:clone(db.stock)};
   await els['restore-file'].listeners.change({target:{files:[{size:20,text:async()=>'{"invalid":true}'}]}});
   assert.equal(els['restore-button'].disabled,true);
   await els['restore-file'].listeners.change({target:{files:[{size:100,text:async()=>JSON.stringify(backup)}]}});

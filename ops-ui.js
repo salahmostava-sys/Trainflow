@@ -9,13 +9,23 @@ function validBackup(value){
      !Array.isArray(value.settings.keycodes) ||
      !Array.isArray(value.codes) || value.codes.length>20000)return false;
   const seen=new Set();
-  return value.codes.every(row=>{
+  const validCodes=value.codes.every(row=>{
     if(!row || typeof row.code!=='string' || typeof row.category!=='string' ||
        !row.code.trim() || row.code.length>200 || !row.category.trim() || row.category.length>100 ||
        (row.notes!=null && (typeof row.notes!=='string' || row.notes.length>2000)))return false;
     const key=row.code.toLocaleLowerCase();
     if(seen.has(key))return false;
     seen.add(key);return true;
+  });
+  if(!validCodes)return false;
+  if(value.supervisorStock===undefined)return true;
+  if(!Array.isArray(value.supervisorStock) || value.supervisorStock.length>1000)return false;
+  const categories=new Set();
+  return value.supervisorStock.every(row=>{
+    if(!row || typeof row.category!=='string' || !row.category.trim() || row.category.length>100 ||
+       !Number.isInteger(row.remaining) || row.remaining<0 || row.remaining>1000000 ||
+       categories.has(row.category))return false;
+    categories.add(row.category);return true;
   });
 }
 
@@ -141,3 +151,86 @@ async function renderAuditList(){
 }
 document.getElementById('admin-tools').addEventListener('toggle',event=>{if(event.target.open)renderMemberList();});
 document.getElementById('audit-details').addEventListener('toggle',event=>{if(event.target.open)renderAuditList();});
+
+function inventoryMessage(categories,stock){
+  return [t('inventoryMessageTitle'),...categories.map(category=>{
+    const mine=(state.codesByCategory[category] || []).filter(code=>!state.usedCodes[code]).length;
+    const theirs=Object.hasOwn(stock,category)?stock[category]:t('inventoryNotSet');
+    return t('inventoryMessageLine')(displayCatName(category),mine,theirs);
+  })].join('\n');
+}
+function renderInventory(){
+  const categories=Object.keys(state.codesByCategory || {}),stock=Cloud.stockSnapshot();
+  const grid=document.getElementById('inventory-grid');grid.innerHTML='';
+  categories.forEach(category=>{
+    const item=document.createElement('article');item.className='inventory-item';
+    const heading=document.createElement('h3');heading.textContent=displayCatName(category);
+    const counts=document.createElement('div');counts.className='inventory-counts';
+    [[t('inventoryWithYou'),(state.codesByCategory[category] || []).filter(code=>!state.usedCodes[code]).length],
+      [t('inventoryWithSupervisor'),Object.hasOwn(stock,category)?stock[category]:t('inventoryNotSet')]].forEach(([label,value])=>{
+      const box=document.createElement('div');box.className='inventory-count';
+      const caption=document.createElement('span');caption.textContent=label;
+      const number=document.createElement('strong');number.textContent=String(value);
+      box.appendChild(caption);box.appendChild(number);counts.appendChild(box);
+    });
+    item.appendChild(heading);item.appendChild(counts);grid.appendChild(item);
+  });
+  const categorySelect=document.getElementById('inventory-category'),previous=categorySelect.value;
+  categorySelect.innerHTML='';
+  categories.forEach(category=>{
+    const option=document.createElement('option');option.value=category;option.textContent=displayCatName(category);
+    categorySelect.appendChild(option);
+  });
+  categorySelect.value=categories.includes(previous)?previous:(categories[0] || '');
+  syncInventoryAction();
+  const complete=categories.length>0 && categories.every(category=>Object.hasOwn(stock,category));
+  const number=Cloud.inventoryWhatsAppNumber();
+  document.getElementById('inventory-message').textContent=inventoryMessage(categories,stock);
+  document.getElementById('inventory-message-hint').textContent=!complete?t('inventoryMessageHint'):!number?t('inventoryPhoneMissing'):'';
+  const link=document.getElementById('inventory-whatsapp-link');
+  if(complete && /^\d{8,15}$/.test(number)){
+    link.href='https://wa.me/'+number+'?text='+encodeURIComponent(inventoryMessage(categories,stock));
+    link.setAttribute('aria-disabled','false');
+  }else{
+    link.removeAttribute('href');link.setAttribute('aria-disabled','true');
+  }
+  document.getElementById('inventory-copy-message').disabled=!complete;
+}
+function syncInventoryAction(){
+  const category=document.getElementById('inventory-category').value;
+  const configured=Object.hasOwn(Cloud.stockSnapshot(),category);
+  const action=document.getElementById('inventory-action');
+  action.children[0].hidden=configured;
+  action.children[1].hidden=!configured;
+  action.children[2].hidden=!configured;
+  if(configured && action.value==='opening')action.value='replenishment';
+  if(!configured)action.value='opening';
+}
+document.getElementById('inventory-category').addEventListener('change',syncInventoryAction);
+document.getElementById('inventory-save').addEventListener('click',async()=>{
+  const category=document.getElementById('inventory-category').value;
+  const mode=document.getElementById('inventory-action').value;
+  const raw=document.getElementById('inventory-quantity').value.trim();
+  const quantity=Number(raw);
+  const status=document.getElementById('inventory-update-status');
+  if(!raw || !Number.isInteger(quantity) || quantity<0 || quantity>1000000 ||
+     (mode==='replenishment' && quantity===0)){
+    status.textContent=t('inventoryInvalidChange');return;
+  }
+  try{
+    await Cloud.changeSupervisorStock(category,mode,quantity);
+    document.getElementById('inventory-quantity').value='';
+    status.textContent=t('inventorySaved');
+  }catch{status.textContent=t('genericError');}
+});
+document.getElementById('inventory-save-number').addEventListener('click',async()=>{
+  const number=document.getElementById('inventory-whatsapp-number').value.trim();
+  const status=document.getElementById('inventory-number-status');
+  if(number && !/^\d{8,15}$/.test(number)){status.textContent=t('inventoryPhoneInvalid');return;}
+  try{await Cloud.saveInventoryWhatsApp(number);status.textContent=t('saved');}
+  catch{status.textContent=t('genericError');}
+});
+document.getElementById('inventory-copy-message').addEventListener('click',async()=>{
+  const message=document.getElementById('inventory-message').textContent;
+  if(await copyText(message))showToast(t('inventoryMessageCopied'));
+});

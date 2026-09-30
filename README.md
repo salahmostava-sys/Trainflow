@@ -11,6 +11,7 @@ Supabase Auth's Site URL is configured as <https://ibta-ops.pages.dev/> for conf
 The Settings screen uses separate tabs for account details, system data, Prometric details, preferences, and team/sync tools. System-data and Prometric-edit tabs are visible only to administrators; the database enforces those permissions independently of the interface.
 
 Administrators add exams and categories under **Settings → System data**. The Keycodes screen remains focused on viewing and using keycodes.
+The destructive reset of all usage marks is also under **Settings → System data**, with a reminder to download a backup first.
 
 The interface and sign-in page share the IBM Plex Sans Arabic font, loaded from Google Fonts with local system-font fallbacks.
 
@@ -22,6 +23,8 @@ Administrators can allowlist another email from **إدارة البيانات و
 - `ibta_settings`: shared keycode catalog, category labels/ordering/overrides, Prometric credentials, and Zoom/Prometric links. RLS restricts reads to approved users; these values are not embedded in public HTML/JavaScript. Administrators can edit existing categories, exams, codes, and the shared connection details from Settings. Category names are editable display labels; the underlying category IDs stay stable so existing codes and links remain attached.
 - `ibta_members`: approved email addresses, immutable Auth user IDs, and roles. Confirming a new sign-in email updates the membership email while retaining the same role.
 - `ibta_audit`: database-generated actor/action/time log. Audit entries deliberately do not include passwords or note contents.
+- `ibta_supervisor_stock`: the supervisor's unallocated balance by code category. New code inserts and file imports debit this balance in the same database transaction; edits and backup restores do not debit it again.
+- `ibta_supervisor_stock_events`: opening balances, replenishments, corrections, and code allocations.
 
 The original 36 codes and 25 keycodes were seeded to the new database. Operational data is not stored in browser localStorage anymore. Only language and auto-chain preferences remain local. Authentication is stored in sessionStorage and requires logging in again when the browser session ends.
 
@@ -35,7 +38,9 @@ Old localStorage was not erased. Sign in as administrator **in the browser and a
 
 Verify the merged counts and marks before putting the team into operation. The original embedded seed did not contain browser-only usage history.
 
-**تنزيل نسخة احتياطية** exports the shared configuration and codes. **استعادة نسخة احتياطية** previews the JSON and asks for confirmation before replacing both in one database transaction; a stale settings version or invalid row cancels the whole restore. The backup includes Prometric credentials and the Zoom meeting link; keep it private. Auth accounts are managed separately and are not restored from this file. There is no scheduled backup service configured. Supabase recommends regular off-site database dumps for Free projects; the app backup is an additional operational export, not a substitute for a full database dump.
+**تنزيل نسخة احتياطية** exports the shared configuration, codes, and supervisor balances. **استعادة نسخة احتياطية** previews the JSON and asks for confirmation before replacing them in one database transaction; a stale settings version or invalid row cancels the whole restore. Older backup files without supervisor balances leave the current balances untouched. The backup includes Prometric credentials and the Zoom meeting link; keep it private. Auth accounts are managed separately and are not restored from this file. There is no scheduled backup service configured. Supabase recommends regular off-site database dumps for Free projects; the app backup is an additional operational export, not a substitute for a full database dump.
+
+The separate **Inventory / المخزون** page shows unused codes held by the team and the remaining supervisor balance for every code category. An administrator must first enter the actual starting balance for each category; no starting numbers are inferred from codes already in the system. Once set, every newly added code reduces the supervisor balance automatically. If there is no opening balance or insufficient stock, the whole code-add operation is rejected. Administrators can record new company supply or correct a balance on this page. Deleting or using an already received code does not return it to the supervisor automatically. Set the destination WhatsApp number under **Settings → Team and sync** using digits with country code. The Inventory page prepares the current bilingual message and opens WhatsApp; a person must press Send there.
 
 Settings → System data includes file import for up to 5,000 codes at a time. CSV files use the first `Code` column and the selected destination category; exact or case-insensitive duplicates are skipped. The same panel exports a CSV inventory for Google Sheets and lets administrators choose a remaining-stock warning threshold. This is file interchange; direct Google authorization and sheet synchronization require the target sheet and OAuth configuration.
 
@@ -57,9 +62,9 @@ Membership identity migrations `migrations/20260929_member_identity.sql` and `mi
 
 ## Hosting
 
-For Cloudflare Pages Git integration, use `main` as the production branch, `node tools/build-site.cjs` as the build command, and `dist` as the output directory. The build publishes only `ibta-ops.html` (as `index.html`) and `cloud.js`; SQL files, tests, and backups are not included in the website. The Supabase publishable key in `cloud.js` is intended for public clients; no secret/service-role key is used. The client library is pinned to Supabase JS 2.116.0 on jsDelivr. After deployment, set the Supabase Auth Site URL to the final HTTPS address.
+For Cloudflare Pages Git integration, use `main` as the production branch, `node tools/build-site.cjs` as the build command, and `dist` as the output directory. The build publishes only `ibta-ops.html` (as `index.html`), `cloud.js`, and `ops-ui.js`; SQL files, tests, and backups are not included in the website. The Supabase publishable key in `cloud.js` is intended for public clients; no secret/service-role key is used. The client library is pinned to Supabase JS 2.116.0 on jsDelivr. After deployment, set the Supabase Auth Site URL to the final HTTPS address.
 
 ## Verification
 
-Run `node tests/cloud.test.cjs` for frontend storage, import, and backup-restore regression checks. `database-tests.sql` checks RLS, claims, stale updates, role restrictions, import, restore, and audit inside a transaction that rolls back all fixtures. Apply `migrations/20260929_ops_hardening.sql` and `migrations/20260929_settings_shape.sql` before deploying the new frontend; both have been applied to the current project. `database.sql` records the original schema already applied to this project; it is not an idempotent setup script and should not be rerun on the provisioned database.
+Run `node tests/cloud.test.cjs` for frontend storage, import, inventory, and backup-restore regression checks. `database-tests.sql` checks RLS, claims, stale updates, role restrictions, inventory allocation, import, restore, and audit inside a transaction that rolls back all fixtures. Apply `migrations/20260929_ops_hardening.sql`, `migrations/20260929_settings_shape.sql`, `migrations/20260930_supervisor_stock.sql`, and `migrations/20260930_supervisor_stock_policy.sql` before deploying this frontend; all have been applied to the current project. `database.sql` records the original schema already applied to this project; it is not an idempotent setup script and should not be rerun on the provisioned database.
 
