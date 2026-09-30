@@ -66,7 +66,7 @@ const client={
     }
     if(name==='ibta_claim_code'){
       const row=db.codes.find(r=>r.code===args.target_code&&r.version===args.expected_version&&!r.used_on);
-      if(!row)return {data:[]};row.used_on=args.use_date;row.used_by='user-1';row.version++;return {data:[clone(row)]};
+      if(!row)return {data:[]};row.used_on=args.use_date;row.used_at='2026-09-30T09:45:00.000Z';row.used_by='user-1';row.version++;return {data:[clone(row)]};
     }
     for(const c of args.changes){
       if(c.op==='update'){const r=db.codes.find(r=>r.code===c.code);assert.equal(c.version,r.version);r.notes=c.notes;r.used_on=c.used_on;r.version++;}
@@ -89,11 +89,11 @@ const client={
 };
 const ctx=vm.createContext({document,URL,localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v)},sessionStorage:{},window:{supabase:{createClient:()=>client},addEventListener(){}},navigator:{clipboard:{writeText:async text=>{if(clipboardFails)throw Error('denied');events.push({name:'clipboard',text});}}},setInterval(){},setTimeout(){},clearTimeout(){},confirm:()=>true,location:{reload(){}}});
 els['account-menu-popover']=new Element();els['account-menu-popover'].hidden=true;
-for(const value of ['opening','replenishment','correction']){
-  const option=new Element();option.value=value;els['inventory-action'] ||= new Element();els['inventory-action'].appendChild(option);
-}
-els['inventory-quantity']=new Element();
+els['inventory-current-quantity']=new Element();
+els['inventory-purchased-quantity']=new Element();
 els['inventory-whatsapp-number']=new Element();
+els['inventory-supervisor-name']=new Element();
+els['inventory-message-language']=new Element();
 vm.runInContext(fs.readFileSync(path.join(__dirname,'../cloud.js'),'utf8'),ctx);
 const html=fs.readFileSync(path.join(__dirname,'../ibta-ops.html'),'utf8');
 assert.match(html,/family=IBM\+Plex\+Sans\+Arabic/);
@@ -103,10 +103,11 @@ assert(!/Tajawal|Calibri/.test(html));
 assert.match(html,/id="prometric-login-card"[^>]*>\s*<div[^>]*data-i18n="prometricLoginLink"/);
 assert(html.indexOf('id="prometric-login-card"')<html.indexOf('id="cred-account"'));
 assert.match(html,/\.cred-value,\.resource-value\{[^}]*font-size:16px;[^}]*font-weight:600/);
-assert.match(html,/<details class="report-card" id="remaining-summary-details">/);
+assert(!html.includes('id="remaining-summary-details"'));
+assert(!html.includes('id="inventory-grid"'));
 assert.match(html,/<details class="report-card" id="daily-used-details">/);
 assert.match(html,/#daily-used-results\{display:grid;grid-template-columns:repeat\(auto-fit,minmax\(220px,1fr\)\)/);
-for(const tab of ['profile','data','prometric','preferences','sync']){
+for(const tab of ['profile','data','prometric','inventory','preferences','sync']){
   assert(html.includes(`id="settings-tab-${tab}"`));
   assert(html.includes(`id="settings-pane-${tab}"`));
 }
@@ -149,26 +150,38 @@ for(const key of usedKeys) assert(englishKeys.includes(key),`Missing translation
   assert.equal(els['account-menu-popover'].hidden,true);
   assert.equal(els['cred-account-val'].textContent,'test-account');
   assert.match(els['cloud-status'].textContent,/متصل/);
-  assert.equal(els['inventory-grid'].children[0].children[1].children[1].children[1].textContent,'لم يُحدد');
   els['inventory-category'].value='Foundation-100';
-  els['inventory-action'].value='opening';els['inventory-quantity'].value='150';
-  await els['inventory-save'].listeners.click();
+  assert.match(els['inventory-current-balance'].textContent,/لم يُحدد/);
+  assert.equal(els['inventory-add-purchased'].disabled,true);
+  els['inventory-current-quantity'].value='150';
+  await els['inventory-set-current'].listeners.click();
   assert.equal(db.stock[0].remaining,150);
-  els['inventory-action'].value='replenishment';els['inventory-quantity'].value='50';
-  await els['inventory-save'].listeners.click();
+  assert.match(els['inventory-current-balance'].textContent,/150/);
+  assert.equal(els['inventory-add-purchased'].disabled,false);
+  els['inventory-purchased-quantity'].value='50';
+  await els['inventory-add-purchased'].listeners.click();
+  assert.equal(db.stock[0].remaining,200);
+  els['inventory-current-quantity'].value='190';
+  await els['inventory-set-current'].listeners.click();
+  assert.equal(db.stock[0].remaining,190);
+  els['inventory-purchased-quantity'].value='10';
+  await els['inventory-add-purchased'].listeners.click();
   assert.equal(db.stock[0].remaining,200);
   els['inventory-whatsapp-number'].value='966500000000';
-  await els['inventory-save-number'].listeners.click();
+  els['inventory-supervisor-name'].value='Ahmed';
+  els['inventory-message-language'].value='en';
+  await els['inventory-save-settings'].listeners.click();
   assert.equal(db.settings.payload.inventoryWhatsappNumber,'966500000000');
+  assert.equal(db.settings.payload.inventorySupervisorName,'Ahmed');
+  assert.equal(db.settings.payload.inventoryMessageLanguage,'en');
   assert.match(els['inventory-whatsapp-link'].href,/^https:\/\/wa\.me\/966500000000\?text=/);
-  els['remaining-summary-details'].open=true;
-  els['remaining-summary-details'].listeners.toggle();
-  assert.equal(els['remaining-summary-panel'].hidden,false);
-  assert.equal(els['daily-used-panel'].hidden,true);
+  assert.match(els['inventory-message'].textContent,/Codes with me\nFoundation: 1\n\nCodes with Ahmed\nFoundation: 200\n\nTotal codes\nFoundation: 201/);
+  assert(!els['inventory-message'].textContent.includes('التأسيسي'));
+  els['inventory-message-language'].value='ar';
+  await els['inventory-save-settings'].listeners.click();
+  assert.match(els['inventory-message'].textContent,/الأكواد معايا\nFoundation: 1\n\nالأكواد مع Ahmed\nFoundation: 200\n\nإجمالي الأكواد\nFoundation: 201/);
   els['daily-used-details'].open=true;
   els['daily-used-details'].listeners.toggle();
-  assert.equal(els['remaining-summary-details'].open,false);
-  assert.equal(els['remaining-summary-panel'].hidden,true);
   assert.equal(els['daily-used-panel'].hidden,false);
   run('toggleLanguage()');
   assert.equal(els['signed-in'].textContent,'test@example.invalid · Admin');
@@ -188,6 +201,8 @@ for(const key of usedKeys) assert(englishKeys.includes(key),`Missing translation
   assert.equal(codeReads,readsBeforeRefresh+1);
   run("state.codeNotes.TEST='hello'");assert.equal(await run('saveState()'),true);assert.equal(db.codes[0].notes,'hello');
   await run("Cloud.copyCode('TEST')");assert.equal(db.codes[0].used_by,'user-1');
+  assert.equal(db.codes[0].used_at,'2026-09-30T09:45:00.000Z');
+  assert.match(els['code-grid'].children[0].children[3].textContent,/12:45/);
   assert(events.findIndex(e=>e.name==='ibta_claim_code')<events.findIndex(e=>e.name==='clipboard'));
   conflict=true;run("state.codeNotes.TEST='stale'");assert.equal(await run('saveState()'),false);assert.equal(run('state.codeNotes.TEST'),'hello');conflict=false;
   db.codes.push({code:'FAIL-COPY',category:'Foundation-100',notes:'',used_on:null,used_by:null,version:1});await run('Cloud.refresh()');
@@ -298,12 +313,6 @@ for(const key of usedKeys) assert(englishKeys.includes(key),`Missing translation
   const copiedLinks=events.filter(event=>event.name==='clipboard' && event.text===db.settings.payload.links.prometric).length;
   await els['prometric-login-card'].listeners.keydown({key:'Enter',preventDefault(){}});
   assert.equal(events.filter(event=>event.name==='clipboard' && event.text===db.settings.payload.links.prometric).length,copiedLinks+1);
-  const summaryLines=JSON.parse(run('JSON.stringify(remainingSummaryLines())'));
-  assert.equal(els['remaining-summary-message'].textContent,summaryLines.join('\n'));
-  assert(summaryLines.some(line=>line.includes(': ')));
-  assert(summaryLines.includes(run("displayCatName('Foundation-100')")+': 1'));
-  await els['copy-remaining-summary'].listeners.click();
-  assert(events.some(event=>event.name==='clipboard' && event.text.includes(summaryLines[0])));
   const deleteDecision=run("confirmDelete('Delete test?')");
   assert.equal(els['delete-dialog'].open,true);
   els['delete-cancel'].onclick();

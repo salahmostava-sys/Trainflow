@@ -102,13 +102,6 @@
   .ops-list-row span{flex:1;min-width:180px;overflow-wrap:anywhere;}
   .ops-list-row select{min-width:135px;}
   .inventory-intro{font-size:14px;color:var(--muted);line-height:1.7;margin:0 0 16px;}
-  .inventory-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(225px,1fr));gap:12px;}
-  .inventory-item{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:16px;box-shadow:var(--shadow);}
-  .inventory-item h3{font-size:15px;margin:0 0 13px;}
-  .inventory-counts{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
-  .inventory-count{background:var(--blue-50);border-radius:10px;padding:11px;}
-  .inventory-count span{display:block;font-size:12px;color:var(--muted);margin-bottom:5px;}
-  .inventory-count strong{font-size:24px;color:var(--blue-600);font-family:var(--mono);}
   .inventory-message{white-space:pre-line;line-height:1.8;font-size:14px;margin:12px 0;}
   .inventory-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
   .inventory-actions a{display:inline-flex;align-items:center;justify-content:center;min-height:36px;padding:8px 13px;border-radius:8px;background:var(--blue);color:white;text-decoration:none;font-weight:700;font-size:13px;}
@@ -227,8 +220,6 @@
   .report-card summary:focus-visible{outline:3px solid var(--blue-100);outline-offset:2px;border-radius:999px;}
   .report-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow);margin-bottom:12px;}
   .report-body{padding:14px 16px;}
-  .remaining-summary-body{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;}
-  .remaining-summary-message{font-size:13px;line-height:1.65;color:var(--text);white-space:pre-line;}
   .report-body button{border:1px solid var(--blue-100);background:var(--blue-50);color:var(--blue-600);border-radius:8px;padding:8px 12px;font:inherit;font-size:12px;font-weight:700;cursor:pointer;}
   .report-body button:hover{background:var(--blue-100);}
   .daily-used-date{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:13px;font-weight:700;margin-bottom:13px;}
@@ -321,7 +312,7 @@
   .col-check{width:30px; flex:none; text-align:center; display:flex; align-items:center; justify-content:center;}
   .col-n{width:30px; flex:none; text-align:center;}
   .col-code{width:182px; flex:none;}         /* sized to fit the code text exactly */
-  .col-date{width:84px; flex:none;}          /* sized to fit dd/mm/yyyy */
+  .col-date{width:132px; flex:none;}          /* date and copy time */
   .col-notes{flex:1; min-width:70px;}        /* takes whatever space is left */
   .col-actions{width:58px; flex:none; text-align:center;}  /* room for exactly 2 icon buttons */
 
@@ -404,29 +395,6 @@
   }
   .stat b{color:var(--blue-600); font-family:var(--mono); font-size:15px;}
 
-  .day-legend-box{
-    background:var(--surface); border:1px solid var(--border); border-radius:999px;
-    box-shadow:var(--shadow); overflow:hidden; flex:none; align-self:flex-start;
-  }
-  .day-legend-box[open]{border-radius:var(--radius-md);}
-  .day-legend-box summary{
-    padding:9px 14px; cursor:pointer; font-size:12.5px; font-weight:700; color:var(--blue-600);
-    list-style:none; display:flex; align-items:center; justify-content:space-between; gap:8px;
-    white-space:nowrap;
-  }
-  .day-legend-box summary::-webkit-details-marker{display:none;}
-  .day-legend-box summary::after{content:'▾'; font-size:10px; color:var(--muted); transition:transform .15s;}
-  .day-legend-box[open] summary::after{transform:rotate(180deg);}
-  .day-legend-groups{padding:2px 14px 12px; border-top:1px solid var(--border); min-width:220px;}
-  .day-legend-month{margin-top:10px;}
-  .day-legend-month:first-child{margin-top:8px;}
-  .day-legend-month-title{font-size:11px; font-weight:700; color:var(--muted); margin-bottom:6px;}
-  .day-legend-pills{display:flex; flex-wrap:wrap; gap:6px;}
-  .day-pill{
-    display:flex; align-items:center; gap:6px; background:var(--surface-2); border:1px solid var(--border);
-    border-radius:999px; padding:5px 10px; font-size:11px; font-weight:600; font-family:var(--mono);
-  }
-  .day-pill-dot{width:8px; height:8px; border-radius:50%; flex:none;}
 
   .reset-link{border-color:#f4c4bf!important;background:#fff3f1!important;color:#a6281d!important;}
   .empty-state{
@@ -595,22 +563,9 @@
     <div class="stats-row">
       <div class="stats" id="code-stats"></div>
       <div class="report-shortcuts">
-        <details class="report-card" id="remaining-summary-details">
-          <summary data-i18n="remainingSummaryTitle">Remaining codes by category</summary>
-        </details>
         <details class="report-card" id="daily-used-details">
           <summary data-i18n="dailyUsedTitle">Codes used on a day</summary>
         </details>
-      </div>
-      <details class="day-legend-box" id="day-legend-details" style="display:none;">
-        <summary id="day-legend-summary">📅</summary>
-        <div id="day-legend-groups" class="day-legend-groups"></div>
-      </details>
-    </div>
-    <div class="report-panel" id="remaining-summary-panel" hidden>
-      <div class="report-body remaining-summary-body">
-        <div class="remaining-summary-message" id="remaining-summary-message"></div>
-        <button id="copy-remaining-summary" type="button" data-i18n="copyRemainingSummary">Copy summary</button>
       </div>
     </div>
     <div class="report-panel" id="daily-used-panel" hidden>
@@ -653,18 +608,6 @@
   <!-- SUPERVISOR INVENTORY -->
   <section class="panel" id="panel-inventory">
     <p class="inventory-intro" data-i18n="inventoryIntro">Codes with you are unused codes in the system. Supervisor balances decrease automatically when new codes are added.</p>
-    <div class="inventory-grid" id="inventory-grid"></div>
-    <div class="ops-card" id="inventory-admin" hidden>
-      <h3 data-i18n="inventoryUpdateTitle">Update supervisor stock</h3>
-      <p class="ops-status" data-i18n="inventoryOpeningHint">Set the supervisor's current balance once for each category before receiving more codes.</p>
-      <div class="ops-row">
-        <label><span data-i18n="inventoryCategory">Category</span><select id="inventory-category"></select></label>
-        <label><span data-i18n="inventoryAction">Action</span><select id="inventory-action"><option value="opening" data-i18n="inventoryOpening">Set starting balance</option><option value="replenishment" data-i18n="inventoryReplenish">Add company codes</option><option value="correction" data-i18n="inventoryCorrection">Correct balance</option></select></label>
-        <label><span data-i18n="inventoryQuantity">Number of codes</span><input id="inventory-quantity" type="number" min="0" max="1000000" step="1" inputmode="numeric"></label>
-        <button id="inventory-save" type="button" data-i18n="saveBtn">Save</button>
-      </div>
-      <p class="ops-status" id="inventory-update-status" role="status" aria-live="polite"></p>
-    </div>
     <div class="ops-card">
       <h3 data-i18n="inventoryWhatsAppTitle">WhatsApp inventory message</h3>
       <p class="ops-status" id="inventory-message-hint"></p>
@@ -674,6 +617,21 @@
         <button id="inventory-copy-message" type="button" data-i18n="inventoryCopyMessage">Copy message</button>
       </div>
     </div>
+    <div class="ops-card" id="inventory-admin" hidden>
+      <h3 data-i18n="inventoryUpdateTitle">Update supervisor stock</h3>
+      <div class="ops-row"><label><span data-i18n="inventoryCategory">Category</span><select id="inventory-category"></select></label></div>
+      <p class="ops-status" id="inventory-current-balance"></p>
+      <p class="ops-status" data-i18n="inventoryOpeningHint">Enter the supervisor's current balance, then add newly purchased codes separately.</p>
+      <div class="ops-row">
+        <label><span data-i18n="inventoryCurrentQuantity">Current number with supervisor</span><input id="inventory-current-quantity" type="number" min="0" max="1000000" step="1" inputmode="numeric"></label>
+        <button id="inventory-set-current" type="button" data-i18n="inventorySetCurrent">Save current balance</button>
+      </div>
+      <div class="ops-row">
+        <label><span data-i18n="inventoryPurchasedQuantity">Newly purchased codes</span><input id="inventory-purchased-quantity" type="number" min="1" max="1000000" step="1" inputmode="numeric"></label>
+        <button id="inventory-add-purchased" type="button" data-i18n="inventoryAddPurchased">Add to balance</button>
+      </div>
+      <p class="ops-status" id="inventory-update-status" role="status" aria-live="polite"></p>
+    </div>
   </section>
 
   <!-- SETTINGS (opened from the account menu) -->
@@ -682,6 +640,7 @@
       <button type="button" role="tab" id="settings-tab-profile" aria-controls="settings-pane-profile" aria-selected="true" tabindex="0" data-i18n="settingsTabProfile">My account</button>
       <button type="button" role="tab" id="settings-tab-data" aria-controls="settings-pane-data" aria-selected="false" tabindex="-1" data-i18n="settingsTabData" hidden>System data</button>
       <button type="button" role="tab" id="settings-tab-prometric" aria-controls="settings-pane-prometric" aria-selected="false" tabindex="-1" data-i18n="settingsTabPrometric" hidden>Prometric</button>
+      <button type="button" role="tab" id="settings-tab-inventory" aria-controls="settings-pane-inventory" aria-selected="false" tabindex="-1" data-i18n="settingsTabInventory" hidden>Inventory</button>
       <button type="button" role="tab" id="settings-tab-preferences" aria-controls="settings-pane-preferences" aria-selected="false" tabindex="-1" data-i18n="settingsTabPreferences">Preferences</button>
       <button type="button" role="tab" id="settings-tab-sync" aria-controls="settings-pane-sync" aria-selected="false" tabindex="-1" data-i18n="settingsTabSync">Team and sync</button>
     </div>
@@ -754,6 +713,20 @@
     </section>
     </div>
 
+    <div class="settings-pane" id="settings-pane-inventory" role="tabpanel" aria-labelledby="settings-tab-inventory" hidden>
+    <section class="ops-card" id="inventory-whatsapp-settings" hidden>
+      <h3 data-i18n="inventoryWhatsAppSettings">Inventory message settings</h3>
+      <p class="ops-status" data-i18n="inventoryNumberHint">Enter the number with country code, digits only, for example 9665XXXXXXXX.</p>
+      <div class="ops-row">
+        <label><span data-i18n="inventoryPhone">WhatsApp number</span><input id="inventory-whatsapp-number" type="tel" inputmode="tel" autocomplete="tel" maxlength="16"></label>
+        <label><span data-i18n="inventorySupervisorName">Supervisor name</span><input id="inventory-supervisor-name" type="text" autocomplete="off" maxlength="100"></label>
+        <label><span data-i18n="inventoryMessageLanguage">Message language</span><select id="inventory-message-language"><option value="ar" data-i18n="inventoryArabic">Arabic</option><option value="en" data-i18n="inventoryEnglish">English</option></select></label>
+      </div>
+      <button id="inventory-save-settings" type="button" data-i18n="saveBtn">Save</button>
+      <p class="ops-status" id="inventory-number-status" role="status" aria-live="polite"></p>
+    </section>
+    </div>
+
     <div class="settings-pane" id="settings-pane-preferences" role="tabpanel" aria-labelledby="settings-tab-preferences" hidden>
     <div class="cred-card" style="cursor:default;">
       <div class="cred-label" style="margin-bottom:2px;" data-i18n="autoChainTitle">Auto Chain Copy</div>
@@ -770,12 +743,6 @@
     </div>
     </div>
     <div class="settings-pane" id="settings-pane-sync" role="tabpanel" aria-labelledby="settings-tab-sync" hidden>
-    <section class="ops-card" id="inventory-whatsapp-settings" hidden>
-      <h3 data-i18n="inventoryWhatsAppSettings">Inventory WhatsApp number</h3>
-      <p class="ops-status" data-i18n="inventoryNumberHint">Enter the number with country code, digits only, for example 9665XXXXXXXX.</p>
-      <div class="ops-row"><label><span data-i18n="inventoryPhone">WhatsApp number</span><input id="inventory-whatsapp-number" type="tel" inputmode="tel" autocomplete="tel" maxlength="16"></label><button id="inventory-save-number" type="button" data-i18n="saveBtn">Save</button></div>
-      <p class="ops-status" id="inventory-number-status" role="status" aria-live="polite"></p>
-    </section>
     <section id="cloud-tools" class="cloud-controls" hidden>
       <div class="cloud-popover">
         <div class="cloud-identity-text"><strong data-i18n="currentAccount">الحساب الحالي</strong><span id="signed-in"></span></div>
@@ -821,7 +788,7 @@
     <div id="edit-language-field"><label for="edit-language" data-i18n="langCol">Language</label><select id="edit-language"><option value="English">English</option><option value="Arabic">Arabic</option></select></div>
     <div id="edit-code-field"><label for="edit-code" id="edit-code-label"></label><input id="edit-code" maxlength="200" required></div>
     <div id="edit-category-field"><label for="edit-category" data-i18n="moveCategoryCol">Move Category</label><select id="edit-category"></select></div>
-    <div id="edit-date-field"><label for="edit-date" data-i18n="colDate">Date</label><input id="edit-date" placeholder="DD/MM/YYYY" inputmode="numeric"></div>
+    <div id="edit-date-field"><label for="edit-date" data-i18n="editUsedDate">Usage date</label><input id="edit-date" placeholder="DD/MM/YYYY" inputmode="numeric"></div>
     <div id="edit-notes-field"><label for="edit-notes" data-i18n="colNotes">Notes</label><input id="edit-notes" maxlength="2000"></div>
     <div class="edit-dialog-actions"><button type="button" id="edit-cancel" data-i18n="cancelBtn">Cancel</button><button type="submit" class="save" data-i18n="saveSharedSettings">Save changes</button></div>
   </form>
@@ -839,20 +806,19 @@ const TRANSLATIONS = {
     tabKeycodes:"Keycodes", tabPrometric:"Prometric", tabCodes:"Codes", tabInventory:"Inventory",
     inventoryIntro:"Codes with you are unused codes in the system. Supervisor balances decrease automatically when new codes are added.",
     inventoryWithYou:"With you", inventoryWithSupervisor:"With supervisor", inventoryNotSet:"Not set",
-    inventoryUpdateTitle:"Update supervisor stock",inventoryOpeningHint:"Set the supervisor's current balance once for each category before receiving more codes.",
+    inventoryUpdateTitle:"Update supervisor stock",inventoryOpeningHint:"Enter the current balance, then add newly purchased codes separately.",inventoryCurrentBalance:n=>"Current supervisor balance: "+n,inventoryCurrentQuantity:"Current number with supervisor",inventorySetCurrent:"Save current balance",inventoryPurchasedQuantity:"Newly purchased codes",inventoryAddPurchased:"Add to balance",
     inventoryCategory:"Category",inventoryAction:"Action",inventoryQuantity:"Number of codes",inventoryOpening:"Set starting balance",inventoryReplenish:"Add company codes",inventoryCorrection:"Correct balance",
-    inventoryWhatsAppTitle:"WhatsApp inventory message",inventoryMessageTitle:"Available code inventory",inventoryMessageLine:(cat,mine,theirs)=>cat+": with me "+mine+" · with supervisor "+theirs,
+    inventoryWhatsAppTitle:"WhatsApp inventory message",inventoryMessageMine:"Codes with me",inventoryMessageSupervisor:name=>"Codes with "+name,inventoryMessageTotal:"Total codes",inventoryMessageOverall:"Overall total",inventorySupervisorFallback:"supervisor",
     inventoryMessageHint:"Set the starting balance for every category to send accurate counts.",inventoryPhoneMissing:"Add a WhatsApp number in Settings to open the prepared message.",
-    inventoryOpenWhatsApp:"Open WhatsApp to send",inventoryCopyMessage:"Copy message",inventoryWhatsAppSettings:"Inventory WhatsApp number",inventoryNumberHint:"Enter the number with country code, digits only, for example 9665XXXXXXXX.",inventoryPhone:"WhatsApp number",inventoryPhoneInvalid:"Enter 8–15 digits, including the country code.",
+    inventoryOpenWhatsApp:"Open WhatsApp to send",inventoryCopyMessage:"Copy message",inventoryWhatsAppSettings:"Inventory message settings",inventoryNumberHint:"Enter the number with country code, digits only, for example 9665XXXXXXXX.",inventoryPhone:"WhatsApp number",inventoryPhoneInvalid:"Enter 8–15 digits, including the country code.",inventorySupervisorName:"Supervisor name",inventorySupervisorNameInvalid:"Enter a supervisor name of up to 100 characters.",inventoryMessageLanguage:"Message language",inventoryArabic:"Arabic",inventoryEnglish:"English",
     inventoryStockNotSet:"Set the supervisor's starting balance for this category first.",inventoryStockInsufficient:"The supervisor does not have enough codes in this category.",inventoryInvalidChange:"Enter a valid non-negative number of codes.",inventorySaved:"Supervisor stock updated.",inventoryMessageCopied:"Inventory message copied.",
-    settingsTitle:"Settings", settingsTabProfile:"My account", settingsTabData:"System data", settingsTabPrometric:"Prometric", settingsTabPreferences:"Preferences", settingsTabSync:"Team and sync",
+    settingsTitle:"Settings", settingsTabProfile:"My account", settingsTabData:"System data", settingsTabPrometric:"Prometric", settingsTabInventory:"Inventory", settingsTabPreferences:"Preferences", settingsTabSync:"Team and sync",
     profileTitle:"My account", profileDesc:"Change your name, sign-in email, or password.", profileName:"Name", profileLoginEmail:"Username (sign-in email)", saveName:"Save name", changeEmail:"Change email", emailConfirmHint:"Confirm the new address from the verification email before using it to sign in.", currentPassword:"Current password", newPassword:"New password", confirmNewPassword:"Confirm new password", changePassword:"Change password", profileNameSaved:"Name saved", profileEmailSent:"Check your new email to confirm the change. Your current sign-in stays active until then.", profilePasswordSaved:"Password changed", profilePasswordMismatch:"The new passwords do not match.", profilePasswordShort:"Use a password with at least 8 characters.", profileSameEmail:"Enter a different email address.", profileInvalidEmail:"Enter a valid email address.",
     examTitleCol:"Exam Title", langCol:"Language", keycodeCol:"Keycode", moveCategoryCol:"Move Category",
     noExams:"No exams in this category",
     remaining:"Remaining",
     prometricAccount:"Prometric Account", prometricPassword:"Prometric Password",
     zoomMeeting:"Zoom meeting", openZoom:"Open Zoom", prometricLoginLink:"Prometric login link", prometricLinkCopyHint:"Copy Prometric login link",
-    remainingSummaryTitle:"Remaining codes by category", copyRemainingSummary:"Copy summary", summaryCopied:"Remaining-code summary copied",
     dailyUsedTitle:"Codes used on a day", chooseUsedDate:"Choose a date", dailyUsedTotal:n=>"Total used: "+n, dailyUsedNone:"No codes were used on this date.",
     sharedSettingsTitle:"Shared Prometric settings", sharedSettingsDesc:"Administrators can change the account, password, and links for the team.", saveSharedSettings:"Save changes", notConfigured:"Not configured",
     invalidZoomUrl:"Enter a valid HTTPS Zoom link.", invalidPrometricUrl:"Enter a valid HTTPS Prometric link.", prometricLinkCopied:"Prometric login link copied",
@@ -860,7 +826,7 @@ const TRANSLATIONS = {
     copiedColon:code=>"Copied: "+code,
     movedTo:(title,cat)=>title+" moved to "+cat,
     total:"Total", copiedStat:"Copied", remainingStat:"Remaining",
-    colCode:"Code", colDate:"Date", colNotes:"Notes",
+    colCode:"Code", colDate:"Copy date / time", editUsedDate:"Usage date", colNotes:"Notes",
     addNewCodes:"+ Add new codes to this category",
     pasteHint:"Paste codes, one per line",
     addBtn:"Add",
@@ -887,8 +853,6 @@ const TRANSLATIONS = {
     moveUp:"Move up", moveDown:"Move down",
     confirmDeleteCode:code=>"Delete code \""+code+"\"? This cannot be undone.",
     recoveredCodes:n=>n+" code(s) recovered from an earlier version of this tool",
-    datesLegend:n=>"Dates ("+n+")",
-    monthNames:["January","February","March","April","May","June","July","August","September","October","November","December"],
     addCategory:"+ Add category",
     categoryNameHint:"Give it a short, clear name — it'll also become a matching tab on the Codes page.",
     categoryNamePlaceholder:"Category name",
@@ -945,20 +909,19 @@ const TRANSLATIONS = {
     tabKeycodes:"مفاتيح الأكواد", tabPrometric:"بروميترك", tabCodes:"الأكواد", tabInventory:"المخزون",
     inventoryIntro:"اللي معاك هو الأكواد غير المستخدمة في النظام. رصيد المشرف ينقص تلقائيًا عند إضافة أكواد جديدة.",
     inventoryWithYou:"معايا",inventoryWithSupervisor:"مع المشرف",inventoryNotSet:"لم يُحدد",
-    inventoryUpdateTitle:"تحديث رصيد المشرف",inventoryOpeningHint:"سجّل الرصيد الحالي عند المشرف مرة واحدة لكل فئة قبل استلام أكواد جديدة.",
+    inventoryUpdateTitle:"تحديث رصيد المشرف",inventoryOpeningHint:"سجّل الرصيد الحالي، وبعدها أضف الأكواد المشتراة حديثًا بشكل منفصل.",inventoryCurrentBalance:n=>"الرصيد الحالي عند المشرف: "+n,inventoryCurrentQuantity:"عدد الأكواد الحالي عند المشرف",inventorySetCurrent:"حفظ الرصيد الحالي",inventoryPurchasedQuantity:"الأكواد الجديدة المشتراة",inventoryAddPurchased:"إضافتها إلى الرصيد",
     inventoryCategory:"الفئة",inventoryAction:"الإجراء",inventoryQuantity:"عدد الأكواد",inventoryOpening:"تحديد الرصيد المبدئي",inventoryReplenish:"إضافة أكواد وصلت للشركة",inventoryCorrection:"تصحيح الرصيد",
-    inventoryWhatsAppTitle:"رسالة المخزون للواتساب",inventoryMessageTitle:"رصيد الأكواد المتاحة",inventoryMessageLine:(cat,mine,theirs)=>cat+": معايا "+mine+" · مع المشرف "+theirs,
+    inventoryWhatsAppTitle:"رسالة المخزون للواتساب",inventoryMessageMine:"الأكواد معايا",inventoryMessageSupervisor:name=>"الأكواد مع "+name,inventoryMessageTotal:"إجمالي الأكواد",inventoryMessageOverall:"الإجمالي الكلي",inventorySupervisorFallback:"المشرف",
     inventoryMessageHint:"حدد الرصيد المبدئي لكل فئة حتى تكون الأعداد في الرسالة دقيقة.",inventoryPhoneMissing:"أضف رقم الواتساب في الإعدادات لفتح الرسالة الجاهزة.",
-    inventoryOpenWhatsApp:"فتح واتساب لإرسال الرسالة",inventoryCopyMessage:"نسخ الرسالة",inventoryWhatsAppSettings:"رقم واتساب رسالة المخزون",inventoryNumberHint:"اكتب الرقم بمفتاح الدولة وأرقام فقط، مثل 9665XXXXXXXX.",inventoryPhone:"رقم واتساب",inventoryPhoneInvalid:"اكتب من 8 إلى 15 رقمًا، بما فيها مفتاح الدولة.",
+    inventoryOpenWhatsApp:"فتح واتساب لإرسال الرسالة",inventoryCopyMessage:"نسخ الرسالة",inventoryWhatsAppSettings:"إعدادات رسالة المخزون",inventoryNumberHint:"اكتب الرقم بمفتاح الدولة وأرقام فقط، مثل 9665XXXXXXXX.",inventoryPhone:"رقم واتساب",inventoryPhoneInvalid:"اكتب من 8 إلى 15 رقمًا، بما فيها مفتاح الدولة.",inventorySupervisorName:"اسم المشرف",inventorySupervisorNameInvalid:"اكتب اسم مشرف لا يزيد عن 100 حرف.",inventoryMessageLanguage:"لغة الرسالة",inventoryArabic:"العربية",inventoryEnglish:"الإنجليزية",
     inventoryStockNotSet:"حدد أولًا الرصيد المبدئي عند المشرف لهذه الفئة.",inventoryStockInsufficient:"رصيد المشرف في هذه الفئة لا يكفي.",inventoryInvalidChange:"أدخل عددًا صحيحًا غير سالب للأكواد.",inventorySaved:"تم تحديث رصيد المشرف.",inventoryMessageCopied:"تم نسخ رسالة المخزون.",
-    settingsTitle:"الإعدادات", settingsTabProfile:"حسابي", settingsTabData:"بيانات النظام", settingsTabPrometric:"بروميترك", settingsTabPreferences:"التفضيلات", settingsTabSync:"الفريق والتحديث",
+    settingsTitle:"الإعدادات", settingsTabProfile:"حسابي", settingsTabData:"بيانات النظام", settingsTabPrometric:"بروميترك", settingsTabInventory:"المخزون", settingsTabPreferences:"التفضيلات", settingsTabSync:"الفريق والتحديث",
     profileTitle:"حسابي", profileDesc:"غيّر اسمك أو بريد الدخول أو كلمة المرور.", profileName:"الاسم", profileLoginEmail:"اسم المستخدم (بريد الدخول)", saveName:"حفظ الاسم", changeEmail:"تغيير البريد", emailConfirmHint:"أكد البريد الجديد من رسالة التحقق قبل استخدامه للدخول.", currentPassword:"كلمة المرور الحالية", newPassword:"كلمة المرور الجديدة", confirmNewPassword:"تأكيد كلمة المرور الجديدة", changePassword:"تغيير كلمة المرور", profileNameSaved:"تم حفظ الاسم", profileEmailSent:"افتح بريدك الجديد وأكد التغيير. سيبقى دخولك الحالي فعالًا حتى التأكيد.", profilePasswordSaved:"تم تغيير كلمة المرور", profilePasswordMismatch:"كلمتا المرور الجديدتان غير متطابقتين.", profilePasswordShort:"استخدم كلمة مرور لا تقل عن 8 أحرف.", profileSameEmail:"أدخل بريدًا مختلفًا.", profileInvalidEmail:"أدخل بريدًا إلكترونيًا صحيحًا.",
     examTitleCol:"اسم الامتحان", langCol:"اللغة", keycodeCol:"مفتاح الكود", moveCategoryCol:"نقل الفئة",
     noExams:"لا توجد امتحانات في هذه الفئة",
     remaining:"متبقي",
     prometricAccount:"حساب بروميترك", prometricPassword:"كلمة مرور بروميترك",
     zoomMeeting:"رابط اجتماع زوم", openZoom:"فتح زوم", prometricLoginLink:"رابط دخول بروميترك", prometricLinkCopyHint:"نسخ رابط دخول بروميترك",
-    remainingSummaryTitle:"الأكواد المتبقية حسب الفئة", copyRemainingSummary:"نسخ الملخص", summaryCopied:"تم نسخ ملخص الأكواد المتبقية",
     dailyUsedTitle:"الأكواد المستخدمة في يوم", chooseUsedDate:"اختر التاريخ", dailyUsedTotal:n=>"إجمالي الأكواد المستخدمة: "+n, dailyUsedNone:"لم تُستخدم أكواد في هذا التاريخ.",
     sharedSettingsTitle:"إعدادات بروميترك المشتركة", sharedSettingsDesc:"يستطيع المدير تعديل الحساب وكلمة المرور والروابط لجميع المستخدمين.", saveSharedSettings:"حفظ التغييرات", notConfigured:"غير مُعدّ",
     invalidZoomUrl:"أدخل رابط زوم صحيحًا يبدأ بـ HTTPS.", invalidPrometricUrl:"أدخل رابط بروميترك صحيحًا يبدأ بـ HTTPS.", prometricLinkCopied:"تم نسخ رابط دخول بروميترك",
@@ -966,7 +929,7 @@ const TRANSLATIONS = {
     copiedColon:code=>"تم نسخ الكود: "+code,
     movedTo:(title,cat)=>title+" نُقل إلى "+cat,
     total:"الإجمالي", copiedStat:"تم نسخه", remainingStat:"متبقي",
-    colCode:"الكود", colDate:"التاريخ", colNotes:"ملاحظات",
+    colCode:"الكود", colDate:"تاريخ ووقت النسخ", editUsedDate:"تاريخ الاستخدام", colNotes:"ملاحظات",
     addNewCodes:"+ إضافة أكواد جديدة لهذه الفئة",
     pasteHint:"الصق الأكواد، كل كود في سطر منفصل",
     addBtn:"إضافة",
@@ -993,8 +956,6 @@ const TRANSLATIONS = {
     moveUp:"تحريك لأعلى", moveDown:"تحريك لأسفل",
     confirmDeleteCode:code=>"حذف الكود \""+code+"\"؟ الإجراء ده مش هينفع يتراجع فيه.",
     recoveredCodes:n=>"تم استرجاع "+n+" كود من نسخة سابقة من الأداة",
-    datesLegend:n=>"التواريخ ("+n+")",
-    monthNames:["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"],
     addCategory:"+ إضافة فئة",
     categoryNameHint:"اكتب اسم قصير وواضح — هيظهر كمان تاب جديد في صفحة الأكواد.",
     categoryNamePlaceholder:"اسم الفئة",
@@ -1215,8 +1176,16 @@ function getContrastText(hex){
   return luminance > 0.6 ? '#1A1A1A' : '#FFFFFF';
 }
 function todayStr(){
-  const d = new Date();
-  return formatEnglishDate(d.getDate(), d.getMonth()+1, d.getFullYear());
+  const parts=Object.fromEntries(new Intl.DateTimeFormat('en-GB',{
+    timeZone:'Asia/Riyadh',day:'2-digit',month:'2-digit',year:'numeric'
+  }).formatToParts(new Date()).map(part=>[part.type,part.value]));
+  return formatEnglishDate(parts.day,parts.month,parts.year);
+}
+function codeCopyTime(iso){
+  if(!iso)return '';
+  const date=new Date(iso);
+  if(Number.isNaN(date.getTime()))return '';
+  return new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Riyadh',hour:'2-digit',minute:'2-digit',hour12:false}).format(date);
 }
 
 // ---------- Unified English-numeral date formatting ----------
@@ -1356,7 +1325,7 @@ document.getElementById('lang-btn').addEventListener('click',toggleLanguage);
 document.getElementById('auth-lang-btn').addEventListener('click',toggleLanguage);
 
 // ---------- TABS ----------
-const SETTINGS_TAB_IDS=['profile','data','prometric','preferences','sync'];
+const SETTINGS_TAB_IDS=['profile','data','prometric','inventory','preferences','sync'];
 function activateSettingsTab(id){
   if(!SETTINGS_TAB_IDS.includes(id) || document.getElementById('settings-tab-'+id).hidden)id='profile';
   SETTINGS_TAB_IDS.forEach(tabId=>{
@@ -1922,7 +1891,6 @@ function renderStats(){
     <div class="stat">${t('copiedStat')}: <b>${usedCount}</b></div>
     <div class="stat">${t('remainingStat')}: <b>${list.length - usedCount}</b></div>
   `;
-  document.getElementById('remaining-summary-message').textContent=remainingSummaryLines().join('\n');
   const threshold=Number.isInteger(state.lowStockThreshold)?state.lowStockThreshold:10;
   const low=Object.entries(state.codesByCategory).map(([cat,codes])=>[cat,codes.filter(code=>!state.usedCodes[code]).length])
     .filter(([,count])=>count<=threshold);
@@ -1931,22 +1899,9 @@ function renderStats(){
   alert.textContent=low.length?t('lowStockWarning')(low.map(([cat,count])=>displayCatName(cat)+': '+count).join(' · ')):'';
   renderDailyUsed();
 }
-function remainingSummaryLines(){
-  return Object.entries(state.codesByCategory).map(([cat,codes])=>
-    displayCatName(cat)+': '+codes.filter(code=>!state.usedCodes[code]).length);
-}
-document.getElementById('copy-remaining-summary').addEventListener('click',async()=>{
-  const message=t('remainingSummaryTitle')+'\n'+remainingSummaryLines().join('\n');
-  if(await copyText(message))showToast(t('summaryCopied'));
+document.getElementById('daily-used-details').addEventListener('toggle',()=>{
+  document.getElementById('daily-used-panel').hidden=!document.getElementById('daily-used-details').open;
 });
-const reportControls=[
-  [document.getElementById('remaining-summary-details'),document.getElementById('remaining-summary-panel')],
-  [document.getElementById('daily-used-details'),document.getElementById('daily-used-panel')]
-];
-reportControls.forEach(([details,panel])=>details.addEventListener('toggle',()=>{
-  if(details.open)reportControls.forEach(([other])=>{if(other!==details)other.open=false;});
-  reportControls.forEach(([control,content])=>{content.hidden=!control.open;});
-}));
 function dailyUsedGroups(iso){
   if(!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return [];
   const [year,month,day]=iso.split('-').map(Number);
@@ -1982,77 +1937,6 @@ function renderDailyUsed(){
 }
 document.getElementById('daily-used-date').addEventListener('change',renderDailyUsed);
 
-function renderDayLegend(dayColors){
-  const list = state.codesByCategory[activeCategory] || [];
-  const dates = [];
-  list.forEach(code=>{
-    const used = state.usedCodes[code];
-    if(used && !dates.includes(used)) dates.push(used);
-  });
-
-  const detailsEl = document.getElementById('day-legend-details');
-  const summaryEl = document.getElementById('day-legend-summary');
-  const groupsEl = document.getElementById('day-legend-groups');
-
-  if(dates.length === 0){
-    detailsEl.style.display = 'none';
-    groupsEl.innerHTML = '';
-    return;
-  }
-  detailsEl.style.display = '';
-  summaryEl.textContent = '📅 ' + t('datesLegend')(dates.length);
-
-  // Group dates by month/year so the list stays compact instead of growing
-  // sideways or pushing the page down as more dates accumulate.
-  const groups = {};
-  dates.forEach(dateStr=>{
-    const parts = dateStr.split('/'); // DD/MM/YYYY
-    if(parts.length !== 3) return;
-    const key = parts[1] + '/' + parts[2];
-    if(!groups[key]) groups[key] = [];
-    groups[key].push(dateStr);
-  });
-
-  const sortedKeys = Object.keys(groups).sort((a, b)=>{
-    const [am, ay] = a.split('/').map(Number);
-    const [bm, by] = b.split('/').map(Number);
-    return (by * 12 + bm) - (ay * 12 + am); // most recent month first
-  });
-
-  groupsEl.innerHTML = '';
-  sortedKeys.forEach(key=>{
-    const [m, y] = key.split('/').map(Number);
-    const monthName = t('monthNames')[m - 1] || key;
-
-    const groupWrap = document.createElement('div');
-    groupWrap.className = 'day-legend-month';
-
-    const header = document.createElement('div');
-    header.className = 'day-legend-month-title';
-    header.textContent = monthName + ' ' + y;
-    groupWrap.appendChild(header);
-
-    const pillsWrap = document.createElement('div');
-    pillsWrap.className = 'day-legend-pills';
-    groups[key].sort().forEach(dateStr=>{
-      const color = dayColors[dateStr];
-      const pill = document.createElement('div');
-      pill.className = 'day-pill';
-      const dot = document.createElement('span');
-      dot.className = 'day-pill-dot';
-      dot.style.background = color;
-      const label = document.createElement('span');
-      label.textContent = dateStr;
-      label.style.direction = 'ltr';
-      pill.appendChild(dot);
-      pill.appendChild(label);
-      pillsWrap.appendChild(pill);
-    });
-    groupWrap.appendChild(pillsWrap);
-    groupsEl.appendChild(groupWrap);
-  });
-}
-
 function updateBulkBar(){
   const bar = document.getElementById('bulk-bar');
   const count = selectedCodes.size;
@@ -2070,7 +1954,6 @@ function renderCodeGrid(){
   const list = state.codesByCategory[activeCategory] || [];
   const dayColors = getDayColors();
   renderStats();
-  renderDayLegend(dayColors);
   updateBulkBar();
   if(list.length === 0){
     grid.innerHTML = `<div class="empty-state" style="border:none; box-shadow:none;">${t('noCodesYet')}</div>`;
@@ -2108,7 +1991,7 @@ function renderCodeGrid(){
 
     const d = document.createElement('div');
     d.className = 'col-date';
-    d.textContent = used || '';
+    d.textContent = used ? used+(state.codeUseTimes?.[code]?' · '+codeCopyTime(state.codeUseTimes[code]):'') : '';
 
     if(used){
       const dayColor = dayColors[used];

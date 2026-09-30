@@ -153,28 +153,22 @@ document.getElementById('admin-tools').addEventListener('toggle',event=>{if(even
 document.getElementById('audit-details').addEventListener('toggle',event=>{if(event.target.open)renderAuditList();});
 
 function inventoryMessage(categories,stock){
-  return [t('inventoryMessageTitle'),...categories.map(category=>{
-    const mine=(state.codesByCategory[category] || []).filter(code=>!state.usedCodes[code]).length;
-    const theirs=Object.hasOwn(stock,category)?stock[category]:t('inventoryNotSet');
-    return t('inventoryMessageLine')(displayCatName(category),mine,theirs);
-  })].join('\n');
+  const settings=Cloud.inventoryMessageSettings(),dict=TRANSLATIONS[settings.language];
+  const label=category=>state.categoryLabels?.[category] || state.categoryLabels?.[category.replace(/-\d+$/,'')] || category.replace(/-\d+$/,'');
+  const mine=category=>(state.codesByCategory[category] || []).filter(code=>!state.usedCodes[code]).length;
+  const theirs=category=>Object.hasOwn(stock,category)?stock[category]:dict.inventoryNotSet;
+  const name=settings.name || dict.inventorySupervisorFallback;
+  const overall=categories.every(category=>Object.hasOwn(stock,category))
+    ? categories.reduce((sum,category)=>sum+mine(category)+stock[category],0):dict.inventoryNotSet;
+  return [dict.inventoryMessageMine,...categories.map(category=>label(category)+': '+mine(category)),
+    '',dict.inventoryMessageSupervisor(name),...categories.map(category=>label(category)+': '+theirs(category)),
+    '',dict.inventoryMessageTotal,...categories.map(category=>{
+      const total=Object.hasOwn(stock,category)?mine(category)+stock[category]:dict.inventoryNotSet;
+      return label(category)+': '+total;
+    }),dict.inventoryMessageOverall+': '+overall].join('\n');
 }
 function renderInventory(){
-  const categories=Object.keys(state.codesByCategory || {}),stock=Cloud.stockSnapshot();
-  const grid=document.getElementById('inventory-grid');grid.innerHTML='';
-  categories.forEach(category=>{
-    const item=document.createElement('article');item.className='inventory-item';
-    const heading=document.createElement('h3');heading.textContent=displayCatName(category);
-    const counts=document.createElement('div');counts.className='inventory-counts';
-    [[t('inventoryWithYou'),(state.codesByCategory[category] || []).filter(code=>!state.usedCodes[code]).length],
-      [t('inventoryWithSupervisor'),Object.hasOwn(stock,category)?stock[category]:t('inventoryNotSet')]].forEach(([label,value])=>{
-      const box=document.createElement('div');box.className='inventory-count';
-      const caption=document.createElement('span');caption.textContent=label;
-      const number=document.createElement('strong');number.textContent=String(value);
-      box.appendChild(caption);box.appendChild(number);counts.appendChild(box);
-    });
-    item.appendChild(heading);item.appendChild(counts);grid.appendChild(item);
-  });
+  const categories=Object.keys(state.codesByCategory || {}),stock=Cloud.stockSnapshot(),messageSettings=Cloud.inventoryMessageSettings();
   const categorySelect=document.getElementById('inventory-category'),previous=categorySelect.value;
   categorySelect.innerHTML='';
   categories.forEach(category=>{
@@ -184,12 +178,13 @@ function renderInventory(){
   categorySelect.value=categories.includes(previous)?previous:(categories[0] || '');
   syncInventoryAction();
   const complete=categories.length>0 && categories.every(category=>Object.hasOwn(stock,category));
-  const number=Cloud.inventoryWhatsAppNumber();
-  document.getElementById('inventory-message').textContent=inventoryMessage(categories,stock);
+  const number=messageSettings.number,message=inventoryMessage(categories,stock);
+  document.getElementById('inventory-message').textContent=message;
+  document.getElementById('inventory-message').dir=messageSettings.language==='ar'?'rtl':'ltr';
   document.getElementById('inventory-message-hint').textContent=!complete?t('inventoryMessageHint'):!number?t('inventoryPhoneMissing'):'';
   const link=document.getElementById('inventory-whatsapp-link');
   if(complete && /^\d{8,15}$/.test(number)){
-    link.href='https://wa.me/'+number+'?text='+encodeURIComponent(inventoryMessage(categories,stock));
+    link.href='https://wa.me/'+number+'?text='+encodeURIComponent(message);
     link.setAttribute('aria-disabled','false');
   }else{
     link.removeAttribute('href');link.setAttribute('aria-disabled','true');
@@ -198,19 +193,15 @@ function renderInventory(){
 }
 function syncInventoryAction(){
   const category=document.getElementById('inventory-category').value;
-  const configured=Object.hasOwn(Cloud.stockSnapshot(),category);
-  const action=document.getElementById('inventory-action');
-  action.children[0].hidden=configured;
-  action.children[1].hidden=!configured;
-  action.children[2].hidden=!configured;
-  if(configured && action.value==='opening')action.value='replenishment';
-  if(!configured)action.value='opening';
+  const stock=Cloud.stockSnapshot(),configured=Object.hasOwn(stock,category);
+  document.getElementById('inventory-current-balance').textContent=t('inventoryCurrentBalance')(configured?stock[category]:t('inventoryNotSet'));
+  document.getElementById('inventory-purchased-quantity').disabled=!configured;
+  document.getElementById('inventory-add-purchased').disabled=!configured;
 }
 document.getElementById('inventory-category').addEventListener('change',syncInventoryAction);
-document.getElementById('inventory-save').addEventListener('click',async()=>{
+async function saveInventoryBalance(mode,field){
   const category=document.getElementById('inventory-category').value;
-  const mode=document.getElementById('inventory-action').value;
-  const raw=document.getElementById('inventory-quantity').value.trim();
+  const input=document.getElementById(field),raw=input.value.trim();
   const quantity=Number(raw);
   const status=document.getElementById('inventory-update-status');
   if(!raw || !Number.isInteger(quantity) || quantity<0 || quantity>1000000 ||
@@ -219,15 +210,26 @@ document.getElementById('inventory-save').addEventListener('click',async()=>{
   }
   try{
     await Cloud.changeSupervisorStock(category,mode,quantity);
-    document.getElementById('inventory-quantity').value='';
+    input.value='';
     status.textContent=t('inventorySaved');
   }catch{status.textContent=t('genericError');}
+}
+document.getElementById('inventory-set-current').addEventListener('click',async()=>{
+  const category=document.getElementById('inventory-category').value;
+  const mode=Object.hasOwn(Cloud.stockSnapshot(),category)?'correction':'opening';
+  await saveInventoryBalance(mode,'inventory-current-quantity');
 });
-document.getElementById('inventory-save-number').addEventListener('click',async()=>{
+document.getElementById('inventory-add-purchased').addEventListener('click',async()=>{
+  await saveInventoryBalance('replenishment','inventory-purchased-quantity');
+});
+document.getElementById('inventory-save-settings').addEventListener('click',async()=>{
   const number=document.getElementById('inventory-whatsapp-number').value.trim();
+  const name=document.getElementById('inventory-supervisor-name').value.trim();
+  const language=document.getElementById('inventory-message-language').value;
   const status=document.getElementById('inventory-number-status');
   if(number && !/^\d{8,15}$/.test(number)){status.textContent=t('inventoryPhoneInvalid');return;}
-  try{await Cloud.saveInventoryWhatsApp(number);status.textContent=t('saved');}
+  if(name.length>100 || /[\r\n\x00-\x1f]/.test(name)){status.textContent=t('inventorySupervisorNameInvalid');return;}
+  try{await Cloud.saveInventoryMessageSettings(number,name,language);status.textContent=t('saved');}
   catch{status.textContent=t('genericError');}
 });
 document.getElementById('inventory-copy-message').addEventListener('click',async()=>{

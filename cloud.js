@@ -103,13 +103,14 @@ const Cloud = (() => {
     const p=config.payload;
     let prefs={};
     try{prefs=JSON.parse(localStorage.getItem('ibta_ui_preferences') || '{}') || {};}catch{}
-    state={usedCodes:{},codesByCategory:{},codeNotes:{},categoryLabels:clone(p.categoryLabels || {}),keycodeOverrides:clone(p.keycodeOverrides || {}),
+    state={usedCodes:{},codeUseTimes:{},codesByCategory:{},codeNotes:{},categoryLabels:clone(p.categoryLabels || {}),keycodeOverrides:clone(p.keycodeOverrides || {}),
       keycodeOrder:clone(p.keycodeOrder || {}),categoryOrder:clone(p.categoryOrder),dateColors:clone(p.dateColors || {}),
       settings:{autoChain:!!prefs.autoChain},lowStockThreshold:Number.isInteger(p.lowStockThreshold)?p.lowStockThreshold:10,uiLang:prefs.uiLang==='en'?'en':'ar'};
     for(const cat of p.codeCategories || []) state.codesByCategory[cat]=[];
     for(const r of rows.values()){
       (state.codesByCategory[r.category] ||= []).push(r.code);
       if(r.used_on) state.usedCodes[r.code]=r.used_on;
+      if(r.used_on && r.used_at) state.codeUseTimes[r.code]=r.used_at;
       if(r.notes) state.codeNotes[r.code]=r.notes;
     }
     DEFAULT_KEYCODES=clone(p.keycodes || []);
@@ -124,6 +125,8 @@ const Cloud = (() => {
     $('settings-zoom-link').value=p.links?.zoom || '';
     $('settings-prometric-link').value=p.links?.prometric || '';
     $('inventory-whatsapp-number').value=p.inventoryWhatsappNumber || '';
+    $('inventory-supervisor-name').value=p.inventorySupervisorName || '';
+    $('inventory-message-language').value=p.inventoryMessageLanguage==='en'?'en':'ar';
     $('low-stock-threshold').value=state.lowStockThreshold;
     $('profile-name').value=accountName();
     $('profile-email').value=user?.email || '';
@@ -146,13 +149,14 @@ const Cloud = (() => {
     $('prometric-settings').hidden=!admin;
     $('settings-tab-data').hidden=!admin;
     $('settings-tab-prometric').hidden=!admin;
+    $('settings-tab-inventory').hidden=!admin;
     $('code-bulk-tools').hidden=!admin;
     $('reset-tools').hidden=!admin;
     $('inventory-admin').hidden=!admin;
     $('inventory-whatsapp-settings').hidden=!admin;
     document.querySelectorAll('.col-notes input').forEach(el=>{el.disabled=role==='copy_only';});
     document.querySelectorAll('.code-unmark-btn').forEach(el=>{el.hidden=role==='copy_only';});
-    if(!admin && ($('settings-tab-data').getAttribute('aria-selected')==='true' || $('settings-tab-prometric').getAttribute('aria-selected')==='true')) activateSettingsTab('profile');
+    if(!admin && ($('settings-tab-data').getAttribute('aria-selected')==='true' || $('settings-tab-prometric').getAttribute('aria-selected')==='true' || $('settings-tab-inventory').getAttribute('aria-selected')==='true')) activateSettingsTab('profile');
     translateUi();
   }
   async function load(){
@@ -263,7 +267,9 @@ const Cloud = (() => {
       const p=config.payload;
       const shared=[['settings-prometric-account',p.credentials?.account || ''],['settings-prometric-password',p.credentials?.password || ''],
         ['settings-zoom-link',p.links?.zoom || ''],['settings-prometric-link',p.links?.prometric || ''],
-        ['inventory-whatsapp-number',p.inventoryWhatsappNumber || '']];
+        ['inventory-whatsapp-number',p.inventoryWhatsappNumber || ''],
+        ['inventory-supervisor-name',p.inventorySupervisorName || ''],
+        ['inventory-message-language',p.inventoryMessageLanguage==='en'?'en':'ar']];
       if(shared.some(([id,value])=>$(id).value!==value)) return true;
     }
     return [...document.querySelectorAll('.kc-add-cat-input, .add-box textarea')]
@@ -458,11 +464,15 @@ const Cloud = (() => {
     }catch(error){fail(error);throw error;}
     finally{lock(false);}
   }
-  async function saveInventoryWhatsApp(number){
+  async function saveInventoryMessageSettings(number,name,language){
     if(!ready || role!=='admin')throw Error('IBTA_NOT_APPROVED');
     if(number && !/^\d{8,15}$/.test(number))throw Error('IBTA_INVALID_PHONE');
+    if(name.length>100 || /[\r\n\x00-\x1f]/.test(name))throw Error('IBTA_INVALID_SUPERVISOR_NAME');
+    if(!['ar','en'].includes(language))throw Error('IBTA_INVALID_MESSAGE_LANGUAGE');
     const payload=clone(config.payload);
     payload.inventoryWhatsappNumber=number;
+    payload.inventorySupervisorName=name;
+    payload.inventoryMessageLanguage=language;
     if(same(payload,config.payload))return true;
     lock(true);setStatus('saving');
     try{
@@ -519,6 +529,6 @@ const Cloud = (() => {
       window.addEventListener('beforeunload',e=>{if(busy){e.preventDefault();e.returnValue='';}});
     }catch(e){setAuthStatus('error',e);}
   }
-  return {boot,persist,copyCode,editCode,decorate,refresh,translateUi,restoreData,importCodes,listMembers,updateMember,auditEvents,exportCodesCsv,changeSupervisorStock,saveInventoryWhatsApp,
-    role:()=>role,email:()=>user?.email || '',existingCodes:()=>[...rows.keys()],stockSnapshot:()=>Object.fromEntries(stock),inventoryWhatsAppNumber:()=>config?.payload?.inventoryWhatsappNumber || ''};
+  return {boot,persist,copyCode,editCode,decorate,refresh,translateUi,restoreData,importCodes,listMembers,updateMember,auditEvents,exportCodesCsv,changeSupervisorStock,saveInventoryMessageSettings,
+    role:()=>role,email:()=>user?.email || '',existingCodes:()=>[...rows.keys()],stockSnapshot:()=>Object.fromEntries(stock),inventoryMessageSettings:()=>({number:config?.payload?.inventoryWhatsappNumber || '',name:config?.payload?.inventorySupervisorName || '',language:config?.payload?.inventoryMessageLanguage==='en'?'en':'ar'})};
 })();
