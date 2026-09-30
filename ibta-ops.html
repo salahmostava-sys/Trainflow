@@ -218,9 +218,12 @@
   .cred-value,.resource-value{font-family:inherit;font-size:16px;font-weight:600;line-height:1.6;word-break:break-all;direction:ltr;unicode-bidi:plaintext;text-align:start;}
   .resource-card{cursor:default;}
   .resource-card:hover{border-color:var(--border);}
-  .resource-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
   .resource-value{min-width:0;flex:1 1 250px;}
   #prometric-login-card:focus-visible{outline:3px solid var(--blue-100);outline-offset:2px;}
+  #zoom-card{display:block;color:var(--text);text-decoration:none;}
+  #zoom-card[href]{cursor:pointer;}
+  #zoom-card[href]:hover{border-color:var(--blue);}
+  #zoom-card:focus-visible{outline:3px solid var(--blue-100);outline-offset:2px;}
   .report-card{background:var(--surface);border:1px solid var(--border);border-radius:999px;box-shadow:var(--shadow);}
   .report-card summary{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 15px;cursor:pointer;font-size:14px;color:var(--muted);list-style:none;white-space:nowrap;}
   .report-card summary::-webkit-details-marker{display:none;}
@@ -563,10 +566,10 @@
       <div class="cred-label" data-i18n="prometricPassword">Prometric Password</div>
       <div class="cred-value" id="cred-password-val"></div>
     </div>
-    <div class="cred-card resource-card">
+    <a class="cred-card resource-card" id="zoom-card" target="_blank" rel="noopener noreferrer">
       <div class="cred-label" data-i18n="zoomMeeting">Zoom meeting</div>
-      <div class="resource-row"><div class="resource-value" id="zoom-link-val"></div><a class="resource-btn" id="open-zoom" target="_blank" rel="noopener noreferrer" data-i18n="openZoom">Open Zoom</a></div>
-    </div>
+      <div class="resource-value" id="zoom-link-val"></div>
+    </a>
   </section>
 
   <!-- TAB 3: CODES -->
@@ -834,7 +837,7 @@ const TRANSLATIONS = {
     noExams:"No exams in this category",
     remaining:"Remaining",
     prometricAccount:"Prometric Account", prometricPassword:"Prometric Password",
-    zoomMeeting:"Zoom meeting", openZoom:"Open Zoom", prometricLoginLink:"Prometric login link", prometricLinkCopyHint:"Copy Prometric login link",
+    zoomMeeting:"Zoom meeting", prometricLoginLink:"Prometric login link", prometricLinkCopyHint:"Copy Prometric login link",
     dailyUsedTitle:"Codes used on a day", chooseUsedDate:"Choose a date", dailyUsedTotal:n=>"Total used: "+n, dailyUsedNone:"No codes were used on this date.",
     sharedSettingsTitle:"Shared Prometric settings", sharedSettingsDesc:"Administrators can change the account, password, and links for the team.", saveSharedSettings:"Save changes", notConfigured:"Not configured",
     invalidZoomUrl:"Enter a valid HTTPS Zoom link.", invalidPrometricUrl:"Enter a valid HTTPS Prometric link.", prometricLinkCopied:"Prometric login link copied",
@@ -937,7 +940,7 @@ const TRANSLATIONS = {
     noExams:"لا توجد امتحانات في هذه الفئة",
     remaining:"متبقي",
     prometricAccount:"حساب بروميترك", prometricPassword:"كلمة مرور بروميترك",
-    zoomMeeting:"رابط اجتماع زوم", openZoom:"فتح زوم", prometricLoginLink:"رابط دخول بروميترك", prometricLinkCopyHint:"نسخ رابط دخول بروميترك",
+    zoomMeeting:"رابط اجتماع زوم", prometricLoginLink:"رابط دخول بروميترك", prometricLinkCopyHint:"نسخ رابط دخول بروميترك",
     dailyUsedTitle:"الأكواد المستخدمة في يوم", chooseUsedDate:"اختر التاريخ", dailyUsedTotal:n=>"إجمالي الأكواد المستخدمة: "+n, dailyUsedNone:"لم تُستخدم أكواد في هذا التاريخ.",
     sharedSettingsTitle:"إعدادات بروميترك المشتركة", sharedSettingsDesc:"يستطيع المدير تعديل الحساب وكلمة المرور والروابط لجميع المستخدمين.", saveSharedSettings:"حفظ التغييرات", notConfigured:"غير مُعدّ",
     invalidZoomUrl:"أدخل رابط زوم صحيحًا يبدأ بـ HTTPS.", invalidPrometricUrl:"أدخل رابط بروميترك صحيحًا يبدأ بـ HTTPS.", prometricLinkCopied:"تم نسخ رابط دخول بروميترك",

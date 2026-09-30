@@ -75,8 +75,8 @@ const Cloud = (() => {
     }
     $('zoom-link-val').textContent=ZOOM_URL || t('notConfigured');
     $('prometric-link-val').textContent=PROMETRIC_LOGIN_URL || t('notConfigured');
-    if(ZOOM_URL) $('open-zoom').setAttribute('href',ZOOM_URL);
-    else $('open-zoom').removeAttribute('href');
+    if(ZOOM_URL) $('zoom-card').setAttribute('href',ZOOM_URL);
+    else $('zoom-card').removeAttribute('href');
     renderStatus();
     setAuthStatus(authStatusKey,...authStatusArgs);
   }

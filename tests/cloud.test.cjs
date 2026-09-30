@@ -298,7 +298,9 @@ for(const key of usedKeys) assert(englishKeys.includes(key),`Missing translation
   assert.equal(db.codes.find(r=>r.code==='REVISED-CODE').used_on,'28/09/2026');
   assert.equal(els['prometric-settings'].hidden,false);
   assert.equal(run('ZOOM_URL'),'https://us02web.zoom.us/j/demo');
-  assert.equal(els['open-zoom'].href,'https://us02web.zoom.us/j/demo');
+  assert.equal(els['zoom-card'].href,'https://us02web.zoom.us/j/demo');
+  assert.match(html,/<a class="cred-card resource-card" id="zoom-card" target="_blank" rel="noopener noreferrer">/);
+  assert(!html.includes('id="open-zoom"'));
   assert.equal(els['prometric-link-val'].textContent,'https://tcnet1.prometric.com/Login.aspx?demo=1');
   els['settings-zoom-link'].value='http://us02web.zoom.us/j/unsafe';
   await els['prometric-settings-form'].listeners.submit({preventDefault(){}});
@@ -313,6 +315,7 @@ for(const key of usedKeys) assert(englishKeys.includes(key),`Missing translation
   assert.equal(db.settings.payload.links.zoom,'https://us02web.zoom.us/j/updated');
   assert.equal(db.settings.payload.links.prometric,'https://tcnet1.prometric.com/Login.aspx?updated=1');
   assert.equal(els['zoom-link-val'].textContent,'https://us02web.zoom.us/j/updated');
+  assert.equal(els['zoom-card'].href,'https://us02web.zoom.us/j/updated');
   clipboardFails=false;
   await els['prometric-login-card'].listeners.click();
   assert(events.some(event=>event.name==='clipboard' && event.text===db.settings.payload.links.prometric));
