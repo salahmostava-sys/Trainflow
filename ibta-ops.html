@@ -326,7 +326,7 @@
   .code-row:hover{background:var(--blue-50);}
   .code-row .col-n{color:var(--muted); font-family:var(--mono); font-size:12.5px;}
   .code-row .col-code{font-family:var(--mono); font-weight:600; font-size:14px; white-space:nowrap; direction:ltr;}
-  .code-row .col-date{color:var(--blue-600); font-size:12px; font-weight:600; font-family:var(--mono); direction:ltr;}
+  .code-row .col-date{color:var(--blue-600); font-size:12px; font-weight:600; font-family:var(--mono); direction:ltr; white-space:pre-line;}
   .code-row .col-notes{padding:3px 4px;}
   .code-row .col-notes input{
     width:100%; border:1px solid transparent; background:transparent; font-family:inherit;
@@ -1991,7 +1991,7 @@ function renderCodeGrid(){
 
     const d = document.createElement('div');
     d.className = 'col-date';
-    d.textContent = used ? used+(state.codeUseTimes?.[code]?' · '+codeCopyTime(state.codeUseTimes[code]):'') : '';
+    d.textContent = used ? used+(state.codeUseTimes?.[code]?'\n'+codeCopyTime(state.codeUseTimes[code]):'') : '';
 
     if(used){
       const dayColor = dayColors[used];

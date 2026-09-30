@@ -202,7 +202,7 @@ for(const key of usedKeys) assert(englishKeys.includes(key),`Missing translation
   run("state.codeNotes.TEST='hello'");assert.equal(await run('saveState()'),true);assert.equal(db.codes[0].notes,'hello');
   await run("Cloud.copyCode('TEST')");assert.equal(db.codes[0].used_by,'user-1');
   assert.equal(db.codes[0].used_at,'2026-09-30T09:45:00.000Z');
-  assert.match(els['code-grid'].children[0].children[3].textContent,/12:45/);
+  assert.equal(els['code-grid'].children[0].children[3].textContent,run('todayStr()')+'\n12:45');
   assert(events.findIndex(e=>e.name==='ibta_claim_code')<events.findIndex(e=>e.name==='clipboard'));
   conflict=true;run("state.codeNotes.TEST='stale'");assert.equal(await run('saveState()'),false);assert.equal(run('state.codeNotes.TEST'),'hello');conflict=false;
   db.codes.push({code:'FAIL-COPY',category:'Foundation-100',notes:'',used_on:null,used_by:null,version:1});await run('Cloud.refresh()');
