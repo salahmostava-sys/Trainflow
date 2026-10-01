@@ -368,7 +368,7 @@ const Trainees=(()=>{
           <button type="button" id="sheet-clear-format"></button><label><span id="sheet-direction-label"></span><select id="sheet-direction"><option value="rtl">يمين ← يسار</option><option value="ltr">Left → Right</option></select></label>
         </div>
         <div class="sheet-filters"><input id="sheet-search" type="search"><input id="sheet-org" type="search"><input id="sheet-date" type="search"><select id="sheet-result"></select><label class="sheet-duplicates-filter"><input type="checkbox" id="sheet-duplicates-only"><span id="sheet-duplicates-label"></span></label><button type="button" id="sheet-clear-filters"></button></div>
-        <div class="sheet-formula"><code id="sheet-address">A1</code><input id="sheet-formula" autocomplete="off" spellcheck="false" dir="auto"></div>
+        <div class="sheet-formula"><input id="sheet-address" value="A1" aria-label="عنوان الخلية / Cell address" title="D150" autocomplete="off" spellcheck="false" dir="ltr"><span class="sheet-fx" aria-hidden="true">fx</span><input id="sheet-formula" autocomplete="off" spellcheck="false" dir="auto"></div>
         <div class="sheet-scroll"><table class="sheet-grid" id="sheet-grid" role="grid" aria-label="Trainees"><thead></thead><tbody></tbody></table></div>
         <div class="sheet-add-rows-bar">
           <span id="sheet-add-prefix"></span>
@@ -379,6 +379,22 @@ const Trainees=(()=>{
         <div class="sheet-footer"><p id="sheet-help"></p><div class="sheet-pages"><button type="button" id="sheet-prev">‹</button><span id="sheet-count"></span><button type="button" id="sheet-next">›</button><label class="sheet-page-size-wrap"><select id="sheet-page-size" aria-label="Rows per page"><option value="100" selected>100</option><option value="250">250</option><option value="500">500</option><option value="1000">1000</option></select><span id="sheet-page-size-suffix"></span></label></div></div>
       </div>
       <div id="sheet-code-workspace" hidden><div class="sheet-code-tools" id="sheet-code-admin" hidden><button type="button" id="sheet-owned"></button><button type="button" id="sheet-pool"></button><button type="button" id="sheet-assign" class="sheet-primary"></button></div><div class="sheet-code-tools"><input id="sheet-code-search" type="search"><button type="button" id="sheet-code-refresh"></button><span id="sheet-code-count"></span></div><p class="sheet-notice" id="sheet-code-notice"></p><div class="sheet-card sheet-code-list" id="sheet-code-list"></div><p id="sheet-code-status" role="status"></p></div>`;
+    const toolbar=$('sheet-workspace').querySelector('.sheet-tools');
+    for(const [label,ids] of [['الحافظة / Clipboard',['sheet-copy','sheet-undo','sheet-redo']],['الصفوف والأعمدة / Rows & columns',['sheet-add','sheet-add-1000','sheet-delete','sheet-add-col','sheet-del-col']],['تحرير وحفظ / Edit & save',['sheet-find-btn','sheet-save','sheet-reload']]]){
+      const group=node('div',undefined,{class:'sheet-ribbon-group'}),actions=node('div',undefined,{class:'sheet-ribbon-actions'});
+      for(const id of ids){const el=$(id);actions.append(id==='sheet-add-col'?el.parentElement:el);}
+      group.append(actions,node('small',label));toolbar.append(group);
+    }
+    toolbar.append($('sheet-status'));
+    $('sheet-address').addEventListener('keydown',e=>{
+      if(e.key==='Escape'){e.preventDefault();$('sheet-address').blur();paint();return;}
+      if(e.key!=='Enter')return;e.preventDefault();if(!loaded)return;
+      const match=/^([A-Z]+)([1-9]\d*)$/.exec($('sheet-address').value.trim().toUpperCase());
+      let col=0;if(match)for(const letter of match[1])col=col*26+letter.charCodeAt(0)-64;
+      const row=match?Number(match[2])-1:-1;col--;
+      if(!match||row<0||row>=cells.length||col<0||col>=labels.length||!visibleCols().includes(col)){message(tr('اكتب عنوان خلية موجودة وعمود ظاهر، مثل D150.','Enter an existing cell in a visible column, such as D150.'),true);return;}
+      commitEdit();clearFilters();render();focusCell(row,col);
+    });
     $('sheet-owner').addEventListener('change',async()=>{const next=$('sheet-owner').value;$('sheet-owner').value=owner;await switchOwner(next);});
     if($('sheet-mode'))$('sheet-mode').onclick=()=>setMode('sheet');if($('sheet-codes-mode'))$('sheet-codes-mode').onclick=()=>setMode('codes');
     $('sheet-save').onclick=()=>flush();$('sheet-reload').onclick=()=>reload();
@@ -766,7 +782,8 @@ const Trainees=(()=>{
   function paint(){
     const [r1,r2,c1,c2]=bounds();
     $('sheet-grid').querySelectorAll('td[data-col]').forEach(td=>{const r=+td.dataset.v,c=+td.dataset.col,current=r===cursor.r&&c===cursor.c;td.classList.toggle('sheet-selected',r>=r1&&r<=r2&&c>=c1&&c<=c2);td.classList.toggle('sheet-current',current);td.tabIndex=current?0:-1;td.setAttribute('aria-selected',String(r>=r1&&r<=r2&&c>=c1&&c<=c2));});
-    $('sheet-address').textContent=colLetter(cursor.c)+((view[cursor.r]??0)+1);
+    if(document.activeElement!==$('sheet-address'))$('sheet-address').value=colLetter(cursor.c)+((view[cursor.r]??0)+1);
+    $('sheet-grid').querySelectorAll('thead th[data-col]').forEach(th=>th.classList.toggle('sheet-active-header',+th.dataset.col>=c1&&+th.dataset.col<=c2));
     if(document.activeElement!==$('sheet-formula'))$('sheet-formula').value=cells[view[cursor.r]]?.[cursor.c]||'';
     const style=formatting.styles[(view[cursor.r]??0)+':'+cursor.c]||{};
     $('sheet-bold').setAttribute('aria-pressed',String(!!style.bold));$('sheet-selection-size').value=String(style.size||formatting.fontSize);
