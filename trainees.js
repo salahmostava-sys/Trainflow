@@ -28,6 +28,257 @@ const Trainees=(()=>{
   function saveColumnWidths(){
     try{localStorage.setItem('ibta_trainee_col_widths',JSON.stringify(colWidths));}catch{}
   }
+  let cellAlignments={};
+  try{cellAlignments=JSON.parse(localStorage.getItem('ibta_trainee_alignments')||'{}')||{};}catch{}
+  function getCellAlign(idx,col){return cellAlignments[(owner||'default')+':'+idx+':'+col]||'';}
+  function setCellAlign(idx,col,align){
+    const key=(owner||'default')+':'+idx+':'+col;
+    if(!align)delete cellAlignments[key];else cellAlignments[key]=align;
+  }
+  function saveAlignments(){try{localStorage.setItem('ibta_trainee_alignments',JSON.stringify(cellAlignments));}catch{}}
+  function setSelectionAlignment(align){
+    commitEdit();const [r1,r2,c1,c2]=bounds();
+    for(let r=r1;r<=r2;r++){
+      const idx=view[r];if(idx===undefined)continue;
+      for(const c of visibleCols().filter(c=>c>=c1&&c<=c2))setCellAlign(idx,c,align);
+    }
+    saveAlignments();render();
+  }
+  function shiftStylesOnInsert(fmt,insertIdx){
+    const next=D.format(fmt);next.styles={};
+    for(const [key,style]of Object.entries(fmt.styles)){
+      const [r,c]=key.split(':').map(Number);
+      const target=r>=insertIdx?r+1:r;
+      if(target<D.MAX_ROWS)next.styles[target+':'+c]={...style};
+    }
+    return next;
+  }
+  function shiftAlignmentsOnInsert(insertIdx){
+    const prefix=(owner||'default')+':',updated={};
+    for(const [key,val]of Object.entries(cellAlignments)){
+      if(key.startsWith(prefix)){
+        const rest=key.slice(prefix.length);
+        const [r,c]=rest.split(':').map(Number);
+        const target=r>=insertIdx?r+1:r;
+        updated[prefix+target+':'+c]=val;
+      }else updated[key]=val;
+    }
+    cellAlignments=updated;saveAlignments();
+  }
+  function insertRow(pos='above'){
+    commitEdit();
+    if(cells.length>=D.MAX_ROWS)return limitError();
+    let targetIdx=view[cursor.r]??cells.length;
+    if(pos==='below')targetIdx++;
+    const next=cells.map(r=>[...r]);
+    while(next.length<targetIdx)next.push(D.blank());
+    next.splice(targetIdx,0,D.blank());
+    const nextFmt=shiftStylesOnInsert(formatting,targetIdx);
+    shiftAlignmentsOnInsert(targetIdx);
+    change(next,true,nextFmt);
+    render();
+    focusCell(pos==='above'?cursor.r:cursor.r+1,cursor.c);
+    message(tr('تم إدراج صف جديد','New row inserted'));
+  }
+  function deleteSelectedRows(){
+    commitEdit();const [r1,r2]=bounds();const ids=new Set(view.slice(r1,r2+1));
+    if(!ids.size||!confirm(tr((ids.size>1?'حذف الصفوف المحددة؟':'حذف الصف المحدد؟'),(ids.size>1?'Delete selected rows?':'Delete selected row?'))))return;
+    const next=D.removeRows(cells,formatting,ids);change(next.cells,true,next.format);
+    message(tr(ids.size>1?'تم حذف الصفوف المحددة':'تم حذف الصف المحدد',ids.size>1?'Selected rows deleted':'Selected row deleted'));
+  }
+  async function cutSelection(){
+    if(editing)return;const text=selectionText();
+    if(await copyText(text)){clearSelection();message(tr('تم القص إلى الحافظة','Cut to clipboard'));}
+  }
+  async function copySelection(){
+    if(editing)return;const text=selectionText();
+    if(await copyText(text)){message(tr('تم النسخ إلى الحافظة','Copied to clipboard'));}
+  }
+  async function pasteSelection(){
+    if(editing)return;
+    try{
+      const text=await navigator.clipboard.readText();if(!text)return;
+      const values=D.parse(text);if(filtered()&&values.length>1){message(tr('امسح الفلاتر والفرز قبل لصق عدة صفوف.','Clear filters and sorting before pasting multiple rows.'),true);return;}
+      const [r,,c]=bounds(),idx=view[r];if(idx===undefined)return;
+      const targets=visibleCols().filter(col=>col>=c),width=Math.max(...values.map(v=>v.length));if(width>targets.length)throw Error('PASTE_BOUNDS');
+      let next=cells;for(let col=0;col<width;col++){const column=values.map(row=>col<row.length?[row[col]]:[]);next=D.paste(next,column,idx,targets[col]);}
+      change(next);anchor={r,c};cursor={r:r+values.length-1,c:targets[width-1]};paint();message(tr('تم اللصق بنجاح','Pasted successfully'));
+    }catch{limitError();}
+  }
+  function initContextMenu(){
+    if($('sheet-context-menu'))return;
+    const menu=node('div',undefined,{id:'sheet-context-menu',class:'sheet-context-menu',hidden:''});
+    menu.innerHTML=`
+      <button type="button" data-action="cut"><span>✂️ <span class="sheet-menu-label"></span></span><span class="sheet-menu-shortcut">Ctrl+X</span></button>
+      <button type="button" data-action="copy"><span>📋 <span class="sheet-menu-label"></span></span><span class="sheet-menu-shortcut">Ctrl+C</span></button>
+      <button type="button" data-action="paste"><span>📄 <span class="sheet-menu-label"></span></span><span class="sheet-menu-shortcut">Ctrl+V</span></button>
+      <hr>
+      <button type="button" data-action="insert-above"><span>⬆️ <span class="sheet-menu-label"></span></span></button>
+      <button type="button" data-action="insert-below"><span>⬇️ <span class="sheet-menu-label"></span></span></button>
+      <button type="button" data-action="delete-row"><span>🗑️ <span class="sheet-menu-label"></span></span></button>
+      <hr>
+      <button type="button" data-action="clear-contents"><span>🧹 <span class="sheet-menu-label"></span></span><span class="sheet-menu-shortcut">Del</span></button>
+      <button type="button" data-action="clear-format"><span>✨ <span class="sheet-menu-label"></span></span></button>
+    `;
+    document.body.append(menu);
+    menu.addEventListener('click',async e=>{
+      const btn=e.target.closest('button[data-action]');if(!btn)return;
+      const action=btn.dataset.action;closeContextMenu();
+      switch(action){
+        case 'cut':await cutSelection();break;
+        case 'copy':await copySelection();break;
+        case 'paste':await pasteSelection();break;
+        case 'insert-above':insertRow('above');break;
+        case 'insert-below':insertRow('below');break;
+        case 'delete-row':deleteSelectedRows();break;
+        case 'clear-contents':clearSelection();break;
+        case 'clear-format':formatSelection(null);break;
+      }
+    });
+    document.addEventListener('pointerdown',e=>{if(!e.target.closest('#sheet-context-menu'))closeContextMenu();});
+    document.addEventListener('keydown',e=>{if(e.key==='Escape')closeContextMenu();});
+  }
+  function openContextMenu(clientX,clientY){
+    const menu=$('sheet-context-menu');if(!menu)return;
+    menu.hidden=false;
+    const menuW=menu.offsetWidth||190,menuH=menu.offsetHeight||270;
+    let x=clientX,y=clientY;
+    if(x+menuW>window.innerWidth-10)x=Math.max(10,window.innerWidth-menuW-10);
+    if(y+menuH>window.innerHeight-10)y=Math.max(10,window.innerHeight-menuH-10);
+    menu.style.left=x+'px';menu.style.top=y+'px';
+  }
+  function closeContextMenu(){const menu=$('sheet-context-menu');if(menu)menu.hidden=true;}
+  function updateContextMenuTranslations(){
+    const menu=$('sheet-context-menu');if(!menu)return;
+    const labels={
+      'cut':tr('قص','Cut'),'copy':tr('نسخ','Copy'),'paste':tr('لصق','Paste'),
+      'insert-above':tr('إدراج صف لأعلى','Insert row above'),'insert-below':tr('إدراج صف لأسفل','Insert row below'),
+      'delete-row':tr('حذف الصف','Delete row'),'clear-contents':tr('مسح المحتويات','Clear contents'),
+      'clear-format':tr('مسح التنسيق','Clear formatting')
+    };
+    menu.querySelectorAll('button[data-action]').forEach(b=>{
+      const act=b.dataset.action,span=b.querySelector('.sheet-menu-label');
+      if(span&&labels[act])span.textContent=labels[act];
+    });
+  }
+  function initFindDialog(){
+    if($('sheet-find-dialog'))return;
+    const dlg=node('dialog',undefined,{id:'sheet-find-dialog',class:'sheet-find-dialog','aria-labelledby':'sheet-find-title'});
+    dlg.innerHTML=`
+      <div style="display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);padding-bottom:10px;">
+        <h3 id="sheet-find-title" style="margin:0;font-size:15px;font-weight:700;"></h3>
+        <button type="button" id="sheet-find-close" style="border:0;background:transparent;font-size:18px;cursor:pointer;color:var(--muted);padding:2px 8px;line-height:1;" aria-label="Close">✕</button>
+      </div>
+      <div class="sheet-find-body">
+        <div class="sheet-find-row">
+          <label for="sheet-find-input" id="sheet-find-label"></label>
+          <input type="text" id="sheet-find-input" autocomplete="off" spellcheck="false">
+        </div>
+        <div class="sheet-find-row">
+          <label for="sheet-replace-input" id="sheet-replace-label"></label>
+          <input type="text" id="sheet-replace-input" autocomplete="off" spellcheck="false">
+        </div>
+        <div class="sheet-find-options">
+          <label><input type="checkbox" id="sheet-find-case"><span id="sheet-find-case-label"></span></label>
+          <label><input type="checkbox" id="sheet-find-entire"><span id="sheet-find-entire-label"></span></label>
+        </div>
+        <p id="sheet-find-status" class="sheet-find-status" role="status"></p>
+        <div class="sheet-find-actions">
+          <button type="button" id="sheet-find-next" class="sheet-primary"></button>
+          <button type="button" id="sheet-find-replace-one"></button>
+          <button type="button" id="sheet-find-replace-all"></button>
+        </div>
+      </div>
+    `;
+    document.body.append(dlg);
+    $('sheet-find-close').onclick=()=>dlg.close();
+    $('sheet-find-next').onclick=findNext;
+    $('sheet-find-replace-one').onclick=replaceOne;
+    $('sheet-find-replace-all').onclick=replaceAll;
+    $('sheet-find-input').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();findNext();}});
+    $('sheet-replace-input').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();replaceOne();}});
+    dlg.addEventListener('click',e=>{
+      if(e.target===dlg){
+        const rect=dlg.getBoundingClientRect();
+        if(e.clientX<rect.left||e.clientX>rect.right||e.clientY<rect.top||e.clientY>rect.bottom)dlg.close();
+      }
+    });
+  }
+  function openFindDialog(isReplace=false){
+    commitEdit();const dlg=$('sheet-find-dialog');if(!dlg)return;
+    dlg.dir=formatting.direction;$('sheet-find-status').textContent='';
+    if(!dlg.open)dlg.showModal();
+    if(isReplace){$('sheet-replace-input')?.focus();}
+    else{$('sheet-find-input')?.focus();$('sheet-find-input')?.select();}
+  }
+  function findNext(){
+    const query=$('sheet-find-input').value;
+    if(!query){$('sheet-find-status').textContent=tr('يرجى كتابة نص للبحث','Please enter search text');return null;}
+    const matchCase=$('sheet-find-case').checked,matchEntire=$('sheet-find-entire').checked;
+    const q=matchCase?query:query.toLowerCase(),cols=visibleCols();
+    if(!cols.length||!view.length){$('sheet-find-status').textContent=tr('لا توجد خلايا متاحة للبحث','No visible cells to search');return null;}
+    const total=view.length*cols.length,curColIdx=Math.max(0,cols.indexOf(cursor.c));
+    const startPos=cursor.r*cols.length+curColIdx+1;
+    for(let k=0;k<total;k++){
+      const pos=(startPos+k)%total,vr=Math.floor(pos/cols.length),c=cols[pos%cols.length],idx=view[vr];
+      const cellVal=cells[idx]?.[c]||'',val=matchCase?cellVal:cellVal.toLowerCase();
+      const isMatch=matchEntire?val===q:val.includes(q);
+      if(isMatch){
+        focusCell(vr,c);
+        $('sheet-find-status').textContent=tr(`تم العثور على: ${String.fromCharCode(65+c)}${idx+1}`,`Found at ${String.fromCharCode(65+c)}${idx+1}`);
+        return {vr,c,idx,val:cellVal};
+      }
+    }
+    $('sheet-find-status').textContent=tr('لم يتم العثور على أي نتائج مطابقة','No matches found');
+    return null;
+  }
+  function replaceOne(){
+    const query=$('sheet-find-input').value;
+    if(!query){$('sheet-find-status').textContent=tr('يرجى كتابة نص للبحث','Please enter search text');return;}
+    const replacement=$('sheet-replace-input').value,matchCase=$('sheet-find-case').checked,matchEntire=$('sheet-find-entire').checked;
+    const q=matchCase?query:query.toLowerCase(),curIdx=view[cursor.r],curVal=cells[curIdx]?.[cursor.c]||'';
+    const val=matchCase?curVal:curVal.toLowerCase(),matches=matchEntire?val===q:val.includes(q);
+    if(matches){
+      let newVal='';
+      if(matchEntire)newVal=replacement;
+      else if(matchCase)newVal=curVal.replace(query,replacement);
+      else{
+        const regex=new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'i');
+        newVal=curVal.replace(regex,replacement);
+      }
+      change(D.paste(cells,[[newVal]],curIdx,cursor.c));
+      render();
+      $('sheet-find-status').textContent=tr('تم استبدال الخلية المحددة','Replaced current cell');
+    }
+    findNext();
+  }
+  function replaceAll(){
+    const query=$('sheet-find-input').value;
+    if(!query){$('sheet-find-status').textContent=tr('يرجى كتابة نص للبحث','Please enter search text');return;}
+    const replacement=$('sheet-replace-input').value,matchCase=$('sheet-find-case').checked,matchEntire=$('sheet-find-entire').checked;
+    const q=matchCase?query:query.toLowerCase(),cols=visibleCols();
+    let count=0,next=cells.map(r=>[...r]);
+    const regex=matchCase?null:new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'gi');
+    for(let i=0;i<next.length;i++){
+      for(const c of cols){
+        const cellVal=next[i][c]||'';if(!cellVal)continue;
+        const val=matchCase?cellVal:cellVal.toLowerCase(),matches=matchEntire?val===q:val.includes(q);
+        if(matches){
+          if(matchEntire)next[i][c]=replacement;
+          else if(matchCase)next[i][c]=cellVal.replaceAll(query,replacement);
+          else next[i][c]=cellVal.replace(regex,replacement);
+          count++;
+        }
+      }
+    }
+    if(count>0){
+      change(D.normalize(next));render();
+      $('sheet-find-status').textContent=tr(`تم استبدال ${count} عنصر بنجاح`,`Replaced ${count} occurrences`);
+      message(tr(`تم استبدال ${count} عنصر بنجاح`,`Replaced ${count} occurrences`));
+    }else{
+      $('sheet-find-status').textContent=tr('لم يتم العثور على أي نتائج للاستبدال','No occurrences found to replace');
+    }
+  }
   function initColumnResize(e,colIndex,thEl){
     e.preventDefault();e.stopPropagation();
     const startX=e.clientX,startWidth=thEl.getBoundingClientRect().width;
@@ -61,12 +312,17 @@ const Trainees=(()=>{
       <div class="sheet-heading"><div><h2 id="sheet-title"></h2><p id="sheet-subtitle"></p></div><label class="sheet-owner" id="sheet-owner-wrap" hidden><span id="sheet-owner-label"></span><select id="sheet-owner"></select></label></div>
       <div class="sheet-subtabs"><button type="button" id="sheet-mode" aria-selected="true"></button><button type="button" id="sheet-codes-mode" aria-selected="false"></button></div>
       <div id="sheet-workspace" class="sheet-card">
-        <div class="sheet-tools"><button type="button" id="sheet-add" class="sheet-primary"></button><button type="button" id="sheet-delete"></button><div class="sheet-add-col-wrap"><button type="button" id="sheet-add-col" class="sheet-primary"></button><div id="sheet-add-col-popover" class="sheet-add-col-popover" hidden></div></div><button type="button" id="sheet-del-col"></button><button type="button" id="sheet-undo"></button><button type="button" id="sheet-redo"></button><button type="button" id="sheet-copy"></button><button type="button" id="sheet-save"></button><button type="button" id="sheet-reload"></button><span class="sheet-status" id="sheet-status" role="status" aria-live="polite"></span></div>
+        <div class="sheet-tools"><button type="button" id="sheet-add" class="sheet-primary"></button><button type="button" id="sheet-delete"></button><div class="sheet-add-col-wrap"><button type="button" id="sheet-add-col" class="sheet-primary"></button><div id="sheet-add-col-popover" class="sheet-add-col-popover" hidden></div></div><button type="button" id="sheet-del-col"></button><button type="button" id="sheet-find-btn"></button><button type="button" id="sheet-undo"></button><button type="button" id="sheet-redo"></button><button type="button" id="sheet-copy"></button><button type="button" id="sheet-save"></button><button type="button" id="sheet-reload"></button><span class="sheet-status" id="sheet-status" role="status" aria-live="polite"></span></div>
         <div class="sheet-format-tools">
           <details id="sheet-columns"><summary id="sheet-columns-title"></summary><div id="sheet-column-options"></div></details>
           <button type="button" id="sheet-font-minus">A−</button><output id="sheet-font-size"></output><button type="button" id="sheet-font-plus">A+</button>
           <label><span id="sheet-selection-size-label"></span><select id="sheet-selection-size"></select></label>
           <button type="button" id="sheet-bold"><b>B</b></button>
+          <div class="sheet-align-group" role="group">
+            <button type="button" id="sheet-align-right" title="محاذاة لليمين"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="3" y1="5" x2="21" y2="5"></line><line x1="9" y1="12" x2="21" y2="12"></line><line x1="5" y1="19" x2="21" y2="19"></line></svg></button>
+            <button type="button" id="sheet-align-center" title="توسيط"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="4" y1="5" x2="20" y2="5"></line><line x1="7" y1="12" x2="17" y2="12"></line><line x1="5" y1="19" x2="19" y2="19"></line></svg></button>
+            <button type="button" id="sheet-align-left" title="محاذاة لليسار"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="3" y1="5" x2="21" y2="5"></line><line x1="3" y1="12" x2="15" y2="12"></line><line x1="3" y1="19" x2="19" y2="19"></line></svg></button>
+          </div>
           <label><span id="sheet-fill-label"></span><input type="color" id="sheet-fill" value="#fff2cc"></label>
           <label><span id="sheet-text-color-label"></span><input type="color" id="sheet-text-color" value="#16324f"></label>
           <button type="button" id="sheet-clear-format"></button><label><span id="sheet-direction-label"></span><select id="sheet-direction"><option value="rtl">يمين ← يسار</option><option value="ltr">Left → Right</option></select></label>
@@ -82,7 +338,8 @@ const Trainees=(()=>{
     $('sheet-mode').onclick=()=>setMode('sheet');$('sheet-codes-mode').onclick=()=>setMode('codes');
     $('sheet-save').onclick=()=>flush();$('sheet-reload').onclick=()=>reload();
     $('sheet-add').onclick=()=>{commitEdit();clearFilters();const r=cells.length;if(r>=D.MAX_ROWS)return limitError();const next=cells.map(row=>[...row]);next.push(D.blank());change(next,false);render();focusCell(r,0);};
-    $('sheet-delete').onclick=()=>{commitEdit();const [r1,r2]=bounds();const ids=new Set(view.slice(r1,r2+1));if(!ids.size||!confirm(tr((ids.size>1?'حذف الصفوف المحددة؟':'حذف الصف المحدد؟'),(ids.size>1?'Delete selected rows?':'Delete selected row?'))))return;const next=D.removeRows(cells,formatting,ids);change(next.cells,true,next.format);};
+    $('sheet-delete').onclick=deleteSelectedRows;
+    $('sheet-find-btn').onclick=()=>openFindDialog();
     $('sheet-add-col').onclick=(e)=>{e.stopPropagation();commitEdit();toggleAddColumnMenu();};
     $('sheet-del-col').onclick=()=>{
       commitEdit();const cols=visibleCols();
@@ -103,6 +360,9 @@ const Trainees=(()=>{
     $('sheet-fill').onchange=()=>formatSelection({bg:$('sheet-fill').value});
     $('sheet-text-color').onchange=()=>formatSelection({color:$('sheet-text-color').value});
     $('sheet-bold').onclick=()=>formatSelection({bold:!formatting.styles[(view[cursor.r]??0)+':'+cursor.c]?.bold});
+    $('sheet-align-right').onclick=()=>setSelectionAlignment('right');
+    $('sheet-align-center').onclick=()=>setSelectionAlignment('center');
+    $('sheet-align-left').onclick=()=>setSelectionAlignment('left');
     $('sheet-clear-format').onclick=()=>formatSelection(null);
     $('sheet-selection-size').onchange=()=>formatSelection({size:Number($('sheet-selection-size').value)});
     for(let size=10;size<=32;size++)$('sheet-selection-size').append(node('option',String(size),{value:size}));
@@ -116,6 +376,8 @@ const Trainees=(()=>{
     $('sheet-formula').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();$('sheet-formula').blur();focusCell(cursor.r,cursor.c);}});
     const grid=$('sheet-grid');
     initDuplicateDetails();
+    initContextMenu();
+    initFindDialog();
     grid.addEventListener('pointerdown',e=>{const td=e.target.closest('td[data-col]');if(e.target.closest('select')){commitEdit();if(td){cursor=anchor={r:+td.dataset.v,c:+td.dataset.col};paint();}return;}if(e.button!==0||e.pointerType==='touch'||!td||editing?.el===td)return;e.preventDefault();dragging=true;dragMoved=false;selectCell(+td.dataset.v,+td.dataset.col,e.shiftKey);});
     grid.addEventListener('pointerover',e=>{const td=e.target.closest('td[data-col]');if(!dragging||!td)return;const r=+td.dataset.v,c=+td.dataset.col;if(r!==cursor.r||c!==cursor.c){dragMoved=true;cursor={r,c};paint();}});
     document.addEventListener('pointerup',()=>{dragging=false;});
@@ -124,6 +386,23 @@ const Trainees=(()=>{
     grid.addEventListener('keydown',keyDown);grid.addEventListener('paste',paste);
     grid.addEventListener('copy',e=>{if(editing)return;e.preventDefault();e.clipboardData.setData('text/plain',selectionText());});
     grid.addEventListener('cut',e=>{if(editing)return;e.preventDefault();e.clipboardData.setData('text/plain',selectionText());clearSelection();});
+    grid.addEventListener('contextmenu',e=>{
+      const td=e.target.closest('td[data-col]'),th=e.target.closest('th.sheet-rownum');
+      if(!td&&!th)return;
+      e.preventDefault();
+      if(td){
+        const vr=+td.dataset.v,vc=+td.dataset.col;
+        const [r1,r2,c1,c2]=bounds();
+        if(vr<r1||vr>r2||vc<c1||vc>c2)selectCell(vr,vc);
+      }else if(th&&th.parentElement){
+        const firstTd=th.parentElement.querySelector('td[data-col]');
+        if(firstTd){
+          const vr=+firstTd.dataset.v;
+          commitEdit();anchor={r:vr,c:0};cursor={r:vr,c:12};paint();
+        }
+      }
+      openContextMenu(e.clientX,e.clientY);
+    });
     $('sheet-owned').onclick=()=>{codeMode='owned';renderCodes();};$('sheet-pool').onclick=()=>{codeMode='pool';renderCodes();};
     $('sheet-assign').onclick=assign;$('sheet-code-search').oninput=renderCodes;
     $('sheet-code-refresh').onclick=async()=>{if(await Cloud.refresh())renderCodes();};
@@ -181,9 +460,14 @@ const Trainees=(()=>{
       'sheet-owned':['أكواد المستخدم','User codes'],'sheet-pool':['المخزون غير المخصص','Unassigned stock'],'sheet-code-refresh':['تحديث الأكواد','Refresh codes']
       ,'sheet-columns-title':['إظهار / إخفاء الأعمدة','Show / hide columns'],'sheet-fill-label':['لون الخلية','Cell fill'],'sheet-text-color-label':['لون الخط','Text color'],
       'sheet-clear-format':['مسح التنسيق','Clear formatting'],'sheet-direction-label':['الاتجاه','Direction'],'sheet-selection-size-label':['حجم المحدد','Selection size'],
-      'sheet-duplicates-label':['الإقامات المكررة فقط','Duplicate IDs only']
-    };for(const [id,pair]of Object.entries(text))$(id).textContent=tr(...pair);
-    for(const [id,pair]of Object.entries({'sheet-search':['بحث في الجدول…','Search sheet…'],'sheet-org':['فلترة بالجهة…','Filter organization…'],'sheet-date':['فلترة بتاريخ الاختبار…','Filter exam date…'],'sheet-code-search':['بحث عن كود…','Search codes…']})){$(id).placeholder=tr(...pair);$(id).setAttribute('aria-label',tr(...pair));}
+      'sheet-duplicates-label':['الإقامات المكررة فقط','Duplicate IDs only'],
+      'sheet-find-btn':['🔍 بحث واستبدال','🔍 Find & Replace'],
+      'sheet-find-title':['بحث واستبدال في جدول المتدربين','Find & Replace in Trainees Sheet'],
+      'sheet-find-label':['بحث عن:','Find:'],'sheet-replace-label':['استبدال بـ:','Replace with:'],
+      'sheet-find-case-label':['مطابقة حالة الأحرف','Match case'],'sheet-find-entire-label':['مطابقة كامل الخلية','Match entire cell'],
+      'sheet-find-next':['بحث عن التالي','Find Next'],'sheet-find-replace-one':['استبدال','Replace'],'sheet-find-replace-all':['استبدال الكل','Replace All']
+    };for(const [id,pair]of Object.entries(text))$(id)&&($(id).textContent=tr(...pair));
+    for(const [id,pair]of Object.entries({'sheet-search':['بحث في الجدول…','Search sheet…'],'sheet-org':['فلترة بالجهة…','Filter organization…'],'sheet-date':['فلترة بتاريخ الاختبار…','Filter exam date…'],'sheet-code-search':['بحث عن كود…','Search codes…']})){$(id)&&($(id).placeholder=tr(...pair));$(id)&&($(id).setAttribute('aria-label',tr(...pair)));}
     $('sheet-formula').setAttribute('aria-label',tr('محتوى الخلية المحددة','Selected cell value'));
     $('sheet-prev').setAttribute('aria-label',tr('الصفحة السابقة','Previous page'));$('sheet-next').setAttribute('aria-label',tr('الصفحة التالية','Next page'));
     const value=$('sheet-result').value;$('sheet-result').replaceChildren();
@@ -194,7 +478,12 @@ const Trainees=(()=>{
     $('sheet-delete').title=tr('حذف الصفوف أو الصف المحدد حالياً','Delete current row');
     $('sheet-add-col').title=tr('إضافة عمود إلى جدول المتدربين','Add column to sheet');
     $('sheet-del-col').title=tr('حذف العمود المحدد حالياً من الجدول','Delete currently selected column from sheet');
+    $('sheet-find-btn')&&($('sheet-find-btn').title=tr('بحث واستبدال (Ctrl+F / Ctrl+H)','Find and replace (Ctrl+F / Ctrl+H)'));
+    $('sheet-align-right')&&($('sheet-align-right').title=tr('محاذاة لليمين','Align right'));
+    $('sheet-align-center')&&($('sheet-align-center').title=tr('توسيط','Align center'));
+    $('sheet-align-left')&&($('sheet-align-left').title=tr('محاذاة لليسار','Align left'));
     $('sheet-copy').title=tr('نسخ كل الأعمدة بما فيها المخفية','Copy every column, including hidden columns');
+    updateContextMenuTranslations();
     if(!editing)render();renderCodes();
   }
   async function open(){
@@ -274,9 +563,12 @@ const Trainees=(()=>{
     const value=cells[index]?.[column]||'',style=formatting.styles[index+':'+column]||{};
     td.replaceChildren();td.style.backgroundColor=style.bg||'';td.style.color=style.color||'';
     td.style.fontSize=style.size?style.size+'px':'';td.style.fontWeight=style.bold?'700':'';
+    const align=getCellAlign(index,column);
+    if(align)td.style.textAlign=align;else td.style.removeProperty('text-align');
     td.classList.remove('sheet-result-pass','sheet-result-fail','sheet-result-absent','sheet-id-duplicate');td.removeAttribute('title');td.removeAttribute('aria-haspopup');
     if(column===11){
       const select=node('select',undefined,{'aria-label':tr('النتيجة للصف ','Result for row ')+(index+1),class:'sheet-result-select',dir:'rtl'});
+      if(align)select.style.textAlign=align;
       ['', 'ناجح','راسب','لم يدخل',...(!['','ناجح','راسب','لم يدخل'].includes(value)?[value]:[])].forEach(v=>select.append(node('option',v||'—',{value:v})));
       select.value=value;
       if(value==='ناجح'||value==='راسب'||value==='لم يدخل')td.classList.add(value==='ناجح'?'sheet-result-pass':value==='راسب'?'sheet-result-fail':'sheet-result-absent');
@@ -351,7 +643,15 @@ const Trainees=(()=>{
   function adjustFont(delta){commitEdit();const next=D.format(formatting);next.fontSize=Math.max(10,Math.min(32,next.fontSize+delta));change(cells,true,next);}
   function formatSelection(style){
     commitEdit();const next=D.format(formatting),[r1,r2,c1,c2]=bounds();
-    for(let r=r1;r<=r2;r++){const index=view[r];if(index===undefined)continue;for(const c of visibleCols().filter(c=>c>=c1&&c<=c2)){const key=index+':'+c;if(style===null)delete next.styles[key];else next.styles[key]={...next.styles[key],...style};}}
+    for(let r=r1;r<=r2;r++){
+      const index=view[r];if(index===undefined)continue;
+      for(const c of visibleCols().filter(c=>c>=c1&&c<=c2)){
+        const key=index+':'+c;
+        if(style===null){delete next.styles[key];setCellAlign(index,c,null);}
+        else next.styles[key]={...next.styles[key],...style};
+      }
+    }
+    if(style===null)saveAlignments();
     change(cells,true,next);
   }
   function bounds(){return [Math.min(anchor.r,cursor.r),Math.max(anchor.r,cursor.r),Math.min(anchor.c,cursor.c),Math.max(anchor.c,cursor.c)];}
@@ -363,6 +663,10 @@ const Trainees=(()=>{
     const style=formatting.styles[(view[cursor.r]??0)+':'+cursor.c]||{};
     $('sheet-bold').setAttribute('aria-pressed',String(!!style.bold));$('sheet-selection-size').value=String(style.size||formatting.fontSize);
     $('sheet-fill').value=style.bg||'#fff2cc';$('sheet-text-color').value=style.color||'#16324f';
+    const curAlign=getCellAlign(view[cursor.r]??0,cursor.c)||'';
+    $('sheet-align-right')?.setAttribute('aria-pressed',String(curAlign==='right'));
+    $('sheet-align-center')?.setAttribute('aria-pressed',String(curAlign==='center'));
+    $('sheet-align-left')?.setAttribute('aria-pressed',String(curAlign==='left'));
   }
   function selectCell(r,c,extend=false){commitEdit();cursor={r,c};if(!extend)anchor={r,c};paint();$('sheet-grid').querySelector(`td[data-v="${r}"][data-col="${c}"]`)?.focus();}
   function focusCell(r,c,extend=false){
@@ -429,6 +733,7 @@ const Trainees=(()=>{
     if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'){e.preventDefault();undo(e.shiftKey);return;}
     if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='y'){e.preventDefault();undo(true);return;}
     if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='a'){e.preventDefault();anchor={r:0,c:0};cursor={r:Math.max(0,view.length-1),c:12};paint();return;}
+    if((e.ctrlKey||e.metaKey)&&(e.key.toLowerCase()==='f'||e.key.toLowerCase()==='h')){e.preventDefault();openFindDialog(e.key.toLowerCase()==='h');return;}
     const sign=formatting.direction==='rtl'?-1:1,cols=visibleCols();
     const moves={ArrowDown:[1,0],ArrowUp:[-1,0],ArrowRight:[0,sign],ArrowLeft:[0,-sign]};
     if(moves[e.key]){e.preventDefault();const [r,c]=moves[e.key];const col=cols[Math.max(0,Math.min(cols.length-1,cols.indexOf(cursor.c)+c))];focusCell(cursor.r+r,col,e.shiftKey);return;}
@@ -465,7 +770,7 @@ const Trainees=(()=>{
     catch(error){$('sheet-code-status').textContent=/CONFLICT/.test(error.message||'')?tr('تغيرت الأكواد. حدّث القائمة وحاول مجددًا.','Codes changed. Refresh and try again.'):tr('تعذر تخصيص الأكواد. تأكد أن المستخدم نشط ثم حدّث القائمة.','Could not assign codes. Check that the user is active, then refresh.');}
     finally{codeBusy=false;$('sheet-code-workspace').inert=false;$('sheet-owner').disabled=false;}
   }
-  function reset(){closeDuplicateDetails();clearTimeout(timer);epoch++;owner='';cells=[];formatting=D.defaultFormat();loaded=false;loading=false;editing=null;history=[];future=[];revision=savedRevision=0;if(initialized){render();$('sheet-owner').replaceChildren();$('sheet-code-list').replaceChildren();$('sheet-workspace').inert=true;}}
+  function reset(){closeDuplicateDetails();closeContextMenu();$('sheet-find-dialog')?.close();clearTimeout(timer);epoch++;owner='';cells=[];formatting=D.defaultFormat();loaded=false;loading=false;editing=null;history=[];future=[];revision=savedRevision=0;if(initialized){render();$('sheet-owner').replaceChildren();$('sheet-code-list').replaceChildren();$('sheet-workspace').inert=true;}}
   return {open,translate,hasDraft,flush,reset};
 })();
 Trainees.translate();

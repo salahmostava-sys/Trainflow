@@ -27,8 +27,8 @@
 .sheet-grid th[data-col="1"],.sheet-grid td[data-col="1"]{--col-w:var(--col-w-1,190px)}
 .sheet-grid th[data-col="2"],.sheet-grid td[data-col="2"]{--col-w:var(--col-w-2,220px)}
 .sheet-grid th[data-col="3"],.sheet-grid td[data-col="3"]{--col-w:var(--col-w-3,220px)}
-.sheet-grid th[data-col="4"],.sheet-grid td[data-col="4"]{--col-w:var(--col-w-4,105px);text-align:center!important}
-.sheet-grid th[data-col="5"],.sheet-grid td[data-col="5"]{--col-w:var(--col-w-5,105px);text-align:center!important}
+.sheet-grid th[data-col="4"],.sheet-grid td[data-col="4"]{--col-w:var(--col-w-4,105px);text-align:center}
+.sheet-grid th[data-col="5"],.sheet-grid td[data-col="5"]{--col-w:var(--col-w-5,105px);text-align:center}
 .sheet-grid th[data-col="6"],.sheet-grid td[data-col="6"]{--col-w:var(--col-w-6,200px)}
 .sheet-grid th[data-col="7"],.sheet-grid td[data-col="7"]{--col-w:var(--col-w-7,220px)}
 .sheet-grid th[data-col="8"],.sheet-grid td[data-col="8"]{--col-w:var(--col-w-8,140px)}
@@ -36,7 +36,7 @@
 /* Col 10: Password column sized for A@a#$1970 */
 .sheet-grid th[data-col="10"],.sheet-grid td[data-col="10"]{--col-w:var(--col-w-10,120px)}
 /* Col 11: Result column sized for 8 characters */
-.sheet-grid th[data-col="11"],.sheet-grid td[data-col="11"]{--col-w:var(--col-w-11,85px);text-align:center!important}
+.sheet-grid th[data-col="11"],.sheet-grid td[data-col="11"]{--col-w:var(--col-w-11,85px);text-align:center}
 .sheet-grid th[data-col="12"],.sheet-grid td[data-col="12"]{--col-w:var(--col-w-12,140px)}
 
 .sheet-grid th[data-col="4"] button,.sheet-grid th[data-col="5"] button,.sheet-grid th[data-col="11"] button{padding:2px 4px!important;font-size:11px!important;white-space:normal!important;line-height:1.2!important}
@@ -50,4 +50,32 @@
 .sheet-add-col-popover button:hover{background:var(--blue-50);border-color:var(--blue);color:var(--blue-600)}
 .sheet-add-col-popover .sheet-add-all-btn{background:var(--blue-50);color:var(--blue-600);font-weight:700;margin-top:4px}
 .sheet-add-col-empty{font-size:12px;color:var(--muted);padding:6px 8px;text-align:center}
+
+/* Context Menu */
+.sheet-context-menu{position:fixed;z-index:100;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:0 12px 35px rgba(15,27,46,.22);padding:6px;min-width:180px;display:flex;flex-direction:column;gap:2px;font-size:13px}
+.sheet-context-menu[hidden]{display:none!important}
+.sheet-context-menu button{border:0;background:transparent;color:var(--text);padding:7px 12px;border-radius:6px;font-size:13px;text-align:start;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.sheet-context-menu button:hover{background:var(--blue-50);color:var(--blue-600)}
+.sheet-context-menu hr{border:0;border-top:1px solid var(--border);margin:4px 0}
+.sheet-context-menu .sheet-menu-shortcut{font-size:11px;color:var(--muted)}
+
+/* Alignment Group in Formatting Toolbar */
+.sheet-align-group{display:flex;align-items:center;gap:2px;background:white;border:1px solid var(--border);border-radius:6px;padding:2px}
+.sheet-align-group button{border:0;background:transparent;padding:4px 8px;font-size:13px;cursor:pointer;border-radius:4px;color:var(--text);line-height:1}
+.sheet-align-group button:hover{background:var(--surface-2)}
+.sheet-align-group button[aria-pressed=true]{background:var(--blue-100);color:var(--blue-600);font-weight:700}
+
+/* Find and Replace Modal */
+.sheet-find-dialog{width:min(480px,calc(100vw - 24px));border:1px solid var(--border);border-radius:14px;padding:18px;background:var(--surface);color:var(--text);box-shadow:0 16px 50px rgba(15,27,46,.25);font-family:var(--ui-font)}
+.sheet-find-dialog::backdrop{background:rgba(16,41,87,.4)}
+.sheet-find-body{display:grid;gap:12px;margin-top:14px}
+.sheet-find-row{display:grid;grid-template-columns:85px 1fr;align-items:center;gap:8px;font-size:13px;font-weight:600}
+.sheet-find-row input{padding:7px 10px;border:1px solid var(--border);border-radius:7px;font:inherit;font-size:13px}
+.sheet-find-options{display:flex;gap:16px;font-size:12.5px;color:var(--muted)}
+.sheet-find-options label{display:flex;align-items:center;gap:6px;cursor:pointer}
+.sheet-find-options input{accent-color:var(--blue)}
+.sheet-find-status{margin:0;font-size:12px;color:var(--blue-600);min-height:18px}
+.sheet-find-actions{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+.sheet-find-actions button{padding:6px 12px;border:1px solid var(--border);border-radius:7px;background:var(--surface);font:inherit;font-size:13px;cursor:pointer}
+.sheet-find-actions .sheet-primary{background:var(--blue);color:white;border-color:var(--blue)}
 
