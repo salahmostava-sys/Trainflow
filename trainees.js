@@ -10,6 +10,44 @@ const Trainees=(()=>{
   let dragging=false,dragMoved=false;
   let formatting=D.defaultFormat(),duplicateIds=new Map();
   let hoverTimer,hoverHideTimer,detailTimer,hoverCell=null,detailKey='',detailPage=0,detailSource=-1;
+  let colWidths={};
+  try{colWidths=JSON.parse(localStorage.getItem('ibta_trainee_col_widths')||'{}')||{};}catch{}
+  function applySavedColWidths(){
+    const ws=$('sheet-workspace');if(!ws)return;
+    Object.entries(colWidths).forEach(([c,w])=>{ws.style.setProperty('--col-w-'+c,w+'px');});
+  }
+  function setColumnWidth(c,width){
+    colWidths[c]=Math.round(width);
+    const ws=$('sheet-workspace');if(ws)ws.style.setProperty('--col-w-'+c,width+'px');
+  }
+  function resetColumnWidth(c){
+    delete colWidths[c];
+    const ws=$('sheet-workspace');if(ws)ws.style.removeProperty('--col-w-'+c);
+    saveColumnWidths();
+  }
+  function saveColumnWidths(){
+    try{localStorage.setItem('ibta_trainee_col_widths',JSON.stringify(colWidths));}catch{}
+  }
+  function initColumnResize(e,colIndex,thEl){
+    e.preventDefault();e.stopPropagation();
+    const startX=e.clientX,startWidth=thEl.getBoundingClientRect().width;
+    const isRtl=formatting.direction==='rtl';
+    const resizer=thEl.querySelector('.sheet-col-resizer');
+    resizer?.classList.add('sheet-resizing');
+    function onPointerMove(moveEvent){
+      const delta=(moveEvent.clientX-startX)*(isRtl?-1:1);
+      const newWidth=Math.max(45,Math.min(600,Math.round(startWidth+delta)));
+      setColumnWidth(colIndex,newWidth);
+    }
+    function onPointerUp(){
+      resizer?.classList.remove('sheet-resizing');
+      document.removeEventListener('pointermove',onPointerMove);
+      document.removeEventListener('pointerup',onPointerUp);
+      saveColumnWidths();
+    }
+    document.addEventListener('pointermove',onPointerMove);
+    document.addEventListener('pointerup',onPointerUp);
+  }
   const visibleCols=()=>labels.map((_,c)=>c).filter(c=>!formatting.hidden.includes(c));
   const snapshot=()=>({cells:cells.map(r=>[...r]),format:D.format(formatting)});
   function node(tag,text,attrs={}){const el=document.createElement(tag);if(text!==undefined)el.textContent=text;for(const [key,value]of Object.entries(attrs))el.setAttribute(key,value);return el;}
@@ -206,11 +244,22 @@ const Trainees=(()=>{
     $('sheet-direction').value=formatting.direction;$('sheet-font-size').textContent=formatting.fontSize+' px';
     $('sheet-font-minus').disabled=formatting.fontSize<=10;$('sheet-font-plus').disabled=formatting.fontSize>=32;
     renderColumnOptions();
+    applySavedColWidths();
     $('sheet-duplicate-summary').hidden=!duplicateIds.size;
     $('sheet-duplicate-summary').textContent=tr('أرقام هوية / إقامة مكررة: ','Duplicate national / Iqama IDs: ')+duplicateIds.size+tr(' — الصفوف المعلّمة تعرض عدد التكرار.',' — Highlighted cells show the occurrence count.');
     const grid=$('sheet-grid'),thead=grid.querySelector('thead'),tbody=grid.querySelector('tbody');thead.replaceChildren();tbody.replaceChildren();
     const header=node('tr');header.append(node('th','#',{class:'sheet-rownum'}));
-    labels.forEach((pair,c)=>{if(!cols.includes(c))return;const th=node('th',undefined,{scope:'col','data-col':c});th.append(button(String.fromCharCode(65+c)+' · '+tr(...pair)+(sortCol===c?(sortDir===1?' ↑':' ↓'):''),()=>{commitEdit();sortDir=sortCol===c?-sortDir:1;sortCol=c;page=0;anchor=cursor={r:0,c:cols[0]};render();}));header.append(th);});thead.append(header);
+    labels.forEach((pair,c)=>{
+      if(!cols.includes(c))return;
+      const th=node('th',undefined,{scope:'col','data-col':c});
+      th.append(button(String.fromCharCode(65+c)+' · '+tr(...pair)+(sortCol===c?(sortDir===1?' ↑':' ↓'):''),()=>{commitEdit();sortDir=sortCol===c?-sortDir:1;sortCol=c;page=0;anchor=cursor={r:0,c:cols[0]};render();}));
+      const resizer=node('div',undefined,{class:'sheet-col-resizer','data-resizer-col':c,title:tr('اسحب لتعديل عرض العمود · انقر مرتين للضبط التلقائي','Drag to resize · Double click to reset')});
+      resizer.addEventListener('pointerdown',e=>initColumnResize(e,c,th));
+      resizer.addEventListener('dblclick',e=>{e.stopPropagation();resetColumnWidth(c);});
+      th.append(resizer);
+      header.append(th);
+    });
+    thead.append(header);
     for(let v=page*PAGE;v<Math.min(view.length,(page+1)*PAGE);v++){
       const idx=view[v],row=cells[idx]||D.blank(),trEl=node('tr');const number=node('th',undefined,{class:'sheet-rownum',scope:'row'});
       number.append(button(String(idx+1),e=>{commitEdit();if(e.shiftKey){cursor={r:v,c:12};anchor.c=0;}else{anchor={r:v,c:0};cursor={r:v,c:12};}paint();}));trEl.append(number);
