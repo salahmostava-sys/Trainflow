@@ -154,7 +154,6 @@ const Cloud = (() => {
     $('inventory-whatsapp-number').value=p.inventoryWhatsappNumber || '';
     $('inventory-supervisor-name').value=p.inventorySupervisorName || '';
     $('inventory-message-language').value=p.inventoryMessageLanguage==='en'?'en':'ar';
-    $('low-stock-threshold').value=state.lowStockThreshold;
     $('profile-name').value=accountName();
     $('profile-email').value=user?.email || '';
     currentLang=state.uiLang;

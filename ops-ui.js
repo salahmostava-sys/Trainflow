@@ -107,13 +107,6 @@ document.getElementById('bulk-import-submit').addEventListener('click',async()=>
     opsText('bulk-import-preview',t('bulkImportDone')(added));
   }catch{opsText('bulk-import-preview',t('genericError'));}
 });
-document.getElementById('low-stock-save').addEventListener('click',async()=>{
-  const value=Number(document.getElementById('low-stock-threshold').value);
-  if(!Number.isInteger(value) || value<0 || value>10000)return;
-  state.lowStockThreshold=value;
-  if(await saveState()){renderStats();showToast(t('saved'));}
-});
-
 async function renderMemberList(){
   if(Cloud.role()!=='admin')return;
   const box=document.getElementById('member-list');box.innerHTML='';
