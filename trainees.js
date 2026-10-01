@@ -310,7 +310,6 @@ const Trainees=(()=>{
     if(initialized)return;initialized=true;
     $('panel-trainees').innerHTML=`
       <div class="sheet-heading"><div><h2 id="sheet-title"></h2><p id="sheet-subtitle"></p></div><label class="sheet-owner" id="sheet-owner-wrap" hidden><span id="sheet-owner-label"></span><select id="sheet-owner"></select></label></div>
-      <div class="sheet-subtabs"><button type="button" id="sheet-mode" aria-selected="true"></button><button type="button" id="sheet-codes-mode" aria-selected="false"></button></div>
       <div id="sheet-workspace" class="sheet-card">
         <div class="sheet-tools"><button type="button" id="sheet-add" class="sheet-primary"></button><button type="button" id="sheet-delete"></button><div class="sheet-add-col-wrap"><button type="button" id="sheet-add-col" class="sheet-primary"></button><div id="sheet-add-col-popover" class="sheet-add-col-popover" hidden></div></div><button type="button" id="sheet-del-col"></button><button type="button" id="sheet-find-btn"></button><button type="button" id="sheet-undo"></button><button type="button" id="sheet-redo"></button><button type="button" id="sheet-copy"></button><button type="button" id="sheet-save"></button><button type="button" id="sheet-reload"></button><span class="sheet-status" id="sheet-status" role="status" aria-live="polite"></span></div>
         <div class="sheet-format-tools">
@@ -335,7 +334,7 @@ const Trainees=(()=>{
       </div>
       <div id="sheet-code-workspace" hidden><div class="sheet-code-tools" id="sheet-code-admin" hidden><button type="button" id="sheet-owned"></button><button type="button" id="sheet-pool"></button><button type="button" id="sheet-assign" class="sheet-primary"></button></div><div class="sheet-code-tools"><input id="sheet-code-search" type="search"><button type="button" id="sheet-code-refresh"></button><span id="sheet-code-count"></span></div><p class="sheet-notice" id="sheet-code-notice"></p><div class="sheet-card sheet-code-list" id="sheet-code-list"></div><p id="sheet-code-status" role="status"></p></div>`;
     $('sheet-owner').addEventListener('change',async()=>{const next=$('sheet-owner').value;$('sheet-owner').value=owner;await switchOwner(next);});
-    $('sheet-mode').onclick=()=>setMode('sheet');$('sheet-codes-mode').onclick=()=>setMode('codes');
+    if($('sheet-mode'))$('sheet-mode').onclick=()=>setMode('sheet');if($('sheet-codes-mode'))$('sheet-codes-mode').onclick=()=>setMode('codes');
     $('sheet-save').onclick=()=>flush();$('sheet-reload').onclick=()=>reload();
     $('sheet-add').onclick=()=>{commitEdit();clearFilters();const r=cells.length;if(r>=D.MAX_ROWS)return limitError();const next=cells.map(row=>[...row]);next.push(D.blank());change(next,false);render();focusCell(r,0);};
     $('sheet-delete').onclick=deleteSelectedRows;
@@ -746,7 +745,7 @@ const Trainees=(()=>{
     const td=e.target.closest('td[data-col]');if(td&&(e.key==='F2'||(e.key.length===1&&!e.ctrlKey&&!e.metaKey&&!e.altKey))){e.preventDefault();beginEdit(td,e.key==='F2'?undefined:e.key);}
   }
   function moveTab(back){const cols=visibleCols();let r=cursor.r,c=cols.indexOf(cursor.c)+(back?-1:1);if(c>=cols.length){c=0;r++;}if(c<0){c=cols.length-1;r--;}focusCell(r,cols[c]);}
-  function setMode(next){commitEdit();mode=next;$('sheet-workspace').hidden=mode!=='sheet';$('sheet-code-workspace').hidden=mode!=='codes';$('sheet-mode').setAttribute('aria-selected',String(mode==='sheet'));$('sheet-codes-mode').setAttribute('aria-selected',String(mode==='codes'));if(mode==='codes')renderCodes();}
+  function setMode(next){commitEdit();mode=next;$('sheet-workspace')&&($('sheet-workspace').hidden=mode!=='sheet');$('sheet-code-workspace')&&($('sheet-code-workspace').hidden=mode!=='codes');$('sheet-mode')?.setAttribute('aria-selected',String(mode==='sheet'));$('sheet-codes-mode')?.setAttribute('aria-selected',String(mode==='codes'));if(mode==='codes')renderCodes();}
   function renderCodes(){
     if(!initialized)return;
     const admin=Cloud.role()==='admin',search=$('sheet-code-search').value.toLocaleLowerCase();
