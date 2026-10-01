@@ -573,6 +573,9 @@ const Trainees=(()=>{
       select.value=value;
       if(value==='ناجح'||value==='راسب'||value==='لم يدخل')td.classList.add(value==='ناجح'?'sheet-result-pass':value==='راسب'?'sheet-result-fail':'sheet-result-absent');
       select.onchange=()=>{const v=+td.dataset.v;cursor=anchor={r:v,c:11};change(D.paste(cells,[[select.value]],index,11));};
+      select.addEventListener('pointerdown',e=>e.stopPropagation());
+      select.addEventListener('focus',()=>{const v=+td.dataset.v;if(v!==cursor.r||cursor.c!==11){cursor=anchor={r:v,c:11};paint();}});
+      td.addEventListener('click',()=>{try{select.showPicker?.();}catch{}});
       td.append(select);
     }else{
       td.append(node('span',value,{class:'sheet-cell-value'}));
