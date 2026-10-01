@@ -2,12 +2,15 @@
 const Trainees=(()=>{
   'use strict';
   const D=TraineeData,$=id=>document.getElementById(id),PAGE=100;
-  const labels=[['الكود','Code'],['البريد الإلكتروني','Email'],['الاسم بالعربي','Arabic name'],['الاسم بالإنجليزي','English name'],['رقم الهوية','National ID'],['الجوال','Phone'],['الجهة','Organization'],['الاختبار','Exam'],['تاريخ الاختبار','Exam date'],['اسم المستخدم','Username'],['كلمة المرور','Password'],['النتيجة','Result'],['AnyDesk ID','AnyDesk ID']];
+  const labels=[['الكود','Code'],['البريد الإلكتروني','Email'],['الاسم بالعربي','Arabic name'],['الاسم بالإنجليزي','English name'],['رقم الهوية / الإقامة','National / Iqama ID'],['الجوال','Phone'],['الجهة','Organization'],['الاختبار','Exam'],['تاريخ الاختبار','Exam date'],['اسم المستخدم','Username'],['كلمة المرور','Password'],['النتيجة','Result'],['AnyDesk ID','AnyDesk ID']];
   const tr=(ar,en)=>currentLang==='ar'?ar:en;
   let owner='',cells=[],version=0,revision=0,savedRevision=0,loaded=false,loading=false,epoch=0;
   let timer,saving=null,history=[],future=[],view=[],page=0,sortCol=-1,sortDir=1,anchor={r:0,c:0},cursor={r:0,c:0},editing=null;
   let members=[],mode='sheet',codeMode='owned',codeBusy=false,initialized=false;
   let dragging=false,dragMoved=false;
+  let formatting=D.defaultFormat(),duplicateIds=new Map();
+  const visibleCols=()=>labels.map((_,c)=>c).filter(c=>!formatting.hidden.includes(c));
+  const snapshot=()=>({cells:cells.map(r=>[...r]),format:D.format(formatting)});
   function node(tag,text,attrs={}){const el=document.createElement(tag);if(text!==undefined)el.textContent=text;for(const [key,value]of Object.entries(attrs))el.setAttribute(key,value);return el;}
   function button(text,fn,cls){const b=node('button',text,{type:'button'});if(cls)b.className=cls;b.addEventListener('click',fn);return b;}
   const message=(text,error=false)=>{if(!$('sheet-status'))return;$('sheet-status').textContent=text;$('sheet-status').dataset.error=String(error);};
@@ -20,7 +23,17 @@ const Trainees=(()=>{
       <div class="sheet-subtabs"><button type="button" id="sheet-mode" aria-selected="true"></button><button type="button" id="sheet-codes-mode" aria-selected="false"></button></div>
       <div id="sheet-workspace" class="sheet-card">
         <div class="sheet-tools"><button type="button" id="sheet-add" class="sheet-primary"></button><button type="button" id="sheet-delete"></button><button type="button" id="sheet-undo"></button><button type="button" id="sheet-redo"></button><button type="button" id="sheet-copy"></button><button type="button" id="sheet-save"></button><button type="button" id="sheet-reload"></button><span class="sheet-status" id="sheet-status" role="status" aria-live="polite"></span></div>
-        <div class="sheet-filters"><input id="sheet-search" type="search"><input id="sheet-org" type="search"><input id="sheet-date" type="search"><select id="sheet-result"></select><button type="button" id="sheet-clear-filters"></button></div>
+        <div class="sheet-format-tools">
+          <details id="sheet-columns"><summary id="sheet-columns-title"></summary><div id="sheet-column-options"></div></details>
+          <button type="button" id="sheet-font-minus">A−</button><output id="sheet-font-size"></output><button type="button" id="sheet-font-plus">A+</button>
+          <label><span id="sheet-selection-size-label"></span><select id="sheet-selection-size"></select></label>
+          <button type="button" id="sheet-bold"><b>B</b></button>
+          <label><span id="sheet-fill-label"></span><input type="color" id="sheet-fill" value="#fff2cc"></label>
+          <label><span id="sheet-text-color-label"></span><input type="color" id="sheet-text-color" value="#16324f"></label>
+          <button type="button" id="sheet-clear-format"></button><label><span id="sheet-direction-label"></span><select id="sheet-direction"><option value="rtl">يمين ← يسار</option><option value="ltr">Left → Right</option></select></label>
+        </div>
+        <div class="sheet-filters"><input id="sheet-search" type="search"><input id="sheet-org" type="search"><input id="sheet-date" type="search"><select id="sheet-result"></select><label class="sheet-duplicates-filter"><input type="checkbox" id="sheet-duplicates-only"><span id="sheet-duplicates-label"></span></label><button type="button" id="sheet-clear-filters"></button></div>
+        <div id="sheet-duplicate-summary" class="sheet-duplicate-summary" role="status" hidden></div>
         <div class="sheet-formula"><code id="sheet-address">A1</code><input id="sheet-formula" autocomplete="off" spellcheck="false" dir="auto"></div>
         <div class="sheet-scroll"><table class="sheet-grid" id="sheet-grid" role="grid" aria-label="Trainees"><thead></thead><tbody></tbody></table></div>
         <div class="sheet-footer"><p id="sheet-help"></p><div class="sheet-pages"><button type="button" id="sheet-prev">‹</button><span id="sheet-count"></span><button type="button" id="sheet-next">›</button></div></div>
@@ -30,19 +43,28 @@ const Trainees=(()=>{
     $('sheet-mode').onclick=()=>setMode('sheet');$('sheet-codes-mode').onclick=()=>setMode('codes');
     $('sheet-save').onclick=()=>flush();$('sheet-reload').onclick=()=>reload();
     $('sheet-add').onclick=()=>{commitEdit();clearFilters();const r=cells.length;if(r>=D.MAX_ROWS)return limitError();const next=cells.map(row=>[...row]);next.push(D.blank());change(next,false);render();focusCell(r,0);};
-    $('sheet-delete').onclick=()=>{commitEdit();const [r1,r2]=bounds();const ids=new Set(view.slice(r1,r2+1));if(!ids.size||!confirm(tr('حذف الصفوف المحددة؟','Delete selected rows?')))return;change(cells.filter((_,i)=>!ids.has(i)));};
+    $('sheet-delete').onclick=()=>{commitEdit();const [r1,r2]=bounds();const ids=new Set(view.slice(r1,r2+1));if(!ids.size||!confirm(tr('حذف الصفوف المحددة؟','Delete selected rows?')))return;const next=D.removeRows(cells,formatting,ids);change(next.cells,true,next.format);};
+    $('sheet-font-minus').onclick=()=>adjustFont(-1);$('sheet-font-plus').onclick=()=>adjustFont(1);
+    $('sheet-direction').onchange=()=>{commitEdit();const next=D.format(formatting);next.direction=$('sheet-direction').value;change(cells,true,next);};
+    $('sheet-fill').onchange=()=>formatSelection({bg:$('sheet-fill').value});
+    $('sheet-text-color').onchange=()=>formatSelection({color:$('sheet-text-color').value});
+    $('sheet-bold').onclick=()=>formatSelection({bold:!formatting.styles[(view[cursor.r]??0)+':'+cursor.c]?.bold});
+    $('sheet-clear-format').onclick=()=>formatSelection(null);
+    $('sheet-selection-size').onchange=()=>formatSelection({size:Number($('sheet-selection-size').value)});
+    for(let size=10;size<=32;size++)$('sheet-selection-size').append(node('option',String(size),{value:size}));
     $('sheet-undo').onclick=()=>undo(false);$('sheet-redo').onclick=()=>undo(true);
     $('sheet-copy').onclick=async()=>{commitEdit();if(await copyText(D.tsv(cells)))message(tr('تم نسخ الجدول بالكامل','Entire sheet copied'));};
     ['sheet-search','sheet-org','sheet-date','sheet-result'].forEach(id=>$(id).addEventListener('input',()=>{commitEdit();page=0;anchor=cursor={r:0,c:0};render();}));
+    $('sheet-duplicates-only').onchange=()=>{commitEdit();page=0;anchor=cursor={r:0,c:0};render();};
     $('sheet-clear-filters').onclick=()=>{commitEdit();clearFilters();render();};
     $('sheet-prev').onclick=()=>{commitEdit();page=Math.max(0,page-1);render();};$('sheet-next').onclick=()=>{commitEdit();page++;render();};
     $('sheet-formula').addEventListener('change',()=>{if(!loaded)return;const idx=view[cursor.r];if(idx===undefined)return;try{change(D.paste(cells,[[$('sheet-formula').value]],idx,cursor.c));}catch{limitError();}});
     $('sheet-formula').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();$('sheet-formula').blur();focusCell(cursor.r,cursor.c);}});
     const grid=$('sheet-grid');
-    grid.addEventListener('pointerdown',e=>{const td=e.target.closest('td[data-col]');if(e.button!==0||e.pointerType==='touch'||!td||editing?.el===td)return;e.preventDefault();dragging=true;dragMoved=false;selectCell(+td.dataset.v,+td.dataset.col,e.shiftKey);});
+    grid.addEventListener('pointerdown',e=>{const td=e.target.closest('td[data-col]');if(e.target.closest('select')){commitEdit();if(td){cursor=anchor={r:+td.dataset.v,c:+td.dataset.col};paint();}return;}if(e.button!==0||e.pointerType==='touch'||!td||editing?.el===td)return;e.preventDefault();dragging=true;dragMoved=false;selectCell(+td.dataset.v,+td.dataset.col,e.shiftKey);});
     grid.addEventListener('pointerover',e=>{const td=e.target.closest('td[data-col]');if(!dragging||!td)return;const r=+td.dataset.v,c=+td.dataset.col;if(r!==cursor.r||c!==cursor.c){dragMoved=true;cursor={r,c};paint();}});
     document.addEventListener('pointerup',()=>{dragging=false;});
-    grid.addEventListener('click',e=>{if(dragMoved){dragMoved=false;return;}const td=e.target.closest('td[data-col]');if(!td||editing?.el===td)return;selectCell(+td.dataset.v,+td.dataset.col,e.shiftKey);});
+    grid.addEventListener('click',e=>{if(e.target.closest('select'))return;if(dragMoved){dragMoved=false;return;}const td=e.target.closest('td[data-col]');if(!td||editing?.el===td)return;selectCell(+td.dataset.v,+td.dataset.col,e.shiftKey);});
     grid.addEventListener('dblclick',e=>{const td=e.target.closest('td[data-col]');if(td)beginEdit(td);});
     grid.addEventListener('keydown',keyDown);grid.addEventListener('paste',paste);
     grid.addEventListener('copy',e=>{if(editing)return;e.preventDefault();e.clipboardData.setData('text/plain',selectionText());});
@@ -62,13 +84,18 @@ const Trainees=(()=>{
       'sheet-copy':['نسخ الجدول','Copy sheet'],'sheet-save':['حفظ الآن','Save now'],'sheet-reload':['إعادة تحميل','Reload'],'sheet-clear-filters':['مسح الفلاتر','Clear filters'],
       'sheet-help':['للكتابة: انقر مرتين أو ابدأ الكتابة · اسحب أو Shift + نقر لتحديد نطاق · Ctrl+C / Ctrl+V · Tab والأسهم للتنقل','Double-click or type to edit · Drag or Shift+click selects a range · Ctrl+C / Ctrl+V · Tab and arrow navigation'],
       'sheet-owned':['أكواد المستخدم','User codes'],'sheet-pool':['المخزون غير المخصص','Unassigned stock'],'sheet-code-refresh':['تحديث الأكواد','Refresh codes']
+      ,'sheet-columns-title':['إظهار / إخفاء الأعمدة','Show / hide columns'],'sheet-fill-label':['لون الخلية','Cell fill'],'sheet-text-color-label':['لون الخط','Text color'],
+      'sheet-clear-format':['مسح التنسيق','Clear formatting'],'sheet-direction-label':['الاتجاه','Direction'],'sheet-selection-size-label':['حجم المحدد','Selection size'],
+      'sheet-duplicates-label':['الإقامات المكررة فقط','Duplicate IDs only']
     };for(const [id,pair]of Object.entries(text))$(id).textContent=tr(...pair);
     for(const [id,pair]of Object.entries({'sheet-search':['بحث في الجدول…','Search sheet…'],'sheet-org':['فلترة بالجهة…','Filter organization…'],'sheet-date':['فلترة بتاريخ الاختبار…','Filter exam date…'],'sheet-code-search':['بحث عن كود…','Search codes…']})){$(id).placeholder=tr(...pair);$(id).setAttribute('aria-label',tr(...pair));}
     $('sheet-formula').setAttribute('aria-label',tr('محتوى الخلية المحددة','Selected cell value'));
     $('sheet-prev').setAttribute('aria-label',tr('الصفحة السابقة','Previous page'));$('sheet-next').setAttribute('aria-label',tr('الصفحة التالية','Next page'));
     const value=$('sheet-result').value;$('sheet-result').replaceChildren();
-    [['',tr('كل النتائج','All results')],['ناجح',tr('ناجح','Passed')],['راسب',tr('راسب','Failed')],['لم يدخل',tr('لم يدخل','Absent')]].forEach(([v,label])=>$('sheet-result').append(node('option',label,{value:v})));
+    [['',tr('كل النتائج','All results')],['ناجح','ناجح'],['راسب','راسب'],['لم يدخل','لم يدخل']].forEach(([v,label])=>$('sheet-result').append(node('option',label,{value:v})));
     $('sheet-result').value=value;$('sheet-result').setAttribute('aria-label',tr('النتيجة','Result'));
+    $('sheet-font-minus').title=tr('تصغير خط الجدول','Smaller sheet text');$('sheet-font-plus').title=tr('تكبير خط الجدول','Larger sheet text');$('sheet-bold').title=tr('خط عريض للمحدد','Bold selection');
+    $('sheet-copy').title=tr('نسخ كل الأعمدة بما فيها المخفية','Copy every column, including hidden columns');
     if(!editing)render();renderCodes();
   }
   async function open(){
@@ -89,7 +116,7 @@ const Trainees=(()=>{
     message(tr('جارٍ تحميل الجدول…','Loading sheet…'));
     try{
       const data=await Cloud.readTrainees(next);if(token!==epoch)return false;
-      const normalized=D.normalize(data.cells);owner=next;cells=normalized;version=Number(data.version);revision=savedRevision=0;history=[];future=[];loaded=true;
+      const normalized=D.normalize(data.cells);owner=next;cells=normalized;formatting=D.format(data.format);version=Number(data.version);revision=savedRevision=0;history=[];future=[];loaded=true;
       clearFilters();anchor=cursor={r:0,c:0};$('sheet-owner').value=owner;render();renderCodes();message(tr('تم الحفظ','Saved'));return true;
     }catch(error){if(token===epoch)message(errorMessage(error),true);return false;}
     finally{if(token===epoch){loading=false;$('sheet-owner').disabled=false;$('sheet-workspace').inert=!loaded;}}
@@ -99,27 +126,65 @@ const Trainees=(()=>{
     if(hasDraft()&&!confirm(tr('إعادة التحميل ستستبدل تعديلاتك غير المحفوظة. انسخ الجدول أولًا للاحتفاظ بها. المتابعة؟','Reload replaces unsaved edits. Copy the sheet first to keep them. Continue?')))return;
     clearTimeout(timer);await switchOwner(owner||Cloud.userId(),true);
   }
-  function clearFilters(){['sheet-search','sheet-org','sheet-date','sheet-result'].forEach(id=>$(id).value='');sortCol=-1;page=0;}
-  function filtered(){return sortCol>=0||['sheet-search','sheet-org','sheet-date','sheet-result'].some(id=>$(id).value);}
+  function clearFilters(){['sheet-search','sheet-org','sheet-date','sheet-result'].forEach(id=>$(id).value='');$('sheet-duplicates-only').checked=false;sortCol=-1;page=0;}
+  function filtered(){return sortCol>=0||$('sheet-duplicates-only').checked||['sheet-search','sheet-org','sheet-date','sheet-result'].some(id=>$(id).value);}
   function buildView(){
     const search=$('sheet-search').value.toLocaleLowerCase(),org=$('sheet-org').value.toLocaleLowerCase(),date=$('sheet-date').value.toLocaleLowerCase(),result=$('sheet-result').value;
-    view=cells.map((_,i)=>i).filter(i=>(!search||cells[i].some(v=>v.toLocaleLowerCase().includes(search)))&&(!org||cells[i][6].toLocaleLowerCase().includes(org))&&(!date||cells[i][8].toLocaleLowerCase().includes(date))&&(!result||cells[i][11]===result));
+    duplicateIds=D.duplicates(cells);
+    view=cells.map((_,i)=>i).filter(i=>(!search||cells[i].some(v=>v.toLocaleLowerCase().includes(search)))&&(!org||cells[i][6].toLocaleLowerCase().includes(org))&&(!date||cells[i][8].toLocaleLowerCase().includes(date))&&(!result||cells[i][11]===result)&&(!$('sheet-duplicates-only').checked||duplicateIds.has(D.idKey(cells[i][4]))));
     if(sortCol>=0)view.sort((a,b)=>sortDir*cells[a][sortCol].localeCompare(cells[b][sortCol],currentLang,{numeric:true})||a-b);
     if(!filtered())for(let i=cells.length;i<Math.min(D.MAX_ROWS,Math.max(25,cells.length+5));i++)view.push(i);
   }
   function render(){
     if(!initialized)return;buildView();page=Math.min(page,Math.max(0,Math.ceil(view.length/PAGE)-1));
+    const cols=visibleCols();if(!cols.includes(cursor.c))cursor.c=cols[0];if(!cols.includes(anchor.c))anchor.c=cursor.c;
+    $('panel-trainees').dir=formatting.direction;
+    $('sheet-workspace').style.setProperty('--sheet-font-size',formatting.fontSize+'px');
+    $('sheet-grid').parentElement.dir=formatting.direction;
+    $('sheet-direction').value=formatting.direction;$('sheet-font-size').textContent=formatting.fontSize+' px';
+    $('sheet-font-minus').disabled=formatting.fontSize<=10;$('sheet-font-plus').disabled=formatting.fontSize>=32;
+    renderColumnOptions();
+    $('sheet-duplicate-summary').hidden=!duplicateIds.size;
+    $('sheet-duplicate-summary').textContent=tr('أرقام هوية / إقامة مكررة: ','Duplicate national / Iqama IDs: ')+duplicateIds.size+tr(' — الصفوف المعلّمة تعرض عدد التكرار.',' — Highlighted cells show the occurrence count.');
     const grid=$('sheet-grid'),thead=grid.querySelector('thead'),tbody=grid.querySelector('tbody');thead.replaceChildren();tbody.replaceChildren();
     const header=node('tr');header.append(node('th','#',{class:'sheet-rownum'}));
-    labels.forEach((pair,c)=>{const th=node('th',undefined,{scope:'col'});th.append(button(String.fromCharCode(65+c)+' · '+tr(...pair)+(sortCol===c?(sortDir===1?' ↑':' ↓'):''),()=>{commitEdit();sortDir=sortCol===c?-sortDir:1;sortCol=c;page=0;anchor=cursor={r:0,c:0};render();}));header.append(th);});thead.append(header);
+    labels.forEach((pair,c)=>{if(!cols.includes(c))return;const th=node('th',undefined,{scope:'col','data-col':c});th.append(button(String.fromCharCode(65+c)+' · '+tr(...pair)+(sortCol===c?(sortDir===1?' ↑':' ↓'):''),()=>{commitEdit();sortDir=sortCol===c?-sortDir:1;sortCol=c;page=0;anchor=cursor={r:0,c:cols[0]};render();}));header.append(th);});thead.append(header);
     for(let v=page*PAGE;v<Math.min(view.length,(page+1)*PAGE);v++){
       const idx=view[v],row=cells[idx]||D.blank(),trEl=node('tr');const number=node('th',undefined,{class:'sheet-rownum',scope:'row'});
       number.append(button(String(idx+1),e=>{commitEdit();if(e.shiftKey){cursor={r:v,c:12};anchor.c=0;}else{anchor={r:v,c:0};cursor={r:v,c:12};}paint();}));trEl.append(number);
-      row.forEach((value,c)=>{const td=node('td',value,{'data-v':v,'data-col':c,tabindex:'-1',role:'gridcell',dir:'auto','aria-label':tr(...labels[c])+' '+(idx+1)});if(c===11)td.classList.add(value==='ناجح'?'sheet-result-pass':value==='راسب'?'sheet-result-fail':'sheet-result-other');trEl.append(td);});tbody.append(trEl);
+      row.forEach((value,c)=>{if(!cols.includes(c))return;const td=node('td',undefined,{'data-v':v,'data-col':c,tabindex:'-1',role:'gridcell',dir:'auto','aria-label':tr(...labels[c])+' '+(idx+1)});decorateCell(td,idx,c);trEl.append(td);});tbody.append(trEl);
     }
     $('sheet-count').textContent=tr('الصفوف: ','Rows: ')+cells.filter(r=>r.some(Boolean)).length+' · '+(page+1)+' / '+Math.max(1,Math.ceil(view.length/PAGE));
     $('sheet-prev').disabled=page===0;$('sheet-next').disabled=(page+1)*PAGE>=view.length;
     $('sheet-undo').disabled=!history.length;$('sheet-redo').disabled=!future.length;paint();
+  }
+  function decorateCell(td,index,column){
+    const value=cells[index]?.[column]||'',style=formatting.styles[index+':'+column]||{};
+    td.replaceChildren();td.style.backgroundColor=style.bg||'';td.style.color=style.color||'';
+    td.style.fontSize=style.size?style.size+'px':'';td.style.fontWeight=style.bold?'700':'';
+    td.classList.remove('sheet-result-pass','sheet-result-fail','sheet-result-absent','sheet-id-duplicate');td.removeAttribute('title');
+    if(column===11){
+      const select=node('select',undefined,{'aria-label':tr('النتيجة للصف ','Result for row ')+(index+1),class:'sheet-result-select',dir:'rtl'});
+      ['', 'ناجح','راسب','لم يدخل',...(!['','ناجح','راسب','لم يدخل'].includes(value)?[value]:[])].forEach(v=>select.append(node('option',v||'—',{value:v})));
+      select.value=value;
+      if(value==='ناجح'||value==='راسب'||value==='لم يدخل')td.classList.add(value==='ناجح'?'sheet-result-pass':value==='راسب'?'sheet-result-fail':'sheet-result-absent');
+      select.onchange=()=>{const v=+td.dataset.v;cursor=anchor={r:v,c:11};change(D.paste(cells,[[select.value]],index,11));};
+      td.append(select);
+    }else{
+      td.append(node('span',value,{class:'sheet-cell-value'}));
+      if(column===4){const duplicates=duplicateIds.get(D.idKey(value));if(duplicates){td.classList.add('sheet-id-duplicate');td.append(node('span',tr('مكرر ×','Duplicate ×')+duplicates.length,{class:'sheet-duplicate-badge'}));td.title=tr('مكرر في الصفوف: ','Repeated in rows: ')+duplicates.map(i=>i+1).join(', ');}}
+    }
+  }
+  function renderColumnOptions(){
+    const box=$('sheet-column-options');box.replaceChildren();
+    box.append(button(tr('إظهار الكل','Show all'),()=>{commitEdit();const next=D.format(formatting);next.hidden=[];change(cells,true,next);}));
+    labels.forEach((pair,c)=>{const label=node('label'),input=node('input',undefined,{type:'checkbox','data-column-toggle':c});input.checked=!formatting.hidden.includes(c);input.disabled=input.checked&&visibleCols().length===1;input.onchange=()=>{commitEdit();const next=D.format(formatting);next.hidden=input.checked?next.hidden.filter(i=>i!==c):[...next.hidden,c];change(cells,true,next);};label.append(input,node('span',tr(...pair)));box.append(label);});
+  }
+  function adjustFont(delta){commitEdit();const next=D.format(formatting);next.fontSize=Math.max(10,Math.min(32,next.fontSize+delta));change(cells,true,next);}
+  function formatSelection(style){
+    commitEdit();const next=D.format(formatting),[r1,r2,c1,c2]=bounds();
+    for(let r=r1;r<=r2;r++){const index=view[r];if(index===undefined)continue;for(const c of visibleCols().filter(c=>c>=c1&&c<=c2)){const key=index+':'+c;if(style===null)delete next.styles[key];else next.styles[key]={...next.styles[key],...style};}}
+    change(cells,true,next);
   }
   function bounds(){return [Math.min(anchor.r,cursor.r),Math.max(anchor.r,cursor.r),Math.min(anchor.c,cursor.c),Math.max(anchor.c,cursor.c)];}
   function paint(){
@@ -127,55 +192,64 @@ const Trainees=(()=>{
     $('sheet-grid').querySelectorAll('td[data-col]').forEach(td=>{const r=+td.dataset.v,c=+td.dataset.col,current=r===cursor.r&&c===cursor.c;td.classList.toggle('sheet-selected',r>=r1&&r<=r2&&c>=c1&&c<=c2);td.classList.toggle('sheet-current',current);td.tabIndex=current?0:-1;td.setAttribute('aria-selected',String(r>=r1&&r<=r2&&c>=c1&&c<=c2));});
     $('sheet-address').textContent=String.fromCharCode(65+cursor.c)+((view[cursor.r]??0)+1);
     if(document.activeElement!==$('sheet-formula'))$('sheet-formula').value=cells[view[cursor.r]]?.[cursor.c]||'';
+    const style=formatting.styles[(view[cursor.r]??0)+':'+cursor.c]||{};
+    $('sheet-bold').setAttribute('aria-pressed',String(!!style.bold));$('sheet-selection-size').value=String(style.size||formatting.fontSize);
+    $('sheet-fill').value=style.bg||'#fff2cc';$('sheet-text-color').value=style.color||'#16324f';
   }
   function selectCell(r,c,extend=false){commitEdit();cursor={r,c};if(!extend)anchor={r,c};paint();$('sheet-grid').querySelector(`td[data-v="${r}"][data-col="${c}"]`)?.focus();}
   function focusCell(r,c,extend=false){
-    r=Math.max(0,Math.min(view.length-1,r));c=Math.max(0,Math.min(12,c));const nextPage=Math.floor(r/PAGE);if(page!==nextPage){page=nextPage;render();}selectCell(r,c,extend);
+    r=Math.max(0,Math.min(view.length-1,r));c=Math.max(0,Math.min(12,c));if(!visibleCols().includes(c))c=visibleCols()[0];const nextPage=Math.floor(r/PAGE);if(page!==nextPage){page=nextPage;render();}selectCell(r,c,extend);
   }
   function beginEdit(td,initial){
     if(!loaded||loading)return;commitEdit();const r=+td.dataset.v,c=+td.dataset.col;cursor=anchor={r,c};paint();
+    if(c===11){td.querySelector('select')?.focus();return;}
     editing={el:td,index:view[r],column:c,old:cells[view[r]]?.[c]||''};td.contentEditable='true';td.spellcheck=false;
-    if(initial!==undefined)td.textContent=initial;td.focus();
+    td.textContent=initial!==undefined?initial:editing.old;td.focus();
     const range=document.createRange();range.selectNodeContents(td);range.collapse(false);const selection=window.getSelection();selection.removeAllRanges();selection.addRange(range);
     td.addEventListener('blur',()=>commitEdit(),{once:true});
   }
   function commitEdit(cancel=false){
     if(!editing)return;const edit=editing;editing=null;edit.el.contentEditable='false';
     const value=cancel?edit.old:edit.el.textContent;edit.el.textContent=value;
-    if(value===edit.old)return;
-    try{change(D.paste(cells,[[value]],edit.index,edit.column),false);paint();}
-    catch{edit.el.textContent=edit.old;limitError();}
+    if(value!==edit.old){try{change(D.paste(cells,[[value]],edit.index,edit.column),false);}
+      catch{limitError();}}
+    duplicateIds=D.duplicates(cells);decorateCell(edit.el,edit.index,edit.column);
+    if(edit.column===4){$('sheet-grid').querySelectorAll('td[data-col="4"]').forEach(td=>decorateCell(td,view[+td.dataset.v],4));$('sheet-duplicate-summary').hidden=!duplicateIds.size;$('sheet-duplicate-summary').textContent=tr('أرقام هوية / إقامة مكررة: ','Duplicate national / Iqama IDs: ')+duplicateIds.size;}
+    paint();
   }
-  function change(next,redraw=true){
-    if(!loaded)return;history.push(cells.map(r=>[...r]));if(history.length>30)history.shift();future=[];cells=next;revision++;schedule();if(redraw)render();else{$('sheet-undo').disabled=false;$('sheet-redo').disabled=true;}
+  function change(next,redraw=true,nextFormat=formatting){
+    if(!loaded)return;history.push(snapshot());if(history.length>30)history.shift();future=[];cells=next;formatting=D.format(nextFormat);revision++;schedule();if(redraw)render();else{$('sheet-undo').disabled=false;$('sheet-redo').disabled=true;}
   }
-  function undo(redo){commitEdit();const from=redo?future:history,to=redo?history:future;if(!from.length)return;to.push(cells);cells=from.pop();revision++;schedule();render();}
+  function undo(redo){commitEdit();const from=redo?future:history,to=redo?history:future;if(!from.length)return;to.push(snapshot());const next=from.pop();cells=next.cells;formatting=D.format(next.format);revision++;schedule();render();}
   function schedule(){clearTimeout(timer);message(tr('تعديلات غير محفوظة…','Unsaved changes…'));const saveWhenIdle=()=>{if(editing){timer=setTimeout(saveWhenIdle,900);return;}flush();};timer=setTimeout(saveWhenIdle,900);}
   function hasDraft(){return !!editing||revision!==savedRevision||!!saving;}
   async function flush(){
     commitEdit();clearTimeout(timer);if(saving){const ok=await saving;if(!ok)return false;return flush();}
     if(!loaded||revision===savedRevision)return true;
-    const token=epoch,snapshot=revision,saveOwner=owner,data=D.normalize(cells);
+    const token=epoch,snapshot=revision,saveOwner=owner,data=D.normalize(cells),saveFormat=D.format(formatting);
     message(tr('جارٍ الحفظ…','Saving…'));
     saving=(async()=>{
-      try{const result=await Cloud.saveTrainees(saveOwner,data,version);if(token!==epoch)return false;version=Number(result);savedRevision=snapshot;message(revision===savedRevision?tr('تم الحفظ','Saved'):tr('تعديلات غير محفوظة…','Unsaved changes…'));return true;}
+      try{const result=await Cloud.saveTrainees(saveOwner,data,version,saveFormat);if(token!==epoch)return false;version=Number(result);savedRevision=snapshot;message(revision===savedRevision?tr('تم الحفظ','Saved'):tr('تعديلات غير محفوظة…','Unsaved changes…'));return true;}
       catch(error){if(token===epoch)message(errorMessage(error),true);return false;}
     })();const ok=await saving;saving=null;
     if(ok&&token===epoch&&revision!==savedRevision)return flush();return ok;
   }
   function limitError(){message(tr('الحد الأقصى 5000 صف و13 عمودًا و2000 حرف للخلية.','Limit: 5,000 rows, 13 columns and 2,000 characters per cell.'),true);}
-  function selectionText(){const [r1,r2,c1,c2]=bounds();return D.tsv(view.slice(r1,r2+1).map(i=>(cells[i]||D.blank()).slice(c1,c2+1)));}
-  function clearSelection(){if(!loaded)return;const next=cells.map(row=>[...row]);const [r1,r2,c1,c2]=bounds();for(let r=r1;r<=r2;r++){const idx=view[r];if(!next[idx])continue;for(let c=c1;c<=c2;c++)next[idx][c]='';}change(D.normalize(next));}
+  function selectionText(){const [r1,r2,c1,c2]=bounds(),cols=visibleCols().filter(c=>c>=c1&&c<=c2);return D.tsv(view.slice(r1,r2+1).map(i=>cols.map(c=>cells[i]?.[c]||'')));}
+  function clearSelection(){if(!loaded)return;const next=cells.map(row=>[...row]);const [r1,r2,c1,c2]=bounds();for(let r=r1;r<=r2;r++){const idx=view[r];if(!next[idx])continue;for(const c of visibleCols().filter(c=>c>=c1&&c<=c2))next[idx][c]='';}change(D.normalize(next));}
   function paste(e){
     if(!loaded)return;e.preventDefault();commitEdit();
     try{
       const values=D.parse(e.clipboardData.getData('text/plain'));if(filtered()&&values.length>1){message(tr('امسح الفلاتر والفرز قبل لصق عدة صفوف.','Clear filters and sorting before pasting multiple rows.'),true);return;}
       const [r,,c]=bounds(),idx=view[r];if(idx===undefined)return;
-      change(D.paste(cells,values,idx,c));anchor={r,c};cursor={r:r+values.length-1,c:c+Math.max(...values.map(v=>v.length))-1};paint();
+      const targets=visibleCols().filter(col=>col>=c),width=Math.max(...values.map(v=>v.length));if(width>targets.length)throw Error('PASTE_BOUNDS');
+      let next=cells;for(let col=0;col<width;col++){const column=values.map(row=>col<row.length?[row[col]]:[]);next=D.paste(next,column,idx,targets[col]);}
+      change(next);anchor={r,c};cursor={r:r+values.length-1,c:targets[width-1]};paint();
     }catch{limitError();}
   }
   function keyDown(e){
     if(!loaded)return;
+    if(e.target.matches('select')){if(e.key==='Tab'){e.preventDefault();const td=e.target.closest('td');cursor=anchor={r:+td.dataset.v,c:+td.dataset.col};moveTab(e.shiftKey);}return;}
     if(editing){
       if(e.key==='Escape'){e.preventDefault();commitEdit(true);focusCell(cursor.r,cursor.c);}
       else if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();commitEdit();render();focusCell(cursor.r+1,cursor.c);}
@@ -185,14 +259,15 @@ const Trainees=(()=>{
     if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'){e.preventDefault();undo(e.shiftKey);return;}
     if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='y'){e.preventDefault();undo(true);return;}
     if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='a'){e.preventDefault();anchor={r:0,c:0};cursor={r:Math.max(0,view.length-1),c:12};paint();return;}
-    const moves={ArrowDown:[1,0],ArrowUp:[-1,0],ArrowRight:[0,1],ArrowLeft:[0,-1]};
-    if(moves[e.key]){e.preventDefault();const [r,c]=moves[e.key];focusCell(cursor.r+r,cursor.c+c,e.shiftKey);return;}
+    const sign=formatting.direction==='rtl'?-1:1,cols=visibleCols();
+    const moves={ArrowDown:[1,0],ArrowUp:[-1,0],ArrowRight:[0,sign],ArrowLeft:[0,-sign]};
+    if(moves[e.key]){e.preventDefault();const [r,c]=moves[e.key];const col=cols[Math.max(0,Math.min(cols.length-1,cols.indexOf(cursor.c)+c))];focusCell(cursor.r+r,col,e.shiftKey);return;}
     if(e.key==='Tab'){e.preventDefault();moveTab(e.shiftKey);return;}
     if(e.key==='Enter'){e.preventDefault();focusCell(cursor.r+(e.shiftKey?-1:1),cursor.c);return;}
     if(e.key==='Delete'||e.key==='Backspace'){e.preventDefault();clearSelection();return;}
     const td=e.target.closest('td[data-col]');if(td&&(e.key==='F2'||(e.key.length===1&&!e.ctrlKey&&!e.metaKey&&!e.altKey))){e.preventDefault();beginEdit(td,e.key==='F2'?undefined:e.key);}
   }
-  function moveTab(back){let r=cursor.r,c=cursor.c+(back?-1:1);if(c>12){c=0;r++;}if(c<0){c=12;r--;}focusCell(r,c);}
+  function moveTab(back){const cols=visibleCols();let r=cursor.r,c=cols.indexOf(cursor.c)+(back?-1:1);if(c>=cols.length){c=0;r++;}if(c<0){c=cols.length-1;r--;}focusCell(r,cols[c]);}
   function setMode(next){commitEdit();mode=next;$('sheet-workspace').hidden=mode!=='sheet';$('sheet-code-workspace').hidden=mode!=='codes';$('sheet-mode').setAttribute('aria-selected',String(mode==='sheet'));$('sheet-codes-mode').setAttribute('aria-selected',String(mode==='codes'));if(mode==='codes')renderCodes();}
   function renderCodes(){
     if(!initialized)return;
@@ -220,7 +295,7 @@ const Trainees=(()=>{
     catch(error){$('sheet-code-status').textContent=/CONFLICT/.test(error.message||'')?tr('تغيرت الأكواد. حدّث القائمة وحاول مجددًا.','Codes changed. Refresh and try again.'):tr('تعذر تخصيص الأكواد. تأكد أن المستخدم نشط ثم حدّث القائمة.','Could not assign codes. Check that the user is active, then refresh.');}
     finally{codeBusy=false;$('sheet-code-workspace').inert=false;$('sheet-owner').disabled=false;}
   }
-  function reset(){clearTimeout(timer);epoch++;owner='';cells=[];loaded=false;loading=false;editing=null;history=[];future=[];revision=savedRevision=0;if(initialized){render();$('sheet-owner').replaceChildren();$('sheet-code-list').replaceChildren();$('sheet-workspace').inert=true;}}
+  function reset(){clearTimeout(timer);epoch++;owner='';cells=[];formatting=D.defaultFormat();loaded=false;loading=false;editing=null;history=[];future=[];revision=savedRevision=0;if(initialized){render();$('sheet-owner').replaceChildren();$('sheet-code-list').replaceChildren();$('sheet-workspace').inert=true;}}
   return {open,translate,hasDraft,flush,reset};
 })();
 Trainees.translate();

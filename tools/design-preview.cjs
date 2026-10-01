@@ -7,11 +7,11 @@ const mock=`const previewSheets=new Map();const previewCodes=[{code:'DEMO-PRIVAT
   refresh:async()=>true,
   listMembers:async()=>[{email:'user@example.invalid',user_id:'demo-user',active:true}],
   async readTrainees(owner){if(window.previewReadError)throw Error('NETWORK');return JSON.parse(JSON.stringify(previewSheets.get(owner)||{cells:[],version:0}));},
-  async saveTrainees(owner,cells,version){
+  async saveTrainees(owner,cells,version,format){
     if(window.previewDelay)await new Promise(resolve=>setTimeout(resolve,window.previewDelay));
     if(window.previewSaveError)throw Error(window.previewSaveError);
     const old=previewSheets.get(owner)||{version:0};if(old.version!==version)throw Error('CONFLICT');
-    previewSheets.set(owner,{cells:JSON.parse(JSON.stringify(cells)),version:version+1});return version+1;
+    previewSheets.set(owner,{cells:JSON.parse(JSON.stringify(cells)),format:JSON.parse(JSON.stringify(format||{})),version:version+1});return version+1;
   },
   async assignCodes(owner,items){for(const item of items){const row=previewCodes.find(r=>r.code===item.code);if(row.version!==item.version)throw Error('CONFLICT');row.owner_id=owner;row.version++;}},
   persist:async()=>true,

@@ -415,11 +415,11 @@ const Cloud = (() => {
     const traineeSheets=[];
     try{
       for(let offset=0;;offset+=100){
-        const {data,error}=await client.from('ibta_trainee_sheets').select('owner_id,cells').order('owner_id').range(offset,offset+99);
+        const {data,error}=await client.from('ibta_trainee_sheets').select('owner_id,cells,format').order('owner_id').range(offset,offset+99);
         if(error)throw error;traineeSheets.push(...data);if(data.length<100)break;
       }
     }catch(error){fail(error);return;}
-    const blob=new Blob([JSON.stringify({format:'ibta-ops-backup',version:3,exportedAt:new Date().toISOString(),settings:config.payload,codes:[...rows.values()],supervisorStock:[...stock].map(([category,remaining])=>({category,remaining})),traineeSheets},null,2)],{type:'application/json'});
+    const blob=new Blob([JSON.stringify({format:'ibta-ops-backup',version:4,exportedAt:new Date().toISOString(),settings:config.payload,codes:[...rows.values()],supervisorStock:[...stock].map(([category,remaining])=>({category,remaining})),traineeSheets},null,2)],{type:'application/json'});
     if(blob.size>10000000){setStatus('error',true,Error(currentLang==='ar'?'النسخة تتجاوز 10 ميجابايت. انسخ جداول المتدربين منفصلة قبل المتابعة.':'Backup exceeds 10 MB. Copy trainee sheets separately before continuing.'));return;}
     const url=window.URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='ibta-backup-'+new Date().toISOString().slice(0,10)+'.json';a.click();window.URL.revokeObjectURL(url);
   }
@@ -544,12 +544,12 @@ const Cloud = (() => {
   }
   async function readTrainees(owner){
     if(!ready)throw Error('AUTH_REQUIRED');
-    const {data,error}=await client.from('ibta_trainee_sheets').select('cells,version').eq('owner_id',owner).maybeSingle();
+    const {data,error}=await client.from('ibta_trainee_sheets').select('cells,version,format').eq('owner_id',owner).maybeSingle();
     if(error)throw error;return data || {cells:[],version:0};
   }
-  async function saveTrainees(owner,cells,version){
+  async function saveTrainees(owner,cells,version,format){
     if(!ready)throw Error('AUTH_REQUIRED');
-    const {data,error}=await client.rpc('ibta_save_trainee_sheet',{target_owner:owner,new_cells:cells,expected_version:version});
+    const {data,error}=await client.rpc('ibta_save_trainee_sheet_formatted',{target_owner:owner,new_cells:cells,expected_version:version,new_format:format});
     if(error)throw error;return data;
   }
   async function assignCodes(owner,items){
