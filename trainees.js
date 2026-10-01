@@ -325,6 +325,7 @@ const Trainees=(()=>{
     tr('تعذر الحفظ أو التحميل. تعديلاتك الحالية ما زالت هنا؛ جرّب مرة أخرى.','Could not save or load. Your current edits are still here; please retry.');
   function init(){
     if(initialized)return;initialized=true;
+    setTimeout(()=>TraineeReports.mount($('sheet-workspace'),()=>({owner,rows:cells}),async()=>{commitEdit();return await flush();}),0);
     $('panel-trainees').innerHTML=`
       <div class="sheet-heading"><div><h2 id="sheet-title"></h2><p id="sheet-subtitle"></p></div><label class="sheet-owner" id="sheet-owner-wrap" hidden><span id="sheet-owner-label"></span><select id="sheet-owner"></select></label></div>
       <div id="sheet-workspace" class="sheet-card">
