@@ -19,12 +19,14 @@ export async function handleApi(request,env={},fetcher=fetch){
   const databaseUrl=env.SUPABASE_URL||DATABASE_URL,key=env.SUPABASE_PUBLISHABLE_KEY||PUBLIC_KEY;
   if(!/^https:\/\/[a-z0-9]+\.supabase\.co$/.test(databaseUrl))return json(503,'SERVER_CONFIGURATION_ERROR');
   const headers={apikey:key,Authorization:authorization};
+  let stage='auth';
   try{
     const auth=await fetcher(databaseUrl+'/auth/v1/user',{headers,redirect:'error'});
     if(!auth.ok)return json(auth.status>=500?503:401,'AUTH_REQUIRED');
     const user=await auth.json();if(!user.id)return json(401,'AUTH_REQUIRED');
     // The first allowlisted login may not yet have a user_id attached.
     const query='select=role,active,user_id,email&or='+encodeURIComponent('(user_id.eq.'+user.id+',and(user_id.is.null,email.eq.'+String(user.email||'').toLowerCase()+'))');
+    stage='membership';
     const membership=await fetcher(databaseUrl+'/rest/v1/ibta_members?'+query,{headers,redirect:'error'});
     if(!membership.ok)return json(403,'IBTA_NOT_APPROVED');
     const members=await membership.json(),member=members.find(m=>m.active&&(m.user_id===user.id||m.user_id==null&&m.email===String(user.email||'').toLowerCase())&&['admin','operator','copy_only'].includes(m.role));
@@ -51,11 +53,19 @@ export async function handleApi(request,env={},fetcher=fetch){
     }
     const outgoing=new Headers(headers);
     for(const name of ['accept','content-type','prefer','range','range-unit']){const value=request.headers.get(name);if(value)outgoing.set(name,value);}
+    stage='database';
     const response=await fetcher(databaseUrl+'/rest/v1/'+path+url.search,{method:request.method,headers:outgoing,body,redirect:'error'});
     const resultHeaders=new Headers({'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'});
     for(const name of ['content-type','content-range','preference-applied']){const value=response.headers.get(name);if(value)resultHeaders.set(name,value);}
-    return new Response(response.body,{status:response.status,headers:resultHeaders});
-  }catch{return json(503,'SERVER_UNAVAILABLE');}
+    stage='response';
+    // Supabase writes often return 204. Workers may expose an empty stream,
+    // but HTTP forbids any body on these status codes.
+    const noBody=[204,205,304].includes(response.status);
+    return new Response(noBody?null:response.body,{status:response.status,headers:resultHeaders});
+  }catch(error){
+    console.error('IBTA_API_FAILURE',{stage,operation:name,errorType:error?.name||'Error'});
+    return json(503,'SERVER_UNAVAILABLE_'+stage.toUpperCase());
+  }
 }
 export default {async fetch(request,env){const path=new URL(request.url).pathname;
   if(path==='/api/health')return Response.json({runtime:'javascript-server',version:1},{headers:{'Cache-Control':'no-store'}});

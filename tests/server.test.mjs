@@ -18,3 +18,9 @@ assert.equal((await handleApi(request('rpc/ibta_claim_code',{...post,body:JSON.s
 assert.notEqual(JSON.parse(calls.at(-1).options.body).use_date,'01/01/1900');
 assert.equal((await handleApi(request('ibta_codes'),{},async()=>Response.json({}, {status:401}))).status,401);
 console.log('PASS: server authentication, inactive membership, admin permissions, JWT forwarding, routes, origin, malformed JSON and no-cache');
+for(const status of [204,205,304]){
+  const emptyStream=async(url,options)=>url.includes('/auth/')||url.includes('ibta_members?select=role')?upstream(url,options):{status,headers:new Headers(),body:new ReadableStream({start(c){c.close();}})};
+  const response=await handleApi(request('rpc/ibta_restore_backup',post),{},emptyStream);
+  assert.equal(response.status,status);assert.equal(response.body,null);
+}
+console.log('PASS: empty database responses do not become SERVER_UNAVAILABLE');

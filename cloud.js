@@ -37,6 +37,7 @@ const Cloud = (() => {
   }
   function errorText(error){
     const raw=error?.message || String(error);
+    if(raw.startsWith('SERVER_UNAVAILABLE'))return currentLang==='ar'?'تعذر إكمال الاتصال بالسيرفر. حاول مرة أخرى؛ وإذا استمرت المشكلة أرسل رمز الخطأ: '+raw:'The server could not complete the request. Retry; if it persists, share this code: '+raw;
     if(raw==='IBTA_AUTH_INVALID_INPUT') return t('authInvalidInput');
     if(raw==='IBTA_NOT_APPROVED') return t('authNotApproved');
     if(raw==='IBTA_CODE_NOT_FOUND') return t('codeNotFound');
