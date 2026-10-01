@@ -15,6 +15,16 @@ const Trainees=(()=>{
   let members=[],mode='sheet',codeMode='owned',codeBusy=false,initialized=false;
   let dragging=false,dragMoved=false,rowDragging=false;
   let formatting=D.defaultFormat(),duplicateIds=new Map();
+  let excelView={wrap:false,freeze:false};
+  try{const pref=JSON.parse(localStorage.getItem('ibta_sheet_view')||'{}');excelView={wrap:pref.wrap===true,freeze:pref.freeze===true};}catch{}
+  function applyExcelView(){
+    const grid=$('sheet-grid');if(!grid)return;
+    grid.classList.toggle('sheet-wrap-text',excelView.wrap);
+    grid.classList.toggle('sheet-freeze-column',excelView.freeze);
+    grid.querySelectorAll('.sheet-frozen-cell').forEach(el=>el.classList.remove('sheet-frozen-cell'));
+    const first=visibleCols()[0];grid.querySelectorAll('[data-col="'+first+'"]').forEach(el=>el.classList.add('sheet-frozen-cell'));
+    for(const key of ['wrap','freeze'])$('sheet-'+key)?.setAttribute('aria-pressed',String(excelView[key]));
+  }
   let hoverTimer,hoverHideTimer,detailTimer,hoverCell=null,detailKey='',detailPage=0,detailSource=-1;
   let colWidths={};
   try{colWidths=JSON.parse(localStorage.getItem('ibta_trainee_col_widths')||'{}')||{};}catch{}
@@ -352,7 +362,7 @@ const Trainees=(()=>{
     $('panel-trainees').innerHTML=`
       <div class="sheet-heading"><div><h2 id="sheet-title"></h2><p id="sheet-subtitle"></p></div><label class="sheet-owner" id="sheet-owner-wrap" hidden><span id="sheet-owner-label"></span><select id="sheet-owner"></select></label></div>
       <div id="sheet-workspace" class="sheet-card">
-        <div class="sheet-tools"><button type="button" id="sheet-add" class="sheet-primary"></button><button type="button" id="sheet-add-1000" class="sheet-primary"></button><button type="button" id="sheet-delete"></button><div class="sheet-add-col-wrap"><button type="button" id="sheet-add-col" class="sheet-primary"></button><div id="sheet-add-col-popover" class="sheet-add-col-popover" hidden></div></div><button type="button" id="sheet-del-col"></button><button type="button" id="sheet-find-btn"></button><button type="button" id="sheet-undo"></button><button type="button" id="sheet-redo"></button><button type="button" id="sheet-copy"></button><button type="button" id="sheet-save"></button><button type="button" id="sheet-reload"></button><span class="sheet-status" id="sheet-status" role="status" aria-live="polite"></span></div>
+        <div class="sheet-tools"><button type="button" id="sheet-add" class="sheet-primary"></button><button type="button" id="sheet-delete"></button><div class="sheet-add-col-wrap"><button type="button" id="sheet-add-col" class="sheet-primary"></button><div id="sheet-add-col-popover" class="sheet-add-col-popover" hidden></div></div><button type="button" id="sheet-del-col"></button><button type="button" id="sheet-find-btn"></button><button type="button" id="sheet-undo"></button><button type="button" id="sheet-redo"></button><button type="button" id="sheet-copy"></button><button type="button" id="sheet-save"></button><button type="button" id="sheet-reload"></button><span class="sheet-status" id="sheet-status" role="status" aria-live="polite"></span></div>
         <div class="sheet-format-tools">
           <details id="sheet-columns"><summary id="sheet-columns-title"></summary><div id="sheet-column-options"></div></details>
           <button type="button" id="sheet-font-minus">A−</button><output id="sheet-font-size"></output><button type="button" id="sheet-font-plus">A+</button>
@@ -365,7 +375,7 @@ const Trainees=(()=>{
           </div>
           <label><span id="sheet-fill-label"></span><input type="color" id="sheet-fill" value="#fff2cc"></label>
           <label><span id="sheet-text-color-label"></span><input type="color" id="sheet-text-color" value="#16324f"></label>
-          <button type="button" id="sheet-clear-format"></button><label><span id="sheet-direction-label"></span><select id="sheet-direction"><option value="rtl">يمين ← يسار</option><option value="ltr">Left → Right</option></select></label>
+          <button type="button" id="sheet-clear-format"></button><button type="button" id="sheet-wrap" aria-pressed="false">التفاف النص / Wrap text</button><button type="button" id="sheet-freeze" aria-pressed="false">تثبيت أول عمود / Freeze first column</button><label><span id="sheet-direction-label"></span><select id="sheet-direction"><option value="rtl">يمين ← يسار</option><option value="ltr">Left → Right</option></select></label>
         </div>
         <div class="sheet-filters"><input id="sheet-search" type="search"><input id="sheet-org" type="search"><input id="sheet-date" type="search"><select id="sheet-result"></select><label class="sheet-duplicates-filter"><input type="checkbox" id="sheet-duplicates-only"><span id="sheet-duplicates-label"></span></label><button type="button" id="sheet-clear-filters"></button></div>
         <div class="sheet-formula"><input id="sheet-address" value="A1" aria-label="عنوان الخلية / Cell address" title="D150" autocomplete="off" spellcheck="false" dir="ltr"><span class="sheet-fx" aria-hidden="true">fx</span><input id="sheet-formula" autocomplete="off" spellcheck="false" dir="auto"></div>
@@ -380,12 +390,13 @@ const Trainees=(()=>{
       </div>
       <div id="sheet-code-workspace" hidden><div class="sheet-code-tools" id="sheet-code-admin" hidden><button type="button" id="sheet-owned"></button><button type="button" id="sheet-pool"></button><button type="button" id="sheet-assign" class="sheet-primary"></button></div><div class="sheet-code-tools"><input id="sheet-code-search" type="search"><button type="button" id="sheet-code-refresh"></button><span id="sheet-code-count"></span></div><p class="sheet-notice" id="sheet-code-notice"></p><div class="sheet-card sheet-code-list" id="sheet-code-list"></div><p id="sheet-code-status" role="status"></p></div>`;
     const toolbar=$('sheet-workspace').querySelector('.sheet-tools');
-    for(const [label,ids] of [['الحافظة / Clipboard',['sheet-copy','sheet-undo','sheet-redo']],['الصفوف والأعمدة / Rows & columns',['sheet-add','sheet-add-1000','sheet-delete','sheet-add-col','sheet-del-col']],['تحرير وحفظ / Edit & save',['sheet-find-btn','sheet-save','sheet-reload']]]){
+    for(const [label,ids] of [['الحافظة / Clipboard',['sheet-copy','sheet-undo','sheet-redo']],['الصفوف والأعمدة / Rows & columns',['sheet-add','sheet-delete','sheet-add-col','sheet-del-col']],['تحرير وحفظ / Edit & save',['sheet-find-btn','sheet-save','sheet-reload']]]){
       const group=node('div',undefined,{class:'sheet-ribbon-group'}),actions=node('div',undefined,{class:'sheet-ribbon-actions'});
       for(const id of ids){const el=$(id);actions.append(id==='sheet-add-col'?el.parentElement:el);}
       group.append(actions,node('small',label));toolbar.append(group);
     }
     toolbar.append($('sheet-status'));
+    for(const key of ['wrap','freeze'])$('sheet-'+key).onclick=()=>{commitEdit();excelView[key]=!excelView[key];try{localStorage.setItem('ibta_sheet_view',JSON.stringify(excelView));}catch{}applyExcelView();};
     $('sheet-address').addEventListener('keydown',e=>{
       if(e.key==='Escape'){e.preventDefault();$('sheet-address').blur();paint();return;}
       if(e.key!=='Enter')return;e.preventDefault();if(!loaded)return;
@@ -399,7 +410,7 @@ const Trainees=(()=>{
     if($('sheet-mode'))$('sheet-mode').onclick=()=>setMode('sheet');if($('sheet-codes-mode'))$('sheet-codes-mode').onclick=()=>setMode('codes');
     $('sheet-save').onclick=()=>flush();$('sheet-reload').onclick=()=>reload();
     $('sheet-add').onclick=()=>{commitEdit();clearFilters();const r=cells.length;if(r>=D.MAX_ROWS)return limitError();const next=cells.map(row=>[...row]);next.push(D.blank());change(next,false);render();focusCell(r,0);};
-    $('sheet-add-1000').onclick=()=>addBulkRows(1000);
+
     $('sheet-add-bulk-btn').onclick=()=>{const count=Number($('sheet-add-bulk-count').value)||1000;addBulkRows(count);};
     $('sheet-add-bulk-count').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();addBulkRows(Number($('sheet-add-bulk-count').value)||1000);}});
     if($('sheet-page-size'))$('sheet-page-size').onchange=()=>{PAGE=Number($('sheet-page-size').value)||100;page=0;render();};
@@ -545,7 +556,7 @@ const Trainees=(()=>{
     const text={
       'sheet-title':['جدول المتدربين','Trainee sheet'],'sheet-subtitle':['جدول خاص بكل مستخدم · حفظ تلقائي','A private sheet for each user · Autosave'],
       'sheet-owner-label':['عرض بيانات المستخدم','View user'],'sheet-mode':['المتدربون','Trainees'],'sheet-codes-mode':['أكواد المستخدم','User codes'],
-      'sheet-add':['+ إضافة صف','+ Add row'],'sheet-add-1000':['+ 1000 صف','+ 1,000 rows'],
+      'sheet-add':['+ إضافة صف','+ Add row'],'sheet-wrap':['التفاف النص','Wrap text'],'sheet-freeze':['تثبيت أول عمود','Freeze first column'],
       'sheet-add-prefix':['إضافة','Add'],'sheet-add-suffix':['صف في الأسفل','more rows at bottom'],'sheet-add-bulk-btn':['+ إضافة','+ Add'],
       'sheet-page-size-suffix':['/ صفحة','/ page'],
       'sheet-delete':['حذف صف','Delete row'],'sheet-add-col':['+ إضافة عمود','+ Add column'],'sheet-del-col':['حذف عمود','Delete column'],'sheet-undo':['تراجع','Undo'],'sheet-redo':['إعادة','Redo'],
@@ -569,7 +580,6 @@ const Trainees=(()=>{
     $('sheet-result').value=value;$('sheet-result').setAttribute('aria-label',tr('النتيجة','Result'));
     $('sheet-font-minus').title=tr('تصغير خط الجدول','Smaller sheet text');$('sheet-font-plus').title=tr('تكبير خط الجدول','Larger sheet text');$('sheet-bold').title=tr('خط عريض للمحدد','Bold selection');
     $('sheet-add').title=tr('إضافة صف جديد في نهاية الجدول','Add new row at the end of the sheet');
-    $('sheet-add-1000')&&($('sheet-add-1000').title=tr('إضافة 1000 صف فارغ دفعة واحدة للجدول','Add 1,000 blank rows to sheet at once'));
     $('sheet-add-bulk-btn')&&($('sheet-add-bulk-btn').title=tr('إضافة العدد المحدد من الصفوف في أسفل الجدول','Add specified number of rows at the bottom'));
     $('sheet-delete').title=tr('حذف الصفوف أو الصف المحدد حالياً','Delete current row');
     $('sheet-add-col').title=tr('إضافة عمود إلى جدول المتدربين','Add column to sheet');
@@ -664,7 +674,7 @@ const Trainees=(()=>{
     }
     $('sheet-count').textContent=tr('الصفوف: ','Rows: ')+cells.filter(r=>r.some(Boolean)).length+' · '+(page+1)+' / '+Math.max(1,Math.ceil(view.length/PAGE));
     $('sheet-prev').disabled=page===0;$('sheet-next').disabled=(page+1)*PAGE>=view.length;
-    $('sheet-undo').disabled=!history.length;$('sheet-redo').disabled=!future.length;paint();
+    $('sheet-undo').disabled=!history.length;$('sheet-redo').disabled=!future.length;applyExcelView();paint();
     if($('sheet-duplicate-dialog')?.open)renderDuplicateDetails();
   }
   function decorateCell(td,index,column){

@@ -112,3 +112,8 @@
 #sheet-workspace .sheet-footer{background:#eef3ef;border-top:1px solid #cbd2cc;padding:6px 12px}
 #sheet-workspace>details.sheet-tools{background:#e8f3ed;padding:8px 12px;font-size:12px}
 @media(max-width:700px){.sheet-ribbon-group{padding:7px;flex:1 1 180px}.sheet-ribbon-group small{font-size:9px}#sheet-workspace .sheet-scroll{max-height:60vh}}
+#sheet-workspace .sheet-grid.sheet-wrap-text td:not([contenteditable=true]){white-space:pre-wrap;overflow-wrap:anywhere;height:auto;min-height:28px;line-height:1.5}
+#sheet-workspace .sheet-grid.sheet-freeze-column .sheet-frozen-cell{position:sticky;left:46px;z-index:2;border-inline-end:2px solid #217346}
+#sheet-workspace .sheet-grid.sheet-freeze-column thead .sheet-frozen-cell{z-index:5}
+#sheet-workspace .sheet-scroll[dir=rtl] .sheet-grid.sheet-freeze-column .sheet-frozen-cell{left:auto;right:46px}
+#sheet-workspace .sheet-format-tools button[aria-pressed=true]{background:#d5e8dc;color:#14532d;border-color:#217346}
