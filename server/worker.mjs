@@ -64,7 +64,8 @@ export async function handleApi(request,env={},fetcher=(...args)=>globalThis.fet
     return new Response(noBody?null:response.body,{status:response.status,headers:resultHeaders});
   }catch(error){
     console.error('IBTA_API_FAILURE',{stage,operation:name,errorType:error?.name||'Error'});
-    return json(503,'SERVER_UNAVAILABLE_'+stage.toUpperCase());
+    const reason=/illegal invocation|receiver|this.*binding/i.test(error?.message||'')?'RUNTIME':/redirect/i.test(error?.message||'')?'REDIRECT':/network|fetch|dns|connect/i.test(error?.message||'')?'NETWORK':error instanceof TypeError?'TYPE':'OTHER';
+    return json(503,'SERVER_UNAVAILABLE_'+stage.toUpperCase()+'_'+reason);
   }
 }
 export default {async fetch(request,env){const path=new URL(request.url).pathname;
