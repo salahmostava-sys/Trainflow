@@ -24,7 +24,7 @@ function validBackup(value){
     for(const sheet of value.traineeSheets){
       if(!sheet||typeof sheet.owner_id!=='string'||!/^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(sheet.owner_id)||owners.has(sheet.owner_id))return false;
       owners.add(sheet.owner_id);
-      if(!Array.isArray(sheet.cells)||sheet.cells.length>5000||sheet.cells.some(row=>!Array.isArray(row)||row.length!==13||row.some(cell=>typeof cell!=='string'||cell.length>2000)))return false;
+      if(!Array.isArray(sheet.cells)||sheet.cells.length>1000000||sheet.cells.some(row=>!Array.isArray(row)||row.length!==13||row.some(cell=>typeof cell!=='string'||cell.length>2000)))return false;
     }
   }
   if(value.supervisorStock===undefined)return true;

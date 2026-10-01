@@ -1,7 +1,7 @@
 /* Spreadsheet data operations. Values stay strings (IDs and leading zeros included). */
 (function(root){
   'use strict';
-  const WIDTH=13,MAX_ROWS=5000,MAX_CELL=2000;
+  const WIDTH=13,MAX_ROWS=1000000,MAX_CELL=2000;
   const blank=()=>Array(WIDTH).fill('');
   function normalizeResult(value){
     const key=value.trim().toLocaleLowerCase();
@@ -17,7 +17,7 @@
     if(Number.isInteger(value.fontSize)&&value.fontSize>=10&&value.fontSize<=32)out.fontSize=value.fontSize;
     if(Array.isArray(value.hidden))out.hidden=[...new Set(value.hidden.filter(c=>Number.isInteger(c)&&c>=0&&c<WIDTH))].slice(0,12);
     if(value.styles&&typeof value.styles==='object')for(const [key,style]of Object.entries(value.styles)){
-      if(!/^(0|[1-9]\d{0,3}):(\d|1[0-2])$/.test(key)||Number(key.split(':')[0])>=MAX_ROWS||!style||typeof style!=='object')continue;
+      if(!/^(0|[1-9]\d*):(\d|1[0-2])$/.test(key)||Number(key.split(':')[0])>=MAX_ROWS||!style||typeof style!=='object')continue;
       const next={};for(const field of ['bg','color'])if(/^#[0-9a-f]{6}$/i.test(style[field]))next[field]=style[field];
       if(typeof style.bold==='boolean')next.bold=style.bold;
       if(Number.isInteger(style.size)&&style.size>=10&&style.size<=32)next.size=style.size;
@@ -48,7 +48,7 @@
   }
   // Excel clipboard TSV supports quoted tabs, newlines and doubled quotes.
   function parse(text){
-    if(text.length>4000000)throw Error('SIZE_LIMIT');
+    if(text.length>50000000)throw Error('SIZE_LIMIT');
     text=text.replace(/^\uFEFF/,'').replace(/\r\n/g,'\n').replace(/\r/g,'\n');
     const rows=[];let row=[],cell='',quoted=false,closed=false;
     for(let i=0;i<text.length;i++){

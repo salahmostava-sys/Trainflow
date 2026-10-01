@@ -706,7 +706,7 @@ const Trainees=(()=>{
     })();const ok=await saving;saving=null;
     if(ok&&token===epoch&&revision!==savedRevision)return flush();return ok;
   }
-  function limitError(){message(tr('الحد الأقصى 5000 صف و13 عمودًا و2000 حرف للخلية.','Limit: 5,000 rows, 13 columns and 2,000 characters per cell.'),true);}
+  function limitError(){message(tr('الحد الأقصى 1,000,000 صف و13 عمودًا و2000 حرف للخلية.','Limit: 1,000,000 rows, 13 columns and 2,000 characters per cell.'),true);}
   function selectionText(){const [r1,r2,c1,c2]=bounds(),cols=visibleCols().filter(c=>c>=c1&&c<=c2);return D.tsv(view.slice(r1,r2+1).map(i=>cols.map(c=>cells[i]?.[c]||'')));}
   function clearSelection(){if(!loaded)return;const next=cells.map(row=>[...row]);const [r1,r2,c1,c2]=bounds();for(let r=r1;r<=r2;r++){const idx=view[r];if(!next[idx])continue;for(const c of visibleCols().filter(c=>c>=c1&&c<=c2))next[idx][c]='';}change(D.normalize(next));}
   function paste(e){

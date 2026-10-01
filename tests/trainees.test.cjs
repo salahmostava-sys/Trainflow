@@ -9,7 +9,7 @@ assert.equal(D.paste([row],[['new']],0,1)[0][0],'000023');
 assert.equal(D.paste([row],[['new']],0,1)[0][1],'new');
 assert.equal(row[1],'','Paste must not mutate history snapshots');
 assert.throws(()=>D.paste([],[["a","b"]],0,12),/PASTE_BOUNDS/);
-assert.throws(()=>D.paste([],[["a"]],5000,0),/PASTE_BOUNDS/);
+assert.throws(()=>D.paste([],[["a"]],1000000,0),/PASTE_BOUNDS/);
 assert.throws(()=>D.normalize([[23]]),/CELL_LIMIT/);
 assert.throws(()=>D.normalize([['x'.repeat(2001)]]),/CELL_LIMIT/);
 assert.throws(()=>D.parse('"unterminated'),/INVALID_CLIPBOARD/);
@@ -24,6 +24,6 @@ assert.equal(D.result('passed'),'ناجح');assert.equal(D.result('FAILED'),'ر�
 const styled=D.format({direction:'rtl',fontSize:18,hidden:[1,3],styles:{'0:2':{bg:'#aabbcc',bold:true},'1:2':{color:'#112233',size:20}}});
 const removed=D.removeRows(duplicateRows,styled,new Set([0]));assert.deepEqual(removed.format.styles['0:2'],{color:'#112233',size:20});
 assert.deepEqual(styled.styles['0:2'],{bg:'#aabbcc',bold:true},'Deleting rows leaves undo snapshot intact');
-assert.deepEqual(D.format({styles:{'0:1':{bg:'url(https://example.invalid)',size:200},'9000:0':{bg:'#ffffff'}}}).styles,{});
+assert.deepEqual(D.format({styles:{'0:1':{bg:'url(https://example.invalid)',size:200},'1000000:0':{bg:'#ffffff'}}}).styles,{});
 assert.equal(D.format({hidden:Array.from({length:13},(_,i)=>i)}).hidden.length,12,'At least one column remains visible');
 console.log('PASS: result normalization, duplicate IDs, formatting validation and row remapping');
