@@ -23,6 +23,11 @@
 .sheet-grid th[data-col="4"] button,.sheet-grid th[data-col="5"] button{padding:2px 4px!important;font-size:11px!important;white-space:normal!important;line-height:1.2!important}
 .sheet-grid td[data-col="4"] .sheet-duplicate-badge{font-size:9px!important;padding:0 3px!important;margin-inline-start:3px!important}
 
+/* Result column sized to fit 8 characters */
+.sheet-grid th[data-col="11"],.sheet-grid td[data-col="11"]{width:85px!important;min-width:85px!important;max-width:85px!important;text-align:center!important}
+.sheet-grid th[data-col="11"] button{padding:2px 4px!important;font-size:11px!important;white-space:normal!important;line-height:1.2!important}
+.sheet-grid td[data-col="11"] .sheet-result-select{width:100%!important;text-align:center!important;text-align-last:center!important}
+
 /* Toolbar Add Column Dropdown */
 .sheet-add-col-wrap{position:relative;display:inline-block}
 .sheet-add-col-popover{position:absolute;top:calc(100% + 5px);inset-inline-start:0;z-index:30;min-width:220px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:8px;box-shadow:0 10px 25px rgba(15,27,46,.15);display:grid;gap:5px}
