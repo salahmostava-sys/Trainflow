@@ -1,8 +1,8 @@
 /* Spreadsheet data operations. Values stay strings (IDs and leading zeros included). */
 (function(root){
   'use strict';
-  const WIDTH=13,MAX_ROWS=1000000,MAX_CELL=2000;
-  const blank=()=>Array(WIDTH).fill('');
+  const BASE_WIDTH=13,WIDTH=13,MAX_ROWS=1000000,MAX_COLS=500,MAX_CELL=2000;
+  const blank=(w=BASE_WIDTH)=>Array(Math.max(BASE_WIDTH,w)).fill('');
   function normalizeResult(value){
     const key=value.trim().toLocaleLowerCase();
     if(['pass','passed','success','ناجح','ناجه','ناجحة'].includes(key))return 'ناجح';
@@ -10,14 +10,20 @@
     if(['absent','not attended','no show','no-show','لم يدخل'].includes(key))return 'لم يدخل';
     return value;
   }
-  const defaultFormat=()=>({direction:'ltr',fontSize:13,hidden:[],styles:{}});
+  const defaultFormat=()=>({direction:'ltr',fontSize:13,hidden:[],styles:{},headers:{}});
   function format(value){
     const out=defaultFormat();if(!value||typeof value!=='object')return out;
     if(['rtl','ltr'].includes(value.direction))out.direction=value.direction;
     if(Number.isInteger(value.fontSize)&&value.fontSize>=10&&value.fontSize<=32)out.fontSize=value.fontSize;
-    if(Array.isArray(value.hidden))out.hidden=[...new Set(value.hidden.filter(c=>Number.isInteger(c)&&c>=0&&c<WIDTH))].slice(0,12);
+    if(Array.isArray(value.hidden))out.hidden=[...new Set(value.hidden.filter(c=>Number.isInteger(c)&&c>=0&&c<MAX_COLS))];
+    if(value.headers&&typeof value.headers==='object'){
+      out.headers={};
+      for(const [c,name] of Object.entries(value.headers)){
+        if(/^\d+$/.test(c)&&typeof name==='string')out.headers[c]=name.slice(0,100);
+      }
+    }
     if(value.styles&&typeof value.styles==='object')for(const [key,style]of Object.entries(value.styles)){
-      if(!/^(0|[1-9]\d*):(\d|1[0-2])$/.test(key)||Number(key.split(':')[0])>=MAX_ROWS||!style||typeof style!=='object')continue;
+      if(!/^(0|[1-9]\d*):(\d+)$/.test(key)||Number(key.split(':')[0])>=MAX_ROWS||!style||typeof style!=='object')continue;
       const next={};for(const field of ['bg','color'])if(/^#[0-9a-f]{6}$/i.test(style[field]))next[field]=style[field];
       if(typeof style.bold==='boolean')next.bold=style.bold;
       if(Number.isInteger(style.size)&&style.size>=10&&style.size<=32)next.size=style.size;
@@ -36,11 +42,19 @@
   }
   function normalize(rows){
     if(!Array.isArray(rows)||rows.length>MAX_ROWS)throw Error('ROW_LIMIT');
+    let width=BASE_WIDTH;
+    for(let i=0;i<rows.length;i++){
+      if(!Array.isArray(rows[i]))throw Error('COLUMN_LIMIT');
+      if(rows[i].length>width)width=Math.min(MAX_COLS,rows[i].length);
+    }
     const result=rows.map(row=>{
-      if(!Array.isArray(row)||row.length>WIDTH)throw Error('COLUMN_LIMIT');
-      const next=blank();
-      row.forEach((value,i)=>{if(typeof value!=='string'||value.length>MAX_CELL)throw Error('CELL_LIMIT');next[i]=value;});
-      next[11]=normalizeResult(next[11]);
+      const next=blank(width);
+      row.forEach((value,i)=>{
+        if(i>=MAX_COLS)return;
+        if(typeof value!=='string'||value.length>MAX_CELL)throw Error('CELL_LIMIT');
+        next[i]=value;
+      });
+      if(next.length>11)next[11]=normalizeResult(next[11]);
       return next;
     });
     while(result.length&&result[result.length-1].every(value=>value===''))result.pop();
@@ -61,18 +75,32 @@
     if(quoted)throw Error('INVALID_CLIPBOARD');
     row.push(cell);rows.push(row);
     if(text.endsWith('\n'))rows.pop();
-    if(rows.length>MAX_ROWS||rows.some(r=>r.length>WIDTH))throw Error('ROW_LIMIT');
+    if(rows.length>MAX_ROWS||rows.some(r=>r.length>MAX_COLS))throw Error('ROW_LIMIT');
     return rows;
   }
   const quote=value=>/[\t\r\n"]/.test(value)?'"'+value.replaceAll('"','""')+'"':value;
   const tsv=rows=>rows.map(row=>row.map(quote).join('\t')).join('\r\n');
   function paste(rows,values,rowIndex,columnIndex){
-    if(rowIndex<0||columnIndex<0||rowIndex+values.length>MAX_ROWS||values.some(r=>columnIndex+r.length>WIDTH))throw Error('PASTE_BOUNDS');
+    if(rowIndex<0||columnIndex<0||rowIndex+values.length>MAX_ROWS||values.some(r=>columnIndex+r.length>MAX_COLS))throw Error('PASTE_BOUNDS');
     const next=rows.map(row=>[...row]);
-    values.forEach((row,r)=>{while(next.length<=rowIndex+r)next.push(blank());row.forEach((value,c)=>{next[rowIndex+r][columnIndex+c]=value;});});
+    let targetWidth=BASE_WIDTH;
+    if(next.length&&next[0].length>targetWidth)targetWidth=next[0].length;
+    values.forEach(r=>{
+      if(columnIndex+r.length>targetWidth)targetWidth=Math.min(MAX_COLS,columnIndex+r.length);
+    });
+    values.forEach((row,r)=>{
+      while(next.length<=rowIndex+r)next.push(blank(targetWidth));
+      row.forEach((value,c)=>{
+        const col=columnIndex+c;
+        if(col<MAX_COLS){
+          while(next[rowIndex+r].length<=col)next[rowIndex+r].push('');
+          next[rowIndex+r][col]=value;
+        }
+      });
+    });
     return normalize(next);
   }
-  const api={WIDTH,MAX_ROWS,MAX_CELL,blank,normalize,parse,tsv,paste,result:normalizeResult,defaultFormat,format,idKey,duplicates,removeRows};
+  const api={BASE_WIDTH,WIDTH,MAX_ROWS,MAX_COLS,MAX_CELL,blank,normalize,parse,tsv,paste,result:normalizeResult,defaultFormat,format,idKey,duplicates,removeRows};
   if(typeof module!=='undefined'&&module.exports)module.exports=api;
   else root.TraineeData=api;
 })(globalThis);
