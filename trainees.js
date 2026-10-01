@@ -23,7 +23,7 @@ const Trainees=(()=>{
       <div class="sheet-heading"><div><h2 id="sheet-title"></h2><p id="sheet-subtitle"></p></div><label class="sheet-owner" id="sheet-owner-wrap" hidden><span id="sheet-owner-label"></span><select id="sheet-owner"></select></label></div>
       <div class="sheet-subtabs"><button type="button" id="sheet-mode" aria-selected="true"></button><button type="button" id="sheet-codes-mode" aria-selected="false"></button></div>
       <div id="sheet-workspace" class="sheet-card">
-        <div class="sheet-tools"><button type="button" id="sheet-add" class="sheet-primary"></button><button type="button" id="sheet-delete"></button><button type="button" id="sheet-undo"></button><button type="button" id="sheet-redo"></button><button type="button" id="sheet-copy"></button><button type="button" id="sheet-save"></button><button type="button" id="sheet-reload"></button><span class="sheet-status" id="sheet-status" role="status" aria-live="polite"></span></div>
+        <div class="sheet-tools"><button type="button" id="sheet-add" class="sheet-primary"></button><button type="button" id="sheet-delete"></button><div class="sheet-add-col-wrap"><button type="button" id="sheet-add-col" class="sheet-primary"></button><div id="sheet-add-col-popover" class="sheet-add-col-popover" hidden></div></div><button type="button" id="sheet-del-col"></button><button type="button" id="sheet-undo"></button><button type="button" id="sheet-redo"></button><button type="button" id="sheet-copy"></button><button type="button" id="sheet-save"></button><button type="button" id="sheet-reload"></button><span class="sheet-status" id="sheet-status" role="status" aria-live="polite"></span></div>
         <div class="sheet-format-tools">
           <details id="sheet-columns"><summary id="sheet-columns-title"></summary><div id="sheet-column-options"></div></details>
           <button type="button" id="sheet-font-minus">A−</button><output id="sheet-font-size"></output><button type="button" id="sheet-font-plus">A+</button>
@@ -44,7 +44,22 @@ const Trainees=(()=>{
     $('sheet-mode').onclick=()=>setMode('sheet');$('sheet-codes-mode').onclick=()=>setMode('codes');
     $('sheet-save').onclick=()=>flush();$('sheet-reload').onclick=()=>reload();
     $('sheet-add').onclick=()=>{commitEdit();clearFilters();const r=cells.length;if(r>=D.MAX_ROWS)return limitError();const next=cells.map(row=>[...row]);next.push(D.blank());change(next,false);render();focusCell(r,0);};
-    $('sheet-delete').onclick=()=>{commitEdit();const [r1,r2]=bounds();const ids=new Set(view.slice(r1,r2+1));if(!ids.size||!confirm(tr('حذف الصفوف المحددة؟','Delete selected rows?')))return;const next=D.removeRows(cells,formatting,ids);change(next.cells,true,next.format);};
+    $('sheet-delete').onclick=()=>{commitEdit();const [r1,r2]=bounds();const ids=new Set(view.slice(r1,r2+1));if(!ids.size||!confirm(tr((ids.size>1?'حذف الصفوف المحددة؟':'حذف الصف المحدد؟'),(ids.size>1?'Delete selected rows?':'Delete selected row?'))))return;const next=D.removeRows(cells,formatting,ids);change(next.cells,true,next.format);};
+    $('sheet-add-col').onclick=(e)=>{e.stopPropagation();commitEdit();toggleAddColumnMenu();};
+    $('sheet-del-col').onclick=()=>{
+      commitEdit();const cols=visibleCols();
+      if(cols.length<=1){message(tr('لا يمكن حذف كل الأعمدة، يجب إبقاء عمود واحد على الأقل','Cannot delete all columns; at least one must remain visible'),true);return;}
+      const colIndex=cursor.c,colName=tr(...labels[colIndex]);
+      if(confirm(tr(`هل تريد حذف عمود "${colName}" من جدول المتدربين؟`,`Delete column "${colName}" from sheet view?`))){
+        const next=D.format(formatting);
+        if(!next.hidden.includes(colIndex))next.hidden=[...next.hidden,colIndex];
+        const newCols=labels.map((_,i)=>i).filter(i=>!next.hidden.includes(i));
+        cursor.c=anchor.c=newCols.includes(colIndex)?colIndex:(newCols[0]||0);
+        change(cells,true,next);
+        message(tr(`تم حذف عمود "${colName}" (يمكنك استعادته من زر إضافة عمود)`,`Column "${colName}" deleted (restore via Add column)`));
+      }
+    };
+    document.addEventListener('click',e=>{if(!e.target.closest('.sheet-add-col-wrap')){$('sheet-add-col-popover')&&($('sheet-add-col-popover').hidden=true);}});
     $('sheet-font-minus').onclick=()=>adjustFont(-1);$('sheet-font-plus').onclick=()=>adjustFont(1);
     $('sheet-direction').onchange=()=>{commitEdit();const next=D.format(formatting);next.direction=$('sheet-direction').value;change(cells,true,next);};
     $('sheet-fill').onchange=()=>formatSelection({bg:$('sheet-fill').value});
@@ -77,12 +92,52 @@ const Trainees=(()=>{
     window.addEventListener('beforeunload',e=>{if(hasDraft()){e.preventDefault();e.returnValue='';}});
     translate();
   }
+  function toggleAddColumnMenu(force){
+    const popover=$('sheet-add-col-popover');
+    if(!popover)return;
+    const shouldOpen=force!==undefined?force:popover.hidden;
+    if(!shouldOpen){popover.hidden=true;return;}
+    popover.innerHTML='';
+    const hiddenCols=formatting.hidden||[];
+    if(hiddenCols.length===0){
+      const empty=node('div',tr('جميع الأعمدة (13 عموداً) معروضة بالفعل في الجدول','All 13 columns are already visible in sheet'),{class:'sheet-add-col-empty'});
+      popover.append(empty);
+    }else{
+      const title=node('div',tr('اختر عموداً لإضافته للجدول:','Choose column to add:'),{style:'font-weight:700;font-size:12px;color:var(--muted);padding:4px;'});
+      popover.append(title);
+      hiddenCols.forEach(c=>{
+        const colName=tr(...labels[c]);
+        const btn=button('+ '+colName,()=>{
+          commitEdit();
+          const next=D.format(formatting);
+          next.hidden=next.hidden.filter(i=>i!==c);
+          change(cells,true,next);
+          popover.hidden=true;
+          focusCell(cursor.r,c);
+          message(tr('تمت إضافة عمود '+colName,'Column added: '+colName));
+        });
+        popover.append(btn);
+      });
+      if(hiddenCols.length>1){
+        const allBtn=button(tr('إظهار كافة الأعمدة','Show all columns'),()=>{
+          commitEdit();
+          const next=D.format(formatting);
+          next.hidden=[];
+          change(cells,true,next);
+          popover.hidden=true;
+          message(tr('تم إظهار كافة الأعمدة','All columns are now visible'));
+        },'sheet-add-all-btn');
+        popover.append(allBtn);
+      }
+    }
+    popover.hidden=false;
+  }
   function translate(){
     $('trainees-tab').textContent=tr('المتدربون','Trainees');if(!initialized)return;
     const text={
       'sheet-title':['جدول المتدربين','Trainee sheet'],'sheet-subtitle':['جدول خاص بكل مستخدم · حفظ تلقائي','A private sheet for each user · Autosave'],
       'sheet-owner-label':['عرض بيانات المستخدم','View user'],'sheet-mode':['المتدربون','Trainees'],'sheet-codes-mode':['أكواد المستخدم','User codes'],
-      'sheet-add':['+ صف جديد','+ Add row'],'sheet-delete':['حذف الصفوف','Delete rows'],'sheet-undo':['تراجع','Undo'],'sheet-redo':['إعادة','Redo'],
+      'sheet-add':['+ إضافة صف','+ Add row'],'sheet-delete':['حذف صف','Delete row'],'sheet-add-col':['+ إضافة عمود','+ Add column'],'sheet-del-col':['حذف عمود','Delete column'],'sheet-undo':['تراجع','Undo'],'sheet-redo':['إعادة','Redo'],
       'sheet-copy':['نسخ الجدول','Copy sheet'],'sheet-save':['حفظ الآن','Save now'],'sheet-reload':['إعادة تحميل','Reload'],'sheet-clear-filters':['مسح الفلاتر','Clear filters'],
       'sheet-help':['للكتابة: انقر مرتين أو ابدأ الكتابة · اسحب أو Shift + نقر لتحديد نطاق · Ctrl+C / Ctrl+V · Tab والأسهم للتنقل','Double-click or type to edit · Drag or Shift+click selects a range · Ctrl+C / Ctrl+V · Tab and arrow navigation'],
       'sheet-owned':['أكواد المستخدم','User codes'],'sheet-pool':['المخزون غير المخصص','Unassigned stock'],'sheet-code-refresh':['تحديث الأكواد','Refresh codes']
@@ -97,6 +152,10 @@ const Trainees=(()=>{
     [['',tr('كل النتائج','All results')],['ناجح','ناجح'],['راسب','راسب'],['لم يدخل','لم يدخل']].forEach(([v,label])=>$('sheet-result').append(node('option',label,{value:v})));
     $('sheet-result').value=value;$('sheet-result').setAttribute('aria-label',tr('النتيجة','Result'));
     $('sheet-font-minus').title=tr('تصغير خط الجدول','Smaller sheet text');$('sheet-font-plus').title=tr('تكبير خط الجدول','Larger sheet text');$('sheet-bold').title=tr('خط عريض للمحدد','Bold selection');
+    $('sheet-add').title=tr('إضافة صف جديد في نهاية الجدول','Add new row at the end of the sheet');
+    $('sheet-delete').title=tr('حذف الصفوف أو الصف المحدد حالياً','Delete current row');
+    $('sheet-add-col').title=tr('إضافة عمود إلى جدول المتدربين','Add column to sheet');
+    $('sheet-del-col').title=tr('حذف العمود المحدد حالياً من الجدول','Delete currently selected column from sheet');
     $('sheet-copy').title=tr('نسخ كل الأعمدة بما فيها المخفية','Copy every column, including hidden columns');
     if(!editing)render();renderCodes();
   }
