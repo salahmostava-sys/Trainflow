@@ -9,4 +9,6 @@ fs.copyFileSync(path.join(root, 'cloud.js'), path.join(output, 'cloud.js'));
 fs.copyFileSync(path.join(root, 'ops-ui.js'), path.join(output, 'ops-ui.js'));
 for(const file of ['trainees.js','trainees-core.js','trainees.css','trainee-reports.js'])fs.copyFileSync(path.join(root,file),path.join(output,file));
 console.log('Cloudflare Pages files ready in dist/');
+fs.copyFileSync(path.join(root,'server','worker.mjs'),path.join(output,'_worker.js'));
+fs.writeFileSync(path.join(output,'_routes.json'),JSON.stringify({version:1,include:['/api/*'],exclude:[]}));
 

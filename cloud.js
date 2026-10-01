@@ -1,7 +1,16 @@
-/* Supabase publishable key: public by design. Access is enforced by database RLS. */
+/* Database requests use the JavaScript server; Auth remains with Supabase. */
 const Cloud = (() => {
   const SUPABASE_URL = 'https://xaeffreqwtozsgqajzpc.supabase.co';
   const KEY = 'sb_publishable_TB0SB3SNFP1ygpRvMoeSGg_s8o0mHeO';
+  function serverFetch(input,init){
+    const url=new URL(typeof input==='string'?input:input.url);
+    if(url.origin===SUPABASE_URL&&url.pathname.startsWith('/rest/v1/')){
+      const target='/api/data/'+url.pathname.slice('/rest/v1/'.length)+url.search;
+      if(typeof input==='string')return fetch(target,init);
+      return fetch(new Request(new URL(target,location.origin),input),init);
+    }
+    return fetch(input,init);
+  }
   let client, rows = new Map(), stock = new Map(), config, user, role, busy = false, ready = false;
   let nextBackgroundRefresh = 0;
   let statusKey = '', statusArgs = [], statusError = false, authStatusKey = 'authAccessHelp', authStatusArgs = [];
@@ -530,7 +539,7 @@ const Cloud = (() => {
   async function boot(){
     try{
       if(!window.supabase) throw Error('IBTA_LIBRARY_LOAD_FAILED');
-      client=window.supabase.createClient(SUPABASE_URL,KEY,{auth:{storage:sessionStorage,persistSession:true,detectSessionInUrl:false}});
+      client=window.supabase.createClient(SUPABASE_URL,KEY,{global:{fetch:serverFetch},auth:{storage:sessionStorage,persistSession:true,detectSessionInUrl:false}});
       $('auth-form').addEventListener('submit',e=>{e.preventDefault();authenticate(false);});
       $('sign-up').addEventListener('click',()=>authenticate(true));
       $('refresh-data').addEventListener('click',refresh);
