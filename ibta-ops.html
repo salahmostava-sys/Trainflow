@@ -316,7 +316,6 @@
   }
   .code-sheet-scroll{overflow:auto;max-height:62vh;position:relative;overflow-anchor:none;}
   .code-history-hint{font-size:12px;color:var(--muted);margin:8px 0;}
-  .code-day-heading{padding:8px 12px;background:var(--surface-2);border-bottom:1px solid var(--border);font-size:12px;font-weight:700;color:var(--blue-600);min-height:32px;}
   .code-sheet-head{
     display:flex; align-items:center; background:var(--surface-2); min-width:480px;position:sticky;top:0;z-index:2;
     border-bottom:1px solid var(--border); font-size:12.5px; font-weight:700;
@@ -2035,16 +2034,10 @@ function renderCodeGrid(){
     positionCodeTimeline();
     return;
   }
-  let previousDay=null;
   timeline.ordered.forEach(({code,index:i},position)=>{
     const used = state.usedCodes[code];
-    const day=used || '';
-    if(day!==previousDay){
-      const heading=document.createElement('div');heading.className='code-day-heading'+(position===timeline.start?' code-current-start':'');
-      heading.textContent=used || (currentLang==='ar'?'أكواد غير مستخدمة':'Unused codes');grid.appendChild(heading);previousDay=day;
-    }
     const row = document.createElement('div');
-    row.className = 'code-row' + (used ? ' used' : '');
+    row.className = 'code-row' + (used ? ' used' : '') + (position===timeline.start ? ' code-current-start' : '');
     row.dataset.code=code;
 
     const checkCell = document.createElement('div');
