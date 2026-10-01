@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="trainees.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -546,6 +547,7 @@
     <button data-tab="prometric" data-i18n="tabPrometric">Prometric</button>
     <button data-tab="codes" data-i18n="tabCodes">Codes</button>
     <button data-tab="inventory" data-i18n="tabInventory">Inventory</button>
+    <button data-tab="trainees" id="trainees-tab">المتدربون</button>
   </nav>
   </div>
 
@@ -632,6 +634,8 @@
       </div>
     </div>
   </section>
+
+  <section class="panel" id="panel-trainees"></section>
 
   <!-- SETTINGS (opened from the account menu) -->
   <section class="panel" id="panel-settings">
@@ -1323,6 +1327,7 @@ function applyLanguage(){
   document.getElementById('add-codes-input').placeholder = 'IBTAMEAF-XXXX-XXXX';
   document.getElementById('auth-password').placeholder = t('authPasswordPlaceholder');
   Cloud.translateUi();
+  if(typeof Trainees!=='undefined')Trainees.translate();
   renderKeycodes();
   renderCodeTabs();
   renderCodeGrid();
@@ -1389,11 +1394,13 @@ document.addEventListener('keydown',e=>{
 });
 function showPanel(id){
   closeAccountMenu();
+  document.getElementById('app').classList.toggle('sheet-wide',id==='trainees');
   if(id === 'keycodes') renderKeycodes();
   document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.remove('active'));
   document.querySelectorAll('section.panel').forEach(p=>p.classList.remove('active'));
   document.getElementById('account-menu-btn').classList.toggle('active',id==='settings');
   document.getElementById('panel-'+id).classList.add('active');
+  if(id==='trainees' && typeof Trainees!=='undefined')Trainees.open();
 }
 document.querySelectorAll('nav.tabs button').forEach(btn=>{
   btn.addEventListener('click', async ()=>{
@@ -2169,5 +2176,7 @@ applyLanguage();
 Cloud.boot();
 </script>
 <script src="ops-ui.js"></script>
+<script src="trainees-core.js"></script>
+<script src="trainees.js"></script>
 </body>
 </html>

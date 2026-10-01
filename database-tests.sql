@@ -19,8 +19,8 @@ do $$ begin
     raise exception 'FAIL: confirmed email change lost membership';
   end if;
 end $$;
-insert into public.ibta_codes(code,category) values ('IBTA-TEST-ONLY','Test');
-insert into public.ibta_codes(code,category) values ('IBTA-TEST-COPY','Test');
+insert into public.ibta_codes(code,category,owner_id) values ('IBTA-TEST-ONLY','Test','00000000-0000-4000-8000-000000000102');
+insert into public.ibta_codes(code,category,owner_id) values ('IBTA-TEST-COPY','Test','00000000-0000-4000-8000-000000000104');
 do $$ begin
   if (select remaining from public.ibta_supervisor_stock where category='Test')<>8 then
     raise exception 'FAIL: code allocation did not reduce supervisor stock';

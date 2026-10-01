@@ -109,7 +109,7 @@ assert(html.indexOf('id="panel-inventory"')<html.indexOf('id="settings-pane-inve
 assert(html.indexOf('id="settings-pane-inventory"')<html.indexOf('id="inventory-admin"'));
 assert(html.indexOf('id="inventory-admin"')<html.indexOf('id="inventory-whatsapp-settings"'));
 assert.match(html,/<details class="report-card" id="daily-used-details">/);
-assert.match(html,/#daily-used-results\{display:grid;grid-template-columns:repeat\(auto-fit,minmax\(220px,1fr\)\)/);
+assert.match(html,/#daily-used-results\{display:grid;grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/);
 for(const tab of ['profile','data','prometric','inventory','preferences','sync']){
   assert(html.includes(`id="settings-tab-${tab}"`));
   assert(html.includes(`id="settings-pane-${tab}"`));

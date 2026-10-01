@@ -18,6 +18,15 @@ function validBackup(value){
     seen.add(key);return true;
   });
   if(!validCodes)return false;
+  if(value.traineeSheets!==undefined){
+    if(!Array.isArray(value.traineeSheets)||value.traineeSheets.length>1000)return false;
+    const owners=new Set();
+    for(const sheet of value.traineeSheets){
+      if(!sheet||typeof sheet.owner_id!=='string'||!/^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(sheet.owner_id)||owners.has(sheet.owner_id))return false;
+      owners.add(sheet.owner_id);
+      if(!Array.isArray(sheet.cells)||sheet.cells.length>5000||sheet.cells.some(row=>!Array.isArray(row)||row.length!==13||row.some(cell=>typeof cell!=='string'||cell.length>2000)))return false;
+    }
+  }
   if(value.supervisorStock===undefined)return true;
   if(!Array.isArray(value.supervisorStock) || value.supervisorStock.length>1000)return false;
   const categories=new Set();

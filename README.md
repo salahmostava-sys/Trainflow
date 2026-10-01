@@ -60,7 +60,19 @@ Existing-code edits use an administrator-only atomic database operation. It pres
 
 Membership identity migrations `migrations/20260929_member_identity.sql` and `migrations/20260929_member_identity_skip_noop.sql` have also been applied to the live project. They keep access stable after a confirmed email change without writing an audit entry at every sign-in.
 
-## Hosting
+## Private trainee sheets and code ownership
+
+The **Trainees / المتدربون** page provides a private, autosaved sheet for every approved account, including copy-only accounts. Its 13 columns follow the supplied layout: code, email, Arabic name, English name, national ID, phone, organization, exam, exam date, username, password, result, and AnyDesk ID. Cells are strings so leading zeros survive. The sheet supports Excel TSV clipboard paste/copy (including quoted multiline cells), rectangular selection, direct editing, keyboard navigation, undo/redo, row deletion, search, filters, sorting, and 100-row pages. Multirow paste requires clearing filters/sorting first. It accepts up to 5,000 rows with 2,000 characters per cell and a 4 MB server payload limit. It does not evaluate Excel formulas.
+
+Administrators select an existing registered user from the page header to view/edit that user's sheet or manage their codes without signing in as them. **User codes → Unassigned stock** assigns selected codes; unused assigned codes can be returned to the pool. Assignment is atomic, version checked, and limited to 250 codes per operation. Ordinary users see only assigned codes throughout the app. Existing claimed codes acquire `used_by` as their owner; codes without a known owner remain in the administrator's unassigned pool. Newly imported codes start in that pool. Pasting a code into a trainee cell stores text only; it does not allocate or claim inventory.
+
+Apply `supabase/migrations/20261001064657_private_trainee_sheets.sql` before this frontend. RLS restricts both sheets and codes by authenticated user ID and active membership, with an administrator override. Student data is never embedded in site files or persisted to localStorage. Autosave uses optimistic sheet versions and retains unsaved edits after a network error or conflict; user switching and sign-out stop if saving fails. The user can copy the current sheet before reloading to resolve a conflict.
+
+Version 3 administrator backups include trainee sheets and code ownership. Restoring an older backup leaves sheets intact and preserves known code owners. Restoring sheets advances version counters so existing browser editors cannot silently overwrite restored data. The existing 10 MB backup limit still applies. Backup files now contain student records and their login details as well as the existing shared configuration.
+
+Validation: `node tests/trainees.test.cjs`, `node tests/cloud.test.cjs`, and `node tests/trainees-browser.test.cjs` (requires Playwright and Edge; starts its own local preview). `tests/trainees-database.sql` and `database-tests.sql` use transactional fixtures and roll back all changes. The migration lives under the CLI-generated `supabase/migrations` directory; older migrations remain under `migrations`.
+
+## Hosting configuration
 
 For Cloudflare Pages Git integration, use `main` as the production branch, `node tools/build-site.cjs` as the build command, and `dist` as the output directory. The build publishes only `ibta-ops.html` (as `index.html`), `cloud.js`, and `ops-ui.js`; SQL files, tests, and backups are not included in the website. The Supabase publishable key in `cloud.js` is intended for public clients; no secret/service-role key is used. The client library is pinned to Supabase JS 2.116.0 on jsDelivr. After deployment, set the Supabase Auth Site URL to the final HTTPS address.
 

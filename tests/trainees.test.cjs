@@ -1,0 +1,17 @@
+const assert=require('node:assert/strict');
+const D=require('../trainees-core.js');
+const row=D.blank();row[0]='000023';row[2]='اسم عربي';row[4]='001001';row[5]='0501234567';row[10]='a"b\tc\nd';row[12]='001234567';
+assert.deepEqual(D.normalize(D.parse(D.tsv([row]))),[row],'Excel clipboard preserves strings, quotes, tabs, line breaks and Arabic');
+assert.deepEqual(D.parse('a\tb\r\nc\td\r\n'),[['a','b'],['c','d']]);
+assert.deepEqual(D.parse('"a"\t"b"\n"c"\t"d"'),[['a','b'],['c','d']]);
+assert.equal(D.paste([],[["001234"]],2,12)[2][12],'001234');
+assert.equal(D.paste([row],[['new']],0,1)[0][0],'000023');
+assert.equal(D.paste([row],[['new']],0,1)[0][1],'new');
+assert.equal(row[1],'','Paste must not mutate history snapshots');
+assert.throws(()=>D.paste([],[["a","b"]],0,12),/PASTE_BOUNDS/);
+assert.throws(()=>D.paste([],[["a"]],5000,0),/PASTE_BOUNDS/);
+assert.throws(()=>D.normalize([[23]]),/CELL_LIMIT/);
+assert.throws(()=>D.normalize([['x'.repeat(2001)]]),/CELL_LIMIT/);
+assert.throws(()=>D.parse('"unterminated'),/INVALID_CLIPBOARD/);
+assert.deepEqual(D.normalize([D.blank(),D.blank()]),[]);
+console.log('Trainee clipboard and data validation tests passed');

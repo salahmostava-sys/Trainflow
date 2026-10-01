@@ -1,6 +1,19 @@
 // Local UI preview only. No Supabase connection, credentials, or production data.
 const http=require('node:http'),fs=require('node:fs'),path=require('node:path');
-const mock=`const Cloud={
+const mock=`const previewSheets=new Map();const previewCodes=[{code:'DEMO-PRIVATE-001',category:'Foundation',owner_id:'demo-user',version:1,used_on:null},{code:'DEMO-POOL-002',category:'Master',owner_id:null,version:1,used_on:null}];const Cloud={
+  role:()=>window.previewRole||'admin',userId:()=> 'demo-admin',email:()=> 'admin@example.invalid',
+  stockSnapshot:()=>({}),inventoryMessageSettings:()=>({number:'',name:'',language:'ar'}),
+  codeSnapshot:()=>previewCodes.map(row=>({...row})),
+  refresh:async()=>true,
+  listMembers:async()=>[{email:'user@example.invalid',user_id:'demo-user',active:true}],
+  async readTrainees(owner){if(window.previewReadError)throw Error('NETWORK');return JSON.parse(JSON.stringify(previewSheets.get(owner)||{cells:[],version:0}));},
+  async saveTrainees(owner,cells,version){
+    if(window.previewDelay)await new Promise(resolve=>setTimeout(resolve,window.previewDelay));
+    if(window.previewSaveError)throw Error(window.previewSaveError);
+    const old=previewSheets.get(owner)||{version:0};if(old.version!==version)throw Error('CONFLICT');
+    previewSheets.set(owner,{cells:JSON.parse(JSON.stringify(cells)),version:version+1});return version+1;
+  },
+  async assignCodes(owner,items){for(const item of items){const row=previewCodes.find(r=>r.code===item.code);if(row.version!==item.version)throw Error('CONFLICT');row.owner_id=owner;row.version++;}},
   persist:async()=>true,
   copyCode:async()=>{showToast('معاينة تصميم فقط — لم يتم نسخ أو حجز أي كود');return false;},
   decorate:()=>{},
@@ -24,9 +37,14 @@ const mock=`const Cloud={
   }
 };`;
 http.createServer((req,res)=>{
-  if(new URL(req.url,'http://localhost').pathname!=='/'){res.writeHead(404);return res.end();}
+  const pathname=new URL(req.url,'http://localhost').pathname;
+  if(['/trainees.js','/trainees-core.js','/trainees.css','/ops-ui.js'].includes(pathname)){
+    res.setHeader('Content-Type',pathname.endsWith('.css')?'text/css':'text/javascript');
+    return res.end(fs.readFileSync(path.join(__dirname,'..',pathname.slice(1))));
+  }
+  if(pathname!=='/'){res.writeHead(404);return res.end();}
   let html=fs.readFileSync(path.join(__dirname,'../ibta-ops.html'),'utf8');
   html=html.replace(/<script src="https:\/\/cdn.jsdelivr.net[^>]+><\/script>/,'').replace('<script src="cloud.js"></script>','<script>'+mock+'</script>');
   res.setHeader('Content-Type','text/html; charset=utf-8');res.setHeader('Cache-Control','no-store');res.end(html);
-}).listen(4174,'127.0.0.1',()=>console.log('Design-only preview: http://127.0.0.1:4174'));
+}).listen(Number(process.env.IBTA_PREVIEW_PORT)||4174,'127.0.0.1',()=>console.log('Design-only preview ready'));
 
