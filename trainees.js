@@ -1,7 +1,8 @@
 /* Private, versioned trainee workspaces. No student data is stored in browser storage. */
 const Trainees=(()=>{
   'use strict';
-  const D=TraineeData,$=id=>document.getElementById(id),PAGE=100;
+  const D=TraineeData,$=id=>document.getElementById(id);
+  let PAGE=100;
   const labels=[['الكود','Code'],['البريد الإلكتروني','Email'],['الاسم بالعربي','Arabic name'],['الاسم بالإنجليزي','English name'],['رقم الهوية / الإقامة','National / Iqama ID'],['الجوال','Phone'],['الجهة','Organization'],['الاختبار','Exam'],['تاريخ الاختبار','Exam date'],['اسم المستخدم','Username'],['كلمة المرور','Password'],['النتيجة','Result'],['AnyDesk ID','AnyDesk ID']];
   const tr=(ar,en)=>currentLang==='ar'?ar:en;
   let owner='',cells=[],version=0,revision=0,savedRevision=0,loaded=false,loading=false,epoch=0;
@@ -80,6 +81,19 @@ const Trainees=(()=>{
     focusCell(pos==='above'?cursor.r:cursor.r+1,cursor.c);
     message(tr('تم إدراج صف جديد','New row inserted'));
   }
+  function addBulkRows(count=1000){
+    commitEdit();clearFilters();
+    const n=Math.max(1,Math.min(Number(count)||1000,D.MAX_ROWS-cells.length));
+    if(cells.length+n>D.MAX_ROWS)return limitError();
+    const startIdx=cells.length;
+    const newRows=Array.from({length:n},()=>D.blank());
+    const next=cells.concat(newRows);
+    change(next,false);
+    page=Math.floor(startIdx/PAGE);
+    render();
+    focusCell(startIdx,0);
+    message(tr(`تمت إضافة ${n.toLocaleString()} صف دفعة واحدة بنجاح`,`Added ${n.toLocaleString()} rows at once successfully`));
+  }
   function deleteSelectedRows(){
     commitEdit();const [r1,r2]=bounds();const ids=new Set(view.slice(r1,r2+1));
     if(!ids.size||!confirm(tr((ids.size>1?'حذف الصفوف المحددة؟':'حذف الصف المحدد؟'),(ids.size>1?'Delete selected rows?':'Delete selected row?'))))return;
@@ -115,6 +129,7 @@ const Trainees=(()=>{
       <hr>
       <button type="button" data-action="insert-above"><span>⬆️ <span class="sheet-menu-label"></span></span></button>
       <button type="button" data-action="insert-below"><span>⬇️ <span class="sheet-menu-label"></span></span></button>
+      <button type="button" data-action="insert-1000"><span>➕ <span class="sheet-menu-label"></span></span></button>
       <button type="button" data-action="delete-row"><span>🗑️ <span class="sheet-menu-label"></span></span></button>
       <hr>
       <button type="button" data-action="clear-contents"><span>🧹 <span class="sheet-menu-label"></span></span><span class="sheet-menu-shortcut">Del</span></button>
@@ -130,6 +145,7 @@ const Trainees=(()=>{
         case 'paste':await pasteSelection();break;
         case 'insert-above':insertRow('above');break;
         case 'insert-below':insertRow('below');break;
+        case 'insert-1000':addBulkRows(1000);break;
         case 'delete-row':deleteSelectedRows();break;
         case 'clear-contents':clearSelection();break;
         case 'clear-format':formatSelection(null);break;
@@ -153,6 +169,7 @@ const Trainees=(()=>{
     const labels={
       'cut':tr('قص','Cut'),'copy':tr('نسخ','Copy'),'paste':tr('لصق','Paste'),
       'insert-above':tr('إدراج صف لأعلى','Insert row above'),'insert-below':tr('إدراج صف لأسفل','Insert row below'),
+      'insert-1000':tr('إدراج 1000 صف في الأسفل','Insert 1,000 rows at bottom'),
       'delete-row':tr('حذف الصف','Delete row'),'clear-contents':tr('مسح المحتويات','Clear contents'),
       'clear-format':tr('مسح التنسيق','Clear formatting')
     };
@@ -311,7 +328,7 @@ const Trainees=(()=>{
     $('panel-trainees').innerHTML=`
       <div class="sheet-heading"><div><h2 id="sheet-title"></h2><p id="sheet-subtitle"></p></div><label class="sheet-owner" id="sheet-owner-wrap" hidden><span id="sheet-owner-label"></span><select id="sheet-owner"></select></label></div>
       <div id="sheet-workspace" class="sheet-card">
-        <div class="sheet-tools"><button type="button" id="sheet-add" class="sheet-primary"></button><button type="button" id="sheet-delete"></button><div class="sheet-add-col-wrap"><button type="button" id="sheet-add-col" class="sheet-primary"></button><div id="sheet-add-col-popover" class="sheet-add-col-popover" hidden></div></div><button type="button" id="sheet-del-col"></button><button type="button" id="sheet-find-btn"></button><button type="button" id="sheet-undo"></button><button type="button" id="sheet-redo"></button><button type="button" id="sheet-copy"></button><button type="button" id="sheet-save"></button><button type="button" id="sheet-reload"></button><span class="sheet-status" id="sheet-status" role="status" aria-live="polite"></span></div>
+        <div class="sheet-tools"><button type="button" id="sheet-add" class="sheet-primary"></button><button type="button" id="sheet-add-1000" class="sheet-primary"></button><button type="button" id="sheet-delete"></button><div class="sheet-add-col-wrap"><button type="button" id="sheet-add-col" class="sheet-primary"></button><div id="sheet-add-col-popover" class="sheet-add-col-popover" hidden></div></div><button type="button" id="sheet-del-col"></button><button type="button" id="sheet-find-btn"></button><button type="button" id="sheet-undo"></button><button type="button" id="sheet-redo"></button><button type="button" id="sheet-copy"></button><button type="button" id="sheet-save"></button><button type="button" id="sheet-reload"></button><span class="sheet-status" id="sheet-status" role="status" aria-live="polite"></span></div>
         <div class="sheet-format-tools">
           <details id="sheet-columns"><summary id="sheet-columns-title"></summary><div id="sheet-column-options"></div></details>
           <button type="button" id="sheet-font-minus">A−</button><output id="sheet-font-size"></output><button type="button" id="sheet-font-plus">A+</button>
@@ -330,13 +347,23 @@ const Trainees=(()=>{
         <div id="sheet-duplicate-summary" class="sheet-duplicate-summary" role="status" hidden></div>
         <div class="sheet-formula"><code id="sheet-address">A1</code><input id="sheet-formula" autocomplete="off" spellcheck="false" dir="auto"></div>
         <div class="sheet-scroll"><table class="sheet-grid" id="sheet-grid" role="grid" aria-label="Trainees"><thead></thead><tbody></tbody></table></div>
-        <div class="sheet-footer"><p id="sheet-help"></p><div class="sheet-pages"><button type="button" id="sheet-prev">‹</button><span id="sheet-count"></span><button type="button" id="sheet-next">›</button></div></div>
+        <div class="sheet-add-rows-bar">
+          <span id="sheet-add-prefix"></span>
+          <input type="number" id="sheet-add-bulk-count" value="1000" min="1" max="100000" step="100" class="sheet-add-bulk-input" aria-label="عدد الصفوف المراد إضافتها">
+          <span id="sheet-add-suffix"></span>
+          <button type="button" id="sheet-add-bulk-btn" class="sheet-primary"></button>
+        </div>
+        <div class="sheet-footer"><p id="sheet-help"></p><div class="sheet-pages"><button type="button" id="sheet-prev">‹</button><span id="sheet-count"></span><button type="button" id="sheet-next">›</button><label class="sheet-page-size-wrap"><select id="sheet-page-size" aria-label="Rows per page"><option value="100" selected>100</option><option value="250">250</option><option value="500">500</option><option value="1000">1000</option></select><span id="sheet-page-size-suffix"></span></label></div></div>
       </div>
       <div id="sheet-code-workspace" hidden><div class="sheet-code-tools" id="sheet-code-admin" hidden><button type="button" id="sheet-owned"></button><button type="button" id="sheet-pool"></button><button type="button" id="sheet-assign" class="sheet-primary"></button></div><div class="sheet-code-tools"><input id="sheet-code-search" type="search"><button type="button" id="sheet-code-refresh"></button><span id="sheet-code-count"></span></div><p class="sheet-notice" id="sheet-code-notice"></p><div class="sheet-card sheet-code-list" id="sheet-code-list"></div><p id="sheet-code-status" role="status"></p></div>`;
     $('sheet-owner').addEventListener('change',async()=>{const next=$('sheet-owner').value;$('sheet-owner').value=owner;await switchOwner(next);});
     if($('sheet-mode'))$('sheet-mode').onclick=()=>setMode('sheet');if($('sheet-codes-mode'))$('sheet-codes-mode').onclick=()=>setMode('codes');
     $('sheet-save').onclick=()=>flush();$('sheet-reload').onclick=()=>reload();
     $('sheet-add').onclick=()=>{commitEdit();clearFilters();const r=cells.length;if(r>=D.MAX_ROWS)return limitError();const next=cells.map(row=>[...row]);next.push(D.blank());change(next,false);render();focusCell(r,0);};
+    $('sheet-add-1000').onclick=()=>addBulkRows(1000);
+    $('sheet-add-bulk-btn').onclick=()=>{const count=Number($('sheet-add-bulk-count').value)||1000;addBulkRows(count);};
+    $('sheet-add-bulk-count').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();addBulkRows(Number($('sheet-add-bulk-count').value)||1000);}});
+    if($('sheet-page-size'))$('sheet-page-size').onchange=()=>{PAGE=Number($('sheet-page-size').value)||100;page=0;render();};
     $('sheet-delete').onclick=deleteSelectedRows;
     $('sheet-find-btn').onclick=()=>openFindDialog();
     $('sheet-add-col').onclick=(e)=>{e.stopPropagation();commitEdit();toggleAddColumnMenu();};
@@ -453,7 +480,10 @@ const Trainees=(()=>{
     const text={
       'sheet-title':['جدول المتدربين','Trainee sheet'],'sheet-subtitle':['جدول خاص بكل مستخدم · حفظ تلقائي','A private sheet for each user · Autosave'],
       'sheet-owner-label':['عرض بيانات المستخدم','View user'],'sheet-mode':['المتدربون','Trainees'],'sheet-codes-mode':['أكواد المستخدم','User codes'],
-      'sheet-add':['+ إضافة صف','+ Add row'],'sheet-delete':['حذف صف','Delete row'],'sheet-add-col':['+ إضافة عمود','+ Add column'],'sheet-del-col':['حذف عمود','Delete column'],'sheet-undo':['تراجع','Undo'],'sheet-redo':['إعادة','Redo'],
+      'sheet-add':['+ إضافة صف','+ Add row'],'sheet-add-1000':['+ 1000 صف','+ 1,000 rows'],
+      'sheet-add-prefix':['إضافة','Add'],'sheet-add-suffix':['صف في الأسفل','more rows at bottom'],'sheet-add-bulk-btn':['+ إضافة','+ Add'],
+      'sheet-page-size-suffix':['/ صفحة','/ page'],
+      'sheet-delete':['حذف صف','Delete row'],'sheet-add-col':['+ إضافة عمود','+ Add column'],'sheet-del-col':['حذف عمود','Delete column'],'sheet-undo':['تراجع','Undo'],'sheet-redo':['إعادة','Redo'],
       'sheet-copy':['نسخ الجدول','Copy sheet'],'sheet-save':['حفظ الآن','Save now'],'sheet-reload':['إعادة تحميل','Reload'],'sheet-clear-filters':['مسح الفلاتر','Clear filters'],
       'sheet-help':['للكتابة: انقر مرتين أو ابدأ الكتابة · اسحب أو Shift + نقر لتحديد نطاق · Ctrl+C / Ctrl+V · Tab والأسهم للتنقل','Double-click or type to edit · Drag or Shift+click selects a range · Ctrl+C / Ctrl+V · Tab and arrow navigation'],
       'sheet-owned':['أكواد المستخدم','User codes'],'sheet-pool':['المخزون غير المخصص','Unassigned stock'],'sheet-code-refresh':['تحديث الأكواد','Refresh codes']
@@ -474,6 +504,8 @@ const Trainees=(()=>{
     $('sheet-result').value=value;$('sheet-result').setAttribute('aria-label',tr('النتيجة','Result'));
     $('sheet-font-minus').title=tr('تصغير خط الجدول','Smaller sheet text');$('sheet-font-plus').title=tr('تكبير خط الجدول','Larger sheet text');$('sheet-bold').title=tr('خط عريض للمحدد','Bold selection');
     $('sheet-add').title=tr('إضافة صف جديد في نهاية الجدول','Add new row at the end of the sheet');
+    $('sheet-add-1000')&&($('sheet-add-1000').title=tr('إضافة 1000 صف فارغ دفعة واحدة للجدول','Add 1,000 blank rows to sheet at once'));
+    $('sheet-add-bulk-btn')&&($('sheet-add-bulk-btn').title=tr('إضافة العدد المحدد من الصفوف في أسفل الجدول','Add specified number of rows at the bottom'));
     $('sheet-delete').title=tr('حذف الصفوف أو الصف المحدد حالياً','Delete current row');
     $('sheet-add-col').title=tr('إضافة عمود إلى جدول المتدربين','Add column to sheet');
     $('sheet-del-col').title=tr('حذف العمود المحدد حالياً من الجدول','Delete currently selected column from sheet');
