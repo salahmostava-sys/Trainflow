@@ -13,7 +13,7 @@ const Trainees=(()=>{
   let owner='',cells=[],version=0,revision=0,savedRevision=0,loaded=false,loading=false,epoch=0;
   let timer,saving=null,history=[],future=[],view=[],page=0,sortCol=-1,sortDir=1,anchor={r:0,c:0},cursor={r:0,c:0},editing=null;
   let members=[],mode='sheet',codeMode='owned',codeBusy=false,initialized=false;
-  let dragging=false,dragMoved=false;
+  let dragging=false,dragMoved=false,rowDragging=false;
   let formatting=D.defaultFormat(),duplicateIds=new Map();
   let hoverTimer,hoverHideTimer,detailTimer,hoverCell=null,detailKey='',detailPage=0,detailSource=-1;
   let colWidths={};
@@ -153,6 +153,8 @@ const Trainees=(()=>{
       <hr>
       <button type="button" data-action="clear-contents"><span>🧹 <span class="sheet-menu-label"></span></span><span class="sheet-menu-shortcut">Del</span></button>
       <button type="button" data-action="clear-format"><span>✨ <span class="sheet-menu-label"></span></span></button>
+      <hr>
+      <button type="button" data-action="select-all"><span>☑️ <span class="sheet-menu-label"></span></span><span class="sheet-menu-shortcut">Ctrl+A</span></button>
     `;
     document.body.append(menu);
     menu.addEventListener('click',async e=>{
@@ -168,6 +170,7 @@ const Trainees=(()=>{
         case 'delete-row':deleteSelectedRows();break;
         case 'clear-contents':clearSelection();break;
         case 'clear-format':formatSelection(null);break;
+        case 'select-all':anchor={r:0,c:0};cursor={r:Math.max(0,view.length-1),c:colCount()-1};paint();break;
       }
     });
     document.addEventListener('pointerdown',e=>{if(!e.target.closest('#sheet-context-menu'))closeContextMenu();});
@@ -190,7 +193,8 @@ const Trainees=(()=>{
       'insert-above':tr('إدراج صف لأعلى','Insert row above'),'insert-below':tr('إدراج صف لأسفل','Insert row below'),
       'insert-1000':tr('إدراج 1000 صف في الأسفل','Insert 1,000 rows at bottom'),
       'delete-row':tr('حذف الصف','Delete row'),'clear-contents':tr('مسح المحتويات','Clear contents'),
-      'clear-format':tr('مسح التنسيق','Clear formatting')
+      'clear-format':tr('مسح التنسيق','Clear formatting'),
+      'select-all':tr('تحديد الكل','Select all')
     };
     menu.querySelectorAll('button[data-action]').forEach(b=>{
       const act=b.dataset.action,span=b.querySelector('.sheet-menu-label');
@@ -429,13 +433,16 @@ const Trainees=(()=>{
     initContextMenu();
     initFindDialog();
     grid.addEventListener('pointerdown',e=>{const td=e.target.closest('td[data-col]');if(e.target.closest('select')){commitEdit();if(td){cursor=anchor={r:+td.dataset.v,c:+td.dataset.col};paint();}return;}if(e.button!==0||e.pointerType==='touch'||!td||editing?.el===td)return;e.preventDefault();dragging=true;dragMoved=false;selectCell(+td.dataset.v,+td.dataset.col,e.shiftKey);});
-    grid.addEventListener('pointerover',e=>{const td=e.target.closest('td[data-col]');if(!dragging||!td)return;const r=+td.dataset.v,c=+td.dataset.col;if(r!==cursor.r||c!==cursor.c){dragMoved=true;cursor={r,c};paint();}});
-    document.addEventListener('pointerup',()=>{dragging=false;});
+    grid.addEventListener('pointerover',e=>{
+      if(rowDragging){const th=e.target.closest('th[data-rowv]');if(th){const rv=+th.dataset.rowv;if(rv!==cursor.r){dragMoved=true;cursor={r:rv,c:colCount()-1};paint();}}return;}
+      const td=e.target.closest('td[data-col]');if(!dragging||!td)return;const r=+td.dataset.v,c=+td.dataset.col;if(r!==cursor.r||c!==cursor.c){dragMoved=true;cursor={r,c};paint();}
+    });
+    document.addEventListener('pointerup',()=>{dragging=false;rowDragging=false;});
     grid.addEventListener('click',e=>{clearTimeout(detailTimer);if(e.target.closest('select'))return;if(dragMoved){dragMoved=false;return;}const td=e.target.closest('td[data-col]');if(!td||editing?.el===td)return;selectCell(+td.dataset.v,+td.dataset.col,e.shiftKey);if(!e.shiftKey&&td.classList.contains('sheet-id-duplicate')){const index=view[+td.dataset.v],token=epoch;detailTimer=setTimeout(()=>{if(token===epoch&&td.isConnected&&!editing)openDuplicateDetails(index);},250);}});
     grid.addEventListener('dblclick',e=>{clearTimeout(detailTimer);hideDuplicateHint();const td=e.target.closest('td[data-col]');if(td)beginEdit(td);});
     grid.addEventListener('keydown',keyDown);grid.addEventListener('paste',paste);
     document.addEventListener('keydown',handleUndoShortcut);
-    grid.addEventListener('copy',e=>{if(editing)return;e.preventDefault();e.clipboardData.setData('text/plain',selectionText());});
+    grid.addEventListener('copy',e=>{if(editing)return;e.preventDefault();e.clipboardData.setData('text/plain',selectionText());e.clipboardData.setData('text/html',selectionHtml());});
     grid.addEventListener('cut',e=>{if(editing)return;e.preventDefault();e.clipboardData.setData('text/plain',selectionText());clearSelection();});
     grid.addEventListener('contextmenu',e=>{
       const td=e.target.closest('td[data-col]'),th=e.target.closest('th.sheet-rownum');
@@ -633,8 +640,10 @@ const Trainees=(()=>{
     });
     thead.append(header);
     for(let v=page*PAGE;v<Math.min(view.length,(page+1)*PAGE);v++){
-      const idx=view[v],trEl=node('tr');const number=node('th',undefined,{class:'sheet-rownum',scope:'row'});
-      number.append(button(String(idx+1),e=>{commitEdit();const maxC=colCount()-1;if(e.shiftKey){cursor={r:v,c:maxC};anchor.c=0;}else{anchor={r:v,c:0};cursor={r:v,c:maxC};}paint();}));trEl.append(number);
+      const idx=view[v],trEl=node('tr');const number=node('th',undefined,{class:'sheet-rownum',scope:'row','data-rowv':v});
+      const rowBtn=button(String(idx+1),e=>{commitEdit();const maxC=colCount()-1;if(e.shiftKey){cursor={r:v,c:maxC};anchor.c=0;}else{anchor={r:v,c:0};cursor={r:v,c:maxC};}paint();});
+      rowBtn.addEventListener('pointerdown',e=>{if(e.button!==0)return;e.preventDefault();e.stopPropagation();commitEdit();rowDragging=true;dragMoved=false;const maxC=colCount()-1;if(e.shiftKey){cursor={r:v,c:maxC};anchor.c=0;}else{anchor={r:v,c:0};cursor={r:v,c:maxC};}paint();});
+      number.append(rowBtn);trEl.append(number);
       cols.forEach(c=>{const td=node('td',undefined,{'data-v':v,'data-col':c,tabindex:'-1',role:'gridcell',dir:'auto','aria-label':tr(...labels[c])+' '+(idx+1)});decorateCell(td,idx,c);trEl.append(td);});tbody.append(trEl);
     }
     $('sheet-count').textContent=tr('الصفوف: ','Rows: ')+cells.filter(r=>r.some(Boolean)).length+' · '+(page+1)+' / '+Math.max(1,Math.ceil(view.length/PAGE));
@@ -807,6 +816,24 @@ const Trainees=(()=>{
   }
   function limitError(){message(tr('الحد الأقصى 1,000,000 صف و500 عمود و2000 حرف للخلية.','Limit: 1,000,000 rows, 500 columns and 2,000 characters per cell.'),true);}
   function selectionText(){const [r1,r2,c1,c2]=bounds(),cols=visibleCols().filter(c=>c>=c1&&c<=c2);return D.tsv(view.slice(r1,r2+1).map(i=>cols.map(c=>cells[i]?.[c]||'')));}
+  function selectionHtml(){
+    const [r1,r2,c1,c2]=bounds(),cols=visibleCols().filter(c=>c>=c1&&c<=c2);
+    let html='<table>';
+    for(let r=r1;r<=r2;r++){
+      const idx=view[r];html+='<tr>';
+      for(const c of cols){
+        const value=cells[idx]?.[c]||'',style=formatting.styles[idx+':'+c]||{};
+        let css='';
+        if(style.bg)css+='background:'+style.bg+';';
+        if(style.color)css+='color:'+style.color+';';
+        if(style.bold)css+='font-weight:700;';
+        if(style.size)css+='font-size:'+style.size+'px;';
+        html+='<td'+(css?' style="'+css+'"':'')+'>'+value.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</td>';
+      }
+      html+='</tr>';
+    }
+    html+='</table>';return html;
+  }
   function clearSelection(){if(!loaded)return;const next=cells.map(row=>[...row]);const [r1,r2,c1,c2]=bounds();for(let r=r1;r<=r2;r++){const idx=view[r];if(!next[idx])continue;for(const c of visibleCols().filter(c=>c>=c1&&c<=c2))next[idx][c]='';}change(D.normalize(next));}
   function paste(e){
     if(!loaded)return;e.preventDefault();commitEdit();

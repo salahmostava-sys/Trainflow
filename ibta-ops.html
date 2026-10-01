@@ -119,7 +119,7 @@
   .inventory-stock-action label{min-width:0;}
   .inventory-stock-action button{justify-self:start;}
   @media(max-width:680px){.inventory-stock-edit-grid{grid-template-columns:1fr;}.inventory-stock-action button{width:100%;}}
-  .low-stock-alert{margin:0 0 12px;padding:10px 13px;border-radius:9px;background:#fff4df;color:#78500a;font-size:13px;font-weight:700;}
+
   @keyframes fade{from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:translateY(0);}}
 
   /* ---- Keycodes ---- */
@@ -645,23 +645,10 @@
         <div id="daily-used-results"></div>
       </div>
     </div>
-    <div id="low-stock-alert" class="low-stock-alert" hidden></div>
+
     <div class="code-tabs-bar">
       <div class="code-tabs" id="code-cat-tabs"></div>
-      <div class="code-view-controls">
-        <button type="button" id="code-density-btn" class="code-control-btn active" title="تبديل حجم الصفوف">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-          <span id="code-density-label" data-i18n="codeDensityCompact">عرض مدمج</span>
-        </button>
-        <button type="button" id="code-expand-btn" class="code-control-btn" title="توسيع ارتفاع الجدول">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
-          <span id="code-expand-label" data-i18n="codeExpandHeight">توسيع الارتفاع</span>
-        </button>
-        <button type="button" id="code-scroll-top-btn" class="code-control-btn" title="الانتقال إلى بداية الجدول">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
-          <span id="code-scroll-label" data-i18n="codeScrollToTop">عرض من البداية (#1)</span>
-        </button>
-      </div>
+
     </div>
     <div class="bulk-bar" id="bulk-bar">
       <div class="bulk-bar-left">
@@ -670,7 +657,7 @@
       </div>
       <button class="confirm-btn" id="bulk-delete-btn" data-i18n="deleteSelected">Delete Selected</button>
     </div>
-    <p class="code-history-hint" id="code-history-hint" hidden></p>
+
     <div class="code-sheet compact">
       <div class="code-sheet-scroll" id="code-sheet-viewport" tabindex="0" role="region" aria-label="Codes">
         <div class="code-sheet-head">
@@ -765,7 +752,7 @@
       <div id="bulk-import-preview" class="ops-status" role="status" aria-live="polite"></div>
       <button id="bulk-import-submit" type="button" disabled data-i18n="bulkImportButton">Import valid codes</button>
       <button id="export-codes-csv" type="button" data-i18n="exportCodesCsv">Export codes CSV</button>
-      <div class="ops-row"><label><span data-i18n="lowStockLabel">Low-stock warning at or below</span><input id="low-stock-threshold" type="number" min="0" max="10000" step="1"></label><button id="low-stock-save" type="button" data-i18n="saveBtn">Save</button></div>
+
     </section>
     <section class="ops-card" id="reset-tools" hidden>
       <h3 data-i18n="resetMarksTitle">Usage marks</h3>
@@ -2101,12 +2088,6 @@ function renderStats(){
     <div class="stat">${t('copiedStat')}: <b>${usedCount}</b></div>
     <div class="stat">${t('remainingStat')}: <b>${list.length - usedCount}</b></div>
   `;
-  const threshold=Number.isInteger(state.lowStockThreshold)?state.lowStockThreshold:10;
-  const low=sortCategories(Object.keys(state.codesByCategory)).map(cat=>[cat,(state.codesByCategory[cat]||[]).filter(code=>!state.usedCodes[code]).length])
-    .filter(([,count])=>count<=threshold);
-  const alert=document.getElementById('low-stock-alert');
-  alert.hidden=!low.length;
-  alert.textContent=low.length?t('lowStockWarning')(low.map(([cat,count])=>displayCatName(cat)+': '+count).join(' · ')):'';
   renderDailyUsed();
 }
 document.getElementById('daily-used-details').addEventListener('toggle',()=>{
@@ -2167,8 +2148,8 @@ function renderCodeGrid(){
   const list = state.codesByCategory[activeCategory] || [];
   const timeline=orderedCodeTimeline(list);
   grid.dataset.category=activeCategory || '';grid.dataset.hasHistory=String(timeline.start>0);
-  const hint=document.getElementById('code-history-hint');hint.hidden=timeline.start<=0;
-  hint.textContent=currentLang==='ar'?'الأيام الأقدم موجودة بالأعلى — مرّر لأعلى داخل جدول الأكواد لعرضها.':'Earlier days are above — scroll up inside the code table to view them.';
+  const hint=document.getElementById('code-history-hint');if(hint){hint.hidden=timeline.start<=0;
+  hint.textContent=currentLang==='ar'?'الأيام الأقدم موجودة بالأعلى — مرّر لأعلى داخل جدول الأكواد لعرضها.':'Earlier days are above — scroll up inside the code table to view them.';}
   document.getElementById('code-sheet-viewport').setAttribute('aria-label',currentLang==='ar'?'الأكواد — مرّر لأعلى للأيام الأقدم':'Codes — scroll up for earlier days');
   const dayColors = getDayColors();
   renderStats();
@@ -2349,17 +2330,7 @@ document.getElementById('reset-btn').addEventListener('click', async ()=>{
   }
 });
 
-document.getElementById('code-density-btn')?.addEventListener('click',()=>{
-  codeCompact=!codeCompact;
-  applyCodeDensity();
-  positionCodeTimeline();
-});
-document.getElementById('code-expand-btn')?.addEventListener('click',()=>{
-  codeExpanded=!codeExpanded;
-  applyCodeExpand();
-});
-document.getElementById('code-scroll-top-btn')?.addEventListener('click',toggleCodeScrollTop);
-document.getElementById('code-history-hint')?.addEventListener('click',toggleCodeScrollTop);
+
 
 // ---------- SETTINGS ----------
 const autoChainToggle = document.getElementById('autochain-toggle');
