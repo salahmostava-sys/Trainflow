@@ -161,7 +161,24 @@ async function renderAuditList(){
 document.getElementById('admin-tools').addEventListener('toggle',event=>{if(event.target.open)renderMemberList();});
 document.getElementById('audit-details').addEventListener('toggle',event=>{if(event.target.open)renderAuditList();});
 
+function sortCategories(cats){
+  if(!Array.isArray(cats))return [];
+  const order=["Foundation","Master","BIS","Corporate","CYBP"];
+  return [...cats].sort((a,b)=>{
+    const cleanA=String(a||'').replace(/-\d+$/,''),cleanB=String(b||'').replace(/-\d+$/,'');
+    const isCybA=cleanA.toUpperCase()==='CYBP',isCybB=cleanB.toUpperCase()==='CYBP';
+    if(isCybA&&!isCybB)return 1;
+    if(!isCybA&&isCybB)return -1;
+    const idxA=order.indexOf(cleanA),idxB=order.indexOf(cleanB);
+    if(idxA!==-1&&idxB!==-1)return idxA-idxB;
+    if(idxA!==-1)return -1;
+    if(idxB!==-1)return 1;
+    return String(a).localeCompare(String(b));
+  });
+}
+
 function inventoryMessage(categories,stock){
+  categories=sortCategories(categories);
   const settings=Cloud.inventoryMessageSettings(),dict=TRANSLATIONS[settings.language];
   const label=category=>state.categoryLabels?.[category] || state.categoryLabels?.[category.replace(/-\d+$/,'')] || category.replace(/-\d+$/,'');
   const mine=category=>(state.codesByCategory[category] || []).filter(code=>!state.usedCodes[code]).length;
@@ -180,7 +197,7 @@ function inventoryMessage(categories,stock){
     }),dict.inventoryMessageOverall+': '+overall].join('\n');
 }
 function renderInventory(){
-  const categories=Object.keys(state.codesByCategory || {}),stock=Cloud.stockSnapshot(),messageSettings=Cloud.inventoryMessageSettings();
+  const categories=sortCategories(Object.keys(state.codesByCategory || {})),stock=Cloud.stockSnapshot(),messageSettings=Cloud.inventoryMessageSettings();
   const categorySelect=document.getElementById('inventory-category'),previous=categorySelect.value;
   categorySelect.innerHTML='';
   categories.forEach(category=>{
@@ -257,7 +274,7 @@ document.getElementById('inventory-save-settings').addEventListener('click',asyn
   catch{status.textContent=t('genericError');}
 });
 document.getElementById('inventory-whatsapp-link').addEventListener('click',e=>{
-  const categories=Object.keys(state.codesByCategory || {}),stock=Cloud.stockSnapshot(),messageSettings=Cloud.inventoryMessageSettings();
+  const categories=sortCategories(Object.keys(state.codesByCategory || {})),stock=Cloud.stockSnapshot(),messageSettings=Cloud.inventoryMessageSettings();
   const complete=categories.length>0 && categories.every(category=>Object.hasOwn(stock,category));
   const number=messageSettings.number;
   if(complete && /^\d{8,15}$/.test(number)){
@@ -269,7 +286,7 @@ document.getElementById('inventory-whatsapp-link').addEventListener('click',e=>{
   }
 });
 document.getElementById('inventory-copy-message').addEventListener('click',async()=>{
-  const categories=Object.keys(state.codesByCategory || {}),stock=Cloud.stockSnapshot();
+  const categories=sortCategories(Object.keys(state.codesByCategory || {})),stock=Cloud.stockSnapshot();
   const message=inventoryMessage(categories,stock);
   document.getElementById('inventory-message').textContent=message;
   if(await copyText(message))showToast(t('inventoryMessageCopied'));

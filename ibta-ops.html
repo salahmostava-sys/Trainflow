@@ -1107,8 +1107,24 @@ let currentLang = 'en';
 function t(key){ return TRANSLATIONS[currentLang][key]; }
 
 // ---------- DATA ----------
-const CATEGORY_ORDER = ["Foundation","Master","BIS","CYBP","Corporate"];
-const CATEGORY_LINK = {"Foundation":"Foundation-100","Master":"Master-10","BIS":"BIS-40","CYBP":"CYBP-5","Corporate":"Corporate"};
+const CATEGORY_ORDER = ["Foundation","Master","BIS","Corporate","CYBP"];
+const CATEGORY_LINK = {"Foundation":"Foundation-100","Master":"Master-10","BIS":"BIS-40","Corporate":"Corporate","CYBP":"CYBP-5"};
+
+function sortCategories(cats){
+  if(!Array.isArray(cats))return [];
+  const order=["Foundation","Master","BIS","Corporate","CYBP"];
+  return [...cats].sort((a,b)=>{
+    const cleanA=String(a||'').replace(/-\d+$/,''),cleanB=String(b||'').replace(/-\d+$/,'');
+    const isCybA=cleanA.toUpperCase()==='CYBP',isCybB=cleanB.toUpperCase()==='CYBP';
+    if(isCybA&&!isCybB)return 1;
+    if(!isCybA&&isCybB)return -1;
+    const idxA=order.indexOf(cleanA),idxB=order.indexOf(cleanB);
+    if(idxA!==-1&&idxB!==-1)return idxA-idxB;
+    if(idxA!==-1)return -1;
+    if(idxB!==-1)return 1;
+    return String(a).localeCompare(String(b));
+  });
+}
 // Display-only helper: strips the trailing "-NN" quota number from a codes category
 // key so the user sees "Foundation" instead of "Foundation-100". The full key (with
 // the number) is still used internally for all state lookups — only the label changes.
@@ -1132,14 +1148,14 @@ function fillManageSelect(id,entries){
   else select.value=entries[0]?.[0] || '';
 }
 function renderManageData(){
-  fillManageSelect('manage-category',state.categoryOrder.map(cat=>[cat,displayCatName(cat)]));
+  fillManageSelect('manage-category',sortCategories(state.categoryOrder).map(cat=>[cat,displayCatName(cat)]));
   fillManageSelect('manage-exam',DEFAULT_KEYCODES.map(item=>[item.code,displayCatName(state.keycodeOverrides[item.code] || item.category)+' · '+item.title+' · '+item.code]));
-  fillManageSelect('manage-code-category',Object.keys(state.codesByCategory).map(cat=>[cat,displayCatName(cat)]));
+  fillManageSelect('manage-code-category',sortCategories(Object.keys(state.codesByCategory)).map(cat=>[cat,displayCatName(cat)]));
   const cat=document.getElementById('manage-code-category').value;
   fillManageSelect('manage-code',(state.codesByCategory[cat] || []).map(code=>[code,code]));
   document.getElementById('manage-exam-edit').disabled=!DEFAULT_KEYCODES.length;
   document.getElementById('manage-code-edit').disabled=!(state.codesByCategory[cat] || []).length;
-  fillManageSelect('bulk-import-category',Object.keys(state.codesByCategory).map(cat=>[cat,displayCatName(cat)]));
+  fillManageSelect('bulk-import-category',sortCategories(Object.keys(state.codesByCategory)).map(cat=>[cat,displayCatName(cat)]));
 }
 document.getElementById('manage-code-category').addEventListener('change',renderManageData);
 document.getElementById('manage-category-edit').addEventListener('click',()=>openEdit('category',document.getElementById('manage-category').value));
@@ -2058,7 +2074,7 @@ function positionCodeTimeline(previous=null){
 function renderCodeTabs(){
   const wrap = document.getElementById('code-cat-tabs');
   wrap.innerHTML = '';
-  Object.keys(state.codesByCategory).forEach(cat=>{
+  sortCategories(Object.keys(state.codesByCategory)).forEach(cat=>{
     const b = document.createElement('button');
     b.textContent = displayCatName(cat);
     if(cat === activeCategory) b.classList.add('active');
@@ -2086,7 +2102,7 @@ function renderStats(){
     <div class="stat">${t('remainingStat')}: <b>${list.length - usedCount}</b></div>
   `;
   const threshold=Number.isInteger(state.lowStockThreshold)?state.lowStockThreshold:10;
-  const low=Object.entries(state.codesByCategory).map(([cat,codes])=>[cat,codes.filter(code=>!state.usedCodes[code]).length])
+  const low=sortCategories(Object.keys(state.codesByCategory)).map(cat=>[cat,(state.codesByCategory[cat]||[]).filter(code=>!state.usedCodes[code]).length])
     .filter(([,count])=>count<=threshold);
   const alert=document.getElementById('low-stock-alert');
   alert.hidden=!low.length;
@@ -2099,7 +2115,7 @@ document.getElementById('daily-used-details').addEventListener('toggle',()=>{
 function dailyUsedGroups(iso){
   if(!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return [];
   const [year,month,day]=iso.split('-').map(Number);
-  return Object.entries(state.codesByCategory).map(([cat,codes])=>({
+  return sortCategories(Object.keys(state.codesByCategory)).map(cat=>({
     cat,
     codes:codes.filter(code=>{
       const used=state.usedCodes[code];

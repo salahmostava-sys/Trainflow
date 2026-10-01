@@ -99,14 +99,31 @@ const Cloud = (() => {
       if(data.length<1000) return result;
     }
   }
+  function sortCategories(cats){
+    if(typeof window!=='undefined' && typeof window.sortCategories==='function') return window.sortCategories(cats);
+    if(typeof globalThis!=='undefined' && typeof globalThis.sortCategories==='function') return globalThis.sortCategories(cats);
+    if(!Array.isArray(cats))return [];
+    const order=["Foundation","Master","BIS","Corporate","CYBP"];
+    return [...cats].sort((a,b)=>{
+      const cleanA=String(a||'').replace(/-\d+$/,''),cleanB=String(b||'').replace(/-\d+$/,'');
+      const isCybA=cleanA.toUpperCase()==='CYBP',isCybB=cleanB.toUpperCase()==='CYBP';
+      if(isCybA&&!isCybB)return 1;
+      if(!isCybA&&isCybB)return -1;
+      const idxA=order.indexOf(cleanA),idxB=order.indexOf(cleanB);
+      if(idxA!==-1&&idxB!==-1)return idxA-idxB;
+      if(idxA!==-1)return -1;
+      if(idxB!==-1)return 1;
+      return String(a).localeCompare(String(b));
+    });
+  }
   function project(){
     const p=config.payload;
     let prefs={};
     try{prefs=JSON.parse(localStorage.getItem('ibta_ui_preferences') || '{}') || {};}catch{}
     state={usedCodes:{},codeUseTimes:{},codesByCategory:{},codeNotes:{},categoryLabels:clone(p.categoryLabels || {}),keycodeOverrides:clone(p.keycodeOverrides || {}),
-      keycodeOrder:clone(p.keycodeOrder || {}),categoryOrder:clone(p.categoryOrder),dateColors:clone(p.dateColors || {}),
+      keycodeOrder:clone(p.keycodeOrder || {}),categoryOrder:sortCategories(p.categoryOrder),dateColors:clone(p.dateColors || {}),
       settings:{autoChain:!!prefs.autoChain},lowStockThreshold:Number.isInteger(p.lowStockThreshold)?p.lowStockThreshold:10,uiLang:prefs.uiLang==='en'?'en':'ar'};
-    for(const cat of p.codeCategories || []) state.codesByCategory[cat]=[];
+    for(const cat of sortCategories(p.codeCategories || [])) state.codesByCategory[cat]=[];
     for(const r of rows.values()){
       (state.codesByCategory[r.category] ||= []).push(r.code);
       if(r.used_on) state.usedCodes[r.code]=r.used_on;
