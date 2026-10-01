@@ -21,13 +21,13 @@ export async function handleApi(request,env={},fetcher=(...args)=>globalThis.fet
   const headers={apikey:key,Authorization:authorization};
   let stage='auth';
   try{
-    const auth=await fetcher(databaseUrl+'/auth/v1/user',{headers,redirect:'error'});
+    const auth=await fetcher(databaseUrl+'/auth/v1/user',{headers,redirect:'manual'});
     if(!auth.ok)return json(auth.status>=500?503:401,'AUTH_REQUIRED');
     const user=await auth.json();if(!user.id)return json(401,'AUTH_REQUIRED');
     // The first allowlisted login may not yet have a user_id attached.
     const query='select=role,active,user_id,email&or='+encodeURIComponent('(user_id.eq.'+user.id+',and(user_id.is.null,email.eq.'+String(user.email||'').toLowerCase()+'))');
     stage='membership';
-    const membership=await fetcher(databaseUrl+'/rest/v1/ibta_members?'+query,{headers,redirect:'error'});
+    const membership=await fetcher(databaseUrl+'/rest/v1/ibta_members?'+query,{headers,redirect:'manual'});
     if(!membership.ok)return json(403,'IBTA_NOT_APPROVED');
     const members=await membership.json(),member=members.find(m=>m.active&&(m.user_id===user.id||m.user_id==null&&m.email===String(user.email||'').toLowerCase())&&['admin','operator','copy_only'].includes(m.role));
     if(!member)return json(403,'IBTA_NOT_APPROVED');
@@ -54,7 +54,8 @@ export async function handleApi(request,env={},fetcher=(...args)=>globalThis.fet
     const outgoing=new Headers(headers);
     for(const name of ['accept','content-type','prefer','range','range-unit']){const value=request.headers.get(name);if(value)outgoing.set(name,value);}
     stage='database';
-    const response=await fetcher(databaseUrl+'/rest/v1/'+path+url.search,{method:request.method,headers:outgoing,body,redirect:'error'});
+    const response=await fetcher(databaseUrl+'/rest/v1/'+path+url.search,{method:request.method,headers:outgoing,body,redirect:'manual'});
+    if(response.status>=300&&response.status<400)return json(502,'UPSTREAM_REDIRECT_REJECTED');
     const resultHeaders=new Headers({'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'});
     for(const name of ['content-type','content-range','preference-applied']){const value=response.headers.get(name);if(value)resultHeaders.set(name,value);}
     stage='response';
