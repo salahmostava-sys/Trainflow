@@ -802,14 +802,20 @@ const Trainees=(()=>{
     if(c===11){td.querySelector('select')?.focus();return;}
     editing={el:td,index:view[r],column:c,old:cells[view[r]]?.[c]||''};td.contentEditable='true';td.spellcheck=false;
     td.textContent=initial!==undefined?initial:editing.old;td.focus();
+    td.oninput=()=>schedule();
+    td.oncompositionstart=()=>{td.dataset.composing='true';clearTimeout(timer);};
+    td.oncompositionend=()=>{delete td.dataset.composing;schedule();};
+    if(initial!==undefined)schedule();
     const range=document.createRange();range.selectNodeContents(td);range.collapse(false);const selection=window.getSelection();selection.removeAllRanges();selection.addRange(range);
     td.addEventListener('blur',()=>commitEdit(),{once:true});
   }
-  function commitEdit(cancel=false){
-    if(!editing)return;const edit=editing;editing=null;edit.el.contentEditable='false';
-    const value=cancel?edit.old:edit.el.textContent;edit.el.textContent=value;
+  function commitEdit(cancel=false,keepEditing=false){
+    if(!editing)return;const edit=editing;
+    if(!keepEditing){editing=null;edit.el.contentEditable='false';edit.el.oninput=null;edit.el.oncompositionstart=null;edit.el.oncompositionend=null;delete edit.el.dataset.composing;}
+    const value=cancel?edit.old:edit.el.textContent;if(!keepEditing)edit.el.textContent=value;
     if(value!==edit.old){try{change(D.paste(cells,[[value]],edit.index,edit.column),false);}
       catch{limitError();}}
+    if(keepEditing){edit.old=cells[edit.index]?.[edit.column]||'';return;}
     duplicateIds=D.duplicates(cells);decorateCell(edit.el,edit.index,edit.column);
     if(edit.column===4){$('sheet-grid').querySelectorAll('td[data-col="4"]').forEach(td=>decorateCell(td,view[+td.dataset.v],4));}
     paint();
@@ -818,10 +824,10 @@ const Trainees=(()=>{
     if(!loaded)return;history.push(snapshot());if(history.length>30)history.shift();future=[];cells=next;formatting=D.format(nextFormat);revision++;schedule();if(redraw)render();else{$('sheet-undo').disabled=false;$('sheet-redo').disabled=true;}
   }
   function undo(redo){commitEdit();const from=redo?future:history,to=redo?history:future;if(!from.length)return;to.push(snapshot());const next=from.pop();cells=next.cells;formatting=D.format(next.format);revision++;schedule();render();}
-  function schedule(){clearTimeout(timer);message(tr('تعديلات غير محفوظة…','Unsaved changes…'));const saveWhenIdle=()=>{if(editing){timer=setTimeout(saveWhenIdle,900);return;}flush();};timer=setTimeout(saveWhenIdle,900);}
+  function schedule(){clearTimeout(timer);message(tr('تعديلات غير محفوظة…','Unsaved changes…'));const saveWhenIdle=()=>{if(editing?.el.dataset.composing==='true'){timer=setTimeout(saveWhenIdle,900);return;}flush(true);};timer=setTimeout(saveWhenIdle,900);}
   function hasDraft(){return !!editing||revision!==savedRevision||!!saving;}
-  async function flush(){
-    commitEdit();clearTimeout(timer);if(saving){const ok=await saving;if(!ok)return false;return flush();}
+  async function flush(keepEditing=false){
+    commitEdit(false,keepEditing);clearTimeout(timer);if(saving){const ok=await saving;if(!ok)return false;return flush(keepEditing);}
     if(!loaded||revision===savedRevision)return true;
     const token=epoch,snapshot=revision,saveOwner=owner,data=D.normalize(cells),saveFormat=D.format(formatting);
     message(tr('جارٍ الحفظ…','Saving…'));
@@ -829,7 +835,7 @@ const Trainees=(()=>{
       try{const result=await Cloud.saveTrainees(saveOwner,data,version,saveFormat);if(token!==epoch)return false;version=Number(result);savedRevision=snapshot;message(revision===savedRevision?tr('تم الحفظ','Saved'):tr('تعديلات غير محفوظة…','Unsaved changes…'));return true;}
       catch(error){if(token===epoch)message(errorMessage(error),true);return false;}
     })();const ok=await saving;saving=null;
-    if(ok&&token===epoch&&revision!==savedRevision)return flush();return ok;
+    if(ok&&token===epoch&&revision!==savedRevision)return flush(keepEditing);return ok;
   }
   function limitError(){message(tr('الحد الأقصى 1,000,000 صف و500 عمود و2000 حرف للخلية.','Limit: 1,000,000 rows, 500 columns and 2,000 characters per cell.'),true);}
   function selectionText(){const [r1,r2,c1,c2]=bounds(),cols=visibleCols().filter(c=>c>=c1&&c<=c2);return D.tsv(view.slice(r1,r2+1).map(i=>cols.map(c=>cells[i]?.[c]||'')));}
