@@ -3,9 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="trainees.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
 <title id="doc-title">IBTA Tools</title>
 <style>
   :root{
@@ -20,7 +21,8 @@
     --text:#0F1B2E;
     --muted:#6B7B93;
     --danger:#E5484D;
-    --mono:'Calibri', 'Segoe UI', Tahoma, Arial, sans-serif;
+    --ui-font:'IBM Plex Sans Arabic', 'Segoe UI', Tahoma, Arial, sans-serif;
+    --mono:var(--ui-font);
     --radius-lg:18px;
     --radius-md:12px;
     --radius-sm:8px;
@@ -29,10 +31,10 @@
   *{box-sizing:border-box;}
   body{
     margin:0; background:var(--bg); color:var(--text);
-    font-family:'Calibri', 'Segoe UI', Tahoma, Arial, sans-serif;
+    font-family:var(--ui-font);
     min-height:100vh;
   }
-  body.lang-ar{font-family:'Calibri', 'Segoe UI', Tahoma, Arial, sans-serif;}
+  button,input,select,textarea{font-family:inherit;}
   .wrap{max-width:920px; margin:0 auto; padding:24px 16px 70px;}
   .app-sticky-bar{position:sticky; top:0; z-index:30; background:var(--bg); margin-top:-24px; padding-top:24px; padding-bottom:1px;}
 
@@ -54,6 +56,19 @@
   }
   .icon-pill-btn.square{width:38px; padding:0; font-size:19px;}
   .icon-pill-btn:hover, .icon-pill-btn.active{background:var(--blue); color:#fff; border-color:var(--blue);}
+  .account-menu{position:relative;flex:none;}
+  .account-trigger{width:40px;height:40px;padding:3px;border-radius:50%;}
+  .account-trigger[aria-expanded="true"]{background:var(--blue);border-color:var(--blue);}
+  .account-avatar{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:var(--blue);color:#fff;font-size:14px;font-weight:700;line-height:1;}
+  .account-trigger:hover .account-avatar,.account-trigger.active .account-avatar,.account-trigger[aria-expanded="true"] .account-avatar{background:#fff;color:var(--blue);}
+  .account-popover{position:absolute;inset-block-start:calc(100% + 9px);inset-inline-end:0;z-index:40;width:min(268px,calc(100vw - 32px));padding:8px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:0 14px 35px rgba(15,27,46,.16);}
+  .account-summary{padding:10px 11px 12px;margin-bottom:4px;border-bottom:1px solid var(--border);}
+  .account-summary strong{display:block;font-size:12px;color:var(--muted);margin-bottom:4px;}
+  .account-summary span{display:block;font-size:13px;font-weight:700;overflow-wrap:anywhere;unicode-bidi:plaintext;}
+  .account-option{display:flex;align-items:center;gap:9px;width:100%;padding:10px 11px;border:0;border-radius:var(--radius-sm);background:transparent;color:var(--text);font:inherit;font-size:13.5px;font-weight:700;text-align:start;cursor:pointer;}
+  .account-option:hover{background:var(--blue-50);color:var(--blue-600);}
+  .account-option:focus-visible,.account-trigger:focus-visible{outline:3px solid var(--blue-100);outline-offset:2px;}
+  .account-option svg{width:17px;height:17px;flex:none;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
 
   nav.tabs{
     display:flex; gap:4px; background:var(--surface); border:1px solid var(--border);
@@ -65,9 +80,46 @@
     transition:background .15s, color .15s;
   }
   nav.tabs button.active{background:var(--blue); color:#fff; box-shadow:0 3px 10px rgba(0,112,243,.3);}
+  @media(max-width:520px){nav.tabs button{min-width:0;font-size:12px;padding:9px 3px;}}
 
   section.panel{display:none;}
   section.panel.active{display:block; animation:fade .18s ease;}
+  .settings-tabs{display:flex;gap:7px;overflow-x:auto;padding:2px 2px 10px;margin-bottom:10px;scrollbar-width:thin;}
+  .settings-tabs button{flex:1 0 auto;min-width:120px;padding:10px 14px;border:1px solid var(--border);border-radius:10px;background:var(--surface);color:var(--muted);box-shadow:var(--shadow);font:inherit;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap;}
+  .settings-tabs button[aria-selected="true"]{background:var(--blue);border-color:var(--blue);color:#fff;}
+  .settings-tabs button:focus-visible{outline:3px solid var(--blue-100);outline-offset:2px;}
+  .settings-pane[hidden],.settings-tabs button[hidden]{display:none;}
+  .ops-card{margin-top:16px;padding:18px;border:1px solid var(--border);border-radius:var(--radius-md);background:var(--surface);box-shadow:var(--shadow);}
+  .ops-card h3{margin:0 0 10px;font-size:16px;}
+  .ops-card label{display:grid;gap:5px;font-size:13px;font-weight:700;color:var(--muted);}
+  .ops-card input,.ops-card select{min-height:36px;padding:7px 9px;border:1px solid var(--border);border-radius:7px;background:var(--surface);color:var(--text);font:inherit;}
+  .ops-row{display:flex;align-items:end;gap:10px;flex-wrap:wrap;margin:10px 0;}
+  .ops-row label{min-width:180px;flex:1;}
+  .ops-card button{padding:8px 13px;border:1px solid var(--border);border-radius:8px;background:var(--blue-50);color:var(--blue-600);font:inherit;font-weight:700;cursor:pointer;}
+  .ops-card button:disabled{opacity:.5;cursor:not-allowed;}
+  .ops-status{font-size:13px;line-height:1.6;color:var(--muted);white-space:pre-line;}
+  .ops-list{display:grid;gap:7px;margin-top:10px;max-height:300px;overflow:auto;}
+  .ops-list-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;}
+  .ops-list-row span{flex:1;min-width:180px;overflow-wrap:anywhere;}
+  .ops-list-row select{min-width:135px;}
+  .inventory-intro{font-size:14px;color:var(--muted);line-height:1.7;margin:0 0 16px;}
+  #panel-inventory .ops-card{margin-top:0;max-width:760px;}
+  .inventory-message{white-space:pre-line;line-height:1.85;font-size:14px;margin:14px 0;padding:16px 18px;border:1px solid var(--border);border-radius:12px;background:var(--surface-2);overflow-wrap:anywhere;}
+  .inventory-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  .inventory-actions a{display:inline-flex;align-items:center;justify-content:center;min-height:36px;padding:8px 13px;border-radius:8px;background:var(--blue);color:white;text-decoration:none;font-weight:700;font-size:13px;}
+  .inventory-actions a[aria-disabled="true"]{opacity:.5;pointer-events:none;}
+  .inventory-actions button{min-height:36px;}
+  .inventory-stock-list{display:grid;gap:0;margin:14px 0;border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+  .inventory-stock-row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 12px;font-size:13px;border-bottom:1px solid var(--border);}
+  .inventory-stock-row:last-child{border-bottom:0;}
+  .inventory-stock-row strong{font-family:var(--mono);font-size:14px;color:var(--blue-600);}
+  .inventory-stock-edit-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:14px;}
+  .inventory-stock-action{border:1px solid var(--border);border-radius:10px;padding:14px;background:var(--surface-2);display:grid;align-content:start;gap:9px;}
+  .inventory-stock-action p{margin:0;}
+  .inventory-stock-action label{min-width:0;}
+  .inventory-stock-action button{justify-self:start;}
+  @media(max-width:680px){.inventory-stock-edit-grid{grid-template-columns:1fr;}.inventory-stock-action button{width:100%;}}
+  .low-stock-alert{margin:0 0 12px;padding:10px 13px;border-radius:9px;background:#fff4df;color:#78500a;font-size:13px;font-weight:700;}
   @keyframes fade{from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:translateY(0);}}
 
   /* ---- Keycodes ---- */
@@ -147,6 +199,11 @@
   .kc-add-exam-fields{display:grid;grid-template-columns:minmax(130px,1.7fr) 100px minmax(115px,1fr) minmax(115px,1fr);gap:8px;margin-top:9px;}
   .kc-add-exam-fields input,.kc-add-exam-fields select{width:100%;min-width:0;height:34px;padding:5px 7px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);font:inherit;font-size:13px;}
   .kc-add-exam-fields input:focus,.kc-add-exam-fields select:focus{outline:2px solid var(--blue-100);border-color:var(--blue);}
+  .kc-add-exam-category{display:grid;gap:5px;margin-top:10px;color:var(--muted);font-size:12px;font-weight:700;}
+  .kc-add-exam-category select{width:100%;max-width:320px;height:34px;padding:5px 7px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);font:inherit;font-size:13px;}
+  #settings-add-forms{display:grid;gap:12px;margin-top:16px;}
+  #settings-add-forms[hidden]{display:none;}
+  #settings-add-forms .kc-add-exam,#settings-add-forms .add-box{border:1px solid var(--border);border-radius:var(--radius-md);background:var(--surface);box-shadow:var(--shadow);}
   .kc-add-exam-fields input[name="keycode"]{direction:ltr;}
   .kc-add-exam button{margin-top:8px;padding:7px 14px;border:0;border-radius:7px;background:var(--blue);color:white;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;}
   @media(max-width:600px){.kc-add-exam-fields{grid-template-columns:repeat(2,minmax(0,1fr));}}
@@ -159,7 +216,49 @@
   }
   .cred-card:hover{border-color:var(--blue);}
   .cred-label{font-size:14px; color:var(--muted); margin-bottom:7px; font-weight:600;}
-  .cred-value{font-family:var(--mono); font-size:19px; font-weight:600; word-break:break-all; direction:ltr; unicode-bidi:plaintext; text-align:start;}
+  .cred-value,.resource-value{font-family:inherit;font-size:16px;font-weight:600;line-height:1.6;word-break:break-all;direction:ltr;unicode-bidi:plaintext;text-align:start;}
+  .resource-card{cursor:default;}
+  .resource-card:hover{border-color:var(--border);}
+  .resource-value{min-width:0;flex:1 1 250px;}
+  #prometric-login-card:focus-visible{outline:3px solid var(--blue-100);outline-offset:2px;}
+  #zoom-card{display:block;color:var(--text);text-decoration:none;}
+  #zoom-card[href]{cursor:pointer;}
+  #zoom-card[href]:hover{border-color:var(--blue);}
+  #zoom-card:focus-visible{outline:3px solid var(--blue-100);outline-offset:2px;}
+  .report-card{background:var(--surface);border:1px solid var(--border);border-radius:999px;box-shadow:var(--shadow);}
+  .report-card summary{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 15px;cursor:pointer;font-size:14px;color:var(--muted);list-style:none;white-space:nowrap;}
+  .report-card summary::-webkit-details-marker{display:none;}
+  .report-card summary::after{content:'⌄';color:var(--blue-600);font-size:14px;transition:transform .15s;}
+  .report-card[open] summary::after{transform:rotate(180deg);}
+  .report-shortcuts{display:contents;}
+  .report-card[open]{border-color:var(--blue);}
+  .report-card summary:focus-visible{outline:3px solid var(--blue-100);outline-offset:2px;border-radius:999px;}
+  .report-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow);margin-bottom:12px;}
+  .report-body{padding:14px 16px;}
+  .report-body button{border:1px solid var(--blue-100);background:var(--blue-50);color:var(--blue-600);border-radius:8px;padding:8px 12px;font:inherit;font-size:12px;font-weight:700;cursor:pointer;}
+  .report-body button:hover{background:var(--blue-100);}
+  .daily-used-date{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:13px;font-weight:700;margin-bottom:13px;}
+  .daily-used-date input{padding:7px 10px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font:inherit;}
+  #daily-used-results{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;}
+  .daily-used-total{grid-column:1/-1;font-size:14px;font-weight:700;color:var(--blue-600);}
+  .daily-used-group{min-width:0;padding:12px;border:1px solid var(--border);border-radius:10px;}
+  .daily-used-group strong{font-size:13px;}
+  .daily-used-codes{display:grid;gap:6px;margin-top:8px;}
+  .daily-used-codes span{font-family:var(--mono);font-size:14px;direction:ltr;text-align:start;padding:8px 10px;border-radius:6px;background:var(--blue-50);color:var(--text);word-break:break-all;}
+  .daily-used-none{grid-column:1/-1;font-size:13px;color:var(--muted);}
+  .resource-btn{display:inline-flex;align-items:center;justify-content:center;min-height:36px;padding:7px 13px;border:1px solid var(--blue);border-radius:var(--radius-sm);background:var(--blue);color:#fff;font:inherit;font-size:13px;font-weight:700;text-decoration:none;white-space:nowrap;cursor:pointer;}
+  .resource-btn:hover{background:var(--blue-600);border-color:var(--blue-600);}
+  .resource-btn:disabled,a.resource-btn:not([href]){opacity:.55;cursor:not-allowed;}
+  .resource-btn:focus-visible{outline:3px solid var(--blue-100);outline-offset:2px;}
+  .shared-settings-form{display:grid;gap:12px;}
+  .shared-settings-form label{display:grid;gap:6px;font-size:13px;font-weight:700;color:var(--text);}
+  .shared-settings-form input{width:100%;min-width:0;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);font:inherit;font-size:14px;direction:ltr;text-align:left;}
+  .shared-settings-form input:focus{outline:2px solid var(--blue-100);border-color:var(--blue);}
+  .shared-settings-form .resource-btn{justify-self:start;margin-top:3px;}
+  .profile-forms{display:grid;gap:17px;}
+  .profile-forms form+form{border-top:1px solid var(--border);padding-top:16px;}
+  .profile-forms .shared-settings-form{gap:9px;}
+  .profile-status{font-size:13px;line-height:1.6;color:var(--blue-600);margin:14px 0 0;}
 
   .switch-row{display:flex; align-items:center; gap:11px; cursor:pointer;}
   .switch{position:relative; width:42px; height:24px; flex:none;}
@@ -215,9 +314,10 @@
     border:1px solid var(--border); border-radius:var(--radius-md); overflow:hidden;
     background:var(--surface); box-shadow:var(--shadow);
   }
-  .code-sheet-scroll{overflow-x:auto;}
+  .code-sheet-scroll{overflow:auto;max-height:62vh;position:relative;overflow-anchor:none;}
+  .code-history-hint{font-size:12px;color:var(--muted);margin:8px 0;}
   .code-sheet-head{
-    display:flex; align-items:center; background:var(--surface-2); min-width:480px;
+    display:flex; align-items:center; background:var(--surface-2); min-width:480px;position:sticky;top:0;z-index:2;
     border-bottom:1px solid var(--border); font-size:12.5px; font-weight:700;
     color:var(--muted); letter-spacing:.2px;
   }
@@ -228,7 +328,7 @@
   .col-check{width:30px; flex:none; text-align:center; display:flex; align-items:center; justify-content:center;}
   .col-n{width:30px; flex:none; text-align:center;}
   .col-code{width:182px; flex:none;}         /* sized to fit the code text exactly */
-  .col-date{width:84px; flex:none;}          /* sized to fit dd/mm/yyyy */
+  .col-date{width:150px; flex:none;}          /* date and copy time on one line */
   .col-notes{flex:1; min-width:70px;}        /* takes whatever space is left */
   .col-actions{width:58px; flex:none; text-align:center;}  /* room for exactly 2 icon buttons */
 
@@ -242,7 +342,7 @@
   .code-row:hover{background:var(--blue-50);}
   .code-row .col-n{color:var(--muted); font-family:var(--mono); font-size:12.5px;}
   .code-row .col-code{font-family:var(--mono); font-weight:600; font-size:14px; white-space:nowrap; direction:ltr;}
-  .code-row .col-date{color:var(--blue-600); font-size:12px; font-weight:600; font-family:var(--mono); direction:ltr;}
+  .code-row .col-date{color:var(--blue-600); font-size:12px; font-weight:600; font-family:var(--mono); direction:ltr; white-space:nowrap;}
   .code-row .col-notes{padding:3px 4px;}
   .code-row .col-notes input{
     width:100%; border:1px solid transparent; background:transparent; font-family:inherit;
@@ -262,6 +362,31 @@
   }
   .icon-btn:hover{background:var(--blue-100); color:var(--blue-600); border-color:var(--blue-100);}
   .icon-btn.danger:hover{background:#FDEBEC; color:var(--danger); border-color:#F6C9CB;}
+  .icon-btn svg,.kc-remove-cat-btn svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+  #prometric-login-card{cursor:pointer;}
+  #prometric-login-card:hover{border-color:var(--blue-600);}
+  .delete-dialog{border:1px solid var(--border);border-radius:18px;padding:24px;width:min(390px,calc(100vw - 32px));box-shadow:0 20px 60px #10295735;background:var(--surface);color:var(--text);}
+  .delete-dialog::backdrop{background:#10295780;}
+  .delete-dialog-icon{width:42px;height:42px;display:grid;place-items:center;border-radius:12px;background:#FDEBEC;color:var(--danger);margin-bottom:14px;}
+  .delete-dialog-icon svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+  .delete-dialog h2{font-size:19px;margin:0 0 8px;}
+  .delete-dialog p{font-size:14px;line-height:1.55;color:var(--muted);overflow-wrap:anywhere;margin:0;}
+  .delete-dialog-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:22px;}
+  .delete-dialog-actions button{padding:9px 16px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font:inherit;cursor:pointer;}
+  .delete-dialog-actions .danger{background:var(--danger);border-color:var(--danger);color:#fff;}
+  .edit-dialog{border:1px solid var(--border);border-radius:16px;padding:24px;width:min(420px,calc(100vw - 32px));box-shadow:0 20px 60px #10295735;color:var(--text);background:var(--surface);}
+  .edit-dialog::backdrop{background:#10295780;}
+  .edit-dialog h2{margin:0 0 18px;font-size:19px;}
+  .edit-dialog label{display:block;margin:12px 0 5px;font-size:13px;font-weight:700;}
+  .edit-dialog input,.edit-dialog select{width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font:inherit;}
+  .edit-dialog-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:20px;}
+  .edit-dialog-actions button{padding:8px 15px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font:inherit;cursor:pointer;}
+  .edit-dialog-actions .save{background:var(--blue);color:#fff;border-color:var(--blue);}
+  .manage-grid{display:grid;gap:12px;margin-top:14px;}
+  .manage-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:end;}
+  .manage-row label{font-size:13px;font-weight:700;min-width:0;}
+  .manage-row select{display:block;width:100%;margin-top:5px;padding:9px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font:inherit;}
+  .manage-row button{padding:9px 14px;border:1px solid var(--blue-100);border-radius:8px;background:var(--blue-50);color:var(--blue-600);font:inherit;font-weight:700;cursor:pointer;}
 
   .add-box{
     background:var(--surface); border:1px dashed var(--border); border-radius:var(--radius-lg);
@@ -278,7 +403,7 @@
     background:var(--blue); color:#fff; border:none; font-weight:700; font-size:15px;
     padding:9px 18px; border-radius:999px; cursor:pointer; font-family:inherit;
   }
-  .stats-row{display:flex; align-items:flex-start; gap:8px; flex-wrap:wrap; margin-bottom:12px;}
+  .stats-row{display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:12px;}
   .stats{display:flex; gap:8px; flex-wrap:wrap;}
   .stat{
     background:var(--surface); border:1px solid var(--border); border-radius:999px;
@@ -286,34 +411,8 @@
   }
   .stat b{color:var(--blue-600); font-family:var(--mono); font-size:15px;}
 
-  .day-legend-box{
-    background:var(--surface); border:1px solid var(--border); border-radius:999px;
-    box-shadow:var(--shadow); overflow:hidden; flex:none; align-self:flex-start;
-  }
-  .day-legend-box[open]{border-radius:var(--radius-md);}
-  .day-legend-box summary{
-    padding:9px 14px; cursor:pointer; font-size:12.5px; font-weight:700; color:var(--blue-600);
-    list-style:none; display:flex; align-items:center; justify-content:space-between; gap:8px;
-    white-space:nowrap;
-  }
-  .day-legend-box summary::-webkit-details-marker{display:none;}
-  .day-legend-box summary::after{content:'▾'; font-size:10px; color:var(--muted); transition:transform .15s;}
-  .day-legend-box[open] summary::after{transform:rotate(180deg);}
-  .day-legend-groups{padding:2px 14px 12px; border-top:1px solid var(--border); min-width:220px;}
-  .day-legend-month{margin-top:10px;}
-  .day-legend-month:first-child{margin-top:8px;}
-  .day-legend-month-title{font-size:11px; font-weight:700; color:var(--muted); margin-bottom:6px;}
-  .day-legend-pills{display:flex; flex-wrap:wrap; gap:6px;}
-  .day-pill{
-    display:flex; align-items:center; gap:6px; background:var(--surface-2); border:1px solid var(--border);
-    border-radius:999px; padding:5px 10px; font-size:11px; font-weight:600; font-family:var(--mono);
-  }
-  .day-pill-dot{width:8px; height:8px; border-radius:50%; flex:none;}
 
-  .reset-link{
-    display:block; text-align:center; margin-top:28px; font-size:13.5px; color:var(--muted);
-    cursor:pointer; text-decoration:underline; text-decoration-style:dotted;
-  }
+  .reset-link{border-color:#f4c4bf!important;background:#fff3f1!important;color:#a6281d!important;}
   .empty-state{
     color:var(--muted); font-size:15px; padding:26px; text-align:center;
     border:1px dashed var(--border); border-radius:var(--radius-lg); background:var(--surface);
@@ -334,7 +433,6 @@
   .cloud-popover button:focus-visible,.cloud-admin summary:focus-visible{outline:3px solid var(--blue-100);outline-offset:2px;}
   .cloud-actions button{display:flex;align-items:center;justify-content:center;gap:6px;flex:1;white-space:nowrap;}
   .cloud-actions svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
-  #sign-out{color:var(--muted);}
   .cloud-admin{margin-top:15px;border-top:1px solid var(--border);}
   .cloud-admin summary{display:flex;align-items:center;gap:7px;padding:13px 0 0;cursor:pointer;color:var(--blue-600);font-size:12.5px;font-weight:700;list-style:none;}
   .cloud-admin summary::before{content:'⌄';display:grid;place-items:center;width:17px;height:17px;border-radius:5px;background:var(--blue-50);font-size:15px;line-height:1;transition:transform .15s;}
@@ -346,19 +444,19 @@
   .cloud-popover input:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-50);}
   #auth-message{font-size:14px;line-height:1.6;}
   @media(max-width:600px){.cloud-popover{padding:17px;}}
-  #auth-box{font-family:'Tajawal','Segoe UI',Tahoma,sans-serif;min-height:100svh;padding:36px 24px;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at 90% 5%,#e2eeff 0,transparent 45%),#f5f7fb;}
+  #auth-box{font-family:var(--ui-font);min-height:100svh;padding:36px 24px;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at 90% 5%,#e2eeff 0,transparent 45%),#f5f7fb;}
   .auth-shell{width:100%;max-width:1040px;display:grid;grid-template-columns:1fr 1fr;background:white;border:1px solid #e2e9f3;border-radius:28px;overflow:hidden;box-shadow:0 24px 80px -28px #233b6b30;}
   .auth-story{position:relative;overflow:hidden;padding:44px 42px;background:linear-gradient(145deg,#12396e,#0c2450);color:white;display:flex;flex-direction:column;justify-content:space-between;min-height:620px;}
   .auth-story::after{content:'';position:absolute;width:430px;height:430px;border:1px solid #ffffff0f;border-radius:50%;left:-220px;bottom:-160px;box-shadow:0 0 0 58px #ffffff04,0 0 0 116px #ffffff03;pointer-events:none;}
   .auth-brand{display:flex;align-items:center;gap:12px;position:relative;z-index:1;}
-  .auth-logo{width:44px;height:44px;border-radius:13px;background:#ffffff15;border:1px solid #ffffff25;display:grid;place-items:center;font-family:'Segoe UI',sans-serif;font-size:19px;font-weight:700;letter-spacing:-1px;}
-  .auth-brand strong{font-family:'Segoe UI',sans-serif;font-size:20px;letter-spacing:.3px;}
+  .auth-logo{width:44px;height:44px;border-radius:13px;background:#ffffff15;border:1px solid #ffffff25;display:grid;place-items:center;font-family:inherit;font-size:19px;font-weight:700;letter-spacing:-1px;}
+  .auth-brand strong{font-family:inherit;font-size:20px;letter-spacing:.3px;}
   .auth-brand small{display:block;font-size:12px;color:#afc6e6;margin-top:3px;}
-  .auth-lang-btn{margin-inline-start:auto;z-index:1;border:1px solid #ffffff40;border-radius:9px;background:#ffffff18;color:#fff;padding:8px 11px;font:700 13px 'Segoe UI',sans-serif;cursor:pointer;}
+  .auth-lang-btn{margin-inline-start:auto;z-index:1;border:1px solid #ffffff40;border-radius:9px;background:#ffffff18;color:#fff;padding:8px 11px;font:700 13px var(--ui-font);cursor:pointer;}
   .auth-intro{position:relative;z-index:1;margin:46px 0 40px;}
   .auth-eyebrow{font-size:12px;font-weight:700;letter-spacing:1.5px;color:#8cbcff;direction:ltr;text-align:right;}
   #auth-box[lang="en"] .auth-eyebrow{text-align:left;}
-  .auth-intro h2{font-size:36px;line-height:1.5;letter-spacing:-.7px;margin:12px 0 14px;font-weight:800;}
+  .auth-intro h2{font-size:36px;line-height:1.5;letter-spacing:-.7px;margin:12px 0 14px;font-weight:700;}
   .auth-intro>p{font-size:16px;line-height:1.9;color:#c0d1e8;margin:0;max-width:340px;}
   .auth-features{display:grid;gap:18px;margin-top:30px;}
   .auth-feature{display:flex;align-items:center;gap:12px;font-size:14px;color:#e1ebf9;}
@@ -366,11 +464,11 @@
   .auth-story-footer{position:relative;z-index:1;font-size:12px;color:#91accf;border-top:1px solid #ffffff15;padding-top:20px;}
   .auth-main{padding:56px 48px;display:flex;flex-direction:column;justify-content:center;}
   .auth-welcome{font-size:12px;font-weight:700;color:#3171c5;margin:0 0 10px;}
-  .auth-main h1{font-size:30px;font-weight:800;line-height:1.4;color:#152c4c;margin:0 0 8px;}
+  .auth-main h1{font-size:30px;font-weight:700;line-height:1.4;color:#152c4c;margin:0 0 8px;}
   .auth-subtitle{font-size:15px;line-height:1.8;color:#718198;margin:0 0 32px;}
   #auth-form label{display:block;font-size:14px;font-weight:700;color:#30425c;margin-bottom:9px;}
   .auth-field{position:relative;margin-bottom:22px;}
-  #auth-form input{display:block;width:100%;height:52px;border:1px solid #dce4ee;border-radius:10px;background:#fafbfd;padding:0 15px 0 44px;font:500 15px 'Tajawal','Segoe UI',Tahoma,sans-serif;direction:ltr;color:#152c4c;transition:border-color .15s,box-shadow .15s;}
+  #auth-form input{display:block;width:100%;height:52px;border:1px solid #dce4ee;border-radius:10px;background:#fafbfd;padding:0 15px 0 44px;font:500 15px var(--ui-font);direction:ltr;color:#152c4c;transition:border-color .15s,box-shadow .15s;}
   #auth-form input::placeholder{color:#a1adbc;font-weight:400;}
   #auth-form input:focus{outline:none;border-color:#327ce3;background:white;box-shadow:0 0 0 4px #327ce312;}
   .auth-field svg{position:absolute;left:15px;top:17px;width:18px;height:18px;stroke:#8495ab;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;pointer-events:none;}
@@ -434,7 +532,14 @@
     </div>
     <div class="header-actions">
       <button class="icon-pill-btn" id="lang-btn">AR</button>
-      <button class="icon-pill-btn square" id="settings-btn" title="Settings">⚙️</button>
+      <div class="account-menu" id="account-menu">
+        <button class="icon-pill-btn account-trigger" id="account-menu-btn" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="account-menu-popover"><span class="account-avatar" id="account-avatar" aria-hidden="true">IB</span></button>
+        <div class="account-popover" id="account-menu-popover" hidden>
+          <div class="account-summary"><strong id="account-menu-name" data-i18n="currentAccount">الحساب الحالي</strong><span id="account-menu-email" dir="ltr"></span></div>
+          <button class="account-option" id="settings-btn" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"/><path d="M19.4 15a1.8 1.8 0 0 0 .36 1.98l.07.07-1.78 1.78-.07-.07A1.8 1.8 0 0 0 16 18.4a1.8 1.8 0 0 0-1 1.66V20h-2v-.06a1.8 1.8 0 0 0-1-1.66 1.8 1.8 0 0 0-1.98.36l-.07.07-1.78-1.78.07-.07A1.8 1.8 0 0 0 8.6 15a1.8 1.8 0 0 0-1.66-1H7v-2h-.06A1.8 1.8 0 0 0 8.6 11a1.8 1.8 0 0 0-.36-1.98l-.07-.07 1.78-1.78.07.07A1.8 1.8 0 0 0 12 7.6a1.8 1.8 0 0 0 1-1.66V6h2v.06a1.8 1.8 0 0 0 1 1.66 1.8 1.8 0 0 0 1.98-.36l.07-.07 1.78 1.78-.07.07A1.8 1.8 0 0 0 19.4 11a1.8 1.8 0 0 0 1.66 1H21v2h.06A1.8 1.8 0 0 0 19.4 15Z"/></svg><span data-i18n="settingsTitle">الإعدادات</span></button>
+          <button class="account-option" id="sign-out" type="button" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4M14 7l5 5-5 5M9 12h10"/></svg><span data-i18n="signOut">تسجيل الخروج</span></button>
+        </div>
+      </div>
     </div>
   </header>
 
@@ -442,6 +547,8 @@
     <button data-tab="keycodes" class="active" data-i18n="tabKeycodes">Keycodes</button>
     <button data-tab="prometric" data-i18n="tabPrometric">Prometric</button>
     <button data-tab="codes" data-i18n="tabCodes">Codes</button>
+    <button data-tab="inventory" data-i18n="tabInventory">Inventory</button>
+    <button data-tab="trainees" id="trainees-tab">المتدربون</button>
   </nav>
   </div>
 
@@ -450,6 +557,10 @@
 
   <!-- TAB 2: PROMETRIC -->
   <section class="panel" id="panel-prometric">
+    <div class="cred-card resource-card" id="prometric-login-card" role="button" tabindex="0">
+      <div class="cred-label" data-i18n="prometricLoginLink">Prometric login link</div>
+      <div class="resource-value" id="prometric-link-val"></div>
+    </div>
     <div class="cred-card" id="cred-account">
       <div class="cred-label" data-i18n="prometricAccount">Prometric Account</div>
       <div class="cred-value" id="cred-account-val"></div>
@@ -458,17 +569,29 @@
       <div class="cred-label" data-i18n="prometricPassword">Prometric Password</div>
       <div class="cred-value" id="cred-password-val"></div>
     </div>
+    <a class="cred-card resource-card" id="zoom-card" target="_blank" rel="noopener noreferrer">
+      <div class="cred-label" data-i18n="zoomMeeting">Zoom meeting</div>
+      <div class="resource-value" id="zoom-link-val"></div>
+    </a>
   </section>
 
   <!-- TAB 3: CODES -->
   <section class="panel" id="panel-codes">
     <div class="stats-row">
       <div class="stats" id="code-stats"></div>
-      <details class="day-legend-box" id="day-legend-details" style="display:none;">
-        <summary id="day-legend-summary">📅</summary>
-        <div id="day-legend-groups" class="day-legend-groups"></div>
-      </details>
+      <div class="report-shortcuts">
+        <details class="report-card" id="daily-used-details">
+          <summary data-i18n="dailyUsedTitle">Codes used on a day</summary>
+        </details>
+      </div>
     </div>
+    <div class="report-panel" id="daily-used-panel" hidden>
+      <div class="report-body">
+        <label class="daily-used-date"><span data-i18n="chooseUsedDate">Choose a date</span><input id="daily-used-date" type="date"></label>
+        <div id="daily-used-results"></div>
+      </div>
+    </div>
+    <div id="low-stock-alert" class="low-stock-alert" hidden></div>
     <div class="code-tabs" id="code-cat-tabs"></div>
     <div class="bulk-bar" id="bulk-bar">
       <div class="bulk-bar-left">
@@ -477,8 +600,9 @@
       </div>
       <button class="confirm-btn" id="bulk-delete-btn" data-i18n="deleteSelected">Delete Selected</button>
     </div>
+    <p class="code-history-hint" id="code-history-hint" hidden></p>
     <div class="code-sheet">
-      <div class="code-sheet-scroll">
+      <div class="code-sheet-scroll" id="code-sheet-viewport" tabindex="0" role="region" aria-label="Codes">
         <div class="code-sheet-head">
           <div class="col-check"><input type="checkbox" id="select-all-codes"></div>
           <div class="col-n">#</div>
@@ -499,10 +623,136 @@
     </details>
   </section>
 
-  <!-- SETTINGS (standalone panel, opened only from the header gear icon) -->
+  <!-- SUPERVISOR INVENTORY -->
+  <section class="panel" id="panel-inventory">
+    <div class="ops-card">
+      <h3 data-i18n="inventoryWhatsAppTitle">WhatsApp inventory message</h3>
+      <p class="inventory-intro" data-i18n="inventoryIntro">Codes with you are unused codes in the system. Supervisor balances decrease automatically when new codes are added.</p>
+      <p class="ops-status" id="inventory-message-hint"></p>
+      <div class="inventory-message" id="inventory-message" dir="auto"></div>
+      <div class="inventory-actions">
+        <a id="inventory-whatsapp-link" target="_blank" rel="noopener noreferrer" aria-disabled="true" data-i18n="inventoryOpenWhatsApp">Open WhatsApp to send</a>
+        <button id="inventory-copy-message" type="button" data-i18n="inventoryCopyMessage">Copy message</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" id="panel-trainees"></section>
+
+  <!-- SETTINGS (opened from the account menu) -->
   <section class="panel" id="panel-settings">
+    <div class="settings-tabs" role="tablist" aria-label="Settings" id="settings-tabs">
+      <button type="button" role="tab" id="settings-tab-profile" aria-controls="settings-pane-profile" aria-selected="true" tabindex="0" data-i18n="settingsTabProfile">My account</button>
+      <button type="button" role="tab" id="settings-tab-data" aria-controls="settings-pane-data" aria-selected="false" tabindex="-1" data-i18n="settingsTabData" hidden>System data</button>
+      <button type="button" role="tab" id="settings-tab-prometric" aria-controls="settings-pane-prometric" aria-selected="false" tabindex="-1" data-i18n="settingsTabPrometric" hidden>Prometric</button>
+      <button type="button" role="tab" id="settings-tab-inventory" aria-controls="settings-pane-inventory" aria-selected="false" tabindex="-1" data-i18n="settingsTabInventory" hidden>Inventory</button>
+      <button type="button" role="tab" id="settings-tab-preferences" aria-controls="settings-pane-preferences" aria-selected="false" tabindex="-1" data-i18n="settingsTabPreferences">Preferences</button>
+      <button type="button" role="tab" id="settings-tab-sync" aria-controls="settings-pane-sync" aria-selected="false" tabindex="-1" data-i18n="settingsTabSync">Team and sync</button>
+    </div>
+    <div class="settings-pane" id="settings-pane-profile" role="tabpanel" aria-labelledby="settings-tab-profile">
+    <section class="cred-card" style="cursor:default;">
+      <div class="cred-label" data-i18n="profileTitle">My account</div>
+      <div class="settings-desc" data-i18n="profileDesc">Change your name, sign-in email, or password.</div>
+      <div class="profile-forms">
+        <form class="shared-settings-form" id="profile-name-form">
+          <label><span data-i18n="profileName">Name</span><input id="profile-name" type="text" autocomplete="name" maxlength="100" required></label>
+          <button class="resource-btn" type="submit" data-i18n="saveName">Save name</button>
+        </form>
+        <form class="shared-settings-form" id="profile-email-form">
+          <label><span data-i18n="profileLoginEmail">Sign-in email</span><input id="profile-email" type="email" autocomplete="email" maxlength="254" required></label>
+          <button class="resource-btn" type="submit" data-i18n="changeEmail">Change email</button>
+          <div class="settings-desc" data-i18n="emailConfirmHint">Confirm the new address from the verification email before using it to sign in.</div>
+        </form>
+        <form class="shared-settings-form" id="profile-password-form">
+          <label><span data-i18n="currentPassword">Current password</span><input id="profile-current-password" type="password" autocomplete="current-password" required></label>
+          <label><span data-i18n="newPassword">New password</span><input id="profile-new-password" type="password" autocomplete="new-password" minlength="8" required></label>
+          <label><span data-i18n="confirmNewPassword">Confirm new password</span><input id="profile-confirm-password" type="password" autocomplete="new-password" minlength="8" required></label>
+          <button class="resource-btn" type="submit" data-i18n="changePassword">Change password</button>
+        </form>
+      </div>
+      <p class="profile-status" id="profile-status" role="status" aria-live="polite"></p>
+    </section>
+    </div>
 
+    <div class="settings-pane" id="settings-pane-data" role="tabpanel" aria-labelledby="settings-tab-data" hidden>
+    <section class="cred-card" id="manage-data" hidden style="cursor:default;">
+      <div class="cred-label" data-i18n="manageRecords">Edit system data</div>
+      <div class="settings-desc" data-i18n="manageRecordsDesc">Choose a record here to edit it without adding controls to the daily work screen.</div>
+      <div class="manage-grid">
+        <div class="manage-row"><label><span data-i18n="categoryNamePlaceholder">Category</span><select id="manage-category"></select></label><button type="button" id="manage-category-edit" data-i18n="editBtn">Edit</button></div>
+        <div class="manage-row"><label><span data-i18n="examTitleCol">Exam</span><select id="manage-exam"></select></label><button type="button" id="manage-exam-edit" data-i18n="editBtn">Edit</button></div>
+        <div class="manage-row"><label><span data-i18n="moveCategoryCol">Code category</span><select id="manage-code-category"></select></label><span></span></div>
+        <div class="manage-row"><label><span data-i18n="colCode">Code</span><select id="manage-code"></select></label><button type="button" id="manage-code-edit" data-i18n="editBtn">Edit</button></div>
+      </div>
+    </section>
+    <div id="settings-add-forms"></div>
+    <section class="ops-card" id="code-bulk-tools" hidden>
+      <h3 data-i18n="bulkImportTitle">Import codes from a file</h3>
+      <div class="ops-row">
+        <label><span data-i18n="bulkImportCategory">Category</span><select id="bulk-import-category"></select></label>
+        <label><span data-i18n="bulkImportFile">CSV or text file</span><input id="bulk-import-file" type="file" accept=".csv,.txt,text/csv,text/plain"></label>
+      </div>
+      <div id="bulk-import-preview" class="ops-status" role="status" aria-live="polite"></div>
+      <button id="bulk-import-submit" type="button" disabled data-i18n="bulkImportButton">Import valid codes</button>
+      <button id="export-codes-csv" type="button" data-i18n="exportCodesCsv">Export codes CSV</button>
+      <div class="ops-row"><label><span data-i18n="lowStockLabel">Low-stock warning at or below</span><input id="low-stock-threshold" type="number" min="0" max="10000" step="1"></label><button id="low-stock-save" type="button" data-i18n="saveBtn">Save</button></div>
+    </section>
+    <section class="ops-card" id="reset-tools" hidden>
+      <h3 data-i18n="resetMarksTitle">Usage marks</h3>
+      <p class="ops-status" data-i18n="resetMarksHint">This clears every used mark and its date. Download a backup first if you may need to restore them.</p>
+      <button class="reset-link" id="reset-btn" type="button" data-i18n="resetLink">Reset all copy marks</button>
+    </section>
+    </div>
 
+    <div class="settings-pane" id="settings-pane-prometric" role="tabpanel" aria-labelledby="settings-tab-prometric" hidden>
+    <section class="cred-card" id="prometric-settings" hidden style="cursor:default;">
+      <div class="cred-label" data-i18n="sharedSettingsTitle">Prometric and meeting details</div>
+      <div class="settings-desc" data-i18n="sharedSettingsDesc">Administrators can change these shared values.</div>
+      <form class="shared-settings-form" id="prometric-settings-form">
+        <label><span data-i18n="prometricAccount">Prometric Account</span><input id="settings-prometric-account" type="text" autocomplete="off" maxlength="300" required></label>
+        <label><span data-i18n="prometricPassword">Prometric Password</span><input id="settings-prometric-password" type="text" autocomplete="off" maxlength="300" required></label>
+        <label><span data-i18n="zoomMeeting">Zoom meeting</span><input id="settings-zoom-link" type="url" autocomplete="off" maxlength="2000" required></label>
+        <label><span data-i18n="prometricLoginLink">Prometric login link</span><input id="settings-prometric-link" type="url" autocomplete="off" maxlength="2000" required></label>
+        <button class="resource-btn" type="submit" data-i18n="saveSharedSettings">Save changes</button>
+      </form>
+    </section>
+    </div>
+
+    <div class="settings-pane" id="settings-pane-inventory" role="tabpanel" aria-labelledby="settings-tab-inventory" hidden>
+    <section class="ops-card" id="inventory-admin" hidden>
+      <h3 data-i18n="inventoryUpdateTitle">Update supervisor stock</h3>
+      <p class="ops-status" data-i18n="inventoryOpeningHint">Enter the supervisor's current balance, then add newly purchased codes separately.</p>
+      <div class="inventory-stock-list" id="inventory-stock-list"></div>
+      <div class="ops-row"><label><span data-i18n="inventoryCategory">Category</span><select id="inventory-category"></select></label></div>
+      <p class="ops-status" id="inventory-current-balance"></p>
+      <div class="inventory-stock-edit-grid">
+        <div class="inventory-stock-action">
+          <label><span data-i18n="inventoryCurrentQuantity">Current number with supervisor</span><input id="inventory-current-quantity" type="number" min="0" max="1000000" step="1" inputmode="numeric"></label>
+          <p class="ops-status" data-i18n="inventorySetCurrentHint">Set the actual balance. This replaces the previous number.</p>
+          <button id="inventory-set-current" type="button" data-i18n="inventorySetCurrent">Save current balance</button>
+        </div>
+        <div class="inventory-stock-action">
+          <label><span data-i18n="inventoryPurchasedQuantity">Newly purchased codes</span><input id="inventory-purchased-quantity" type="number" min="1" max="1000000" step="1" inputmode="numeric"></label>
+          <p class="ops-status" data-i18n="inventoryAddPurchasedHint">Add this number to the existing supervisor balance.</p>
+          <button id="inventory-add-purchased" type="button" data-i18n="inventoryAddPurchased">Add to balance</button>
+        </div>
+      </div>
+      <p class="ops-status" id="inventory-update-status" role="status" aria-live="polite"></p>
+    </section>
+    <section class="ops-card" id="inventory-whatsapp-settings" hidden>
+      <h3 data-i18n="inventoryWhatsAppSettings">Inventory message settings</h3>
+      <p class="ops-status" data-i18n="inventoryNumberHint">Enter the number with country code, digits only, for example 9665XXXXXXXX.</p>
+      <div class="ops-row">
+        <label><span data-i18n="inventoryPhone">WhatsApp number</span><input id="inventory-whatsapp-number" type="tel" inputmode="tel" autocomplete="tel" maxlength="16"></label>
+        <label><span data-i18n="inventorySupervisorName">Supervisor name</span><input id="inventory-supervisor-name" type="text" autocomplete="off" maxlength="100"></label>
+        <label><span data-i18n="inventoryMessageLanguage">Message language</span><select id="inventory-message-language"><option value="ar" data-i18n="inventoryArabic">Arabic</option><option value="en" data-i18n="inventoryEnglish">English</option></select></label>
+      </div>
+      <button id="inventory-save-settings" type="button" data-i18n="saveBtn">Save</button>
+      <p class="ops-status" id="inventory-number-status" role="status" aria-live="polite"></p>
+    </section>
+    </div>
+
+    <div class="settings-pane" id="settings-pane-preferences" role="tabpanel" aria-labelledby="settings-tab-preferences" hidden>
     <div class="cred-card" style="cursor:default;">
       <div class="cred-label" style="margin-bottom:2px;" data-i18n="autoChainTitle">Auto Chain Copy</div>
       <div class="settings-desc" data-i18n="autoChainDesc">
@@ -516,29 +766,58 @@
         <span class="switch-label" data-i18n="autoChainSwitch">Enable auto copy (Keycode → Prometric → Code)</span>
       </label>
     </div>
+    </div>
+    <div class="settings-pane" id="settings-pane-sync" role="tabpanel" aria-labelledby="settings-tab-sync" hidden>
     <section id="cloud-tools" class="cloud-controls" hidden>
       <div class="cloud-popover">
         <div class="cloud-identity-text"><strong data-i18n="currentAccount">الحساب الحالي</strong><span id="signed-in"></span></div>
         <p id="cloud-status" class="cloud-status" role="status" aria-live="polite"></p>
         <div class="cloud-actions">
           <button id="refresh-data" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M5.7 9A7 7 0 0 1 18 7l2 5M4 12l2 5a7 7 0 0 0 12.3-2"/></svg><span data-i18n="refresh">تحديث</span></button>
-          <button id="sign-out" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4M14 7l5 5-5 5M9 12h10"/></svg><span data-i18n="signOut">خروج</span></button>
         </div>
         <details id="admin-tools" class="cloud-admin"><summary><span data-i18n="manageDataUsers">إدارة البيانات والمستخدمين</span></summary>
           <div class="cloud-admin-content">
             <div class="cloud-admin-actions"><button id="import-legacy" type="button" data-i18n="importLegacy">استيراد بيانات المتصفح القديمة</button><button id="export-data" type="button" data-i18n="exportBackup">تنزيل نسخة احتياطية</button></div>
             <label for="member-email" data-i18n="newMemberEmail">بريد مستخدم جديد</label><input id="member-email" type="email" placeholder="user@example.com">
+            <label for="member-role" data-i18n="memberRole">Role</label><select id="member-role"><option value="copy_only" data-i18n="roleCopyOnly">Copy codes only</option><option value="operator" data-i18n="roleOperator" selected>Operator</option><option value="admin" data-i18n="roleAdmin">Administrator</option></select>
             <button id="add-member" type="button" data-i18n="addMember">اعتماد المستخدم</button>
+            <div id="member-list" class="ops-list"></div>
+            <div class="ops-card">
+              <h3 data-i18n="restoreTitle">Restore a backup</h3>
+              <label><span data-i18n="restoreFile">Choose an IBTA backup JSON file</span><input id="restore-file" type="file" accept=".json,application/json"></label>
+              <p id="restore-preview" class="ops-status" role="status" aria-live="polite"></p>
+              <button id="restore-button" type="button" disabled data-i18n="restoreButton">Restore data</button>
+            </div>
+            <details class="ops-card" id="audit-details"><summary data-i18n="activityTitle">Recent activity</summary><div id="audit-list" class="ops-list"></div></details>
           </div>
         </details>
       </div>
     </section>
+    </div>
   </section>
 
-  <div class="reset-link" id="reset-btn" data-i18n="resetLink">Reset all copy marks</div>
 </div>
 
 <div class="toast" id="toast"></div>
+<dialog id="delete-dialog" class="delete-dialog" aria-labelledby="delete-dialog-title" aria-describedby="delete-dialog-message">
+  <div class="delete-dialog-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 7h16M10 7V4h4v3M6 7l1 13h10l1-13M10 11v6m4-6v6"/></svg></div>
+  <h2 id="delete-dialog-title" data-i18n="deleteConfirmTitle">Delete item?</h2>
+  <p id="delete-dialog-message"></p>
+  <div class="delete-dialog-actions"><button id="delete-cancel" type="button" data-i18n="cancelBtn">Cancel</button><button id="delete-confirm" class="danger" type="button" data-i18n="deleteBtn">Delete</button></div>
+</dialog>
+<dialog id="edit-dialog" class="edit-dialog">
+  <form id="edit-form">
+    <h2 id="edit-heading"></h2>
+    <div id="edit-name-field"><label for="edit-name" data-i18n="categoryNamePlaceholder">Category name</label><input id="edit-name" maxlength="100"></div>
+    <div id="edit-title-field"><label for="edit-title" data-i18n="examTitleCol">Exam Title</label><input id="edit-title" maxlength="200"></div>
+    <div id="edit-language-field"><label for="edit-language" data-i18n="langCol">Language</label><select id="edit-language"><option value="English">English</option><option value="Arabic">Arabic</option></select></div>
+    <div id="edit-code-field"><label for="edit-code" id="edit-code-label"></label><input id="edit-code" maxlength="200" required></div>
+    <div id="edit-category-field"><label for="edit-category" data-i18n="moveCategoryCol">Move Category</label><select id="edit-category"></select></div>
+    <div id="edit-date-field"><label for="edit-date" data-i18n="editUsedDate">Usage date</label><input id="edit-date" placeholder="DD/MM/YYYY" inputmode="numeric"></div>
+    <div id="edit-notes-field"><label for="edit-notes" data-i18n="colNotes">Notes</label><input id="edit-notes" maxlength="2000"></div>
+    <div class="edit-dialog-actions"><button type="button" id="edit-cancel" data-i18n="cancelBtn">Cancel</button><button type="submit" class="save" data-i18n="saveSharedSettings">Save changes</button></div>
+  </form>
+</dialog>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.116.0/dist/umd/supabase.js"></script>
 <script src="cloud.js"></script>
@@ -549,23 +828,37 @@ const TRANSLATIONS = {
     copyBtn:"Copy", copyFailed:"Copy failed. Please try again.", enterCredential:"Enter the value first.",
     sessionCredentials:"The Prometric credentials are prefilled for this session.",
     appTitle:"IBTA Tools",
-    tabKeycodes:"Keycodes", tabPrometric:"Prometric", tabCodes:"Codes",
-    settingsTitle:"Settings",
+    tabKeycodes:"Keycodes", tabPrometric:"Prometric", tabCodes:"Codes", tabInventory:"Inventory",
+    inventoryIntro:"Codes with you are unused codes in the system. Supervisor balances decrease automatically when new codes are added.",
+    inventoryWithYou:"With you", inventoryWithSupervisor:"With supervisor", inventoryNotSet:"Not set",
+    inventoryUpdateTitle:"Supervisor balances",inventoryOpeningHint:"Review each category, then choose whether to set its actual balance or add new codes.",inventoryCurrentBalance:n=>"Current supervisor balance: "+n,inventoryCurrentQuantity:"Current number with supervisor",inventorySetCurrent:"Save current balance",inventorySetCurrentHint:"This replaces the previous balance with the actual count.",inventoryPurchasedQuantity:"Newly purchased codes",inventoryAddPurchased:"Add to balance",inventoryAddPurchasedHint:"This number is added to the existing supervisor balance.",
+    inventoryCategory:"Category",inventoryAction:"Action",inventoryQuantity:"Number of codes",inventoryOpening:"Set starting balance",inventoryReplenish:"Add company codes",inventoryCorrection:"Correct balance",
+    inventoryWhatsAppTitle:"WhatsApp inventory message",inventoryMessageMine:"Codes with me",inventoryMessageSupervisor:name=>"Codes with "+name,inventoryMessageTotal:"Total codes",inventoryMessageOverall:"Overall total",inventorySupervisorFallback:"supervisor",
+    inventoryMessageHint:"Set the starting balance for every category to send accurate counts.",inventoryPhoneMissing:"Add a WhatsApp number in Settings to open the prepared message.",
+    inventoryOpenWhatsApp:"Open WhatsApp to send",inventoryCopyMessage:"Copy message",inventoryWhatsAppSettings:"Inventory message settings",inventoryNumberHint:"Enter the number with country code, digits only, for example 9665XXXXXXXX.",inventoryPhone:"WhatsApp number",inventoryPhoneInvalid:"Enter 8–15 digits, including the country code.",inventorySupervisorName:"Supervisor name",inventorySupervisorNameInvalid:"Enter a supervisor name of up to 100 characters.",inventoryMessageLanguage:"Message language",inventoryArabic:"Arabic",inventoryEnglish:"English",
+    inventoryStockNotSet:"Set the supervisor's starting balance for this category first.",inventoryStockInsufficient:"The supervisor does not have enough codes in this category.",inventoryInvalidChange:"Enter a valid non-negative number of codes.",inventorySaved:"Supervisor stock updated.",inventoryMessageCopied:"Inventory message copied.",
+    settingsTitle:"Settings", settingsTabProfile:"My account", settingsTabData:"System data", settingsTabPrometric:"Prometric", settingsTabInventory:"Inventory", settingsTabPreferences:"Preferences", settingsTabSync:"Team and sync",
+    profileTitle:"My account", profileDesc:"Change your name, sign-in email, or password.", profileName:"Name", profileLoginEmail:"Username (sign-in email)", saveName:"Save name", changeEmail:"Change email", emailConfirmHint:"Confirm the new address from the verification email before using it to sign in.", currentPassword:"Current password", newPassword:"New password", confirmNewPassword:"Confirm new password", changePassword:"Change password", profileNameSaved:"Name saved", profileEmailSent:"Check your new email to confirm the change. Your current sign-in stays active until then.", profilePasswordSaved:"Password changed", profilePasswordMismatch:"The new passwords do not match.", profilePasswordShort:"Use a password with at least 8 characters.", profileSameEmail:"Enter a different email address.", profileInvalidEmail:"Enter a valid email address.",
     examTitleCol:"Exam Title", langCol:"Language", keycodeCol:"Keycode", moveCategoryCol:"Move Category",
     noExams:"No exams in this category",
     remaining:"Remaining",
     prometricAccount:"Prometric Account", prometricPassword:"Prometric Password",
+    zoomMeeting:"Zoom meeting", prometricLoginLink:"Prometric login link", prometricLinkCopyHint:"Copy Prometric login link",
+    dailyUsedTitle:"Codes used on a day", chooseUsedDate:"Choose a date", dailyUsedTotal:n=>"Total used: "+n, dailyUsedNone:"No codes were used on this date.",
+    sharedSettingsTitle:"Shared Prometric settings", sharedSettingsDesc:"Administrators can change the account, password, and links for the team.", saveSharedSettings:"Save changes", notConfigured:"Not configured",
+    invalidZoomUrl:"Enter a valid HTTPS Zoom link.", invalidPrometricUrl:"Enter a valid HTTPS Prometric link.", prometricLinkCopied:"Prometric login link copied",
     accountCopied:"Prometric Account — Copied", passwordCopied:"Prometric Password — Copied",
     copiedColon:code=>"Copied: "+code,
     movedTo:(title,cat)=>title+" moved to "+cat,
     total:"Total", copiedStat:"Copied", remainingStat:"Remaining",
-    colCode:"Code", colDate:"Date", colNotes:"Notes",
+    colCode:"Code", colDate:"Copy date / time", editUsedDate:"Usage date", colNotes:"Notes",
     addNewCodes:"+ Add new codes to this category",
     pasteHint:"Paste codes, one per line",
     addBtn:"Add",
     newCodesAdded:n=>n+" new code(s) added",
     removeMark:"Remove mark", markRemoved:"Mark removed",
     deleteCode:"Delete code", codeDeleted:"Code deleted",
+    deleteConfirmTitle:"Delete this item?", deleteBtn:"Delete",
     noCodesAvailable:cat=>"No codes available in "+cat,
     autoCopied:code=>"Auto-copied: "+code,
     noCodesYet:"No codes in this category yet — add some below",
@@ -573,7 +866,7 @@ const TRANSLATIONS = {
     clear:"Clear", deleteSelected:"Delete Selected",
     confirmBulkDelete:n=>"Delete "+n+" selected code(s)? This cannot be undone.",
     codesDeleted:n=>n+" code(s) deleted",
-    resetLink:"Reset all copy marks",
+    resetMarksTitle:"Usage marks",resetMarksHint:"This clears every used mark and its date. Download a backup first if you may need to restore them.",resetLink:"Reset all copy marks",
     confirmReset:"Reset all copy marks and dates? (The codes themselves will remain)",
     resetDone:"Reset done",
     autoChainTitle:"Auto Chain Copy",
@@ -585,8 +878,6 @@ const TRANSLATIONS = {
     moveUp:"Move up", moveDown:"Move down",
     confirmDeleteCode:code=>"Delete code \""+code+"\"? This cannot be undone.",
     recoveredCodes:n=>n+" code(s) recovered from an earlier version of this tool",
-    datesLegend:n=>"Dates ("+n+")",
-    monthNames:["January","February","March","April","May","June","July","August","September","October","November","December"],
     addCategory:"+ Add category",
     categoryNameHint:"Give it a short, clear name — it'll also become a matching tab on the Codes page.",
     categoryNamePlaceholder:"Category name",
@@ -598,6 +889,7 @@ const TRANSLATIONS = {
     removeCategory:"Remove category",
     confirmRemoveCategory:cat=>"Remove category \""+cat+"\"? Its exams will move back to their original category.",
     categoryRemoved:"Category removed",
+    editBtn:"Edit", editCategory:"Edit category", editExam:"Edit exam", editCode:"Edit code", cancelBtn:"Cancel", invalidCodeEdit:"Enter a unique code and a date in DD/MM/YYYY format.", itemUpdated:"Changes saved", manageRecords:"Edit system data", manageRecordsDesc:"Choose a record here to edit it without adding controls to the daily work screen.",
     authBrandTagline:"Your team's workspace", authHeadline1:"Your codes, organized.", authHeadline2:"Your team, connected.",
     authEyebrow:"IBTA OPERATIONS",
     authIntro:"One place to manage codes and track their use, wherever you are.",
@@ -612,9 +904,13 @@ const TRANSLATIONS = {
     authNotApproved:"Your account is not approved. Ask an administrator to add your email address.",
     authInvalidCredentials:"Invalid email or password.", authEmailNotConfirmed:"Confirm your email address before signing in.",
     authEmailLimit:"Too many emails were sent. Please try again later.", authAlreadyRegistered:"An account with this email already exists.",
-    currentAccount:"Current account", adminRole:"Admin", userRole:"User", refresh:"Refresh", signOut:"Sign out",
+    currentAccount:"Current account", accountMenu:"Account menu", adminRole:"Admin", userRole:"User", refresh:"Refresh", signOut:"Sign out",
     manageDataUsers:"Manage data and users", importLegacy:"Import old browser data", exportBackup:"Download backup",
     newMemberEmail:"New user's email", addMember:"Approve user",
+    memberRole:"Role",roleCopyOnly:"Copy codes only",roleOperator:"Operator",roleAdmin:"Administrator",memberInactive:"Inactive",memberActive:"Active",memberSave:"Save member",activityTitle:"Recent activity",activityEmpty:"No activity found.",
+    auditInsert:"Added",auditUpdate:"Updated",auditDelete:"Deleted",auditCodes:"Code",auditMembers:"Team member",auditSettings:"System settings",
+    restoreTitle:"Restore a backup",restoreFile:"Choose an IBTA backup JSON file",restoreButton:"Restore data",restorePreview:n=>"This backup contains "+n+" codes. Restoring replaces the current codes and shared settings.",restoreDone:"Backup restored successfully.",restoreInvalid:"The backup file is invalid.",restoreConfirm:n=>"Replace all current codes and shared settings with the "+n+" codes in this backup?",
+    bulkImportTitle:"Import codes from a file",bulkImportCategory:"Category",bulkImportFile:"CSV or text file",bulkImportButton:"Import valid codes",exportCodesCsv:"Export codes CSV",bulkImportPreview:(valid,duplicates,invalid)=>valid+" new codes ready · "+duplicates+" duplicates skipped · "+invalid+" invalid rows",bulkImportDone:n=>n+" codes imported.",lowStockLabel:"Low-stock warning at or below",lowStockWarning:items=>"Low stock: "+items,saveBtn:"Save",
     dbConnected:"Connected to the database", saving:"Saving…", saved:"Saved to the database", refreshed:"Data refreshed",
     copyRecorded:"Code copied and marked as used", copyReserved:"Code reserved for your account, but copying failed. Click it to retry or remove the used mark.",
     codeNotFound:"Code not found. Refresh the data.", codeUsedByOther:"This code was used by someone else.",
@@ -635,23 +931,37 @@ const TRANSLATIONS = {
     copyBtn:"نسخ", copyFailed:"تعذر النسخ. حاول مرة أخرى.", enterCredential:"أدخل القيمة أولًا.",
     sessionCredentials:"بيانات دخول Prometric موجودة مسبقًا لهذه الجلسة.",
     appTitle:"أدوات IBTA",
-    tabKeycodes:"مفاتيح الأكواد", tabPrometric:"بروميترك", tabCodes:"الأكواد",
-    settingsTitle:"الإعدادات",
+    tabKeycodes:"مفاتيح الأكواد", tabPrometric:"بروميترك", tabCodes:"الأكواد", tabInventory:"المخزون",
+    inventoryIntro:"اللي معاك هو الأكواد غير المستخدمة في النظام. رصيد المشرف ينقص تلقائيًا عند إضافة أكواد جديدة.",
+    inventoryWithYou:"معايا",inventoryWithSupervisor:"مع المشرف",inventoryNotSet:"لم يُحدد",
+    inventoryUpdateTitle:"أرصدة المشرف",inventoryOpeningHint:"راجع رصيد كل فئة، ثم حدّد الرصيد الفعلي أو أضف أكوادًا جديدة.",inventoryCurrentBalance:n=>"الرصيد الحالي عند المشرف: "+n,inventoryCurrentQuantity:"عدد الأكواد الحالي عند المشرف",inventorySetCurrent:"حفظ الرصيد الحالي",inventorySetCurrentHint:"يستبدل الرصيد السابق بالعدد الفعلي.",inventoryPurchasedQuantity:"الأكواد الجديدة المشتراة",inventoryAddPurchased:"إضافتها إلى الرصيد",inventoryAddPurchasedHint:"يُضاف هذا العدد إلى رصيد المشرف الحالي.",
+    inventoryCategory:"الفئة",inventoryAction:"الإجراء",inventoryQuantity:"عدد الأكواد",inventoryOpening:"تحديد الرصيد المبدئي",inventoryReplenish:"إضافة أكواد وصلت للشركة",inventoryCorrection:"تصحيح الرصيد",
+    inventoryWhatsAppTitle:"رسالة المخزون للواتساب",inventoryMessageMine:"الأكواد معايا",inventoryMessageSupervisor:name=>"الأكواد مع "+name,inventoryMessageTotal:"إجمالي الأكواد",inventoryMessageOverall:"الإجمالي الكلي",inventorySupervisorFallback:"المشرف",
+    inventoryMessageHint:"حدد الرصيد المبدئي لكل فئة حتى تكون الأعداد في الرسالة دقيقة.",inventoryPhoneMissing:"أضف رقم الواتساب في الإعدادات لفتح الرسالة الجاهزة.",
+    inventoryOpenWhatsApp:"فتح واتساب لإرسال الرسالة",inventoryCopyMessage:"نسخ الرسالة",inventoryWhatsAppSettings:"إعدادات رسالة المخزون",inventoryNumberHint:"اكتب الرقم بمفتاح الدولة وأرقام فقط، مثل 9665XXXXXXXX.",inventoryPhone:"رقم واتساب",inventoryPhoneInvalid:"اكتب من 8 إلى 15 رقمًا، بما فيها مفتاح الدولة.",inventorySupervisorName:"اسم المشرف",inventorySupervisorNameInvalid:"اكتب اسم مشرف لا يزيد عن 100 حرف.",inventoryMessageLanguage:"لغة الرسالة",inventoryArabic:"العربية",inventoryEnglish:"الإنجليزية",
+    inventoryStockNotSet:"حدد أولًا الرصيد المبدئي عند المشرف لهذه الفئة.",inventoryStockInsufficient:"رصيد المشرف في هذه الفئة لا يكفي.",inventoryInvalidChange:"أدخل عددًا صحيحًا غير سالب للأكواد.",inventorySaved:"تم تحديث رصيد المشرف.",inventoryMessageCopied:"تم نسخ رسالة المخزون.",
+    settingsTitle:"الإعدادات", settingsTabProfile:"حسابي", settingsTabData:"بيانات النظام", settingsTabPrometric:"بروميترك", settingsTabInventory:"المخزون", settingsTabPreferences:"التفضيلات", settingsTabSync:"الفريق والتحديث",
+    profileTitle:"حسابي", profileDesc:"غيّر اسمك أو بريد الدخول أو كلمة المرور.", profileName:"الاسم", profileLoginEmail:"اسم المستخدم (بريد الدخول)", saveName:"حفظ الاسم", changeEmail:"تغيير البريد", emailConfirmHint:"أكد البريد الجديد من رسالة التحقق قبل استخدامه للدخول.", currentPassword:"كلمة المرور الحالية", newPassword:"كلمة المرور الجديدة", confirmNewPassword:"تأكيد كلمة المرور الجديدة", changePassword:"تغيير كلمة المرور", profileNameSaved:"تم حفظ الاسم", profileEmailSent:"افتح بريدك الجديد وأكد التغيير. سيبقى دخولك الحالي فعالًا حتى التأكيد.", profilePasswordSaved:"تم تغيير كلمة المرور", profilePasswordMismatch:"كلمتا المرور الجديدتان غير متطابقتين.", profilePasswordShort:"استخدم كلمة مرور لا تقل عن 8 أحرف.", profileSameEmail:"أدخل بريدًا مختلفًا.", profileInvalidEmail:"أدخل بريدًا إلكترونيًا صحيحًا.",
     examTitleCol:"اسم الامتحان", langCol:"اللغة", keycodeCol:"مفتاح الكود", moveCategoryCol:"نقل الفئة",
     noExams:"لا توجد امتحانات في هذه الفئة",
     remaining:"متبقي",
     prometricAccount:"حساب بروميترك", prometricPassword:"كلمة مرور بروميترك",
+    zoomMeeting:"رابط اجتماع زوم", prometricLoginLink:"رابط دخول بروميترك", prometricLinkCopyHint:"نسخ رابط دخول بروميترك",
+    dailyUsedTitle:"الأكواد المستخدمة في يوم", chooseUsedDate:"اختر التاريخ", dailyUsedTotal:n=>"إجمالي الأكواد المستخدمة: "+n, dailyUsedNone:"لم تُستخدم أكواد في هذا التاريخ.",
+    sharedSettingsTitle:"إعدادات بروميترك المشتركة", sharedSettingsDesc:"يستطيع المدير تعديل الحساب وكلمة المرور والروابط لجميع المستخدمين.", saveSharedSettings:"حفظ التغييرات", notConfigured:"غير مُعدّ",
+    invalidZoomUrl:"أدخل رابط زوم صحيحًا يبدأ بـ HTTPS.", invalidPrometricUrl:"أدخل رابط بروميترك صحيحًا يبدأ بـ HTTPS.", prometricLinkCopied:"تم نسخ رابط دخول بروميترك",
     accountCopied:"تم نسخ حساب بروميترك", passwordCopied:"تم نسخ كلمة مرور بروميترك",
     copiedColon:code=>"تم نسخ الكود: "+code,
     movedTo:(title,cat)=>title+" نُقل إلى "+cat,
     total:"الإجمالي", copiedStat:"تم نسخه", remainingStat:"متبقي",
-    colCode:"الكود", colDate:"التاريخ", colNotes:"ملاحظات",
+    colCode:"الكود", colDate:"تاريخ ووقت النسخ", editUsedDate:"تاريخ الاستخدام", colNotes:"ملاحظات",
     addNewCodes:"+ إضافة أكواد جديدة لهذه الفئة",
     pasteHint:"الصق الأكواد، كل كود في سطر منفصل",
     addBtn:"إضافة",
     newCodesAdded:n=>n+" كود جديد تم إضافته",
     removeMark:"إلغاء العلامة", markRemoved:"تم إلغاء العلامة",
     deleteCode:"حذف الكود", codeDeleted:"تم حذف الكود",
+    deleteConfirmTitle:"هل تريد حذف هذا العنصر؟", deleteBtn:"حذف",
     noCodesAvailable:cat=>"مفيش أكواد متاحة في "+cat,
     autoCopied:code=>"تم نسخ الكود تلقائيًا: "+code,
     noCodesYet:"لا توجد أكواد في هذه الفئة بعد — أضف أكواد من الأسفل",
@@ -659,7 +969,7 @@ const TRANSLATIONS = {
     clear:"إلغاء التحديد", deleteSelected:"حذف المحدد",
     confirmBulkDelete:n=>"حذف "+n+" كود محدد؟ الإجراء ده مش هينفع يتراجع فيه.",
     codesDeleted:n=>"تم حذف "+n+" كود",
-    resetLink:"تصفير كل علامات النسخ",
+    resetMarksTitle:"علامات الاستخدام",resetMarksHint:"هذا الإجراء يمسح كل علامات الاستخدام وتواريخها. نزّل نسخة احتياطية أولًا إذا قد تحتاج لاسترجاعها.",resetLink:"تصفير كل علامات النسخ",
     confirmReset:"تصفير كل علامات النسخ والتواريخ؟ (الأكواد نفسها هتفضل موجودة)",
     resetDone:"تم التصفير",
     autoChainTitle:"النسخ التلقائي المتسلسل",
@@ -671,8 +981,6 @@ const TRANSLATIONS = {
     moveUp:"تحريك لأعلى", moveDown:"تحريك لأسفل",
     confirmDeleteCode:code=>"حذف الكود \""+code+"\"؟ الإجراء ده مش هينفع يتراجع فيه.",
     recoveredCodes:n=>"تم استرجاع "+n+" كود من نسخة سابقة من الأداة",
-    datesLegend:n=>"التواريخ ("+n+")",
-    monthNames:["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"],
     addCategory:"+ إضافة فئة",
     categoryNameHint:"اكتب اسم قصير وواضح — هيظهر كمان تاب جديد في صفحة الأكواد.",
     categoryNamePlaceholder:"اسم الفئة",
@@ -684,6 +992,7 @@ const TRANSLATIONS = {
     removeCategory:"حذف الفئة",
     confirmRemoveCategory:cat=>"حذف فئة \""+cat+"\"؟ الامتحانات اللي جواها هترجع لفئتها الأصلية.",
     categoryRemoved:"تم حذف الفئة",
+    editBtn:"تعديل", editCategory:"تعديل الفئة", editExam:"تعديل الامتحان", editCode:"تعديل الكود", cancelBtn:"إلغاء", invalidCodeEdit:"أدخل كودًا غير مكرر، واكتب التاريخ بصيغة يوم/شهر/سنة.", itemUpdated:"تم حفظ التعديل", manageRecords:"تعديل بيانات النظام", manageRecordsDesc:"اختر البيانات المطلوب تعديلها هنا، بعيدًا عن شاشة العمل اليومية.",
     authBrandTagline:"مساحة عمل فريقك", authHeadline1:"أكوادك منظّمة.", authHeadline2:"وفريقك على اتصال.",
     authEyebrow:"عمليات IBTA",
     authIntro:"مساحة واحدة لإدارة الأكواد ومتابعة استخدامها، أينما كنت.",
@@ -698,9 +1007,13 @@ const TRANSLATIONS = {
     authNotApproved:"حسابك غير معتمد. اطلب من المدير إضافة بريدك إلى المستخدمين.",
     authInvalidCredentials:"البريد الإلكتروني أو كلمة المرور غير صحيحين.", authEmailNotConfirmed:"أكّد بريدك الإلكتروني قبل تسجيل الدخول.",
     authEmailLimit:"تم تجاوز حد رسائل البريد الإلكتروني. حاول مرة أخرى لاحقًا.", authAlreadyRegistered:"يوجد حساب مسجل بهذا البريد الإلكتروني.",
-    currentAccount:"الحساب الحالي", adminRole:"مدير", userRole:"مستخدم", refresh:"تحديث", signOut:"خروج",
+    currentAccount:"الحساب الحالي", accountMenu:"قائمة الحساب", adminRole:"مدير", userRole:"مستخدم", refresh:"تحديث", signOut:"تسجيل الخروج",
     manageDataUsers:"إدارة البيانات والمستخدمين", importLegacy:"استيراد بيانات المتصفح القديمة", exportBackup:"تنزيل نسخة احتياطية",
     newMemberEmail:"بريد مستخدم جديد", addMember:"اعتماد المستخدم",
+    memberRole:"الصلاحية",roleCopyOnly:"نسخ الأكواد فقط",roleOperator:"مشغّل",roleAdmin:"مدير",memberInactive:"معطّل",memberActive:"نشط",memberSave:"حفظ المستخدم",activityTitle:"آخر النشاطات",activityEmpty:"لا يوجد نشاط مسجل.",
+    auditInsert:"إضافة",auditUpdate:"تعديل",auditDelete:"حذف",auditCodes:"كود",auditMembers:"مستخدم",auditSettings:"إعدادات النظام",
+    restoreTitle:"استعادة نسخة احتياطية",restoreFile:"اختر ملف نسخة IBTA بصيغة JSON",restoreButton:"استعادة البيانات",restorePreview:n=>"النسخة تحتوي على "+n+" كود. الاستعادة ستستبدل الأكواد والإعدادات المشتركة الحالية.",restoreDone:"تمت استعادة النسخة الاحتياطية.",restoreInvalid:"ملف النسخة الاحتياطية غير صالح.",restoreConfirm:n=>"استبدال كل الأكواد والإعدادات المشتركة الحالية بـ "+n+" كود من النسخة الاحتياطية؟",
+    bulkImportTitle:"استيراد أكواد من ملف",bulkImportCategory:"الفئة",bulkImportFile:"ملف CSV أو نص",bulkImportButton:"استيراد الأكواد الصالحة",exportCodesCsv:"تصدير الأكواد CSV",bulkImportPreview:(valid,duplicates,invalid)=>valid+" كود جديد جاهز · "+duplicates+" مكرر تم تجاهله · "+invalid+" صف غير صالح",bulkImportDone:n=>"تم استيراد "+n+" كود.",lowStockLabel:"تنبيه انخفاض الرصيد عند",lowStockWarning:items=>"رصيد منخفض: "+items,saveBtn:"حفظ",
     dbConnected:"متصل بقاعدة البيانات", saving:"جارٍ الحفظ…", saved:"تم الحفظ في قاعدة البيانات", refreshed:"تم تحديث البيانات",
     copyRecorded:"تم نسخ الكود وتسجيل استخدامه", copyReserved:"تم حجز الكود لحسابك لكن النسخ فشل. اضغط عليه لإعادة النسخ أو ألغِ علامة الاستخدام.",
     codeNotFound:"الكود غير موجود. حدّث البيانات.", codeUsedByOther:"هذا الكود مستخدم بواسطة شخص آخر.",
@@ -729,16 +1042,98 @@ const CATEGORY_LINK = {"Foundation":"Foundation-100","Master":"Master-10","BIS":
 // the number) is still used internally for all state lookups — only the label changes.
 function displayCatName(cat){
   const name=cat.replace(/-\d+$/, '');
-  return t('categoryNames')[name] || name;
+  return state?.categoryLabels?.[cat] || state?.categoryLabels?.[name] || t('categoryNames')[name] || name;
 }
 
 let DEFAULT_KEYCODES = [];
-let PROMETRIC_ACCOUNT = '', PROMETRIC_PASSWORD = '';
+let PROMETRIC_ACCOUNT = '', PROMETRIC_PASSWORD = '', ZOOM_URL = '', PROMETRIC_LOGIN_URL = '';
 async function saveState(){ return Cloud.persist(); }
-let state = {usedCodes:{},codesByCategory:{},keycodeOverrides:{},dateColors:{},settings:{autoChain:false},codeNotes:{},uiLang:'en',categoryOrder:[],keycodeOrder:{}};
+let state = {usedCodes:{},codesByCategory:{},categoryLabels:{},keycodeOverrides:{},dateColors:{},settings:{autoChain:false},codeNotes:{},uiLang:'en',categoryOrder:[],keycodeOrder:{}};
 function getLinkedCodesCat(cat){
   return CATEGORY_LINK[cat] || cat;
 }
+function fillManageSelect(id,entries){
+  const select=document.getElementById(id),selected=select.value;
+  select.innerHTML='';
+  entries.forEach(([value,label])=>{const option=document.createElement('option');option.value=value;option.textContent=label;select.appendChild(option);});
+  if(entries.some(([value])=>value===selected))select.value=selected;
+  else select.value=entries[0]?.[0] || '';
+}
+function renderManageData(){
+  fillManageSelect('manage-category',state.categoryOrder.map(cat=>[cat,displayCatName(cat)]));
+  fillManageSelect('manage-exam',DEFAULT_KEYCODES.map(item=>[item.code,displayCatName(state.keycodeOverrides[item.code] || item.category)+' · '+item.title+' · '+item.code]));
+  fillManageSelect('manage-code-category',Object.keys(state.codesByCategory).map(cat=>[cat,displayCatName(cat)]));
+  const cat=document.getElementById('manage-code-category').value;
+  fillManageSelect('manage-code',(state.codesByCategory[cat] || []).map(code=>[code,code]));
+  document.getElementById('manage-exam-edit').disabled=!DEFAULT_KEYCODES.length;
+  document.getElementById('manage-code-edit').disabled=!(state.codesByCategory[cat] || []).length;
+  fillManageSelect('bulk-import-category',Object.keys(state.codesByCategory).map(cat=>[cat,displayCatName(cat)]));
+}
+document.getElementById('manage-code-category').addEventListener('change',renderManageData);
+document.getElementById('manage-category-edit').addEventListener('click',()=>openEdit('category',document.getElementById('manage-category').value));
+document.getElementById('manage-exam-edit').addEventListener('click',()=>{
+  const item=DEFAULT_KEYCODES.find(item=>item.code===document.getElementById('manage-exam').value);if(item)openEdit('exam',item);
+});
+document.getElementById('manage-code-edit').addEventListener('click',()=>{
+  const code=document.getElementById('manage-code').value;if(code)openEdit('code',code);
+});
+let editTarget=null;
+function openEdit(kind,target){
+  editTarget={kind,target};
+  const dialog=document.getElementById('edit-dialog');
+  const isCategory=kind==='category',isExam=kind==='exam';
+  document.getElementById('edit-heading').textContent=t(isCategory?'editCategory':isExam?'editExam':'editCode');
+  document.getElementById('edit-name-field').hidden=!isCategory;
+  document.getElementById('edit-title-field').hidden=!isExam;
+  document.getElementById('edit-language-field').hidden=!isExam;
+  document.getElementById('edit-code-field').hidden=isCategory;
+  document.getElementById('edit-category-field').hidden=isCategory;
+  document.getElementById('edit-date-field').hidden=kind!=='code';
+  document.getElementById('edit-notes-field').hidden=kind!=='code';
+  document.getElementById('edit-code').required=!isCategory;
+  document.getElementById('edit-code-label').textContent=t(isExam?'keycodeCol':'colCode');
+  document.getElementById('edit-name').value=isCategory?displayCatName(target):'';
+  document.getElementById('edit-title').value=isExam?target.title:'';
+  document.getElementById('edit-language').value=isExam?target.lang:'English';
+  [...document.getElementById('edit-language').options].forEach(option=>option.textContent=t('languageNames')[option.value]);
+  document.getElementById('edit-code').value=isCategory?'':isExam?target.code:target;
+  document.getElementById('edit-date').value=kind==='code'?(state.usedCodes[target] || ''):'';
+  document.getElementById('edit-notes').value=kind==='code'?(state.codeNotes[target] || ''):'';
+  const select=document.getElementById('edit-category');
+  select.innerHTML='';
+  (isExam?state.categoryOrder:Object.keys(state.codesByCategory)).forEach(cat=>{
+    const option=document.createElement('option');option.value=cat;option.textContent=displayCatName(cat);select.appendChild(option);
+  });
+  if(!isCategory) select.value=isExam?(state.keycodeOverrides[target.code] || target.category):Object.keys(state.codesByCategory).find(cat=>state.codesByCategory[cat].includes(target));
+  dialog.showModal();
+}
+document.getElementById('edit-cancel').addEventListener('click',()=>document.getElementById('edit-dialog').close());
+document.getElementById('edit-form').addEventListener('submit',async e=>{
+  e.preventDefault();
+  if(!editTarget)return;
+  const {kind,target}=editTarget,code=document.getElementById('edit-code').value.trim(),cat=document.getElementById('edit-category').value;
+  let saved=false;
+  if(kind==='category'){
+    const name=document.getElementById('edit-name').value.trim();
+    if(!name || state.categoryOrder.some(other=>other!==target && displayCatName(other).toLowerCase()===name.toLowerCase())){showToast(t('categoryExists'));return;}
+    state.categoryLabels[target]=name;
+    saved=await saveState();
+  }else if(kind==='exam'){
+    const title=document.getElementById('edit-title').value.trim();
+    if(!title || !code){showToast(t('examRequired'));return;}
+    if(DEFAULT_KEYCODES.some(item=>item!==target && item.code.toLowerCase()===code.toLowerCase())){showToast(t('keycodeExists'));return;}
+    const oldCode=target.code;
+    target.title=title;target.lang=document.getElementById('edit-language').value;target.code=code;target.category=cat;
+    delete state.keycodeOverrides[oldCode];
+    Object.values(state.keycodeOrder).forEach(order=>{const i=order.indexOf(oldCode);if(i!==-1)order.splice(i,1);});
+    saved=await saveState();
+  }else{
+    const date=document.getElementById('edit-date').value.trim();
+    const notes=document.getElementById('edit-notes').value.trim();
+    saved=await Cloud.editCode(target,code,cat,date,notes);
+  }
+  if(saved){document.getElementById('edit-dialog').close();editTarget=null;renderKeycodes();renderCodeTabs();renderCodeGrid();renderManageData();showToast(t('itemUpdated'));}
+});
 state.categoryOrder.forEach(c=>{
   const linked = getLinkedCodesCat(c);
   if(!state.codesByCategory[linked]) state.codesByCategory[linked] = [];
@@ -806,8 +1201,16 @@ function getContrastText(hex){
   return luminance > 0.6 ? '#1A1A1A' : '#FFFFFF';
 }
 function todayStr(){
-  const d = new Date();
-  return formatEnglishDate(d.getDate(), d.getMonth()+1, d.getFullYear());
+  const parts=Object.fromEntries(new Intl.DateTimeFormat('en-GB',{
+    timeZone:'Asia/Riyadh',day:'2-digit',month:'2-digit',year:'numeric'
+  }).formatToParts(new Date()).map(part=>[part.type,part.value]));
+  return formatEnglishDate(parts.day,parts.month,parts.year);
+}
+function codeCopyTime(iso){
+  if(!iso)return '';
+  const date=new Date(iso);
+  if(Number.isNaN(date.getTime()))return '';
+  return new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Riyadh',hour:'2-digit',minute:'2-digit',hour12:false}).format(date);
 }
 
 // ---------- Unified English-numeral date formatting ----------
@@ -865,6 +1268,18 @@ function showToast(msg){
   clearTimeout(toastTimer);
   toastTimer = setTimeout(()=>el.classList.remove('show'), 1400);
 }
+const TRASH_ICON='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M10 7V4h4v3M6 7l1 13h10l1-13M10 11v6m4-6v6"/></svg>';
+function confirmDelete(message){
+  const dialog=document.getElementById('delete-dialog');
+  document.getElementById('delete-dialog-message').textContent=message;
+  dialog.showModal();
+  return new Promise(resolve=>{
+    const done=answer=>{dialog.close();resolve(answer);};
+    document.getElementById('delete-cancel').onclick=()=>done(false);
+    document.getElementById('delete-confirm').onclick=()=>done(true);
+    dialog.oncancel=e=>{e.preventDefault();done(false);};
+  });
+}
 async function copyText(text){
   try{
     if(navigator.clipboard && navigator.clipboard.writeText){
@@ -904,15 +1319,24 @@ function applyLanguage(){
   document.getElementById('lang-btn').textContent = currentLang === 'en' ? 'AR' : 'EN';
   document.getElementById('auth-lang-btn').textContent = currentLang === 'en' ? 'AR' : 'EN';
   document.getElementById('settings-btn').title = t('settingsTitle');
+  document.getElementById('settings-tabs').setAttribute('aria-label',t('settingsTitle'));
+  document.getElementById('account-menu-btn').title = t('accountMenu');
+  document.getElementById('account-menu-btn').setAttribute('aria-label',t('accountMenu'));
+  document.getElementById('prometric-login-card').setAttribute('aria-label',t('prometricLinkCopyHint'));
   document.querySelectorAll('[data-i18n]').forEach(el=>{
     el.textContent = t(el.dataset.i18n);
   });
   document.getElementById('add-codes-input').placeholder = 'IBTAMEAF-XXXX-XXXX';
   document.getElementById('auth-password').placeholder = t('authPasswordPlaceholder');
   Cloud.translateUi();
+  if(typeof Trainees!=='undefined')Trainees.translate();
   renderKeycodes();
   renderCodeTabs();
   renderCodeGrid();
+  renderManageData();
+  if(typeof renderInventory==='function')renderInventory();
+  if(typeof renderMemberList==='function' && document.getElementById('admin-tools').open)renderMemberList();
+  if(typeof renderAuditList==='function' && document.getElementById('audit-details').open)renderAuditList();
 }
 function toggleLanguage(){
   currentLang = currentLang === 'en' ? 'ar' : 'en';
@@ -927,32 +1351,81 @@ document.getElementById('lang-btn').addEventListener('click',toggleLanguage);
 document.getElementById('auth-lang-btn').addEventListener('click',toggleLanguage);
 
 // ---------- TABS ----------
+const SETTINGS_TAB_IDS=['profile','data','prometric','inventory','preferences','sync'];
+function activateSettingsTab(id){
+  if(!SETTINGS_TAB_IDS.includes(id) || document.getElementById('settings-tab-'+id).hidden)id='profile';
+  SETTINGS_TAB_IDS.forEach(tabId=>{
+    const button=document.getElementById('settings-tab-'+tabId);
+    const active=tabId===id;
+    button.setAttribute('aria-selected',String(active));
+    button.tabIndex=active?0:-1;
+    document.getElementById('settings-pane-'+tabId).hidden=!active;
+  });
+}
+SETTINGS_TAB_IDS.forEach(id=>{
+  const button=document.getElementById('settings-tab-'+id);
+  button.addEventListener('click',()=>activateSettingsTab(id));
+  button.addEventListener('keydown',e=>{
+    if(e.key!=='ArrowRight' && e.key!=='ArrowLeft')return;
+    e.preventDefault();
+    const visible=SETTINGS_TAB_IDS.filter(tabId=>!document.getElementById('settings-tab-'+tabId).hidden);
+    const direction=e.key==='ArrowRight'?1:-1;
+    const next=visible[(visible.indexOf(id)+direction+visible.length)%visible.length];
+    activateSettingsTab(next);
+    document.getElementById('settings-tab-'+next).focus();
+  });
+});
+function closeAccountMenu(){
+  document.getElementById('account-menu-popover').hidden=true;
+  document.getElementById('account-menu-btn').setAttribute('aria-expanded','false');
+}
+document.getElementById('account-menu-btn').addEventListener('click',()=>{
+  const menu=document.getElementById('account-menu-popover');
+  const opening=menu.hidden;
+  menu.hidden=!opening;
+  document.getElementById('account-menu-btn').setAttribute('aria-expanded',String(opening));
+});
+document.addEventListener('click',e=>{
+  if(!document.getElementById('account-menu').contains(e.target)) closeAccountMenu();
+});
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'&&!document.getElementById('account-menu-popover').hidden){
+    closeAccountMenu();
+    document.getElementById('account-menu-btn').focus();
+  }
+});
 function showPanel(id){
+  closeAccountMenu();
+  document.getElementById('app').classList.toggle('sheet-wide',id==='trainees');
   if(id === 'keycodes') renderKeycodes();
   document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.remove('active'));
   document.querySelectorAll('section.panel').forEach(p=>p.classList.remove('active'));
-  document.getElementById('settings-btn').classList.remove('active');
+  document.getElementById('account-menu-btn').classList.toggle('active',id==='settings');
   document.getElementById('panel-'+id).classList.add('active');
+  if(id==='codes'){codeTimelineReset=true;positionCodeTimeline();}
+  if(id==='trainees' && typeof Trainees!=='undefined')Trainees.open();
 }
 document.querySelectorAll('nav.tabs button').forEach(btn=>{
   btn.addEventListener('click', async ()=>{
     showPanel(btn.dataset.tab);
     btn.classList.add('active');
+    if(btn.dataset.tab==='codes' || btn.dataset.tab==='inventory')await Cloud.refresh();
   });
 });
 document.getElementById('settings-btn').addEventListener('click', async ()=>{
   showPanel('settings');
-  document.getElementById('settings-btn').classList.add('active');
+  activateSettingsTab('profile');
 });
 
 // ---------- PANEL 1: KEYCODES ----------
-function goToCodesCategory(codesCat){
+async function goToCodesCategory(codesCat){
   showPanel('codes');
   document.querySelector('nav.tabs button[data-tab="codes"]').classList.add('active');
   activeCategory = codesCat;
   selectedCodes.clear();
   renderCodeTabs();
   renderCodeGrid();
+  await Cloud.refresh();
 }
 
 async function autoCopyNextCode(linkedCat){
@@ -1080,12 +1553,26 @@ function buildAddCategoryBox(){
   return box;
 }
 
-function buildAddExamBox(cat){
+function buildAddExamBox(){
   const box = document.createElement('details');
   box.className = 'kc-add-exam';
   const summary = document.createElement('summary');
   summary.textContent = t('addExam');
   const form = document.createElement('form');
+  const categoryLabel = document.createElement('label');
+  categoryLabel.className = 'kc-add-exam-category';
+  const categoryName = document.createElement('span');
+  categoryName.textContent = t('categoryNamePlaceholder');
+  const category = document.createElement('select');
+  category.name = 'category';
+  state.categoryOrder.forEach(value=>{
+    const option = document.createElement('option');
+    option.value = value;
+    option.textContent = displayCatName(value);
+    category.appendChild(option);
+  });
+  categoryLabel.appendChild(categoryName);
+  categoryLabel.appendChild(category);
   const fields = document.createElement('div');
   fields.className = 'kc-add-exam-fields';
   const title = document.createElement('input');
@@ -1118,9 +1605,9 @@ function buildAddExamBox(cat){
     const option = document.createElement('option');
     option.value = value;
     option.textContent = displayCatName(value);
-    option.selected = value === cat;
     destination.appendChild(option);
   });
+  category.addEventListener('change',()=>{destination.value=category.value;});
   [title,language,keycode,destination].forEach(field=>fields.appendChild(field));
   const button = document.createElement('button');
   button.type = 'submit';
@@ -1129,6 +1616,7 @@ function buildAddExamBox(cat){
     event.preventDefault();
     const examTitle = title.value.trim();
     const code = keycode.value.trim();
+    const cat = category.value;
     if(!examTitle || !code){ showToast(t('examRequired')); return; }
     if(DEFAULT_KEYCODES.some(item=>item.code.toLowerCase() === code.toLowerCase())){
       showToast(t('keycodeExists')); return;
@@ -1139,11 +1627,19 @@ function buildAddExamBox(cat){
     renderKeycodes();
     showToast(t('examAdded'));
   });
+  form.appendChild(categoryLabel);
   form.appendChild(fields);
   form.appendChild(button);
   box.appendChild(summary);
   box.appendChild(form);
   return box;
+}
+
+function renderSettingsAddForms(){
+  const container=document.getElementById('settings-add-forms');
+  container.innerHTML='';
+  container.appendChild(buildAddExamBox());
+  container.appendChild(buildAddCategoryBox());
 }
 
 function renderKeycodes(){
@@ -1216,10 +1712,11 @@ function renderKeycodes(){
     if(!CATEGORY_ORDER.includes(cat)){
       const removeBtn = document.createElement('button');
       removeBtn.className = 'kc-remove-cat-btn';
-      removeBtn.textContent = '✕';
+      removeBtn.innerHTML = TRASH_ICON;
       removeBtn.title = t('removeCategory');
+      removeBtn.setAttribute('aria-label',t('removeCategory'));
       removeBtn.addEventListener('click', async ()=>{
-        if(!confirm(t('confirmRemoveCategory')(cat))) return;
+        if(!await confirmDelete(t('confirmRemoveCategory')(cat))) return;
         DEFAULT_KEYCODES.forEach(item=>{
           if(item.category === cat) item.category = state.keycodeOverrides[item.code] || CATEGORY_ORDER[0];
         });
@@ -1227,6 +1724,7 @@ function renderKeycodes(){
           if(state.keycodeOverrides[code] === cat) delete state.keycodeOverrides[code];
         });
         state.categoryOrder = state.categoryOrder.filter(c=>c!==cat);
+        delete state.categoryLabels[cat];
         delete state.keycodeOrder[cat];
         if(!await saveState()) return;
         renderKeycodes();
@@ -1357,12 +1855,10 @@ function renderKeycodes(){
     });
 
     block.appendChild(scroll);
-    block.appendChild(buildAddExamBox(cat));
     panel.appendChild(block);
   });
 
-  // Keep category management after the complete list of keycode groups.
-  panel.appendChild(buildAddCategoryBox());
+  renderSettingsAddForms();
   Cloud.decorate();
 }
 
@@ -1386,9 +1882,56 @@ document.getElementById('cred-account').addEventListener('click', async ()=>{
 document.getElementById('cred-password').addEventListener('click', async ()=>{
   handlePrometricCopy('cred-password-val', 'passwordCopied');
 });
+async function copyPrometricLogin(){
+  if(!PROMETRIC_LOGIN_URL){showToast(t('notConfigured'));return;}
+  if(await copyText(PROMETRIC_LOGIN_URL)) showToast(t('prometricLinkCopied'));
+}
+document.getElementById('prometric-login-card').addEventListener('click',copyPrometricLogin);
+document.getElementById('prometric-login-card').addEventListener('keydown',async e=>{
+  if(e.key==='Enter' || e.key===' '){e.preventDefault();await copyPrometricLogin();}
+});
 
 // ---------- PANEL 3: CODES ----------
 let activeCategory = Object.keys(state.codesByCategory)[0];
+let codeTimelineReset=true,codeTimelineFrame=0;
+
+function codeDayNumber(value){
+  const date=parseAnyDateString(value || '');
+  return date?Date.UTC(date.year,date.month-1,date.day):0;
+}
+function orderedCodeTimeline(list){
+  const ordered=list.map((code,index)=>({code,index,day:state.usedCodes[code]?codeDayNumber(state.usedCodes[code]):Infinity}));
+  ordered.sort((a,b)=>a.day-b.day || (Date.parse(state.codeUseTimes?.[a.code])||0)-(Date.parse(state.codeUseTimes?.[b.code])||0) || a.index-b.index);
+  const today=codeDayNumber(todayStr());
+  let start=ordered.findIndex(item=>item.day>=today);
+  if(start<0&&ordered.length){const newest=ordered[ordered.length-1].day;start=ordered.findIndex(item=>item.day===newest);}
+  return {ordered,start};
+}
+function captureCodeTimeline(){
+  const scroll=document.getElementById('code-sheet-viewport'),grid=document.getElementById('code-grid');
+  if(codeTimelineReset||grid.dataset.category!==activeCategory||typeof scroll.getBoundingClientRect!=='function'||!document.getElementById('panel-codes').classList.contains('active'))return null;
+  const top=scroll.getBoundingClientRect().top+scroll.querySelector('.code-sheet-head').offsetHeight;
+  const first=[...grid.querySelectorAll('.code-row')].find(row=>row.getBoundingClientRect().bottom>top);
+  return {code:first?.dataset.code,delta:first?first.getBoundingClientRect().top-top:0,scrollTop:scroll.scrollTop};
+}
+function positionCodeTimeline(previous=null){
+  if(typeof window.requestAnimationFrame!=='function')return;
+  window.cancelAnimationFrame(codeTimelineFrame);
+  codeTimelineFrame=window.requestAnimationFrame(()=>{
+    if(!document.getElementById('panel-codes').classList.contains('active'))return;
+    const scroll=document.getElementById('code-sheet-viewport'),grid=document.getElementById('code-grid'),head=scroll.querySelector('.code-sheet-head');
+    const anchor=grid.querySelector('.code-current-start');
+    grid.style.paddingBottom='0px';scroll.style.height=grid.dataset.hasHistory==='true'?'min(62vh,600px)':'';
+    const top=scroll.getBoundingClientRect().top,headHeight=head.offsetHeight;
+    const target=anchor?anchor.getBoundingClientRect().top-top+scroll.scrollTop-headHeight:0;
+    if(grid.dataset.hasHistory==='true')grid.style.paddingBottom=Math.max(0,scroll.clientHeight-(headHeight+grid.offsetHeight-target))+'px';
+    if(previous&&!codeTimelineReset){
+      const row=[...grid.querySelectorAll('.code-row')].find(row=>row.dataset.code===previous.code);
+      scroll.scrollTop=row?row.getBoundingClientRect().top-top+scroll.scrollTop-headHeight-previous.delta:previous.scrollTop;
+    }else scroll.scrollTop=Math.max(0,target);
+    codeTimelineReset=false;
+  });
+}
 
 function renderCodeTabs(){
   const wrap = document.getElementById('code-cat-tabs');
@@ -1416,78 +1959,51 @@ function renderStats(){
     <div class="stat">${t('copiedStat')}: <b>${usedCount}</b></div>
     <div class="stat">${t('remainingStat')}: <b>${list.length - usedCount}</b></div>
   `;
+  const threshold=Number.isInteger(state.lowStockThreshold)?state.lowStockThreshold:10;
+  const low=Object.entries(state.codesByCategory).map(([cat,codes])=>[cat,codes.filter(code=>!state.usedCodes[code]).length])
+    .filter(([,count])=>count<=threshold);
+  const alert=document.getElementById('low-stock-alert');
+  alert.hidden=!low.length;
+  alert.textContent=low.length?t('lowStockWarning')(low.map(([cat,count])=>displayCatName(cat)+': '+count).join(' · ')):'';
+  renderDailyUsed();
 }
-
-function renderDayLegend(dayColors){
-  const list = state.codesByCategory[activeCategory] || [];
-  const dates = [];
-  list.forEach(code=>{
-    const used = state.usedCodes[code];
-    if(used && !dates.includes(used)) dates.push(used);
-  });
-
-  const detailsEl = document.getElementById('day-legend-details');
-  const summaryEl = document.getElementById('day-legend-summary');
-  const groupsEl = document.getElementById('day-legend-groups');
-
-  if(dates.length === 0){
-    detailsEl.style.display = 'none';
-    groupsEl.innerHTML = '';
-    return;
-  }
-  detailsEl.style.display = '';
-  summaryEl.textContent = '📅 ' + t('datesLegend')(dates.length);
-
-  // Group dates by month/year so the list stays compact instead of growing
-  // sideways or pushing the page down as more dates accumulate.
-  const groups = {};
-  dates.forEach(dateStr=>{
-    const parts = dateStr.split('/'); // DD/MM/YYYY
-    if(parts.length !== 3) return;
-    const key = parts[1] + '/' + parts[2];
-    if(!groups[key]) groups[key] = [];
-    groups[key].push(dateStr);
-  });
-
-  const sortedKeys = Object.keys(groups).sort((a, b)=>{
-    const [am, ay] = a.split('/').map(Number);
-    const [bm, by] = b.split('/').map(Number);
-    return (by * 12 + bm) - (ay * 12 + am); // most recent month first
-  });
-
-  groupsEl.innerHTML = '';
-  sortedKeys.forEach(key=>{
-    const [m, y] = key.split('/').map(Number);
-    const monthName = t('monthNames')[m - 1] || key;
-
-    const groupWrap = document.createElement('div');
-    groupWrap.className = 'day-legend-month';
-
-    const header = document.createElement('div');
-    header.className = 'day-legend-month-title';
-    header.textContent = monthName + ' ' + y;
-    groupWrap.appendChild(header);
-
-    const pillsWrap = document.createElement('div');
-    pillsWrap.className = 'day-legend-pills';
-    groups[key].sort().forEach(dateStr=>{
-      const color = dayColors[dateStr];
-      const pill = document.createElement('div');
-      pill.className = 'day-pill';
-      const dot = document.createElement('span');
-      dot.className = 'day-pill-dot';
-      dot.style.background = color;
-      const label = document.createElement('span');
-      label.textContent = dateStr;
-      label.style.direction = 'ltr';
-      pill.appendChild(dot);
-      pill.appendChild(label);
-      pillsWrap.appendChild(pill);
-    });
-    groupWrap.appendChild(pillsWrap);
-    groupsEl.appendChild(groupWrap);
+document.getElementById('daily-used-details').addEventListener('toggle',()=>{
+  document.getElementById('daily-used-panel').hidden=!document.getElementById('daily-used-details').open;
+});
+function dailyUsedGroups(iso){
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return [];
+  const [year,month,day]=iso.split('-').map(Number);
+  return Object.entries(state.codesByCategory).map(([cat,codes])=>({
+    cat,
+    codes:codes.filter(code=>{
+      const used=state.usedCodes[code];
+      if(!used)return false;
+      const date=parseAnyDateString(used);
+      return date && date.day===day && date.month===month && date.year===year;
+    })
+  }));
+}
+function renderDailyUsed(){
+  const box=document.getElementById('daily-used-results');
+  box.innerHTML='';
+  const iso=document.getElementById('daily-used-date').value;
+  if(!iso){const prompt=document.createElement('div');prompt.className='daily-used-none';prompt.textContent=t('chooseUsedDate');box.appendChild(prompt);return;}
+  const groups=dailyUsedGroups(iso);
+  const total=groups.reduce((sum,group)=>sum+group.codes.length,0);
+  const totalEl=document.createElement('div');totalEl.className='daily-used-total';totalEl.textContent=t('dailyUsedTotal')(total);box.appendChild(totalEl);
+  if(total===0){const empty=document.createElement('div');empty.className='daily-used-none';empty.textContent=t('dailyUsedNone');box.appendChild(empty);}
+  groups.filter(group=>group.codes.length).forEach(group=>{
+    const section=document.createElement('div');section.className='daily-used-group';
+    const title=document.createElement('strong');title.textContent=displayCatName(group.cat)+': '+group.codes.length;section.appendChild(title);
+    if(group.codes.length){
+      const list=document.createElement('div');list.className='daily-used-codes';
+      group.codes.forEach(code=>{const pill=document.createElement('span');pill.textContent=code;list.appendChild(pill);});
+      section.appendChild(list);
+    }
+    box.appendChild(section);
   });
 }
+document.getElementById('daily-used-date').addEventListener('change',renderDailyUsed);
 
 function updateBulkBar(){
   const bar = document.getElementById('bulk-bar');
@@ -1502,20 +2018,27 @@ function updateBulkBar(){
 function renderCodeGrid(){
   renderKeycodes();
   const grid = document.getElementById('code-grid');
+  const previous=captureCodeTimeline();
   grid.innerHTML = '';
   const list = state.codesByCategory[activeCategory] || [];
+  const timeline=orderedCodeTimeline(list);
+  grid.dataset.category=activeCategory || '';grid.dataset.hasHistory=String(timeline.start>0);
+  const hint=document.getElementById('code-history-hint');hint.hidden=timeline.start<=0;
+  hint.textContent=currentLang==='ar'?'الأيام الأقدم موجودة بالأعلى — مرّر لأعلى داخل جدول الأكواد لعرضها.':'Earlier days are above — scroll up inside the code table to view them.';
+  document.getElementById('code-sheet-viewport').setAttribute('aria-label',currentLang==='ar'?'الأكواد — مرّر لأعلى للأيام الأقدم':'Codes — scroll up for earlier days');
   const dayColors = getDayColors();
   renderStats();
-  renderDayLegend(dayColors);
   updateBulkBar();
   if(list.length === 0){
     grid.innerHTML = `<div class="empty-state" style="border:none; box-shadow:none;">${t('noCodesYet')}</div>`;
+    positionCodeTimeline();
     return;
   }
-  list.forEach((code, i)=>{
+  timeline.ordered.forEach(({code,index:i},position)=>{
     const used = state.usedCodes[code];
     const row = document.createElement('div');
-    row.className = 'code-row' + (used ? ' used' : '');
+    row.className = 'code-row' + (used ? ' used' : '') + (position===timeline.start ? ' code-current-start' : '');
+    row.dataset.code=code;
 
     const checkCell = document.createElement('div');
     checkCell.className = 'col-check';
@@ -1544,7 +2067,7 @@ function renderCodeGrid(){
 
     const d = document.createElement('div');
     d.className = 'col-date';
-    d.textContent = used || '';
+    d.textContent = used ? used+(state.codeUseTimes?.[code]?' '+codeCopyTime(state.codeUseTimes[code]):'') : '';
 
     if(used){
       const dayColor = dayColors[used];
@@ -1593,10 +2116,11 @@ function renderCodeGrid(){
     const delBtn = document.createElement('button');
     delBtn.className = 'icon-btn danger';
     delBtn.title = t('deleteCode');
-    delBtn.textContent = '✕';
+    delBtn.setAttribute('aria-label',t('deleteCode'));
+    delBtn.innerHTML = TRASH_ICON;
     delBtn.addEventListener('click', async (e)=>{
       e.stopPropagation();
-      if(!confirm(t('confirmDeleteCode')(code))) return;
+      if(!await confirmDelete(t('confirmDeleteCode')(code))) return;
       state.codesByCategory[activeCategory] = state.codesByCategory[activeCategory].filter(x=>x!==code);
       delete state.usedCodes[code];
       delete state.codeNotes[code];
@@ -1621,6 +2145,7 @@ function renderCodeGrid(){
     grid.appendChild(row);
   });
   Cloud.decorate();
+  positionCodeTimeline(previous);
 }
 
 document.getElementById('select-all-codes').addEventListener('change', async (e)=>{
@@ -1638,7 +2163,7 @@ document.getElementById('clear-sel-btn').addEventListener('click', async ()=>{
 document.getElementById('bulk-delete-btn').addEventListener('click', async ()=>{
   const count = selectedCodes.size;
   if(count === 0) return;
-  if(confirm(t('confirmBulkDelete')(count))){
+  if(await confirmDelete(t('confirmBulkDelete')(count))){
     state.codesByCategory[activeCategory] = (state.codesByCategory[activeCategory] || []).filter(c => !selectedCodes.has(c));
     selectedCodes.forEach(c=>{
       delete state.usedCodes[c];
@@ -1672,7 +2197,7 @@ document.getElementById('add-codes-btn').addEventListener('click', async ()=>{
 });
 
 document.getElementById('reset-btn').addEventListener('click', async ()=>{
-  if(confirm(t('confirmReset'))){
+  if(await confirmDelete(t('confirmReset'))){
     state.usedCodes = {};
     if(!await saveState()) return;
     renderCodeGrid();
@@ -1691,6 +2216,8 @@ autoChainToggle.addEventListener('change', async (e)=>{
 });
 
 // ---------- init ----------
+const [initialDay,initialMonth,initialYear]=todayStr().split('/');
+document.getElementById('daily-used-date').value=initialYear+'-'+initialMonth+'-'+initialDay;
 try{
   const prefs=JSON.parse(localStorage.getItem('ibta_ui_preferences') || '{}') || {};
   currentLang=prefs.uiLang==='en'?'en':'ar';
@@ -1699,5 +2226,8 @@ try{
 applyLanguage();
 Cloud.boot();
 </script>
+<script src="ops-ui.js"></script>
+<script src="trainees-core.js"></script>
+<script src="trainees.js"></script>
 </body>
 </html>

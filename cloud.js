@@ -1,14 +1,23 @@
 /* Supabase publishable key: public by design. Access is enforced by database RLS. */
 const Cloud = (() => {
-  const URL = 'https://xaeffreqwtozsgqajzpc.supabase.co';
+  const SUPABASE_URL = 'https://xaeffreqwtozsgqajzpc.supabase.co';
   const KEY = 'sb_publishable_TB0SB3SNFP1ygpRvMoeSGg_s8o0mHeO';
-  let client, rows = new Map(), config, user, role, busy = false, ready = false;
+  let client, rows = new Map(), stock = new Map(), config, user, role, busy = false, ready = false;
   let nextBackgroundRefresh = 0;
   let statusKey = '', statusArgs = [], statusError = false, authStatusKey = 'authAccessHelp', authStatusArgs = [];
+  let profileStatusKey='',profileStatusError=false;
   const BACKGROUND_REFRESH_MS = 120000;
   const $ = id => document.getElementById(id);
   const clone = value => JSON.parse(JSON.stringify(value));
   const same = (a,b) => JSON.stringify(a) === JSON.stringify(b);
+  const accountName = () => typeof user?.user_metadata?.full_name==='string' ? user.user_metadata.full_name.trim() : '';
+  function validHttpsUrl(value,domain){
+    try{
+      const url=new URL(value);
+      return url.protocol==='https:' && !url.username && !url.password &&
+        (url.hostname===domain || url.hostname.endsWith('.'+domain));
+    }catch{return false;}
+  }
   function message(text, error = false){
     $('cloud-status').textContent = text;
     $('cloud-status').style.color = error ? '#b42318' : '';
@@ -25,6 +34,14 @@ const Cloud = (() => {
     if(raw==='IBTA_CODE_USED_BY_OTHER') return t('codeUsedByOther');
     if(raw==='IBTA_NO_LEGACY_DATA') return t('noLegacyData');
     if(raw==='IBTA_INVALID_LEGACY_DATA') return t('invalidLegacyData');
+    if(raw==='IBTA_INVALID_ZOOM_URL') return t('invalidZoomUrl');
+    if(raw==='IBTA_INVALID_PROMETRIC_URL') return t('invalidPrometricUrl');
+    if(raw==='IBTA_CREDENTIAL_REQUIRED') return t('enterCredential');
+    if(raw==='IBTA_INVALID_CODE_EDIT') return t('invalidCodeEdit');
+    if(raw==='IBTA_STOCK_NOT_SET') return t('inventoryStockNotSet');
+    if(raw==='IBTA_STOCK_INSUFFICIENT') return t('inventoryStockInsufficient');
+    if(raw==='IBTA_INVALID_STOCK_CHANGE') return t('inventoryInvalidChange');
+    if(raw==='IBTA_INVALID_PHONE') return t('inventoryPhoneInvalid');
     if(raw==='IBTA_LIBRARY_LOAD_FAILED') return t('libraryLoadFailed');
     if(raw.startsWith('IBTA_DUPLICATE_CODE:')) return t('duplicateCode')(raw.slice(20));
     if(/invalid login credentials|invalid credentials/i.test(raw) || error?.code==='invalid_credentials') return t('authInvalidCredentials');
@@ -44,7 +61,22 @@ const Cloud = (() => {
     $('auth-message').textContent=key==='error' ? errorText(args[0]) : translated(key,...args);
   }
   function translateUi(){
-    if(user) $('signed-in').textContent=(user.email || '')+' · '+(role==='admin'?t('adminRole'):t('userRole'));
+    if(user){
+      const email=user.email || '';
+      const name=accountName();
+      $('signed-in').textContent=(name?name+' · ':'')+email+' · '+(role==='admin'?t('adminRole'):role==='copy_only'?t('roleCopyOnly'):t('userRole'));
+      $('account-menu-name').textContent=name || t('currentAccount');
+      $('account-menu-email').textContent=email;
+      $('account-avatar').textContent=(name || email).trim().charAt(0).toUpperCase() || 'IB';
+    }
+    if(profileStatusKey){
+      $('profile-status').textContent=profileStatusKey==='error'?errorText(profileStatusError):t(profileStatusKey);
+      $('profile-status').style.color=profileStatusKey==='error'?'#b42318':'';
+    }
+    $('zoom-link-val').textContent=ZOOM_URL || t('notConfigured');
+    $('prometric-link-val').textContent=PROMETRIC_LOGIN_URL || t('notConfigured');
+    if(ZOOM_URL) $('zoom-card').setAttribute('href',ZOOM_URL);
+    else $('zoom-card').removeAttribute('href');
     renderStatus();
     setAuthStatus(authStatusKey,...authStatusArgs);
   }
@@ -71,26 +103,40 @@ const Cloud = (() => {
     const p=config.payload;
     let prefs={};
     try{prefs=JSON.parse(localStorage.getItem('ibta_ui_preferences') || '{}') || {};}catch{}
-    state={usedCodes:{},codesByCategory:{},codeNotes:{},keycodeOverrides:clone(p.keycodeOverrides || {}),
+    state={usedCodes:{},codeUseTimes:{},codesByCategory:{},codeNotes:{},categoryLabels:clone(p.categoryLabels || {}),keycodeOverrides:clone(p.keycodeOverrides || {}),
       keycodeOrder:clone(p.keycodeOrder || {}),categoryOrder:clone(p.categoryOrder),dateColors:clone(p.dateColors || {}),
-      settings:{autoChain:!!prefs.autoChain},uiLang:prefs.uiLang==='en'?'en':'ar'};
+      settings:{autoChain:!!prefs.autoChain},lowStockThreshold:Number.isInteger(p.lowStockThreshold)?p.lowStockThreshold:10,uiLang:prefs.uiLang==='en'?'en':'ar'};
     for(const cat of p.codeCategories || []) state.codesByCategory[cat]=[];
     for(const r of rows.values()){
       (state.codesByCategory[r.category] ||= []).push(r.code);
       if(r.used_on) state.usedCodes[r.code]=r.used_on;
+      if(r.used_on && r.used_at) state.codeUseTimes[r.code]=r.used_at;
       if(r.notes) state.codeNotes[r.code]=r.notes;
     }
     DEFAULT_KEYCODES=clone(p.keycodes || []);
     PROMETRIC_ACCOUNT=p.credentials?.account || '';
     PROMETRIC_PASSWORD=p.credentials?.password || '';
+    ZOOM_URL=validHttpsUrl(p.links?.zoom,'zoom.us') ? p.links.zoom : '';
+    PROMETRIC_LOGIN_URL=validHttpsUrl(p.links?.prometric,'prometric.com') ? p.links.prometric : '';
     $('cred-account-val').textContent=PROMETRIC_ACCOUNT;
     $('cred-password-val').textContent=PROMETRIC_PASSWORD;
+    $('settings-prometric-account').value=PROMETRIC_ACCOUNT;
+    $('settings-prometric-password').value=PROMETRIC_PASSWORD;
+    $('settings-zoom-link').value=p.links?.zoom || '';
+    $('settings-prometric-link').value=p.links?.prometric || '';
+    $('inventory-whatsapp-number').value=p.inventoryWhatsappNumber || '';
+    $('inventory-supervisor-name').value=p.inventorySupervisorName || '';
+    $('inventory-message-language').value=p.inventoryMessageLanguage==='en'?'en':'ar';
+    $('low-stock-threshold').value=state.lowStockThreshold;
+    $('profile-name').value=accountName();
+    $('profile-email').value=user?.email || '';
     currentLang=state.uiLang;
     autoChainToggle.checked=state.settings.autoChain;
     if(!Object.hasOwn(state.codesByCategory,activeCategory)) activeCategory=Object.keys(state.codesByCategory)[0];
     selectedCodes.clear();
     applyLanguage();
     decorate();
+    if(typeof renderInventory==='function')renderInventory();
   }
   function decorate(){
     const admin=role==='admin';
@@ -98,18 +144,37 @@ const Cloud = (() => {
       el.hidden=!admin;
     });
     $('admin-tools').hidden=!admin;
+    $('manage-data').hidden=!admin;
+    $('settings-add-forms').hidden=!admin;
+    $('prometric-settings').hidden=!admin;
+    $('settings-tab-data').hidden=!admin;
+    $('settings-tab-prometric').hidden=!admin;
+    $('settings-tab-inventory').hidden=!admin;
+    $('code-bulk-tools').hidden=!admin;
+    $('reset-tools').hidden=!admin;
+    $('inventory-admin').hidden=!admin;
+    $('inventory-whatsapp-settings').hidden=!admin;
+    document.querySelectorAll('.col-notes input').forEach(el=>{el.disabled=role==='copy_only';});
+    document.querySelectorAll('.code-unmark-btn').forEach(el=>{el.hidden=role==='copy_only';});
+    if(!admin && ($('settings-tab-data').getAttribute('aria-selected')==='true' || $('settings-tab-prometric').getAttribute('aria-selected')==='true' || $('settings-tab-inventory').getAttribute('aria-selected')==='true')) activateSettingsTab('profile');
     translateUi();
   }
   async function load(){
-    const [settings,codes]=await Promise.all([client.from('ibta_settings').select('*').eq('id',1).single(),allRows()]);
+    const [settings,codes,stockResult]=await Promise.all([
+      client.from('ibta_settings').select('*').eq('id',1).single(),allRows(),
+      client.from('ibta_supervisor_stock').select('category,remaining')
+    ]);
     if(settings.error) throw settings.error;
+    if(stockResult.error) throw stockResult.error;
     config=settings.data;
     rows=new Map(codes.map(r=>[r.code,r]));
+    stock=new Map(stockResult.data.map(r=>[r.category,r.remaining]));
     project();
   }
   function metadata(){
-    return {...clone(config.payload),keycodes:clone(DEFAULT_KEYCODES),categoryOrder:clone(state.categoryOrder),keycodeOverrides:clone(state.keycodeOverrides),
-      keycodeOrder:clone(state.keycodeOrder),codeCategories:Object.keys(state.codesByCategory)};
+    return {...clone(config.payload),keycodes:clone(DEFAULT_KEYCODES),categoryOrder:clone(state.categoryOrder),categoryLabels:clone(state.categoryLabels),keycodeOverrides:clone(state.keycodeOverrides),
+      keycodeOrder:clone(state.keycodeOrder),codeCategories:Object.keys(state.codesByCategory),
+      ...(Object.hasOwn(config.payload,'lowStockThreshold') || state.lowStockThreshold!==10 ? {lowStockThreshold:state.lowStockThreshold} : {})};
   }
   async function persist(){
     if(!ready) return true;
@@ -162,6 +227,24 @@ const Cloud = (() => {
       fail(error);return false;
     }finally{lock(false);}
   }
+  async function editCode(oldCode,newCode,category,usedOn,notes){
+    if(!ready || busy || role!=='admin') return false;
+    const prior=rows.get(oldCode);
+    if(!prior) return false;
+    if(!newCode || newCode.length>200 || !Object.hasOwn(state.codesByCategory,category) ||
+       (usedOn && !/^\d{2}\/\d{2}\/\d{4}$/.test(usedOn)) ||
+       (newCode!==oldCode && [...rows.keys()].some(code=>code.toLowerCase()===newCode.toLowerCase()))){
+      fail(Error('IBTA_INVALID_CODE_EDIT')); return false;
+    }
+    if(newCode===oldCode && category===prior.category && usedOn===(prior.used_on || '') && notes===prior.notes) return true;
+    lock(true);setStatus('saving');
+    try{
+      const {error}=await client.rpc('ibta_apply_changes',{changes:[{op:'replace',code:oldCode,version:prior.version,new_code:newCode,new_category:category,used_on:usedOn || null,notes}],settings_payload:null,settings_version:config.version});
+      if(error) throw error;
+      await load();setStatus('saved');return true;
+    }catch(error){try{await load();}catch{}fail(error);return false;}
+    finally{lock(false);}
+  }
   async function refresh(background = false){
     if(!ready || busy) return false;
     if(background === true && (Date.now() < nextBackgroundRefresh || hasDraftInput())) return false;
@@ -175,18 +258,109 @@ const Cloud = (() => {
     }finally{lock(false);}
   }
   function hasDraftInput(){
+    if(typeof Trainees!=='undefined' && Trainees.hasDraft())return true;
+    if($('edit-dialog')?.open) return true;
+    if($('profile-name').value!==accountName() ||
+       $('profile-email').value!==(user?.email || '') ||
+       $('profile-current-password').value || $('profile-new-password').value || $('profile-confirm-password').value) return true;
     if($('add-codes-input')?.value.trim()) return true;
+    if(role==='admin' && config){
+      const p=config.payload;
+      const shared=[['settings-prometric-account',p.credentials?.account || ''],['settings-prometric-password',p.credentials?.password || ''],
+        ['settings-zoom-link',p.links?.zoom || ''],['settings-prometric-link',p.links?.prometric || ''],
+        ['inventory-whatsapp-number',p.inventoryWhatsappNumber || ''],
+        ['inventory-supervisor-name',p.inventorySupervisorName || ''],
+        ['inventory-message-language',p.inventoryMessageLanguage==='en'?'en':'ar']];
+      if(shared.some(([id,value])=>$(id).value!==value)) return true;
+    }
     return [...document.querySelectorAll('.kc-add-cat-input, .add-box textarea')]
       .some(input => input.value.trim());
   }
+  async function savePrometricSettings(event){
+    event.preventDefault();
+    if(role!=='admin' || busy || !ready) return false;
+    const account=$('settings-prometric-account').value.trim();
+    const password=$('settings-prometric-password').value;
+    const zoom=$('settings-zoom-link').value.trim();
+    const prometric=$('settings-prometric-link').value.trim();
+    try{
+      if(!account || !password) throw Error('IBTA_CREDENTIAL_REQUIRED');
+      if(!validHttpsUrl(zoom,'zoom.us')) throw Error('IBTA_INVALID_ZOOM_URL');
+      if(!validHttpsUrl(prometric,'prometric.com')) throw Error('IBTA_INVALID_PROMETRIC_URL');
+      const payload=clone(config.payload);
+      payload.credentials={...(payload.credentials || {}),account,password};
+      payload.links={...(payload.links || {}),zoom,prometric};
+      if(same(payload,config.payload)) return true;
+      lock(true);setStatus('saving');
+      const {error}=await client.rpc('ibta_apply_changes',{changes:[],settings_payload:payload,settings_version:config.version});
+      if(error) throw error;
+      await load();setStatus('saved');showToast(t('saved'));
+      return true;
+    }catch(error){
+      if(/CONFLICT/.test(error.message || '')) try{await load();}catch{}
+      fail(error);return false;
+    }finally{lock(false);}
+  }
+  function profileMessage(key,error=null){
+    profileStatusKey=key;profileStatusError=error;translateUi();
+  }
+  async function saveProfileName(event){
+    event.preventDefault();
+    if(!ready || busy)return;
+    const name=$('profile-name').value.trim();
+    if(!name)return;
+    if(name===accountName())return;
+    lock(true);
+    try{
+      const {data,error}=await client.auth.updateUser({data:{full_name:name}});
+      if(error)throw error;
+      user=data.user || user;
+      $('profile-name').value=name;
+      profileMessage('profileNameSaved');
+    }catch(error){profileMessage('error',error);}
+    finally{lock(false);}
+  }
+  async function saveProfileEmail(event){
+    event.preventDefault();
+    if(!ready || busy)return;
+    const email=$('profile-email').value.trim().toLowerCase();
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){profileMessage('profileInvalidEmail');return;}
+    if(email===(user.email || '').toLowerCase()){profileMessage('profileSameEmail');return;}
+    lock(true);
+    try{
+      const {data,error}=await client.auth.updateUser({email});
+      if(error)throw error;
+      user=data.user || user;
+      $('profile-email').value=user.email || '';
+      profileMessage('profileEmailSent');
+    }catch(error){profileMessage('error',error);}
+    finally{lock(false);}
+  }
+  async function saveProfilePassword(event){
+    event.preventDefault();
+    if(!ready || busy)return;
+    const current=$('profile-current-password').value,newPassword=$('profile-new-password').value,confirm=$('profile-confirm-password').value;
+    if(newPassword.length<8){profileMessage('profilePasswordShort');return;}
+    if(newPassword!==confirm){profileMessage('profilePasswordMismatch');return;}
+    lock(true);
+    try{
+      const {error}=await client.auth.updateUser({password:newPassword,current_password:current});
+      if(error)throw error;
+      $('profile-current-password').value='';$('profile-new-password').value='';$('profile-confirm-password').value='';
+      profileMessage('profilePasswordSaved');
+    }catch(error){profileMessage('error',error);}
+    finally{lock(false);}
+  }
   async function enter(session){
-    if(!session){ready=false;$('app').hidden=true;$('cloud-tools').hidden=true;$('auth-box').hidden=false;return;}
+    if(!session){ready=false;$('app').hidden=true;$('cloud-tools').hidden=true;$('sign-out').hidden=true;$('auth-box').hidden=false;return;}
     user=session.user;
-    const {data,error}=await client.from('ibta_members').select('role,active').eq('email',user.email.toLowerCase()).single();
-    if(error || !data?.active){throw Error('IBTA_NOT_APPROVED');}
-    role=data.role;
+    let member=await client.from('ibta_members').select('role,active,user_id').eq('user_id',user.id).maybeSingle();
+    if(member.error)throw member.error;
+    if(!member.data)member=await client.from('ibta_members').select('role,active,user_id').eq('email',user.email.toLowerCase()).maybeSingle();
+    if(member.error || !member.data?.active || (member.data.user_id && member.data.user_id!==user.id))throw Error('IBTA_NOT_APPROVED');
+    role=member.data.role;
     await load();ready=true;
-    $('auth-box').hidden=true;$('app').hidden=false;$('cloud-tools').hidden=false;
+    $('auth-box').hidden=true;$('app').hidden=false;$('cloud-tools').hidden=false;$('sign-out').hidden=false;
     setStatus('dbConnected');
   }
   async function authenticate(signup){
@@ -229,31 +403,136 @@ const Cloud = (() => {
     if(role!=='admin') return;
     const email=$('member-email').value.trim().toLowerCase();
     if(!email || !email.includes('@')) return;
-    const {error}=await client.from('ibta_members').insert({email,role:'operator',active:true});
-    if(error) fail(error);else {setStatus('memberAdded',false,email);$('member-email').value='';}
+    const memberRole=$('member-role').value;
+    if(!['copy_only','operator','admin'].includes(memberRole))return;
+    const {error}=await client.from('ibta_members').insert({email,role:memberRole,active:true});
+    if(error) fail(error);else {setStatus('memberAdded',false,email);$('member-email').value='';if(typeof renderMemberList==='function')renderMemberList();}
   }
   async function exportData(){
     if(role!=='admin') return;
-    await refresh();
-    const blob=new Blob([JSON.stringify({exportedAt:new Date().toISOString(),settings:config.payload,codes:[...rows.values()]},null,2)],{type:'application/json'});
+    if(typeof Trainees!=='undefined' && !await Trainees.flush())return;
+    if(!await refresh())return;
+    const traineeSheets=[];
+    try{
+      for(let offset=0;;offset+=100){
+        const {data,error}=await client.from('ibta_trainee_sheets').select('owner_id,cells,format').order('owner_id').range(offset,offset+99);
+        if(error)throw error;traineeSheets.push(...data);if(data.length<100)break;
+      }
+    }catch(error){fail(error);return;}
+    const blob=new Blob([JSON.stringify({format:'ibta-ops-backup',version:4,exportedAt:new Date().toISOString(),settings:config.payload,codes:[...rows.values()],supervisorStock:[...stock].map(([category,remaining])=>({category,remaining})),traineeSheets},null,2)],{type:'application/json'});
+    if(blob.size>10000000){setStatus('error',true,Error(currentLang==='ar'?'النسخة تتجاوز 10 ميجابايت. انسخ جداول المتدربين منفصلة قبل المتابعة.':'Backup exceeds 10 MB. Copy trainee sheets separately before continuing.'));return;}
     const url=window.URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='ibta-backup-'+new Date().toISOString().slice(0,10)+'.json';a.click();window.URL.revokeObjectURL(url);
+  }
+  async function exportCodesCsv(){
+    if(role!=='admin')return;
+    if(!await refresh())return;
+    const csvCell=value=>{
+      let text=String(value ?? '');
+      if(/^[=+@\-\t\r]/.test(text))text="'"+text;
+      return '"'+text.replaceAll('"','""')+'"';
+    };
+    const lines=[['Code','Category','Used On'],...[...rows.values()].map(row=>[row.code,row.category,row.used_on || ''])];
+    const blob=new Blob(['\uFEFF'+lines.map(line=>line.map(csvCell).join(',')).join('\r\n')],{type:'text/csv;charset=utf-8'});
+    const url=window.URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='ibta-codes-'+new Date().toISOString().slice(0,10)+'.csv';a.click();window.URL.revokeObjectURL(url);
+  }
+  async function restoreData(backup){
+    if(!ready || role!=='admin')throw Error('IBTA_NOT_APPROVED');
+    if(typeof Trainees!=='undefined' && !await Trainees.flush())throw Error('UNSAVED_SHEET');
+    if(backup?.format && backup.format!=='ibta-ops-backup')throw Error('IBTA_INVALID_BACKUP');
+    if(!Array.isArray(backup?.settings?.categoryOrder) || !Array.isArray(backup?.settings?.codeCategories) ||
+       !Array.isArray(backup?.settings?.keycodes) || !Array.isArray(backup.codes))throw Error('IBTA_INVALID_BACKUP');
+    if(backup.supervisorStock!==undefined && (!Array.isArray(backup.supervisorStock) ||
+       backup.supervisorStock.some(row=>!row || typeof row.category!=='string' ||
+         !Number.isInteger(row.remaining) || row.remaining<0 || row.remaining>1000000)))throw Error('IBTA_INVALID_BACKUP');
+    lock(true);setStatus('saving');
+    try{
+      const {error}=await client.rpc('ibta_restore_backup',{backup,expected_version:config.version});
+      if(error)throw error;
+      if(backup.traineeSheets!==undefined && typeof Trainees!=='undefined')Trainees.reset();
+      await load();setStatus('saved');return true;
+    }catch(error){fail(error);throw error;}
+    finally{lock(false);}
+  }
+  async function importCodes(category,codes){
+    if(!ready || role!=='admin')throw Error('IBTA_NOT_APPROVED');
+    if(!Object.hasOwn(state.codesByCategory,category))throw Error('IBTA_INVALID_CATEGORY');
+    lock(true);setStatus('saving');
+    try{
+      const {data,error}=await client.rpc('ibta_import_codes',{target_category:category,new_codes:codes});
+      if(error)throw error;
+      await load();setStatus('saved');return data;
+    }catch(error){fail(error);throw error;}
+    finally{lock(false);}
+  }
+  async function changeSupervisorStock(category,mode,quantity){
+    if(!ready || role!=='admin')throw Error('IBTA_NOT_APPROVED');
+    if(!Object.hasOwn(state.codesByCategory,category) || !['opening','replenishment','correction'].includes(mode) ||
+       !Number.isInteger(quantity) || quantity<0 || quantity>1000000)throw Error('IBTA_INVALID_STOCK_CHANGE');
+    lock(true);setStatus('saving');
+    try{
+      const {error}=await client.rpc('ibta_change_supervisor_stock',{target_category:category,mode,quantity});
+      if(error)throw error;
+      await load();setStatus('saved');return true;
+    }catch(error){fail(error);throw error;}
+    finally{lock(false);}
+  }
+  async function saveInventoryMessageSettings(number,name,language){
+    if(!ready || role!=='admin')throw Error('IBTA_NOT_APPROVED');
+    if(number && !/^\d{8,15}$/.test(number))throw Error('IBTA_INVALID_PHONE');
+    if(name.length>100 || /[\r\n\x00-\x1f]/.test(name))throw Error('IBTA_INVALID_SUPERVISOR_NAME');
+    if(!['ar','en'].includes(language))throw Error('IBTA_INVALID_MESSAGE_LANGUAGE');
+    const payload=clone(config.payload);
+    payload.inventoryWhatsappNumber=number;
+    payload.inventorySupervisorName=name;
+    payload.inventoryMessageLanguage=language;
+    if(same(payload,config.payload))return true;
+    lock(true);setStatus('saving');
+    try{
+      const {error}=await client.rpc('ibta_apply_changes',{changes:[],settings_payload:payload,settings_version:config.version});
+      if(error)throw error;
+      await load();setStatus('saved');return true;
+    }catch(error){try{await load();}catch{}fail(error);throw error;}
+    finally{lock(false);}
+  }
+  async function listMembers(){
+    if(role!=='admin')return [];
+    const {data,error}=await client.from('ibta_members').select('email,role,active,user_id').order('email');
+    if(error)throw error;return data;
+  }
+  async function updateMember(email,nextRole,active){
+    if(role!=='admin')throw Error('IBTA_NOT_APPROVED');
+    if(!['copy_only','operator','admin'].includes(nextRole))throw Error('IBTA_INVALID_ROLE');
+    const {error}=await client.from('ibta_members').update({role:nextRole,active}).eq('email',email);
+    if(error)throw error;
+  }
+  async function auditEvents(){
+    if(role!=='admin')return [];
+    const {data,error}=await client.from('ibta_audit').select('id,actor,action,entity,record_key,happened_at').order('happened_at',{ascending:false}).limit(100);
+    if(error)throw error;return data;
   }
   async function boot(){
     try{
       if(!window.supabase) throw Error('IBTA_LIBRARY_LOAD_FAILED');
-      client=window.supabase.createClient(URL,KEY,{auth:{storage:sessionStorage,persistSession:true,detectSessionInUrl:false}});
+      client=window.supabase.createClient(SUPABASE_URL,KEY,{auth:{storage:sessionStorage,persistSession:true,detectSessionInUrl:false}});
       $('auth-form').addEventListener('submit',e=>{e.preventDefault();authenticate(false);});
       $('sign-up').addEventListener('click',()=>authenticate(true));
       $('refresh-data').addEventListener('click',refresh);
       $('import-legacy').addEventListener('click',importLegacy);
       $('export-data').addEventListener('click',exportData);
+      $('export-codes-csv').addEventListener('click',exportCodesCsv);
       $('add-member').addEventListener('click',addMember);
+      $('prometric-settings-form').addEventListener('submit',savePrometricSettings);
+      $('profile-name-form').addEventListener('submit',saveProfileName);
+      $('profile-email-form').addEventListener('submit',saveProfileEmail);
+      $('profile-password-form').addEventListener('submit',saveProfilePassword);
       $('sign-out').addEventListener('click',async()=>{
+        if(typeof Trainees!=='undefined' && !await Trainees.flush())return;
         ready=false;pendingChain=null;await client.auth.signOut({scope:'local'});
         location.reload();
       });
       client.auth.onAuthStateChange((event,session)=>{
-        if(event==='SIGNED_OUT'){ready=false;$('app').hidden=true;$('cloud-tools').hidden=true;$('auth-box').hidden=false;}
+        if(event==='SIGNED_OUT'){ready=false;if(typeof Trainees!=='undefined')Trainees.reset();$('app').hidden=true;$('cloud-tools').hidden=true;$('sign-out').hidden=true;$('auth-box').hidden=false;}
+        if(event==='USER_UPDATED' && session?.user){user=session.user;translateUi();}
       });
       const {data,error}=await client.auth.getSession();if(error)throw error;
       await enter(data.session);
@@ -263,5 +542,23 @@ const Cloud = (() => {
       window.addEventListener('beforeunload',e=>{if(busy){e.preventDefault();e.returnValue='';}});
     }catch(e){setAuthStatus('error',e);}
   }
-  return {boot,persist,copyCode,decorate,refresh,translateUi};
+  async function readTrainees(owner){
+    if(!ready)throw Error('AUTH_REQUIRED');
+    const {data,error}=await client.from('ibta_trainee_sheets').select('cells,version,format').eq('owner_id',owner).maybeSingle();
+    if(error)throw error;return data || {cells:[],version:0};
+  }
+  async function saveTrainees(owner,cells,version,format){
+    if(!ready)throw Error('AUTH_REQUIRED');
+    const {data,error}=await client.rpc('ibta_save_trainee_sheet_formatted',{target_owner:owner,new_cells:cells,expected_version:version,new_format:format});
+    if(error)throw error;return data;
+  }
+  async function assignCodes(owner,items){
+    if(!ready||role!=='admin')throw Error('IBTA_NOT_APPROVED');
+    const {error}=await client.rpc('ibta_assign_codes',{target_owner:owner,items});
+    if(error)throw error;
+    await load();
+  }
+  return {boot,persist,copyCode,editCode,decorate,refresh,translateUi,restoreData,importCodes,listMembers,updateMember,auditEvents,exportCodesCsv,changeSupervisorStock,saveInventoryMessageSettings,
+    readTrainees,saveTrainees,assignCodes,userId:()=>user?.id || '',codeSnapshot:()=>[...rows.values()].map(row=>({...row})),
+    role:()=>role,email:()=>user?.email || '',existingCodes:()=>[...rows.keys()],stockSnapshot:()=>Object.fromEntries(stock),inventoryMessageSettings:()=>({number:config?.payload?.inventoryWhatsappNumber || '',name:config?.payload?.inventorySupervisorName || '',language:config?.payload?.inventoryMessageLanguage==='en'?'en':'ar'})};
 })();

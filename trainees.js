@@ -1,0 +1,363 @@
+/* Private, versioned trainee workspaces. No student data is stored in browser storage. */
+const Trainees=(()=>{
+  'use strict';
+  const D=TraineeData,$=id=>document.getElementById(id),PAGE=100;
+  const labels=[['الكود','Code'],['البريد الإلكتروني','Email'],['الاسم بالعربي','Arabic name'],['الاسم بالإنجليزي','English name'],['رقم الهوية / الإقامة','National / Iqama ID'],['الجوال','Phone'],['الجهة','Organization'],['الاختبار','Exam'],['تاريخ الاختبار','Exam date'],['اسم المستخدم','Username'],['كلمة المرور','Password'],['النتيجة','Result'],['AnyDesk ID','AnyDesk ID']];
+  const tr=(ar,en)=>currentLang==='ar'?ar:en;
+  let owner='',cells=[],version=0,revision=0,savedRevision=0,loaded=false,loading=false,epoch=0;
+  let timer,saving=null,history=[],future=[],view=[],page=0,sortCol=-1,sortDir=1,anchor={r:0,c:0},cursor={r:0,c:0},editing=null;
+  let members=[],mode='sheet',codeMode='owned',codeBusy=false,initialized=false;
+  let dragging=false,dragMoved=false;
+  let formatting=D.defaultFormat(),duplicateIds=new Map();
+  let hoverTimer,hoverHideTimer,detailTimer,hoverCell=null,detailKey='',detailPage=0,detailSource=-1;
+  const visibleCols=()=>labels.map((_,c)=>c).filter(c=>!formatting.hidden.includes(c));
+  const snapshot=()=>({cells:cells.map(r=>[...r]),format:D.format(formatting)});
+  function node(tag,text,attrs={}){const el=document.createElement(tag);if(text!==undefined)el.textContent=text;for(const [key,value]of Object.entries(attrs))el.setAttribute(key,value);return el;}
+  function button(text,fn,cls){const b=node('button',text,{type:'button'});if(cls)b.className=cls;b.addEventListener('click',fn);return b;}
+  const message=(text,error=false)=>{if(!$('sheet-status'))return;$('sheet-status').textContent=text;$('sheet-status').dataset.error=String(error);};
+  const errorMessage=error=>/CONFLICT|23505/.test((error?.message||'')+' '+error?.code)?tr('تم تعديل الجدول من نافذة أخرى. انسخ تعديلاتك ثم أعد التحميل.','Another window changed this sheet. Copy your edits, then reload.'):
+    tr('تعذر الحفظ أو التحميل. تعديلاتك الحالية ما زالت هنا؛ جرّب مرة أخرى.','Could not save or load. Your current edits are still here; please retry.');
+  function init(){
+    if(initialized)return;initialized=true;
+    $('panel-trainees').innerHTML=`
+      <div class="sheet-heading"><div><h2 id="sheet-title"></h2><p id="sheet-subtitle"></p></div><label class="sheet-owner" id="sheet-owner-wrap" hidden><span id="sheet-owner-label"></span><select id="sheet-owner"></select></label></div>
+      <div class="sheet-subtabs"><button type="button" id="sheet-mode" aria-selected="true"></button><button type="button" id="sheet-codes-mode" aria-selected="false"></button></div>
+      <div id="sheet-workspace" class="sheet-card">
+        <div class="sheet-tools"><button type="button" id="sheet-add" class="sheet-primary"></button><button type="button" id="sheet-delete"></button><button type="button" id="sheet-undo"></button><button type="button" id="sheet-redo"></button><button type="button" id="sheet-copy"></button><button type="button" id="sheet-save"></button><button type="button" id="sheet-reload"></button><span class="sheet-status" id="sheet-status" role="status" aria-live="polite"></span></div>
+        <div class="sheet-format-tools">
+          <details id="sheet-columns"><summary id="sheet-columns-title"></summary><div id="sheet-column-options"></div></details>
+          <button type="button" id="sheet-font-minus">A−</button><output id="sheet-font-size"></output><button type="button" id="sheet-font-plus">A+</button>
+          <label><span id="sheet-selection-size-label"></span><select id="sheet-selection-size"></select></label>
+          <button type="button" id="sheet-bold"><b>B</b></button>
+          <label><span id="sheet-fill-label"></span><input type="color" id="sheet-fill" value="#fff2cc"></label>
+          <label><span id="sheet-text-color-label"></span><input type="color" id="sheet-text-color" value="#16324f"></label>
+          <button type="button" id="sheet-clear-format"></button><label><span id="sheet-direction-label"></span><select id="sheet-direction"><option value="rtl">يمين ← يسار</option><option value="ltr">Left → Right</option></select></label>
+        </div>
+        <div class="sheet-filters"><input id="sheet-search" type="search"><input id="sheet-org" type="search"><input id="sheet-date" type="search"><select id="sheet-result"></select><label class="sheet-duplicates-filter"><input type="checkbox" id="sheet-duplicates-only"><span id="sheet-duplicates-label"></span></label><button type="button" id="sheet-clear-filters"></button></div>
+        <div id="sheet-duplicate-summary" class="sheet-duplicate-summary" role="status" hidden></div>
+        <div class="sheet-formula"><code id="sheet-address">A1</code><input id="sheet-formula" autocomplete="off" spellcheck="false" dir="auto"></div>
+        <div class="sheet-scroll"><table class="sheet-grid" id="sheet-grid" role="grid" aria-label="Trainees"><thead></thead><tbody></tbody></table></div>
+        <div class="sheet-footer"><p id="sheet-help"></p><div class="sheet-pages"><button type="button" id="sheet-prev">‹</button><span id="sheet-count"></span><button type="button" id="sheet-next">›</button></div></div>
+      </div>
+      <div id="sheet-code-workspace" hidden><div class="sheet-code-tools" id="sheet-code-admin" hidden><button type="button" id="sheet-owned"></button><button type="button" id="sheet-pool"></button><button type="button" id="sheet-assign" class="sheet-primary"></button></div><div class="sheet-code-tools"><input id="sheet-code-search" type="search"><button type="button" id="sheet-code-refresh"></button><span id="sheet-code-count"></span></div><p class="sheet-notice" id="sheet-code-notice"></p><div class="sheet-card sheet-code-list" id="sheet-code-list"></div><p id="sheet-code-status" role="status"></p></div>`;
+    $('sheet-owner').addEventListener('change',async()=>{const next=$('sheet-owner').value;$('sheet-owner').value=owner;await switchOwner(next);});
+    $('sheet-mode').onclick=()=>setMode('sheet');$('sheet-codes-mode').onclick=()=>setMode('codes');
+    $('sheet-save').onclick=()=>flush();$('sheet-reload').onclick=()=>reload();
+    $('sheet-add').onclick=()=>{commitEdit();clearFilters();const r=cells.length;if(r>=D.MAX_ROWS)return limitError();const next=cells.map(row=>[...row]);next.push(D.blank());change(next,false);render();focusCell(r,0);};
+    $('sheet-delete').onclick=()=>{commitEdit();const [r1,r2]=bounds();const ids=new Set(view.slice(r1,r2+1));if(!ids.size||!confirm(tr('حذف الصفوف المحددة؟','Delete selected rows?')))return;const next=D.removeRows(cells,formatting,ids);change(next.cells,true,next.format);};
+    $('sheet-font-minus').onclick=()=>adjustFont(-1);$('sheet-font-plus').onclick=()=>adjustFont(1);
+    $('sheet-direction').onchange=()=>{commitEdit();const next=D.format(formatting);next.direction=$('sheet-direction').value;change(cells,true,next);};
+    $('sheet-fill').onchange=()=>formatSelection({bg:$('sheet-fill').value});
+    $('sheet-text-color').onchange=()=>formatSelection({color:$('sheet-text-color').value});
+    $('sheet-bold').onclick=()=>formatSelection({bold:!formatting.styles[(view[cursor.r]??0)+':'+cursor.c]?.bold});
+    $('sheet-clear-format').onclick=()=>formatSelection(null);
+    $('sheet-selection-size').onchange=()=>formatSelection({size:Number($('sheet-selection-size').value)});
+    for(let size=10;size<=32;size++)$('sheet-selection-size').append(node('option',String(size),{value:size}));
+    $('sheet-undo').onclick=()=>undo(false);$('sheet-redo').onclick=()=>undo(true);
+    $('sheet-copy').onclick=async()=>{commitEdit();if(await copyText(D.tsv(cells)))message(tr('تم نسخ الجدول بالكامل','Entire sheet copied'));};
+    ['sheet-search','sheet-org','sheet-date','sheet-result'].forEach(id=>$(id).addEventListener('input',()=>{commitEdit();page=0;anchor=cursor={r:0,c:0};render();}));
+    $('sheet-duplicates-only').onchange=()=>{commitEdit();page=0;anchor=cursor={r:0,c:0};render();};
+    $('sheet-clear-filters').onclick=()=>{commitEdit();clearFilters();render();};
+    $('sheet-prev').onclick=()=>{commitEdit();page=Math.max(0,page-1);render();};$('sheet-next').onclick=()=>{commitEdit();page++;render();};
+    $('sheet-formula').addEventListener('change',()=>{if(!loaded)return;const idx=view[cursor.r];if(idx===undefined)return;try{change(D.paste(cells,[[$('sheet-formula').value]],idx,cursor.c));}catch{limitError();}});
+    $('sheet-formula').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();$('sheet-formula').blur();focusCell(cursor.r,cursor.c);}});
+    const grid=$('sheet-grid');
+    initDuplicateDetails();
+    grid.addEventListener('pointerdown',e=>{const td=e.target.closest('td[data-col]');if(e.target.closest('select')){commitEdit();if(td){cursor=anchor={r:+td.dataset.v,c:+td.dataset.col};paint();}return;}if(e.button!==0||e.pointerType==='touch'||!td||editing?.el===td)return;e.preventDefault();dragging=true;dragMoved=false;selectCell(+td.dataset.v,+td.dataset.col,e.shiftKey);});
+    grid.addEventListener('pointerover',e=>{const td=e.target.closest('td[data-col]');if(!dragging||!td)return;const r=+td.dataset.v,c=+td.dataset.col;if(r!==cursor.r||c!==cursor.c){dragMoved=true;cursor={r,c};paint();}});
+    document.addEventListener('pointerup',()=>{dragging=false;});
+    grid.addEventListener('click',e=>{clearTimeout(detailTimer);if(e.target.closest('select'))return;if(dragMoved){dragMoved=false;return;}const td=e.target.closest('td[data-col]');if(!td||editing?.el===td)return;selectCell(+td.dataset.v,+td.dataset.col,e.shiftKey);if(!e.shiftKey&&td.classList.contains('sheet-id-duplicate')){const index=view[+td.dataset.v],token=epoch;detailTimer=setTimeout(()=>{if(token===epoch&&td.isConnected&&!editing)openDuplicateDetails(index);},250);}});
+    grid.addEventListener('dblclick',e=>{clearTimeout(detailTimer);hideDuplicateHint();const td=e.target.closest('td[data-col]');if(td)beginEdit(td);});
+    grid.addEventListener('keydown',keyDown);grid.addEventListener('paste',paste);
+    grid.addEventListener('copy',e=>{if(editing)return;e.preventDefault();e.clipboardData.setData('text/plain',selectionText());});
+    grid.addEventListener('cut',e=>{if(editing)return;e.preventDefault();e.clipboardData.setData('text/plain',selectionText());clearSelection();});
+    $('sheet-owned').onclick=()=>{codeMode='owned';renderCodes();};$('sheet-pool').onclick=()=>{codeMode='pool';renderCodes();};
+    $('sheet-assign').onclick=assign;$('sheet-code-search').oninput=renderCodes;
+    $('sheet-code-refresh').onclick=async()=>{if(await Cloud.refresh())renderCodes();};
+    window.addEventListener('beforeunload',e=>{if(hasDraft()){e.preventDefault();e.returnValue='';}});
+    translate();
+  }
+  function translate(){
+    $('trainees-tab').textContent=tr('المتدربون','Trainees');if(!initialized)return;
+    const text={
+      'sheet-title':['جدول المتدربين','Trainee sheet'],'sheet-subtitle':['جدول خاص بكل مستخدم · حفظ تلقائي','A private sheet for each user · Autosave'],
+      'sheet-owner-label':['عرض بيانات المستخدم','View user'],'sheet-mode':['المتدربون','Trainees'],'sheet-codes-mode':['أكواد المستخدم','User codes'],
+      'sheet-add':['+ صف جديد','+ Add row'],'sheet-delete':['حذف الصفوف','Delete rows'],'sheet-undo':['تراجع','Undo'],'sheet-redo':['إعادة','Redo'],
+      'sheet-copy':['نسخ الجدول','Copy sheet'],'sheet-save':['حفظ الآن','Save now'],'sheet-reload':['إعادة تحميل','Reload'],'sheet-clear-filters':['مسح الفلاتر','Clear filters'],
+      'sheet-help':['للكتابة: انقر مرتين أو ابدأ الكتابة · اسحب أو Shift + نقر لتحديد نطاق · Ctrl+C / Ctrl+V · Tab والأسهم للتنقل','Double-click or type to edit · Drag or Shift+click selects a range · Ctrl+C / Ctrl+V · Tab and arrow navigation'],
+      'sheet-owned':['أكواد المستخدم','User codes'],'sheet-pool':['المخزون غير المخصص','Unassigned stock'],'sheet-code-refresh':['تحديث الأكواد','Refresh codes']
+      ,'sheet-columns-title':['إظهار / إخفاء الأعمدة','Show / hide columns'],'sheet-fill-label':['لون الخلية','Cell fill'],'sheet-text-color-label':['لون الخط','Text color'],
+      'sheet-clear-format':['مسح التنسيق','Clear formatting'],'sheet-direction-label':['الاتجاه','Direction'],'sheet-selection-size-label':['حجم المحدد','Selection size'],
+      'sheet-duplicates-label':['الإقامات المكررة فقط','Duplicate IDs only']
+    };for(const [id,pair]of Object.entries(text))$(id).textContent=tr(...pair);
+    for(const [id,pair]of Object.entries({'sheet-search':['بحث في الجدول…','Search sheet…'],'sheet-org':['فلترة بالجهة…','Filter organization…'],'sheet-date':['فلترة بتاريخ الاختبار…','Filter exam date…'],'sheet-code-search':['بحث عن كود…','Search codes…']})){$(id).placeholder=tr(...pair);$(id).setAttribute('aria-label',tr(...pair));}
+    $('sheet-formula').setAttribute('aria-label',tr('محتوى الخلية المحددة','Selected cell value'));
+    $('sheet-prev').setAttribute('aria-label',tr('الصفحة السابقة','Previous page'));$('sheet-next').setAttribute('aria-label',tr('الصفحة التالية','Next page'));
+    const value=$('sheet-result').value;$('sheet-result').replaceChildren();
+    [['',tr('كل النتائج','All results')],['ناجح','ناجح'],['راسب','راسب'],['لم يدخل','لم يدخل']].forEach(([v,label])=>$('sheet-result').append(node('option',label,{value:v})));
+    $('sheet-result').value=value;$('sheet-result').setAttribute('aria-label',tr('النتيجة','Result'));
+    $('sheet-font-minus').title=tr('تصغير خط الجدول','Smaller sheet text');$('sheet-font-plus').title=tr('تكبير خط الجدول','Larger sheet text');$('sheet-bold').title=tr('خط عريض للمحدد','Bold selection');
+    $('sheet-copy').title=tr('نسخ كل الأعمدة بما فيها المخفية','Copy every column, including hidden columns');
+    if(!editing)render();renderCodes();
+  }
+  async function open(){
+    init();if(loading)return;
+    const admin=Cloud.role()==='admin';$('sheet-owner-wrap').hidden=!admin;$('sheet-code-admin').hidden=!admin;
+    if(!Cloud.userId())return;
+    if(admin){try{members=await Cloud.listMembers();}catch(error){message(errorMessage(error),true);return;}}
+    else members=[];
+    const selector=$('sheet-owner');selector.replaceChildren();selector.append(node('option',tr('جدولي','My sheet')+' — '+Cloud.email(),{value:Cloud.userId()}));
+    members.filter(m=>m.user_id&&m.user_id!==Cloud.userId()).forEach(m=>selector.append(node('option',m.email+(m.active?'':tr(' (غير نشط)',' (inactive)')),{value:m.user_id})));
+    if(!owner||!loaded)await switchOwner(owner||Cloud.userId());else selector.value=owner;
+    renderCodes();
+  }
+  async function switchOwner(next,discard=false){
+    if(loading)return false;
+    closeDuplicateDetails();
+    commitEdit();if(!discard&&!await flush())return false;
+    const token=++epoch;loading=true;$('sheet-owner').disabled=true;$('sheet-workspace').inert=true;
+    message(tr('جارٍ تحميل الجدول…','Loading sheet…'));
+    try{
+      const data=await Cloud.readTrainees(next);if(token!==epoch)return false;
+      const normalized=D.normalize(data.cells);owner=next;cells=normalized;formatting=D.format(data.format);version=Number(data.version);revision=savedRevision=0;history=[];future=[];loaded=true;
+      clearFilters();anchor=cursor={r:0,c:0};$('sheet-owner').value=owner;render();renderCodes();message(tr('تم الحفظ','Saved'));return true;
+    }catch(error){if(token===epoch)message(errorMessage(error),true);return false;}
+    finally{if(token===epoch){loading=false;$('sheet-owner').disabled=false;$('sheet-workspace').inert=!loaded;}}
+  }
+  async function reload(){
+    commitEdit();if(saving)await saving;
+    if(hasDraft()&&!confirm(tr('إعادة التحميل ستستبدل تعديلاتك غير المحفوظة. انسخ الجدول أولًا للاحتفاظ بها. المتابعة؟','Reload replaces unsaved edits. Copy the sheet first to keep them. Continue?')))return;
+    clearTimeout(timer);await switchOwner(owner||Cloud.userId(),true);
+  }
+  function clearFilters(){['sheet-search','sheet-org','sheet-date','sheet-result'].forEach(id=>$(id).value='');$('sheet-duplicates-only').checked=false;sortCol=-1;page=0;}
+  function filtered(){return sortCol>=0||$('sheet-duplicates-only').checked||['sheet-search','sheet-org','sheet-date','sheet-result'].some(id=>$(id).value);}
+  function buildView(){
+    const search=$('sheet-search').value.toLocaleLowerCase(),org=$('sheet-org').value.toLocaleLowerCase(),date=$('sheet-date').value.toLocaleLowerCase(),result=$('sheet-result').value;
+    duplicateIds=D.duplicates(cells);
+    view=cells.map((_,i)=>i).filter(i=>(!search||cells[i].some(v=>v.toLocaleLowerCase().includes(search)))&&(!org||cells[i][6].toLocaleLowerCase().includes(org))&&(!date||cells[i][8].toLocaleLowerCase().includes(date))&&(!result||cells[i][11]===result)&&(!$('sheet-duplicates-only').checked||duplicateIds.has(D.idKey(cells[i][4]))));
+    if(sortCol>=0)view.sort((a,b)=>sortDir*cells[a][sortCol].localeCompare(cells[b][sortCol],currentLang,{numeric:true})||a-b);
+    if(!filtered())for(let i=cells.length;i<Math.min(D.MAX_ROWS,Math.max(25,cells.length+5));i++)view.push(i);
+  }
+  function render(){
+    if(!initialized)return;hideDuplicateHint();clearTimeout(detailTimer);buildView();page=Math.min(page,Math.max(0,Math.ceil(view.length/PAGE)-1));
+    const cols=visibleCols();if(!cols.includes(cursor.c))cursor.c=cols[0];if(!cols.includes(anchor.c))anchor.c=cursor.c;
+    $('panel-trainees').dir=formatting.direction;
+    $('sheet-workspace').style.setProperty('--sheet-font-size',formatting.fontSize+'px');
+    $('sheet-grid').parentElement.dir=formatting.direction;
+    $('sheet-direction').value=formatting.direction;$('sheet-font-size').textContent=formatting.fontSize+' px';
+    $('sheet-font-minus').disabled=formatting.fontSize<=10;$('sheet-font-plus').disabled=formatting.fontSize>=32;
+    renderColumnOptions();
+    $('sheet-duplicate-summary').hidden=!duplicateIds.size;
+    $('sheet-duplicate-summary').textContent=tr('أرقام هوية / إقامة مكررة: ','Duplicate national / Iqama IDs: ')+duplicateIds.size+tr(' — الصفوف المعلّمة تعرض عدد التكرار.',' — Highlighted cells show the occurrence count.');
+    const grid=$('sheet-grid'),thead=grid.querySelector('thead'),tbody=grid.querySelector('tbody');thead.replaceChildren();tbody.replaceChildren();
+    const header=node('tr');header.append(node('th','#',{class:'sheet-rownum'}));
+    labels.forEach((pair,c)=>{if(!cols.includes(c))return;const th=node('th',undefined,{scope:'col','data-col':c});th.append(button(String.fromCharCode(65+c)+' · '+tr(...pair)+(sortCol===c?(sortDir===1?' ↑':' ↓'):''),()=>{commitEdit();sortDir=sortCol===c?-sortDir:1;sortCol=c;page=0;anchor=cursor={r:0,c:cols[0]};render();}));header.append(th);});thead.append(header);
+    for(let v=page*PAGE;v<Math.min(view.length,(page+1)*PAGE);v++){
+      const idx=view[v],row=cells[idx]||D.blank(),trEl=node('tr');const number=node('th',undefined,{class:'sheet-rownum',scope:'row'});
+      number.append(button(String(idx+1),e=>{commitEdit();if(e.shiftKey){cursor={r:v,c:12};anchor.c=0;}else{anchor={r:v,c:0};cursor={r:v,c:12};}paint();}));trEl.append(number);
+      row.forEach((value,c)=>{if(!cols.includes(c))return;const td=node('td',undefined,{'data-v':v,'data-col':c,tabindex:'-1',role:'gridcell',dir:'auto','aria-label':tr(...labels[c])+' '+(idx+1)});decorateCell(td,idx,c);trEl.append(td);});tbody.append(trEl);
+    }
+    $('sheet-count').textContent=tr('الصفوف: ','Rows: ')+cells.filter(r=>r.some(Boolean)).length+' · '+(page+1)+' / '+Math.max(1,Math.ceil(view.length/PAGE));
+    $('sheet-prev').disabled=page===0;$('sheet-next').disabled=(page+1)*PAGE>=view.length;
+    $('sheet-undo').disabled=!history.length;$('sheet-redo').disabled=!future.length;paint();
+    if($('sheet-duplicate-dialog')?.open)renderDuplicateDetails();
+  }
+  function decorateCell(td,index,column){
+    const value=cells[index]?.[column]||'',style=formatting.styles[index+':'+column]||{};
+    td.replaceChildren();td.style.backgroundColor=style.bg||'';td.style.color=style.color||'';
+    td.style.fontSize=style.size?style.size+'px':'';td.style.fontWeight=style.bold?'700':'';
+    td.classList.remove('sheet-result-pass','sheet-result-fail','sheet-result-absent','sheet-id-duplicate');td.removeAttribute('title');td.removeAttribute('aria-haspopup');
+    if(column===11){
+      const select=node('select',undefined,{'aria-label':tr('النتيجة للصف ','Result for row ')+(index+1),class:'sheet-result-select',dir:'rtl'});
+      ['', 'ناجح','راسب','لم يدخل',...(!['','ناجح','راسب','لم يدخل'].includes(value)?[value]:[])].forEach(v=>select.append(node('option',v||'—',{value:v})));
+      select.value=value;
+      if(value==='ناجح'||value==='راسب'||value==='لم يدخل')td.classList.add(value==='ناجح'?'sheet-result-pass':value==='راسب'?'sheet-result-fail':'sheet-result-absent');
+      select.onchange=()=>{const v=+td.dataset.v;cursor=anchor={r:v,c:11};change(D.paste(cells,[[select.value]],index,11));};
+      td.append(select);
+    }else{
+      td.append(node('span',value,{class:'sheet-cell-value'}));
+      if(column===4){const duplicates=duplicateIds.get(D.idKey(value));if(duplicates){td.classList.add('sheet-id-duplicate');td.append(node('span',tr('مكرر ×','Duplicate ×')+duplicates.length,{class:'sheet-duplicate-badge'}));td.setAttribute('aria-haspopup','dialog');}}
+    }
+  }
+  function resultBadge(value){
+    const badge=node('span',value||'—',{class:'sheet-detail-result',dir:'rtl'});
+    badge.dataset.result=value==='ناجح'?'pass':value==='راسب'?'fail':value==='لم يدخل'?'absent':'';return badge;
+  }
+  function initDuplicateDetails(){
+    const hint=node('div',undefined,{id:'sheet-duplicate-hint',class:'sheet-duplicate-hint',role:'tooltip',hidden:''});document.body.append(hint);
+    const dialog=node('dialog',undefined,{id:'sheet-duplicate-dialog',class:'sheet-duplicate-dialog','aria-labelledby':'sheet-duplicate-title'});
+    const head=node('div',undefined,{class:'sheet-detail-header'});head.append(node('h2','',{id:'sheet-duplicate-title'}),button('×',()=>dialog.close(),'sheet-detail-close'));
+    head.lastChild.setAttribute('aria-label',tr('إغلاق','Close'));dialog.append(head,node('p','',{id:'sheet-duplicate-description'}),node('div',undefined,{id:'sheet-duplicate-records'}));
+    const footer=node('div',undefined,{class:'sheet-detail-footer'}),prev=button('‹',()=>{detailPage--;renderDuplicateDetails();}),next=button('›',()=>{detailPage++;renderDuplicateDetails();});
+    prev.id='sheet-detail-prev';next.id='sheet-detail-next';
+    const edit=button(tr('تعديل رقم الهوية','Edit ID'),()=>{const index=detailSource;dialog.close();clearFilters();render();focusCell(index,4);const td=$('sheet-grid').querySelector(`td[data-v="${index}"][data-col="4"]`);if(td)beginEdit(td);});edit.id='sheet-detail-edit';
+    footer.append(prev,node('span','',{id:'sheet-detail-page'}),next,edit);dialog.append(footer);document.body.append(dialog);
+    dialog.addEventListener('click',e=>{if(e.target===dialog){const rect=dialog.getBoundingClientRect();if(e.clientX<rect.left||e.clientX>rect.right||e.clientY<rect.top||e.clientY>rect.bottom)dialog.close();}});
+    dialog.addEventListener('close',()=>{detailKey='';$('sheet-duplicate-records').replaceChildren();$('sheet-duplicate-title').textContent='';$('sheet-duplicate-description').textContent='';});
+    const grid=$('sheet-grid');
+    const start=e=>{const td=e.target.closest('td.sheet-id-duplicate');if(!td||editing||dragging||dialog.open)return;if(td===hoverCell&&!hint.hidden){clearTimeout(hoverHideTimer);return;}hideDuplicateHint();hoverCell=td;hoverTimer=setTimeout(()=>showDuplicateHint(td),180);};
+    grid.addEventListener('pointerover',start);grid.addEventListener('focusin',start);
+    const leave=e=>{if(hoverCell?.contains(e.relatedTarget)||hint.contains(e.relatedTarget))return;clearTimeout(hoverTimer);hoverHideTimer=setTimeout(hideDuplicateHint,100);};
+    grid.addEventListener('pointerout',leave);grid.addEventListener('focusout',leave);
+    grid.addEventListener('pointerdown',()=>{clearTimeout(detailTimer);hideDuplicateHint();});grid.parentElement.addEventListener('scroll',()=>{if(!hint.hidden)hideDuplicateHint();});
+    hint.addEventListener('pointerenter',()=>clearTimeout(hoverHideTimer));hint.addEventListener('pointerleave',hideDuplicateHint);
+    window.addEventListener('resize',hideDuplicateHint);
+    document.addEventListener('keydown',e=>{if(e.key==='Escape')hideDuplicateHint();});
+  }
+  function hideDuplicateHint(){
+    clearTimeout(hoverTimer);clearTimeout(hoverHideTimer);hoverCell?.removeAttribute('aria-describedby');hoverCell=null;
+    const hint=$('sheet-duplicate-hint');if(hint){hint.hidden=true;hint.replaceChildren();}
+  }
+  function closeDuplicateDetails(){clearTimeout(detailTimer);hideDuplicateHint();if($('sheet-duplicate-dialog')?.open)$('sheet-duplicate-dialog').close();}
+  function showDuplicateHint(td){
+    if(!td.isConnected||editing||$('sheet-duplicate-dialog').open||(!td.matches(':hover')&&document.activeElement!==td))return;
+    const index=view[+td.dataset.v],matches=duplicateIds.get(D.idKey(cells[index]?.[4]||''));if(!matches)return;
+    const hint=$('sheet-duplicate-hint');hint.replaceChildren();hint.dir=formatting.direction;
+    hint.append(node('strong',tr('مكرر ','Repeated ')+matches.length+tr(' مرات',' times')),node('div',cells[index][4],{class:'sheet-detail-id',dir:'ltr'}));
+    matches.slice(0,10).forEach(i=>{const row=cells[i],card=node('div',undefined,{class:'sheet-hint-record'});card.append(node('strong',tr('الصف ','Row ')+(i+1)+' · '+(row[2]||row[3]||'—')));const dl=node('dl');for(const c of [9,10,11]){dl.append(node('dt',tr(...labels[c])));const dd=node('dd');dd.dir='auto';dd.append(c===11?resultBadge(row[c]):node('span',row[c]||'—'));dl.append(dd);}card.append(dl);hint.append(card);});
+    hint.append(node('p',tr('اضغط على الرقم لعرض جميع البيانات. انقر مرتين أو F2 لتعديله.','Click the ID for all details. Double-click or F2 to edit.')));
+    hint.hidden=false;td.setAttribute('aria-describedby',hint.id);
+    const rect=td.getBoundingClientRect(),box=hint.getBoundingClientRect();
+    hint.style.left=Math.max(8,Math.min(window.innerWidth-box.width-8,formatting.direction==='rtl'?rect.right-box.width:rect.left))+'px';
+    hint.style.top=Math.max(8,Math.min(window.innerHeight-box.height-8,rect.bottom+box.height+8<=window.innerHeight?rect.bottom+8:rect.top-box.height-8))+'px';
+  }
+  function openDuplicateDetails(index){
+    commitEdit();clearTimeout(detailTimer);hideDuplicateHint();const key=D.idKey(cells[index]?.[4]||'');if(!duplicateIds.has(key))return;
+    detailKey=key;detailPage=0;detailSource=index;renderDuplicateDetails();if(!$('sheet-duplicate-dialog').open)$('sheet-duplicate-dialog').showModal();
+  }
+  function renderDuplicateDetails(){
+    const matches=duplicateIds.get(detailKey)||[];if(!matches.length){closeDuplicateDetails();return;}
+    const dialog=$('sheet-duplicate-dialog');dialog.dir=formatting.direction;detailPage=Math.max(0,Math.min(detailPage,Math.ceil(matches.length/20)-1));
+    $('sheet-duplicate-title').textContent=tr('بيانات الهوية / الإقامة: ','National / Iqama ID: ')+detailKey;
+    $('sheet-duplicate-description').textContent=tr('مكرر ','Repeated ')+matches.length+tr(' مرات في جدول المستخدم المعروض.',' times in the selected user’s sheet.');
+    const box=$('sheet-duplicate-records');box.replaceChildren();
+    matches.slice(detailPage*20,detailPage*20+20).forEach(i=>{const card=node('section',undefined,{class:'sheet-detail-record'});card.append(node('h3',tr('الصف ','Row ')+(i+1)+' · '+(cells[i][2]||cells[i][3]||'—')));const dl=node('dl');labels.forEach((pair,c)=>{dl.append(node('dt',tr(...pair)));const dd=node('dd',undefined,{dir:'auto'});dd.append(c===11?resultBadge(cells[i][c]):node('span',cells[i][c]||'—'));dl.append(dd);});card.append(dl);box.append(card);});
+    $('sheet-detail-page').textContent=(detailPage+1)+' / '+Math.ceil(matches.length/20);$('sheet-detail-prev').disabled=detailPage===0;$('sheet-detail-next').disabled=(detailPage+1)*20>=matches.length;
+    $('sheet-detail-prev').setAttribute('aria-label',tr('السابق','Previous'));$('sheet-detail-next').setAttribute('aria-label',tr('التالي','Next'));$('sheet-detail-edit').textContent=tr('تعديل رقم الهوية','Edit ID');
+  }
+  function renderColumnOptions(){
+    const box=$('sheet-column-options');box.replaceChildren();
+    box.append(button(tr('إظهار الكل','Show all'),()=>{commitEdit();const next=D.format(formatting);next.hidden=[];change(cells,true,next);}));
+    labels.forEach((pair,c)=>{const label=node('label'),input=node('input',undefined,{type:'checkbox','data-column-toggle':c});input.checked=!formatting.hidden.includes(c);input.disabled=input.checked&&visibleCols().length===1;input.onchange=()=>{commitEdit();const next=D.format(formatting);next.hidden=input.checked?next.hidden.filter(i=>i!==c):[...next.hidden,c];change(cells,true,next);};label.append(input,node('span',tr(...pair)));box.append(label);});
+  }
+  function adjustFont(delta){commitEdit();const next=D.format(formatting);next.fontSize=Math.max(10,Math.min(32,next.fontSize+delta));change(cells,true,next);}
+  function formatSelection(style){
+    commitEdit();const next=D.format(formatting),[r1,r2,c1,c2]=bounds();
+    for(let r=r1;r<=r2;r++){const index=view[r];if(index===undefined)continue;for(const c of visibleCols().filter(c=>c>=c1&&c<=c2)){const key=index+':'+c;if(style===null)delete next.styles[key];else next.styles[key]={...next.styles[key],...style};}}
+    change(cells,true,next);
+  }
+  function bounds(){return [Math.min(anchor.r,cursor.r),Math.max(anchor.r,cursor.r),Math.min(anchor.c,cursor.c),Math.max(anchor.c,cursor.c)];}
+  function paint(){
+    const [r1,r2,c1,c2]=bounds();
+    $('sheet-grid').querySelectorAll('td[data-col]').forEach(td=>{const r=+td.dataset.v,c=+td.dataset.col,current=r===cursor.r&&c===cursor.c;td.classList.toggle('sheet-selected',r>=r1&&r<=r2&&c>=c1&&c<=c2);td.classList.toggle('sheet-current',current);td.tabIndex=current?0:-1;td.setAttribute('aria-selected',String(r>=r1&&r<=r2&&c>=c1&&c<=c2));});
+    $('sheet-address').textContent=String.fromCharCode(65+cursor.c)+((view[cursor.r]??0)+1);
+    if(document.activeElement!==$('sheet-formula'))$('sheet-formula').value=cells[view[cursor.r]]?.[cursor.c]||'';
+    const style=formatting.styles[(view[cursor.r]??0)+':'+cursor.c]||{};
+    $('sheet-bold').setAttribute('aria-pressed',String(!!style.bold));$('sheet-selection-size').value=String(style.size||formatting.fontSize);
+    $('sheet-fill').value=style.bg||'#fff2cc';$('sheet-text-color').value=style.color||'#16324f';
+  }
+  function selectCell(r,c,extend=false){commitEdit();cursor={r,c};if(!extend)anchor={r,c};paint();$('sheet-grid').querySelector(`td[data-v="${r}"][data-col="${c}"]`)?.focus();}
+  function focusCell(r,c,extend=false){
+    r=Math.max(0,Math.min(view.length-1,r));c=Math.max(0,Math.min(12,c));if(!visibleCols().includes(c))c=visibleCols()[0];const nextPage=Math.floor(r/PAGE);if(page!==nextPage){page=nextPage;render();}selectCell(r,c,extend);
+  }
+  function beginEdit(td,initial){
+    if(!loaded||loading)return;commitEdit();const r=+td.dataset.v,c=+td.dataset.col;cursor=anchor={r,c};paint();
+    if(c===11){td.querySelector('select')?.focus();return;}
+    editing={el:td,index:view[r],column:c,old:cells[view[r]]?.[c]||''};td.contentEditable='true';td.spellcheck=false;
+    td.textContent=initial!==undefined?initial:editing.old;td.focus();
+    const range=document.createRange();range.selectNodeContents(td);range.collapse(false);const selection=window.getSelection();selection.removeAllRanges();selection.addRange(range);
+    td.addEventListener('blur',()=>commitEdit(),{once:true});
+  }
+  function commitEdit(cancel=false){
+    if(!editing)return;const edit=editing;editing=null;edit.el.contentEditable='false';
+    const value=cancel?edit.old:edit.el.textContent;edit.el.textContent=value;
+    if(value!==edit.old){try{change(D.paste(cells,[[value]],edit.index,edit.column),false);}
+      catch{limitError();}}
+    duplicateIds=D.duplicates(cells);decorateCell(edit.el,edit.index,edit.column);
+    if(edit.column===4){$('sheet-grid').querySelectorAll('td[data-col="4"]').forEach(td=>decorateCell(td,view[+td.dataset.v],4));$('sheet-duplicate-summary').hidden=!duplicateIds.size;$('sheet-duplicate-summary').textContent=tr('أرقام هوية / إقامة مكررة: ','Duplicate national / Iqama IDs: ')+duplicateIds.size;}
+    paint();
+  }
+  function change(next,redraw=true,nextFormat=formatting){
+    if(!loaded)return;history.push(snapshot());if(history.length>30)history.shift();future=[];cells=next;formatting=D.format(nextFormat);revision++;schedule();if(redraw)render();else{$('sheet-undo').disabled=false;$('sheet-redo').disabled=true;}
+  }
+  function undo(redo){commitEdit();const from=redo?future:history,to=redo?history:future;if(!from.length)return;to.push(snapshot());const next=from.pop();cells=next.cells;formatting=D.format(next.format);revision++;schedule();render();}
+  function schedule(){clearTimeout(timer);message(tr('تعديلات غير محفوظة…','Unsaved changes…'));const saveWhenIdle=()=>{if(editing){timer=setTimeout(saveWhenIdle,900);return;}flush();};timer=setTimeout(saveWhenIdle,900);}
+  function hasDraft(){return !!editing||revision!==savedRevision||!!saving;}
+  async function flush(){
+    commitEdit();clearTimeout(timer);if(saving){const ok=await saving;if(!ok)return false;return flush();}
+    if(!loaded||revision===savedRevision)return true;
+    const token=epoch,snapshot=revision,saveOwner=owner,data=D.normalize(cells),saveFormat=D.format(formatting);
+    message(tr('جارٍ الحفظ…','Saving…'));
+    saving=(async()=>{
+      try{const result=await Cloud.saveTrainees(saveOwner,data,version,saveFormat);if(token!==epoch)return false;version=Number(result);savedRevision=snapshot;message(revision===savedRevision?tr('تم الحفظ','Saved'):tr('تعديلات غير محفوظة…','Unsaved changes…'));return true;}
+      catch(error){if(token===epoch)message(errorMessage(error),true);return false;}
+    })();const ok=await saving;saving=null;
+    if(ok&&token===epoch&&revision!==savedRevision)return flush();return ok;
+  }
+  function limitError(){message(tr('الحد الأقصى 5000 صف و13 عمودًا و2000 حرف للخلية.','Limit: 5,000 rows, 13 columns and 2,000 characters per cell.'),true);}
+  function selectionText(){const [r1,r2,c1,c2]=bounds(),cols=visibleCols().filter(c=>c>=c1&&c<=c2);return D.tsv(view.slice(r1,r2+1).map(i=>cols.map(c=>cells[i]?.[c]||'')));}
+  function clearSelection(){if(!loaded)return;const next=cells.map(row=>[...row]);const [r1,r2,c1,c2]=bounds();for(let r=r1;r<=r2;r++){const idx=view[r];if(!next[idx])continue;for(const c of visibleCols().filter(c=>c>=c1&&c<=c2))next[idx][c]='';}change(D.normalize(next));}
+  function paste(e){
+    if(!loaded)return;e.preventDefault();commitEdit();
+    try{
+      const values=D.parse(e.clipboardData.getData('text/plain'));if(filtered()&&values.length>1){message(tr('امسح الفلاتر والفرز قبل لصق عدة صفوف.','Clear filters and sorting before pasting multiple rows.'),true);return;}
+      const [r,,c]=bounds(),idx=view[r];if(idx===undefined)return;
+      const targets=visibleCols().filter(col=>col>=c),width=Math.max(...values.map(v=>v.length));if(width>targets.length)throw Error('PASTE_BOUNDS');
+      let next=cells;for(let col=0;col<width;col++){const column=values.map(row=>col<row.length?[row[col]]:[]);next=D.paste(next,column,idx,targets[col]);}
+      change(next);anchor={r,c};cursor={r:r+values.length-1,c:targets[width-1]};paint();
+    }catch{limitError();}
+  }
+  function keyDown(e){
+    if(!loaded)return;
+    clearTimeout(detailTimer);
+    if(!editing&&e.key==='Enter'&&cursor.c===4&&duplicateIds.has(D.idKey(cells[view[cursor.r]]?.[4]||''))){e.preventDefault();openDuplicateDetails(view[cursor.r]);return;}
+    if(e.target.matches('select')){if(e.key==='Tab'){e.preventDefault();const td=e.target.closest('td');cursor=anchor={r:+td.dataset.v,c:+td.dataset.col};moveTab(e.shiftKey);}return;}
+    if(editing){
+      if(e.key==='Escape'){e.preventDefault();commitEdit(true);focusCell(cursor.r,cursor.c);}
+      else if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();commitEdit();render();focusCell(cursor.r+1,cursor.c);}
+      else if(e.key==='Tab'){e.preventDefault();commitEdit();render();moveTab(e.shiftKey);}
+      return;
+    }
+    if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'){e.preventDefault();undo(e.shiftKey);return;}
+    if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='y'){e.preventDefault();undo(true);return;}
+    if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='a'){e.preventDefault();anchor={r:0,c:0};cursor={r:Math.max(0,view.length-1),c:12};paint();return;}
+    const sign=formatting.direction==='rtl'?-1:1,cols=visibleCols();
+    const moves={ArrowDown:[1,0],ArrowUp:[-1,0],ArrowRight:[0,sign],ArrowLeft:[0,-sign]};
+    if(moves[e.key]){e.preventDefault();const [r,c]=moves[e.key];const col=cols[Math.max(0,Math.min(cols.length-1,cols.indexOf(cursor.c)+c))];focusCell(cursor.r+r,col,e.shiftKey);return;}
+    if(e.key==='Tab'){e.preventDefault();moveTab(e.shiftKey);return;}
+    if(e.key==='Enter'){e.preventDefault();focusCell(cursor.r+(e.shiftKey?-1:1),cursor.c);return;}
+    if(e.key==='Delete'||e.key==='Backspace'){e.preventDefault();clearSelection();return;}
+    const td=e.target.closest('td[data-col]');if(td&&(e.key==='F2'||(e.key.length===1&&!e.ctrlKey&&!e.metaKey&&!e.altKey))){e.preventDefault();beginEdit(td,e.key==='F2'?undefined:e.key);}
+  }
+  function moveTab(back){const cols=visibleCols();let r=cursor.r,c=cols.indexOf(cursor.c)+(back?-1:1);if(c>=cols.length){c=0;r++;}if(c<0){c=cols.length-1;r--;}focusCell(r,cols[c]);}
+  function setMode(next){commitEdit();mode=next;$('sheet-workspace').hidden=mode!=='sheet';$('sheet-code-workspace').hidden=mode!=='codes';$('sheet-mode').setAttribute('aria-selected',String(mode==='sheet'));$('sheet-codes-mode').setAttribute('aria-selected',String(mode==='codes'));if(mode==='codes')renderCodes();}
+  function renderCodes(){
+    if(!initialized)return;
+    const admin=Cloud.role()==='admin',search=$('sheet-code-search').value.toLocaleLowerCase();
+    const rows=Cloud.codeSnapshot().filter(r=>(admin&&codeMode==='pool'?r.owner_id==null:r.owner_id===owner)&&(!search||r.code.toLocaleLowerCase().includes(search)||r.category.toLocaleLowerCase().includes(search)));
+    $('sheet-assign').textContent=codeMode==='pool'?tr('تخصيص المحدد للمستخدم','Assign selected to user'):tr('إرجاع المحدد للمخزون','Return selected to stock');
+    $('sheet-code-notice').textContent=admin?tr('اختر المستخدم بالأعلى ثم خصص له الأكواد من المخزون غير المخصص. الإرجاع للمخزون متاح للأكواد غير المستخدمة فقط.','Choose a user above, then assign codes from unassigned stock. Only unused codes can be returned.'):tr('هذه الأكواد مخصصة لحسابك. تواصل مع الأدمن لإضافة أكواد.','These codes belong to your account. Ask the administrator to assign more.');
+    $('sheet-code-count').textContent=tr('عدد الأكواد: ','Codes: ')+rows.length;
+    const box=$('sheet-code-list');box.replaceChildren();if(!rows.length){box.append(node('div',tr('لا توجد أكواد في هذا العرض.','No codes in this view.'),{class:'sheet-empty'}));return;}
+    const table=node('table',undefined,{class:'sheet-codes-table'}),thead=node('thead'),trEl=node('tr');
+    if(admin){const th=node('th'),all=node('input',undefined,{type:'checkbox','aria-label':tr('تحديد الكل','Select all')});all.onchange=()=>box.querySelectorAll('input[data-code]').forEach(el=>{if(!el.disabled)el.checked=all.checked;});th.append(all);trEl.append(th);}
+    [tr('الكود','Code'),tr('الفئة','Category'),tr('الاستخدام','Usage'),''].forEach(label=>trEl.append(node('th',label)));thead.append(trEl);table.append(thead);const body=node('tbody');
+    rows.forEach(row=>{const r=node('tr');if(admin){const td=node('td'),check=node('input',undefined,{type:'checkbox','data-code':row.code,'aria-label':row.code});check.disabled=codeMode==='owned'&&!!row.used_on;td.append(check);r.append(td);}
+      r.append(node('td',row.code,{dir:'ltr'}),node('td',row.category),node('td',row.used_on||tr('غير مستخدم','Unused')));
+      const action=node('td');action.append(button(tr('نسخ واستخدام','Copy & use'),async()=>{if(await Cloud.copyCode(row.code))renderCodes();}));r.append(action);body.append(r);});table.append(body);box.append(table);
+  }
+  async function assign(){
+    if(codeBusy||!owner)return;
+    const chosen=[...$('sheet-code-list').querySelectorAll('input[data-code]:checked')].map(el=>el.dataset.code);
+    if(!chosen.length)return;if(chosen.length>250){$('sheet-code-status').textContent=tr('اختر حتى 250 كودًا في المرة.','Select up to 250 codes at a time.');return;}
+    const snapshot=new Map(Cloud.codeSnapshot().map(row=>[row.code,row]));const items=chosen.map(code=>({code,version:snapshot.get(code).version}));
+    if(!confirm(codeMode==='pool'?tr('تخصيص الأكواد المحددة للمستخدم المعروض؟','Assign selected codes to the displayed user?'):tr('إرجاع الأكواد المحددة للمخزون؟','Return selected codes to stock?')))return;
+    codeBusy=true;$('sheet-code-workspace').inert=true;$('sheet-owner').disabled=true;
+    try{await Cloud.assignCodes(codeMode==='pool'?owner:null,items);renderCodes();$('sheet-code-status').textContent=tr('تم تحديث تخصيص الأكواد.','Code assignments updated.');}
+    catch(error){$('sheet-code-status').textContent=/CONFLICT/.test(error.message||'')?tr('تغيرت الأكواد. حدّث القائمة وحاول مجددًا.','Codes changed. Refresh and try again.'):tr('تعذر تخصيص الأكواد. تأكد أن المستخدم نشط ثم حدّث القائمة.','Could not assign codes. Check that the user is active, then refresh.');}
+    finally{codeBusy=false;$('sheet-code-workspace').inert=false;$('sheet-owner').disabled=false;}
+  }
+  function reset(){closeDuplicateDetails();clearTimeout(timer);epoch++;owner='';cells=[];formatting=D.defaultFormat();loaded=false;loading=false;editing=null;history=[];future=[];revision=savedRevision=0;if(initialized){render();$('sheet-owner').replaceChildren();$('sheet-code-list').replaceChildren();$('sheet-workspace').inert=true;}}
+  return {open,translate,hasDraft,flush,reset};
+})();
+Trainees.translate();

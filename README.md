@@ -8,16 +8,29 @@ Open the live application at <https://ibta-ops.pages.dev/>. The administrator ac
 
 Supabase Auth's Site URL is configured as <https://ibta-ops.pages.dev/> for confirmation and recovery emails. This application does not need access to your email password.
 
-Administrators can allowlist another email from **إدارة البيانات والمستخدمين**. That person then creates an account and confirms the same address. Other signups cannot access operational data. Operators can copy codes, edit notes, and release their own codes. Only administrators can add/delete codes, manage categories, and allowlist users. Membership can be deactivated in the Supabase `ibta_members` table by setting `active=false`.
+The Settings screen uses separate tabs for account details, system data, Prometric details, preferences, and team/sync tools. System-data and Prometric-edit tabs are visible only to administrators; the database enforces those permissions independently of the interface.
+
+Administrators add exams and categories under **Settings → System data**. The Keycodes screen remains focused on viewing and using keycodes.
+The destructive reset of all usage marks is also under **Settings → System data**, with a reminder to download a backup first.
+
+The interface and sign-in page share the IBM Plex Sans Arabic font, loaded from Google Fonts with local system-font fallbacks.
+
+Administrators can allowlist another email from **إدارة البيانات والمستخدمين**, assign a role, and later change or deactivate it. That person then creates an account and confirms the same address. Other signups cannot access operational data. Copy-only users can claim and copy unused codes; operators can also edit notes and release their own codes; administrators can add/delete codes, manage categories, and manage users. The database enforces these roles independently of the interface.
 
 ## Data
 
 - `ibta_codes`: one row per unique code, notes, usage date, actor, and optimistic version.
-- `ibta_settings`: shared keycode catalog, category ordering/overrides, and Prometric credentials. RLS restricts reads to approved users; these credentials are no longer in public HTML/JavaScript.
-- `ibta_members`: approved email addresses and roles.
+- `ibta_settings`: shared keycode catalog, category labels/ordering/overrides, Prometric credentials, and Zoom/Prometric links. RLS restricts reads to approved users; these values are not embedded in public HTML/JavaScript. Administrators can edit existing categories, exams, codes, and the shared connection details from Settings. Category names are editable display labels; the underlying category IDs stay stable so existing codes and links remain attached.
+- `ibta_members`: approved email addresses, immutable Auth user IDs, and roles. Confirming a new sign-in email updates the membership email while retaining the same role.
 - `ibta_audit`: database-generated actor/action/time log. Audit entries deliberately do not include passwords or note contents.
+- `ibta_supervisor_stock`: the supervisor's unallocated balance by code category. New code inserts and file imports debit this balance in the same database transaction; edits and backup restores do not debit it again.
+- `ibta_supervisor_stock_events`: opening balances, replenishments, corrections, and code allocations.
 
 The original 36 codes and 25 keycodes were seeded to the new database. Operational data is not stored in browser localStorage anymore. Only language and auto-chain preferences remain local. Authentication is stored in sessionStorage and requires logging in again when the browser session ends.
+
+The deployed HTML and JavaScript contain interface code, the Supabase project URL, and a publishable key. They contain no operational codes, Prometric credentials, or secret/service-role key. Browser source is public by nature, so authorization depends on Supabase Auth and database RLS rather than hiding JavaScript. An approved user can inspect any values the application sends to their browser; a different access model would require a server-side API with narrower per-user responses.
+
+Each signed-in team member can edit their own name, sign-in email, and password under **Settings → My account**. The display name is stored in Supabase Auth user metadata and never grants access. Email changes require confirmation from the new inbox; authorization remains attached to the Auth user ID. Password changes ask for the current password and are handled by Supabase Auth without storing either password in app settings. Administrators cannot read team members' passwords.
 
 ## Existing browser data
 
@@ -25,20 +38,51 @@ Old localStorage was not erased. Sign in as administrator **in the browser and a
 
 Verify the merged counts and marks before putting the team into operation. The original embedded seed did not contain browser-only usage history.
 
-**تنزيل نسخة احتياطية** exports the shared configuration and codes. The resulting JSON includes Prometric credentials; keep it private. There is no scheduled backup service configured.
+**تنزيل نسخة احتياطية** exports the shared configuration, codes, and supervisor balances. **استعادة نسخة احتياطية** previews the JSON and asks for confirmation before replacing them in one database transaction; a stale settings version or invalid row cancels the whole restore. Older backup files without supervisor balances leave the current balances untouched. The backup includes Prometric credentials and the Zoom meeting link; keep it private. Auth accounts are managed separately and are not restored from this file. There is no scheduled backup service configured. Supabase recommends regular off-site database dumps for Free projects; the app backup is an additional operational export, not a substitute for a full database dump.
+
+The separate **Inventory / المخزون** page shows a ready-to-send WhatsApp message with unused codes held by the team, the remaining supervisor balance, and totals for every code category. Administrators manage balances under **Settings → Inventory**, where a compact category list shows current supervisor stock and separate controls set the actual balance or add newly purchased codes to it. No starting numbers are inferred from codes already in the system. Every newly received code reduces the supervisor balance automatically. If there is no opening balance or insufficient stock, the whole code-add operation is rejected. Deleting or using an already received code does not return it to the supervisor automatically. The same settings tab holds the destination WhatsApp number (digits with country code), supervisor name, and message language. The message has three separated sections—codes with the team, codes with the supervisor, and totals—while keeping category names unchanged in Arabic and English. WhatsApp opens with the message prepared; a person must press Send there.
+
+Settings → System data includes file import for up to 5,000 codes at a time. CSV files use the first `Code` column and the selected destination category; exact or case-insensitive duplicates are skipped. The same panel exports a CSV inventory for Google Sheets and lets administrators choose a remaining-stock warning threshold. This is file interchange; direct Google authorization and sheet synchronization require the target sheet and OAuth configuration.
+
+Settings → Team and sync includes a recent activity view (last 100 database audit entries) and team role/activation controls. Audit records identify actions, actors, and record keys without containing password or note contents.
 
 ## Concurrent use
 
 The server atomically claims a code before copying it. Another user with a stale version cannot claim or overwrite it. If clipboard access fails, the code stays reserved for the same user; they can retry copying or release it. Previously used codes require confirmation before recopying, and operators cannot recopy another person's used code.
 
+The Codes page has a collapsible remaining-code summary for every category, with a button to copy it as a multiline message. A second collapsible report lets the user choose a date and see only the categories and individual codes used that day, plus their counts. Opening the Codes page refreshes the shared data first. On the Prometric page, the login-link card is the first item; clicking it copies the link directly. All Prometric values use the same typography.
+
 Changes are transactional and version-checked. On conflict, the UI reloads current server data and asks the user to repeat the operation; it never silently overwrites a colleague. Data refreshes on changes, manually, and approximately every two minutes while the page is visible and the user has no unsaved input or selected rows. Rate-limited or unavailable background requests pause for five minutes. This is polling, not push realtime. This version loads the current code inventory into memory, with paginated API reads; a very large inventory should use server-side search and paginated UI.
 
 The database rejects change batches over 250 operations, settings payloads over 64 KiB, notes over 2,000 characters, and claim targets over 200 characters. These limits reduce accidental or abusive database work; they do not stop a distributed denial-of-service attack against the public Supabase endpoint. Before public deployment, review Supabase Auth rate limits and enable Auth CAPTCHA. Protecting the Data API from high-volume traffic would require a server-side gateway with per-client limits and an architecture that prevents direct access to the same operations.
 
-## Hosting
+Existing-code edits use an administrator-only atomic database operation. It preserves the recorded user and date when changing a code's value or category, and checks the row version before committing. The live project has migration `migrations/20260929_edit_code.sql` applied; fresh installations can use the matching function in `database.sql`.
 
-For Cloudflare Pages Git integration, use `main` as the production branch, `node tools/build-site.cjs` as the build command, and `dist` as the output directory. The build publishes only `ibta-ops.html` (as `index.html`) and `cloud.js`; SQL files, tests, and backups are not included in the website. The Supabase publishable key in `cloud.js` is intended for public clients; no secret/service-role key is used. The client library is pinned to Supabase JS 2.116.0 on jsDelivr. After deployment, set the Supabase Auth Site URL to the final HTTPS address.
+Membership identity migrations `migrations/20260929_member_identity.sql` and `migrations/20260929_member_identity_skip_noop.sql` have also been applied to the live project. They keep access stable after a confirmed email change without writing an audit entry at every sign-in.
+
+## Private trainee sheets and code ownership
+
+The **Trainees / المتدربون** page provides a private, autosaved sheet for every approved account, including copy-only accounts. Its 13 columns follow the supplied layout: code, email, Arabic name, English name, national ID, phone, organization, exam, exam date, username, password, result, and AnyDesk ID. Cells are strings so leading zeros survive. The sheet supports Excel TSV clipboard paste/copy (including quoted multiline cells), rectangular selection, direct editing, keyboard navigation, undo/redo, row deletion, search, filters, sorting, and 100-row pages. Multirow paste requires clearing filters/sorting first. It accepts up to 5,000 rows with 2,000 characters per cell and a 4 MB server payload limit. It does not evaluate Excel formulas.
+
+Administrators select an existing registered user from the page header to view/edit that user's sheet or manage their codes without signing in as them. **User codes → Unassigned stock** assigns selected codes; unused assigned codes can be returned to the pool. Assignment is atomic, version checked, and limited to 250 codes per operation. Ordinary users see only assigned codes throughout the app. Existing claimed codes acquire `used_by` as their owner; codes without a known owner remain in the administrator's unassigned pool. Newly imported codes start in that pool. Pasting a code into a trainee cell stores text only; it does not allocate or claim inventory.
+
+Apply `supabase/migrations/20261001064657_private_trainee_sheets.sql` before this frontend. RLS restricts both sheets and codes by authenticated user ID and active membership, with an administrator override. Student data is never embedded in site files or persisted to localStorage. Autosave uses optimistic sheet versions and retains unsaved edits after a network error or conflict; user switching and sign-out stop if saving fails. The user can copy the current sheet before reloading to resolve a conflict.
+
+Version 3 administrator backups include trainee sheets and code ownership. Restoring an older backup leaves sheets intact and preserves known code owners. Restoring sheets advances version counters so existing browser editors cannot silently overwrite restored data. The existing 10 MB backup limit still applies. Backup files now contain student records and their login details as well as the existing shared configuration.
+
+Apply `supabase/migrations/20261001090026_trainee_sheet_formatting.sql` for saved sheet formatting. The toolbar controls hidden columns, overall and selected-cell font sizes (10–32 px), bold text, text/background colors, clear formatting, and LTR/RTL direction. Formatting shares the sheet's private access, atomic version and undo history; row deletion keeps formatting aligned. Keyboard navigation and range copy/paste skip hidden columns; **Copy sheet** intentionally includes all columns. At least one column stays visible.
+
+Result dropdowns always use Arabic: **ناجح** (green), **راسب** (red), **لم يدخل** (amber). Common English equivalents normalize to Arabic on paste/load. Their automatic colors take precedence over manual cell colors. National/Iqama IDs are checked for duplicates across the entire user's sheet, including filtered rows and other pages, with badges and a duplicates-only filter. Comparison ignores spacing/hyphens and accepts Arabic/Persian digits without changing the stored ID or dropping leading zeros. Version 4 backups include formatting; older clients and older backups preserve existing formatting. `tests/trainees-format-database.sql` verifies formatting isolation, input validation, version conflicts, and restoration in a rollback-only transaction.
+
+Duplicate ID cells use the reference Excel colors (`#FFC7CE` fill, `#9C0006` text) across the entire cell. Results use `#00B050`/white for passed, `#FF0000`/white for failed, and `#FFFF00`/black for absent. Hovering or keyboard-focusing a duplicate previews the occurrence count plus username, password and result for up to ten matching rows. A single click or Enter opens a floating dialog with every field, including hidden columns, for all matching rows in the selected user's sheet (20 records per dialog page). Escape, the close button or the backdrop dismiss it; double-click/F2 and the dialog's Edit ID action retain editing. Tooltip and dialog data are cleared on account switches and sign-out. No cross-user search or new data access is introduced.
+
+Validation: `node tests/trainees.test.cjs`, `node tests/cloud.test.cjs`, and `node tests/trainees-browser.test.cjs` (requires Playwright and Edge; starts its own local preview). `tests/trainees-database.sql` and `database-tests.sql` use transactional fixtures and roll back all changes. The migration lives under the CLI-generated `supabase/migrations` directory; older migrations remain under `migrations`.
+
+## Hosting configuration
+
+For Cloudflare Pages Git integration, use `main` as the production branch, `node tools/build-site.cjs` as the build command, and `dist` as the output directory. The build publishes only `ibta-ops.html` (as `index.html`), `cloud.js`, and `ops-ui.js`; SQL files, tests, and backups are not included in the website. The Supabase publishable key in `cloud.js` is intended for public clients; no secret/service-role key is used. The client library is pinned to Supabase JS 2.116.0 on jsDelivr. After deployment, set the Supabase Auth Site URL to the final HTTPS address.
 
 ## Verification
 
-Run `node tests/cloud.test.cjs` for frontend storage and reservation regression checks. `database-tests.sql` checks RLS, claims, stale updates, role restrictions, and audit inside a transaction that rolls back all fixtures. `database.sql` records the schema already applied to this project; it is not an idempotent setup script and should not be rerun on the provisioned database.
+Run `node tests/cloud.test.cjs` for frontend storage, import, inventory, and backup-restore regression checks. `database-tests.sql` checks RLS, claims, stale updates, role restrictions, inventory allocation, import, restore, and audit inside a transaction that rolls back all fixtures. Apply `migrations/20260929_ops_hardening.sql`, `migrations/20260929_settings_shape.sql`, `migrations/20260930_supervisor_stock.sql`, `migrations/20260930_supervisor_stock_policy.sql`, and `migrations/20260930_code_copy_time.sql` before deploying this frontend; all have been applied to the current project. `database.sql` records the original schema already applied to this project; it is not an idempotent setup script and should not be rerun on the provisioned database. New code claims store a server timestamp and display its time in the Codes date column in Riyadh time. Older claims continue to show their date only because their exact time was never recorded.
+
