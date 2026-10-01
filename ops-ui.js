@@ -169,7 +169,10 @@ function inventoryMessage(categories,stock){
   const name=settings.name || dict.inventorySupervisorFallback;
   const overall=categories.every(category=>Object.hasOwn(stock,category))
     ? categories.reduce((sum,category)=>sum+mine(category)+stock[category],0):dict.inventoryNotSet;
-  return [dict.inventoryMessageMine,...categories.map(category=>label(category)+': '+mine(category)),
+  const dateStr=typeof todayStr==='function'?todayStr():new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Riyadh',day:'2-digit',month:'2-digit',year:'numeric'}).format(new Date());
+  const dateHeader=dict.inventoryMessageDate?dict.inventoryMessageDate(dateStr):(settings.language==='ar'?'التاريخ: '+dateStr:'Date: '+dateStr);
+  return [dateHeader,'',
+    dict.inventoryMessageMine,...categories.map(category=>label(category)+': '+mine(category)),
     '',dict.inventoryMessageSupervisor(name),...categories.map(category=>label(category)+': '+theirs(category)),
     '',dict.inventoryMessageTotal,...categories.map(category=>{
       const total=Object.hasOwn(stock,category)?mine(category)+stock[category]:dict.inventoryNotSet;
@@ -253,7 +256,21 @@ document.getElementById('inventory-save-settings').addEventListener('click',asyn
   try{await Cloud.saveInventoryMessageSettings(number,name,language);status.textContent=t('saved');}
   catch{status.textContent=t('genericError');}
 });
+document.getElementById('inventory-whatsapp-link').addEventListener('click',e=>{
+  const categories=Object.keys(state.codesByCategory || {}),stock=Cloud.stockSnapshot(),messageSettings=Cloud.inventoryMessageSettings();
+  const complete=categories.length>0 && categories.every(category=>Object.hasOwn(stock,category));
+  const number=messageSettings.number;
+  if(complete && /^\d{8,15}$/.test(number)){
+    const message=inventoryMessage(categories,stock);
+    e.currentTarget.href='https://wa.me/'+number+'?text='+encodeURIComponent(message);
+    document.getElementById('inventory-message').textContent=message;
+  }else{
+    e.preventDefault();
+  }
+});
 document.getElementById('inventory-copy-message').addEventListener('click',async()=>{
-  const message=document.getElementById('inventory-message').textContent;
+  const categories=Object.keys(state.codesByCategory || {}),stock=Cloud.stockSnapshot();
+  const message=inventoryMessage(categories,stock);
+  document.getElementById('inventory-message').textContent=message;
   if(await copyText(message))showToast(t('inventoryMessageCopied'));
 });
