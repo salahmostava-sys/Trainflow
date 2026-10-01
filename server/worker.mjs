@@ -7,7 +7,7 @@ const tables=new Set(['ibta_codes','ibta_settings','ibta_supervisor_stock','ibta
 const adminRpc=new Set(['ibta_restore_backup','ibta_import_codes','ibta_change_supervisor_stock','ibta_assign_codes']);
 const userRpc=new Set(['ibta_apply_changes','ibta_claim_code','ibta_save_trainee_sheet_formatted']);
 const json=(status,message)=>Response.json({message},{status,headers:{'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
-export async function handleApi(request,env={},fetcher=fetch){
+export async function handleApi(request,env={},fetcher=(...args)=>globalThis.fetch(...args)){
   const url=new URL(request.url),path=url.pathname.slice('/api/data/'.length);
   const isRpc=path.startsWith('rpc/'),name=isRpc?path.slice(4):path;
   if(!(isRpc?(adminRpc.has(name)||userRpc.has(name)):tables.has(name)))return json(404,'API_NOT_FOUND');
