@@ -285,13 +285,25 @@
   .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
 
   /* ---- Codes tab ---- */
-  .code-tabs{display:flex; gap:6px; overflow-x:auto; margin-bottom:14px; padding-bottom:2px;}
+  .code-tabs-bar{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:12px; flex-wrap:wrap;}
+  .code-tabs{display:flex; gap:6px; overflow-x:auto; margin-bottom:0; padding-bottom:2px; flex:1; min-width:240px;}
   .code-tabs button{
-    flex:none; padding:9px 16px; border-radius:999px; border:1px solid var(--border);
+    flex:none; padding:8px 15px; border-radius:999px; border:1px solid var(--border);
     background:var(--surface); color:var(--muted); font-family:inherit; font-weight:600;
-    font-size:14.5px; cursor:pointer; white-space:nowrap; transition:background .12s, color .12s;
+    font-size:14px; cursor:pointer; white-space:nowrap; transition:background .12s, color .12s;
   }
   .code-tabs button.active{background:var(--blue); color:#fff; border-color:var(--blue);}
+
+  .code-view-controls{display:flex; align-items:center; gap:6px; flex-wrap:wrap;}
+  .code-control-btn{
+    display:inline-flex; align-items:center; gap:5px; padding:6px 12px; border-radius:999px;
+    border:1px solid var(--border); background:var(--surface); color:var(--muted);
+    font-family:inherit; font-size:12.5px; font-weight:600; cursor:pointer; transition:all .15s ease;
+    white-space:nowrap; user-select:none;
+  }
+  .code-control-btn:hover{background:var(--surface-2); color:var(--text); border-color:var(--border-strong);}
+  .code-control-btn.active{background:var(--blue-50); color:var(--blue-600); border-color:var(--blue); font-weight:700;}
+  .code-control-btn svg{width:13px; height:13px; flex-shrink:0;}
 
   .bulk-bar{
     display:none; align-items:center; justify-content:space-between; gap:10px;
@@ -312,17 +324,23 @@
   /* Spreadsheet-style grid: columns sized to their own content */
   .code-sheet{
     border:1px solid var(--border); border-radius:var(--radius-md); overflow:hidden;
-    background:var(--surface); box-shadow:var(--shadow);
+    background:var(--surface); box-shadow:var(--shadow); transition:max-height .2s ease;
   }
-  .code-sheet-scroll{overflow:auto;max-height:62vh;position:relative;overflow-anchor:none;}
-  .code-history-hint{font-size:12px;color:var(--muted);margin:8px 0;}
+  .code-sheet-scroll{
+    overflow:auto; max-height:calc(100vh - 200px); min-height:450px; position:relative; overflow-anchor:none;
+  }
+  .code-sheet-scroll.expanded{
+    max-height:calc(100vh - 100px) !important;
+  }
+  .code-history-hint{font-size:12px;color:var(--muted);margin:8px 0;cursor:pointer;}
+  .code-history-hint:hover{color:var(--blue-600);text-decoration:underline;}
   .code-sheet-head{
     display:flex; align-items:center; background:var(--surface-2); min-width:480px;position:sticky;top:0;z-index:2;
     border-bottom:1px solid var(--border); font-size:12.5px; font-weight:700;
     color:var(--muted); letter-spacing:.2px;
   }
   .code-sheet-head > div, .code-row > div{
-    padding:6px 8px; border-inline-start:1px solid var(--border);
+    padding:5px 8px; border-inline-start:1px solid var(--border);
   }
   .code-sheet-head > div:first-child, .code-row > div:first-child{border-inline-start:none;}
   .col-check{width:30px; flex:none; text-align:center; display:flex; align-items:center; justify-content:center;}
@@ -335,7 +353,7 @@
   .code-list{display:flex; flex-direction:column; min-width:480px;}
   .code-row{
     display:flex; align-items:center; cursor:pointer;
-    border-bottom:1px solid var(--border); transition:background .1s; font-size:14px;
+    border-bottom:1px solid var(--border); transition:background .1s; font-size:14px; min-height:32px;
   }
   .code-row:last-child{border-bottom:none;}
   .code-row:nth-child(even){background:#FAFCFF;}
@@ -343,10 +361,10 @@
   .code-row .col-n{color:var(--muted); font-family:var(--mono); font-size:12.5px;}
   .code-row .col-code{font-family:var(--mono); font-weight:600; font-size:14px; white-space:nowrap; direction:ltr;}
   .code-row .col-date{color:var(--blue-600); font-size:12px; font-weight:600; font-family:var(--mono); direction:ltr; white-space:nowrap;}
-  .code-row .col-notes{padding:3px 4px;}
+  .code-row .col-notes{padding:2px 4px;}
   .code-row .col-notes input{
     width:100%; border:1px solid transparent; background:transparent; font-family:inherit;
-    font-size:13px; color:var(--text); padding:4px 6px; border-radius:6px; transition:border-color .12s, background .12s;
+    font-size:13px; color:var(--text); padding:3px 6px; border-radius:6px; transition:border-color .12s, background .12s;
   }
   .code-row .col-notes input:hover{background:var(--surface); border-color:var(--border);}
   .code-row .col-notes input:focus{background:var(--surface); border-color:var(--blue); outline:none;}
@@ -354,11 +372,47 @@
   .code-row.used{background:var(--blue-50);}
   .code-row.used:nth-child(even){background:#E4EFFF;}
   .code-row.used .col-code{color:var(--blue-600);}
-  .code-row .col-actions{display:flex; align-items:center; justify-content:center; gap:4px; padding:4px 4px;}
+  .code-row .col-actions{display:flex; align-items:center; justify-content:center; gap:4px; padding:3px 4px;}
   .icon-btn{
     width:22px; height:22px; border-radius:6px; border:1px solid var(--border); background:var(--surface);
     color:var(--muted); display:flex; align-items:center; justify-content:center; cursor:pointer;
     font-size:13px; line-height:1; transition:background .12s, color .12s, border-color .12s; flex:none;
+  }
+
+  /* Compact mode (active by default for maximum code visibility) */
+  .code-sheet.compact .code-sheet-head{
+    font-size:12px;
+  }
+  .code-sheet.compact .code-sheet-head > div,
+  .code-sheet.compact .code-row > div{
+    padding:2px 8px;
+  }
+  .code-sheet.compact .code-row{
+    min-height:27px; font-size:13px;
+  }
+  .code-sheet.compact .code-row .col-n{
+    font-size:12px;
+  }
+  .code-sheet.compact .code-row .col-code{
+    font-size:13px;
+  }
+  .code-sheet.compact .code-row .col-date{
+    font-size:11px;
+  }
+  .code-sheet.compact .code-row .col-notes{
+    padding:1px 4px;
+  }
+  .code-sheet.compact .code-row .col-notes input{
+    font-size:12px; padding:1px 5px; height:22px;
+  }
+  .code-sheet.compact .code-row .col-actions{
+    padding:1px 4px; gap:3px;
+  }
+  .code-sheet.compact .icon-btn{
+    width:19px; height:19px; border-radius:4px; font-size:10px;
+  }
+  .code-sheet.compact .icon-btn svg{
+    width:13px; height:13px;
   }
   .icon-btn:hover{background:var(--blue-100); color:var(--blue-600); border-color:var(--blue-100);}
   .icon-btn.danger:hover{background:#FDEBEC; color:var(--danger); border-color:#F6C9CB;}
@@ -592,7 +646,23 @@
       </div>
     </div>
     <div id="low-stock-alert" class="low-stock-alert" hidden></div>
-    <div class="code-tabs" id="code-cat-tabs"></div>
+    <div class="code-tabs-bar">
+      <div class="code-tabs" id="code-cat-tabs"></div>
+      <div class="code-view-controls">
+        <button type="button" id="code-density-btn" class="code-control-btn active" title="تبديل حجم الصفوف">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+          <span id="code-density-label" data-i18n="codeDensityCompact">عرض مدمج</span>
+        </button>
+        <button type="button" id="code-expand-btn" class="code-control-btn" title="توسيع ارتفاع الجدول">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+          <span id="code-expand-label" data-i18n="codeExpandHeight">توسيع الارتفاع</span>
+        </button>
+        <button type="button" id="code-scroll-top-btn" class="code-control-btn" title="الانتقال إلى بداية الجدول">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
+          <span id="code-scroll-label" data-i18n="codeScrollToTop">عرض من البداية (#1)</span>
+        </button>
+      </div>
+    </div>
     <div class="bulk-bar" id="bulk-bar">
       <div class="bulk-bar-left">
         <button class="clear-sel" id="clear-sel-btn" data-i18n="clear">Clear</button>
@@ -601,7 +671,7 @@
       <button class="confirm-btn" id="bulk-delete-btn" data-i18n="deleteSelected">Delete Selected</button>
     </div>
     <p class="code-history-hint" id="code-history-hint" hidden></p>
-    <div class="code-sheet">
+    <div class="code-sheet compact">
       <div class="code-sheet-scroll" id="code-sheet-viewport" tabindex="0" role="region" aria-label="Codes">
         <div class="code-sheet-head">
           <div class="col-check"><input type="checkbox" id="select-all-codes"></div>
@@ -829,6 +899,7 @@ const TRANSLATIONS = {
     sessionCredentials:"The Prometric credentials are prefilled for this session.",
     appTitle:"IBTA Tools",
     tabKeycodes:"Keycodes", tabPrometric:"Prometric", tabCodes:"Codes", tabInventory:"Inventory",
+    codeDensityCompact:"Compact view", codeDensityComfortable:"Comfortable view", codeExpandHeight:"Expand height", codeNormalHeight:"Normal height", codeScrollToTop:"Show from start (#1)", codeScrollToToday:"Go to today's codes",
     inventoryIntro:"Codes with you are unused codes in the system. Supervisor balances decrease automatically when new codes are added.",
     inventoryWithYou:"With you", inventoryWithSupervisor:"With supervisor", inventoryNotSet:"Not set",
     inventoryUpdateTitle:"Supervisor balances",inventoryOpeningHint:"Review each category, then choose whether to set its actual balance or add new codes.",inventoryCurrentBalance:n=>"Current supervisor balance: "+n,inventoryCurrentQuantity:"Current number with supervisor",inventorySetCurrent:"Save current balance",inventorySetCurrentHint:"This replaces the previous balance with the actual count.",inventoryPurchasedQuantity:"Newly purchased codes",inventoryAddPurchased:"Add to balance",inventoryAddPurchasedHint:"This number is added to the existing supervisor balance.",
@@ -932,6 +1003,7 @@ const TRANSLATIONS = {
     sessionCredentials:"بيانات دخول Prometric موجودة مسبقًا لهذه الجلسة.",
     appTitle:"أدوات IBTA",
     tabKeycodes:"مفاتيح الأكواد", tabPrometric:"بروميترك", tabCodes:"الأكواد", tabInventory:"المخزون",
+    codeDensityCompact:"عرض مدمج", codeDensityComfortable:"عرض مريح", codeExpandHeight:"توسيع الارتفاع", codeNormalHeight:"الارتفاع العادي", codeScrollToTop:"عرض من البداية (#1)", codeScrollToToday:"الذهاب لأكواد اليوم",
     inventoryIntro:"اللي معاك هو الأكواد غير المستخدمة في النظام. رصيد المشرف ينقص تلقائيًا عند إضافة أكواد جديدة.",
     inventoryWithYou:"معايا",inventoryWithSupervisor:"مع المشرف",inventoryNotSet:"لم يُحدد",
     inventoryUpdateTitle:"أرصدة المشرف",inventoryOpeningHint:"راجع رصيد كل فئة، ثم حدّد الرصيد الفعلي أو أضف أكوادًا جديدة.",inventoryCurrentBalance:n=>"الرصيد الحالي عند المشرف: "+n,inventoryCurrentQuantity:"عدد الأكواد الحالي عند المشرف",inventorySetCurrent:"حفظ الرصيد الحالي",inventorySetCurrentHint:"يستبدل الرصيد السابق بالعدد الفعلي.",inventoryPurchasedQuantity:"الأكواد الجديدة المشتراة",inventoryAddPurchased:"إضافتها إلى الرصيد",inventoryAddPurchasedHint:"يُضاف هذا العدد إلى رصيد المشرف الحالي.",
@@ -1333,6 +1405,8 @@ function applyLanguage(){
   renderKeycodes();
   renderCodeTabs();
   renderCodeGrid();
+  const scrollLabel=document.getElementById('code-scroll-label');
+  if(scrollLabel)scrollLabel.textContent=codeScrolledToTop?t('codeScrollToToday'):t('codeScrollToTop');
   renderManageData();
   if(typeof renderInventory==='function')renderInventory();
   if(typeof renderMemberList==='function' && document.getElementById('admin-tools').open)renderMemberList();
@@ -1894,6 +1968,50 @@ document.getElementById('prometric-login-card').addEventListener('keydown',async
 // ---------- PANEL 3: CODES ----------
 let activeCategory = Object.keys(state.codesByCategory)[0];
 let codeTimelineReset=true,codeTimelineFrame=0;
+let codeCompact = localStorage.getItem('ibta_code_compact') !== 'false';
+let codeExpanded = localStorage.getItem('ibta_code_expanded') === 'true';
+let codeScrolledToTop = false;
+
+function applyCodeDensity(){
+  const sheet=document.querySelector('.code-sheet');
+  const btn=document.getElementById('code-density-btn');
+  const label=document.getElementById('code-density-label');
+  if(!sheet||!btn)return;
+  sheet.classList.toggle('compact',codeCompact);
+  btn.classList.toggle('active',codeCompact);
+  if(label)label.textContent=codeCompact?t('codeDensityCompact'):t('codeDensityComfortable');
+  try{localStorage.setItem('ibta_code_compact',String(codeCompact));}catch{}
+}
+
+function applyCodeExpand(){
+  const scroll=document.getElementById('code-sheet-viewport');
+  const btn=document.getElementById('code-expand-btn');
+  const label=document.getElementById('code-expand-label');
+  if(!scroll||!btn)return;
+  scroll.classList.toggle('expanded',codeExpanded);
+  btn.classList.toggle('active',codeExpanded);
+  if(label)label.textContent=codeExpanded?t('codeNormalHeight'):t('codeExpandHeight');
+  try{localStorage.setItem('ibta_code_expanded',String(codeExpanded));}catch{}
+  positionCodeTimeline();
+}
+
+function toggleCodeScrollTop(){
+  const scroll=document.getElementById('code-sheet-viewport');
+  const label=document.getElementById('code-scroll-label');
+  const btn=document.getElementById('code-scroll-top-btn');
+  if(!scroll)return;
+  codeScrolledToTop=!codeScrolledToTop;
+  if(codeScrolledToTop){
+    scroll.scrollTo({top:0,behavior:'smooth'});
+    if(label)label.textContent=t('codeScrollToToday');
+    if(btn)btn.classList.add('active');
+  }else{
+    codeTimelineReset=true;
+    positionCodeTimeline();
+    if(label)label.textContent=t('codeScrollToTop');
+    if(btn)btn.classList.remove('active');
+  }
+}
 
 function codeDayNumber(value){
   const date=parseAnyDateString(value || '');
@@ -1921,11 +2039,15 @@ function positionCodeTimeline(previous=null){
     if(!document.getElementById('panel-codes').classList.contains('active'))return;
     const scroll=document.getElementById('code-sheet-viewport'),grid=document.getElementById('code-grid'),head=scroll.querySelector('.code-sheet-head');
     const anchor=grid.querySelector('.code-current-start');
-    grid.style.paddingBottom='0px';scroll.style.height=grid.dataset.hasHistory==='true'?'min(62vh,600px)':'';
+    grid.style.paddingBottom='0px';
+    const targetHeight=codeExpanded?'calc(100vh - 100px)':'min(82vh,850px)';
+    scroll.style.height=grid.dataset.hasHistory==='true'?targetHeight:'';
     const top=scroll.getBoundingClientRect().top,headHeight=head.offsetHeight;
     const target=anchor?anchor.getBoundingClientRect().top-top+scroll.scrollTop-headHeight:0;
     if(grid.dataset.hasHistory==='true')grid.style.paddingBottom=Math.max(0,scroll.clientHeight-(headHeight+grid.offsetHeight-target))+'px';
-    if(previous&&!codeTimelineReset){
+    if(codeScrolledToTop){
+      scroll.scrollTop=0;
+    }else if(previous&&!codeTimelineReset){
       const row=[...grid.querySelectorAll('.code-row')].find(row=>row.dataset.code===previous.code);
       scroll.scrollTop=row?row.getBoundingClientRect().top-top+scroll.scrollTop-headHeight-previous.delta:previous.scrollTop;
     }else scroll.scrollTop=Math.max(0,target);
@@ -1943,6 +2065,10 @@ function renderCodeTabs(){
     b.addEventListener('click', async ()=>{
       activeCategory = cat;
       selectedCodes.clear();
+      codeScrolledToTop = false;
+      const scrollLabel=document.getElementById('code-scroll-label');
+      if(scrollLabel)scrollLabel.textContent=t('codeScrollToTop');
+      document.getElementById('code-scroll-top-btn')?.classList.remove('active');
       renderCodeTabs();
       renderCodeGrid();
     });
@@ -2016,6 +2142,8 @@ function updateBulkBar(){
 }
 
 function renderCodeGrid(){
+  applyCodeDensity();
+  applyCodeExpand();
   renderKeycodes();
   const grid = document.getElementById('code-grid');
   const previous=captureCodeTimeline();
@@ -2204,6 +2332,18 @@ document.getElementById('reset-btn').addEventListener('click', async ()=>{
     showToast(t('resetDone'));
   }
 });
+
+document.getElementById('code-density-btn')?.addEventListener('click',()=>{
+  codeCompact=!codeCompact;
+  applyCodeDensity();
+  positionCodeTimeline();
+});
+document.getElementById('code-expand-btn')?.addEventListener('click',()=>{
+  codeExpanded=!codeExpanded;
+  applyCodeExpand();
+});
+document.getElementById('code-scroll-top-btn')?.addEventListener('click',toggleCodeScrollTop);
+document.getElementById('code-history-hint')?.addEventListener('click',toggleCodeScrollTop);
 
 // ---------- SETTINGS ----------
 const autoChainToggle = document.getElementById('autochain-toggle');
