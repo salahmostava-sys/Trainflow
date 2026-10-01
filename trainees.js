@@ -345,7 +345,6 @@ const Trainees=(()=>{
           <button type="button" id="sheet-clear-format"></button><label><span id="sheet-direction-label"></span><select id="sheet-direction"><option value="rtl">يمين ← يسار</option><option value="ltr">Left → Right</option></select></label>
         </div>
         <div class="sheet-filters"><input id="sheet-search" type="search"><input id="sheet-org" type="search"><input id="sheet-date" type="search"><select id="sheet-result"></select><label class="sheet-duplicates-filter"><input type="checkbox" id="sheet-duplicates-only"><span id="sheet-duplicates-label"></span></label><button type="button" id="sheet-clear-filters"></button></div>
-        <div id="sheet-duplicate-summary" class="sheet-duplicate-summary" role="status" hidden></div>
         <div class="sheet-formula"><code id="sheet-address">A1</code><input id="sheet-formula" autocomplete="off" spellcheck="false" dir="auto"></div>
         <div class="sheet-scroll"><table class="sheet-grid" id="sheet-grid" role="grid" aria-label="Trainees"><thead></thead><tbody></tbody></table></div>
         <div class="sheet-add-rows-bar">
@@ -567,8 +566,6 @@ const Trainees=(()=>{
     $('sheet-font-minus').disabled=formatting.fontSize<=10;$('sheet-font-plus').disabled=formatting.fontSize>=32;
     renderColumnOptions();
     applySavedColWidths();
-    $('sheet-duplicate-summary').hidden=!duplicateIds.size;
-    $('sheet-duplicate-summary').textContent=tr('أرقام هوية / إقامة مكررة: ','Duplicate national / Iqama IDs: ')+duplicateIds.size+tr(' — الصفوف المعلّمة تعرض عدد التكرار.',' — Highlighted cells show the occurrence count.');
     const grid=$('sheet-grid'),thead=grid.querySelector('thead'),tbody=grid.querySelector('tbody');thead.replaceChildren();tbody.replaceChildren();
     const header=node('tr');header.append(node('th','#',{class:'sheet-rownum'}));
     labels.forEach((pair,c)=>{
@@ -735,7 +732,7 @@ const Trainees=(()=>{
     if(value!==edit.old){try{change(D.paste(cells,[[value]],edit.index,edit.column),false);}
       catch{limitError();}}
     duplicateIds=D.duplicates(cells);decorateCell(edit.el,edit.index,edit.column);
-    if(edit.column===4){$('sheet-grid').querySelectorAll('td[data-col="4"]').forEach(td=>decorateCell(td,view[+td.dataset.v],4));$('sheet-duplicate-summary').hidden=!duplicateIds.size;$('sheet-duplicate-summary').textContent=tr('أرقام هوية / إقامة مكررة: ','Duplicate national / Iqama IDs: ')+duplicateIds.size;}
+    if(edit.column===4){$('sheet-grid').querySelectorAll('td[data-col="4"]').forEach(td=>decorateCell(td,view[+td.dataset.v],4));}
     paint();
   }
   function change(next,redraw=true,nextFormat=formatting){
