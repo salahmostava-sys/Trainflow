@@ -629,7 +629,7 @@ const Trainees=(()=>{
     const edit=button(tr('تعديل رقم الهوية','Edit ID'),()=>{const index=detailSource;dialog.close();clearFilters();render();focusCell(index,4);const td=$('sheet-grid').querySelector(`td[data-v="${index}"][data-col="4"]`);if(td)beginEdit(td);});edit.id='sheet-detail-edit';
     footer.append(prev,node('span','',{id:'sheet-detail-page'}),next,edit);dialog.append(footer);document.body.append(dialog);
     dialog.addEventListener('click',e=>{if(e.target===dialog){const rect=dialog.getBoundingClientRect();if(e.clientX<rect.left||e.clientX>rect.right||e.clientY<rect.top||e.clientY>rect.bottom)dialog.close();}});
-    dialog.addEventListener('close',()=>{detailKey='';$('sheet-duplicate-records').replaceChildren();$('sheet-duplicate-title').textContent='';$('sheet-duplicate-description').textContent='';});
+    dialog.addEventListener('close',()=>{detailKey='';$('sheet-duplicate-records').replaceChildren();$('sheet-duplicate-title').textContent='';$('sheet-duplicate-description').textContent='';dialog.style.width='';});
     const grid=$('sheet-grid');
     const start=e=>{const td=e.target.closest('td.sheet-id-duplicate');if(!td||editing||dragging||dialog.open)return;if(td===hoverCell&&!hint.hidden){clearTimeout(hoverHideTimer);return;}hideDuplicateHint();hoverCell=td;hoverTimer=setTimeout(()=>showDuplicateHint(td),180);};
     grid.addEventListener('pointerover',start);grid.addEventListener('focusin',start);
@@ -663,13 +663,26 @@ const Trainees=(()=>{
   }
   function renderDuplicateDetails(){
     const matches=duplicateIds.get(detailKey)||[];if(!matches.length){closeDuplicateDetails();return;}
-    const dialog=$('sheet-duplicate-dialog');dialog.dir=formatting.direction;detailPage=Math.max(0,Math.min(detailPage,Math.ceil(matches.length/20)-1));
+    const dialog=$('sheet-duplicate-dialog');dialog.dir=formatting.direction;
+    const count=matches.length;
+    dialog.style.width=count<=1?'min(520px,calc(100vw - 24px))':count===2?'min(920px,calc(100vw - 24px))':count===3?'min(1240px,calc(100vw - 24px))':'min(1560px,calc(100vw - 24px))';
+    const showAll=count<=50;const pageCount=showAll?1:Math.ceil(count/50);
+    detailPage=Math.max(0,Math.min(detailPage,pageCount-1));
+    const pageMatches=showAll?matches:matches.slice(detailPage*50,detailPage*50+50);
     $('sheet-duplicate-title').textContent=tr('بيانات الهوية / الإقامة: ','National / Iqama ID: ')+detailKey;
-    $('sheet-duplicate-description').textContent=tr('مكرر ','Repeated ')+matches.length+tr(' مرات في جدول المستخدم المعروض.',' times in the selected user’s sheet.');
+    $('sheet-duplicate-description').textContent=tr('مكرر ','Repeated ')+count+tr(' مرات في جدول المستخدم المعروض.',' times in the selected user’s sheet.');
     const box=$('sheet-duplicate-records');box.replaceChildren();
-    matches.slice(detailPage*20,detailPage*20+20).forEach(i=>{const card=node('section',undefined,{class:'sheet-detail-record'});card.append(node('h3',tr('الصف ','Row ')+(i+1)+' · '+(cells[i][2]||cells[i][3]||'—')));const dl=node('dl');labels.forEach((pair,c)=>{dl.append(node('dt',tr(...pair)));const dd=node('dd',undefined,{dir:'auto'});dd.append(c===11?resultBadge(cells[i][c]):node('span',cells[i][c]||'—'));dl.append(dd);});card.append(dl);box.append(card);});
-    $('sheet-detail-page').textContent=(detailPage+1)+' / '+Math.ceil(matches.length/20);$('sheet-detail-prev').disabled=detailPage===0;$('sheet-detail-next').disabled=(detailPage+1)*20>=matches.length;
-    $('sheet-detail-prev').setAttribute('aria-label',tr('السابق','Previous'));$('sheet-detail-next').setAttribute('aria-label',tr('التالي','Next'));$('sheet-detail-edit').textContent=tr('تعديل رقم الهوية','Edit ID');
+    pageMatches.forEach(i=>{const card=node('section',undefined,{class:'sheet-detail-record'});card.append(node('h3',tr('الصف ','Row ')+(i+1)+' · '+(cells[i][2]||cells[i][3]||'—')));const dl=node('dl');labels.forEach((pair,c)=>{dl.append(node('dt',tr(...pair)));const dd=node('dd',undefined,{dir:'auto'});dd.append(c===11?resultBadge(cells[i][c]):node('span',cells[i][c]||'—'));dl.append(dd);});card.append(dl);box.append(card);});
+    const hasPages=pageCount>1;
+    $('sheet-detail-page').style.display=hasPages?'':'none';
+    $('sheet-detail-prev').style.display=hasPages?'':'none';
+    $('sheet-detail-next').style.display=hasPages?'':'none';
+    if(hasPages){
+      $('sheet-detail-page').textContent=(detailPage+1)+' / '+pageCount;
+      $('sheet-detail-prev').disabled=detailPage===0;$('sheet-detail-next').disabled=(detailPage+1)*50>=count;
+      $('sheet-detail-prev').setAttribute('aria-label',tr('السابق','Previous'));$('sheet-detail-next').setAttribute('aria-label',tr('التالي','Next'));
+    }
+    $('sheet-detail-edit').textContent=tr('تعديل رقم الهوية','Edit ID');
   }
   function renderColumnOptions(){
     const box=$('sheet-column-options');box.replaceChildren();
