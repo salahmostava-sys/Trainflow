@@ -411,6 +411,7 @@ const Trainees=(()=>{
     grid.addEventListener('click',e=>{clearTimeout(detailTimer);if(e.target.closest('select'))return;if(dragMoved){dragMoved=false;return;}const td=e.target.closest('td[data-col]');if(!td||editing?.el===td)return;selectCell(+td.dataset.v,+td.dataset.col,e.shiftKey);if(!e.shiftKey&&td.classList.contains('sheet-id-duplicate')){const index=view[+td.dataset.v],token=epoch;detailTimer=setTimeout(()=>{if(token===epoch&&td.isConnected&&!editing)openDuplicateDetails(index);},250);}});
     grid.addEventListener('dblclick',e=>{clearTimeout(detailTimer);hideDuplicateHint();const td=e.target.closest('td[data-col]');if(td)beginEdit(td);});
     grid.addEventListener('keydown',keyDown);grid.addEventListener('paste',paste);
+    document.addEventListener('keydown',handleUndoShortcut);
     grid.addEventListener('copy',e=>{if(editing)return;e.preventDefault();e.clipboardData.setData('text/plain',selectionText());});
     grid.addEventListener('cut',e=>{if(editing)return;e.preventDefault();e.clipboardData.setData('text/plain',selectionText());clearSelection();});
     grid.addEventListener('contextmenu',e=>{
@@ -754,8 +755,48 @@ const Trainees=(()=>{
       change(next);anchor={r,c};cursor={r:r+values.length-1,c:targets[width-1]};paint();
     }catch{limitError();}
   }
+  function handleUndoShortcut(e){
+    if(!loaded)return false;
+    const panel=$('panel-trainees');
+    if(!panel||!panel.classList.contains('active')||panel.hidden)return false;
+    const activeDlg=document.querySelector('dialog[open]');
+    if(activeDlg)return false;
+    const activeId=document.activeElement?.id;
+    if(activeId==='sheet-search'||activeId==='sheet-org'||activeId==='sheet-date'||activeId==='sheet-code-search'||activeId==='sheet-add-bulk-count')return false;
+
+    const isCtrlZ=(e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z';
+    const isCtrlY=(e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='y';
+    if(!isCtrlZ&&!isCtrlY)return false;
+
+    e.preventDefault();
+    if(isCtrlY||(isCtrlZ&&e.shiftKey)){
+      if(editing)commitEdit();
+      if(future.length){undo(true);message(tr('تمت الإعادة (Redo)','Redo'));}
+      else{message(tr('لا توجد عمليات للإعادة','Nothing to redo'));}
+      return true;
+    }
+    if(isCtrlZ){
+      if(editing){
+        if(editing.el&&editing.el.textContent!==editing.old){
+          commitEdit(true);
+          message(tr('تم التراجع عن تعديل الخلية','Cell edit undone'));
+          return true;
+        }
+        commitEdit(true);
+      }
+      if(history.length){
+        undo(false);
+        message(tr('تم التراجع (Undo)','Undo'));
+      }else{
+        message(tr('لا توجد عمليات للتراجع عنها','Nothing to undo'));
+      }
+      return true;
+    }
+    return false;
+  }
   function keyDown(e){
     if(!loaded)return;
+    if(handleUndoShortcut(e))return;
     clearTimeout(detailTimer);
     if(!editing&&e.key==='Enter'&&cursor.c===4&&duplicateIds.has(D.idKey(cells[view[cursor.r]]?.[4]||''))){e.preventDefault();openDuplicateDetails(view[cursor.r]);return;}
     if(e.target.matches('select')){if(e.key==='Tab'){e.preventDefault();const td=e.target.closest('td');cursor=anchor={r:+td.dataset.v,c:+td.dataset.col};moveTab(e.shiftKey);}return;}
