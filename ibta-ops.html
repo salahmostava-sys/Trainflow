@@ -2098,7 +2098,7 @@ function dailyUsedGroups(iso){
   const [year,month,day]=iso.split('-').map(Number);
   return sortCategories(Object.keys(state.codesByCategory)).map(cat=>({
     cat,
-    codes:codes.filter(code=>{
+    codes:(state.codesByCategory[cat] || []).filter(code=>{
       const used=state.usedCodes[code];
       if(!used)return false;
       const date=parseAnyDateString(used);
