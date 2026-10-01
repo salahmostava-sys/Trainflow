@@ -362,7 +362,7 @@ const Trainees=(()=>{
     $('panel-trainees').innerHTML=`
       <div class="sheet-heading"><div><h2 id="sheet-title"></h2><p id="sheet-subtitle"></p></div><label class="sheet-owner" id="sheet-owner-wrap" hidden><span id="sheet-owner-label"></span><select id="sheet-owner"></select></label></div>
       <div id="sheet-workspace" class="sheet-card">
-        <div class="sheet-tools"><button type="button" id="sheet-add" class="sheet-primary"></button><button type="button" id="sheet-delete"></button><div class="sheet-add-col-wrap"><button type="button" id="sheet-add-col" class="sheet-primary"></button><div id="sheet-add-col-popover" class="sheet-add-col-popover" hidden></div></div><button type="button" id="sheet-del-col"></button><button type="button" id="sheet-find-btn"></button><button type="button" id="sheet-undo"></button><button type="button" id="sheet-redo"></button><button type="button" id="sheet-copy"></button><button type="button" id="sheet-save"></button><button type="button" id="sheet-reload"></button><span class="sheet-status" id="sheet-status" role="status" aria-live="polite"></span></div>
+        <div class="sheet-tools"><button type="button" id="sheet-add" class="sheet-primary"></button><button type="button" id="sheet-delete"></button><div class="sheet-add-col-wrap"><button type="button" id="sheet-add-col" class="sheet-primary"></button><div id="sheet-add-col-popover" class="sheet-add-col-popover" hidden></div></div><button type="button" id="sheet-find-btn"></button><button type="button" id="sheet-undo"></button><button type="button" id="sheet-redo"></button><button type="button" id="sheet-copy"></button><button type="button" id="sheet-save"></button><button type="button" id="sheet-reload"></button><span class="sheet-status" id="sheet-status" role="status" aria-live="polite"></span></div>
         <div class="sheet-format-tools">
           <details id="sheet-columns"><summary id="sheet-columns-title"></summary><div id="sheet-column-options"></div></details>
           <button type="button" id="sheet-font-minus">A−</button><output id="sheet-font-size"></output><button type="button" id="sheet-font-plus">A+</button>
@@ -378,7 +378,7 @@ const Trainees=(()=>{
           <button type="button" id="sheet-clear-format"></button><button type="button" id="sheet-wrap" aria-pressed="false">التفاف النص / Wrap text</button><button type="button" id="sheet-freeze" aria-pressed="false">تثبيت أول عمود / Freeze first column</button><label><span id="sheet-direction-label"></span><select id="sheet-direction"><option value="rtl">يمين ← يسار</option><option value="ltr">Left → Right</option></select></label>
         </div>
         <div class="sheet-filters"><input id="sheet-search" type="search"><input id="sheet-org" type="search"><input id="sheet-date" type="search"><select id="sheet-result"></select><label class="sheet-duplicates-filter"><input type="checkbox" id="sheet-duplicates-only"><span id="sheet-duplicates-label"></span></label><button type="button" id="sheet-clear-filters"></button></div>
-        <div class="sheet-formula"><input id="sheet-address" value="A1" aria-label="عنوان الخلية / Cell address" title="D150" autocomplete="off" spellcheck="false" dir="ltr"><span class="sheet-fx" aria-hidden="true">fx</span><input id="sheet-formula" autocomplete="off" spellcheck="false" dir="auto"></div>
+        <div class="sheet-formula"><input id="sheet-address" value="A1" aria-label="عنوان الخلية / Cell address" title="D150" autocomplete="off" spellcheck="false" dir="ltr"><span class="sheet-fx" id="sheet-value-label">قيمة</span><input id="sheet-formula" autocomplete="off" spellcheck="false" dir="auto"></div>
         <div class="sheet-scroll"><table class="sheet-grid" id="sheet-grid" role="grid" aria-label="Trainees"><thead></thead><tbody></tbody></table></div>
         <div class="sheet-add-rows-bar">
           <span id="sheet-add-prefix"></span>
@@ -390,7 +390,7 @@ const Trainees=(()=>{
       </div>
       <div id="sheet-code-workspace" hidden><div class="sheet-code-tools" id="sheet-code-admin" hidden><button type="button" id="sheet-owned"></button><button type="button" id="sheet-pool"></button><button type="button" id="sheet-assign" class="sheet-primary"></button></div><div class="sheet-code-tools"><input id="sheet-code-search" type="search"><button type="button" id="sheet-code-refresh"></button><span id="sheet-code-count"></span></div><p class="sheet-notice" id="sheet-code-notice"></p><div class="sheet-card sheet-code-list" id="sheet-code-list"></div><p id="sheet-code-status" role="status"></p></div>`;
     const toolbar=$('sheet-workspace').querySelector('.sheet-tools');
-    for(const [label,ids] of [['الحافظة / Clipboard',['sheet-copy','sheet-undo','sheet-redo']],['الصفوف والأعمدة / Rows & columns',['sheet-add','sheet-delete','sheet-add-col','sheet-del-col']],['تحرير وحفظ / Edit & save',['sheet-find-btn','sheet-save','sheet-reload']]]){
+    for(const [label,ids] of [['الحافظة / Clipboard',['sheet-copy','sheet-undo','sheet-redo']],['الصفوف والأعمدة / Rows & columns',['sheet-add','sheet-delete','sheet-add-col']],['تحرير وحفظ / Edit & save',['sheet-find-btn','sheet-save','sheet-reload']]]){
       const group=node('div',undefined,{class:'sheet-ribbon-group'}),actions=node('div',undefined,{class:'sheet-ribbon-actions'});
       for(const id of ids){const el=$(id);actions.append(id==='sheet-add-col'?el.parentElement:el);}
       group.append(actions,node('small',label));toolbar.append(group);
@@ -417,24 +417,6 @@ const Trainees=(()=>{
     $('sheet-delete').onclick=deleteSelectedRows;
     $('sheet-find-btn').onclick=()=>openFindDialog();
     $('sheet-add-col').onclick=(e)=>{e.stopPropagation();commitEdit();toggleAddColumnMenu();};
-    $('sheet-del-col').onclick=()=>{
-      commitEdit();const cols=visibleCols();
-      if(cols.length<=1){message(tr('لا يمكن حذف كل الأعمدة، يجب إبقاء عمود واحد على الأقل','Cannot delete all columns; at least one must remain visible'),true);return;}
-      const colIndex=cursor.c,colName=tr(...labels[colIndex]);
-      if(confirm(tr(`هل تريد حذف عمود "${colName}" من جدول المتدربين؟`,`Delete column "${colName}" from sheet?`))){
-        const next=D.format(formatting);let nextCells=cells;
-        if(colIndex>=baseLabels.length&&colIndex===colCount()-1){
-          nextCells=cells.map(row=>row.slice(0,colIndex));
-          if(next.headers)delete next.headers[colIndex];
-        }else{
-          if(!next.hidden.includes(colIndex))next.hidden=[...next.hidden,colIndex];
-        }
-        const newCols=labels.map((_,i)=>i).filter(i=>!next.hidden.includes(i));
-        cursor.c=anchor.c=newCols.includes(colIndex)?colIndex:(newCols[0]||0);
-        change(nextCells,true,next);
-        message(tr(`تم حذف عمود "${colName}"`,`Column "${colName}" deleted`));
-      }
-    };
     document.addEventListener('click',e=>{if(!e.target.closest('.sheet-add-col-wrap')){$('sheet-add-col-popover')&&($('sheet-add-col-popover').hidden=true);}});
     $('sheet-font-minus').onclick=()=>adjustFont(-1);$('sheet-font-plus').onclick=()=>adjustFont(1);
     $('sheet-direction').onchange=()=>{commitEdit();const next=D.format(formatting);next.direction=$('sheet-direction').value;change(cells,true,next);};
@@ -556,10 +538,10 @@ const Trainees=(()=>{
     const text={
       'sheet-title':['جدول المتدربين','Trainee sheet'],'sheet-subtitle':['جدول خاص بكل مستخدم · حفظ تلقائي','A private sheet for each user · Autosave'],
       'sheet-owner-label':['عرض بيانات المستخدم','View user'],'sheet-mode':['المتدربون','Trainees'],'sheet-codes-mode':['أكواد المستخدم','User codes'],
-      'sheet-add':['+ إضافة صف','+ Add row'],'sheet-wrap':['التفاف النص','Wrap text'],'sheet-freeze':['تثبيت أول عمود','Freeze first column'],
+      'sheet-value-label':['قيمة','Value'],'sheet-add':['+ إضافة صف','+ Add row'],'sheet-wrap':['التفاف النص','Wrap text'],'sheet-freeze':['تثبيت أول عمود','Freeze first column'],
       'sheet-add-prefix':['إضافة','Add'],'sheet-add-suffix':['صف في الأسفل','more rows at bottom'],'sheet-add-bulk-btn':['+ إضافة','+ Add'],
       'sheet-page-size-suffix':['/ صفحة','/ page'],
-      'sheet-delete':['حذف صف','Delete row'],'sheet-add-col':['+ إضافة عمود','+ Add column'],'sheet-del-col':['حذف عمود','Delete column'],'sheet-undo':['تراجع','Undo'],'sheet-redo':['إعادة','Redo'],
+      'sheet-delete':['حذف صف','Delete row'],'sheet-add-col':['+ إضافة عمود','+ Add column'],'sheet-undo':['تراجع','Undo'],'sheet-redo':['إعادة','Redo'],
       'sheet-copy':['نسخ الجدول','Copy sheet'],'sheet-save':['حفظ الآن','Save now'],'sheet-reload':['إعادة تحميل','Reload'],'sheet-clear-filters':['مسح الفلاتر','Clear filters'],
       'sheet-help':['للكتابة: انقر مرتين أو ابدأ الكتابة · اسحب أو Shift + نقر لتحديد نطاق · Ctrl+C / Ctrl+V · Tab والأسهم للتنقل','Double-click or type to edit · Drag or Shift+click selects a range · Ctrl+C / Ctrl+V · Tab and arrow navigation'],
       'sheet-owned':['أكواد المستخدم','User codes'],'sheet-pool':['المخزون غير المخصص','Unassigned stock'],'sheet-code-refresh':['تحديث الأكواد','Refresh codes']
@@ -583,7 +565,6 @@ const Trainees=(()=>{
     $('sheet-add-bulk-btn')&&($('sheet-add-bulk-btn').title=tr('إضافة العدد المحدد من الصفوف في أسفل الجدول','Add specified number of rows at the bottom'));
     $('sheet-delete').title=tr('حذف الصفوف أو الصف المحدد حالياً','Delete current row');
     $('sheet-add-col').title=tr('إضافة عمود إلى جدول المتدربين','Add column to sheet');
-    $('sheet-del-col').title=tr('حذف العمود المحدد حالياً من الجدول','Delete currently selected column from sheet');
     $('sheet-find-btn')&&($('sheet-find-btn').title=tr('بحث واستبدال (Ctrl+F / Ctrl+H)','Find and replace (Ctrl+F / Ctrl+H)'));
     $('sheet-align-right')&&($('sheet-align-right').title=tr('محاذاة لليمين','Align right'));
     $('sheet-align-center')&&($('sheet-align-center').title=tr('توسيط','Align center'));
@@ -876,6 +857,7 @@ const Trainees=(()=>{
     }catch{limitError();}
   }
   function handleUndoShortcut(e){
+    if(e.defaultPrevented)return false;
     if(!loaded)return false;
     const panel=$('panel-trainees');
     if(!panel||!panel.classList.contains('active')||panel.hidden)return false;

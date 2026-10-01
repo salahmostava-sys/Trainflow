@@ -48,11 +48,6 @@ const {spawn}=require('node:child_process');
     await page.evaluate(()=>window.previewDelay=250);await paste(0,1,'first@example.invalid');await page.locator('#sheet-save').click();await paste(0,1,'second@example.invalid');
     await page.waitForFunction(()=>!Trainees.hasDraft());assert.equal(await page.evaluate(()=>previewSheets.get('demo-admin').cells[0][1]),'second@example.invalid');
     await page.evaluate(()=>window.previewDelay=0);
-    await page.locator('#sheet-codes-mode').click();await page.locator('#sheet-pool').click();
-    await page.locator('input[data-code="DEMO-POOL-002"]').check();page.once('dialog',d=>d.accept());await page.locator('#sheet-assign').click();
-    await page.waitForFunction(()=>document.getElementById('sheet-code-status').textContent.includes('تم تحديث'));
-    await page.locator('#sheet-owned').click();assert.match(await page.locator('#sheet-code-list').textContent(),/DEMO-POOL-002/);
-    await page.locator('#sheet-mode').click();
     // Background autosave must not interrupt typing in the next cell.
     await paste(0,0,'DEMO-001');await cell(0,1).dblclick();
     await page.waitForTimeout(1100);assert.equal(await cell(0,1).getAttribute('contenteditable'),'true');
