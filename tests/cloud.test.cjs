@@ -208,14 +208,14 @@ for(const key of usedKeys) assert(englishKeys.includes(key),`Missing translation
   run("state.codeNotes.TEST='hello'");assert.equal(await run('saveState()'),true);assert.equal(db.codes[0].notes,'hello');
   await run("Cloud.copyCode('TEST')");assert.equal(db.codes[0].used_by,'user-1');
   assert.equal(db.codes[0].used_at,'2026-09-30T09:45:00.000Z');
-  assert.equal(els['code-grid'].children[0].children[3].textContent,run('todayStr()')+' 12:45');
+  assert.equal(els['code-grid'].children.find(row=>row.dataset.code).children[3].textContent,run('todayStr()')+' 12:45');
   assert(events.findIndex(e=>e.name==='ibta_claim_code')<events.findIndex(e=>e.name==='clipboard'));
   conflict=true;run("state.codeNotes.TEST='stale'");assert.equal(await run('saveState()'),false);assert.equal(run('state.codeNotes.TEST'),'hello');conflict=false;
   db.codes.push({code:'FAIL-COPY',category:'Foundation-100',notes:'',used_on:null,used_by:null,version:1});await run('Cloud.refresh()');
   clipboardFails=true;assert.equal(await run("Cloud.copyCode('FAIL-COPY')"),false);assert.equal(db.codes.find(r=>r.code==='FAIL-COPY').used_by,'user-1');
   assert.match(els['cloud-status'].textContent,/تم حجز/);
   assert(!storage.has('ibta_ops_state_v4'));
-  const count=events.length;const row=els['code-grid'].children[0];await row.listeners.click({target:{closest:()=>true}});assert.equal(events.length,count);
+  const count=events.length;const row=els['code-grid'].children.find(row=>row.dataset.code);await row.listeners.click({target:{closest:()=>true}});assert.equal(events.length,count);
   db.settings.payload.dateColors={'27/09/2026':'#FFC000','28/09/2026':'#FFC000'};
   db.codes.push({code:'PREVIOUS-DAY',category:'Foundation-100',notes:'',used_on:'27/09/2026',used_by:'user-1',version:1});
   db.codes.push({code:'CURRENT-DAY-A',category:'Foundation-100',notes:'',used_on:'28/09/2026',used_by:'user-1',version:1});

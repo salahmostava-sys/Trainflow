@@ -314,9 +314,11 @@
     border:1px solid var(--border); border-radius:var(--radius-md); overflow:hidden;
     background:var(--surface); box-shadow:var(--shadow);
   }
-  .code-sheet-scroll{overflow-x:auto;}
+  .code-sheet-scroll{overflow:auto;max-height:62vh;position:relative;overflow-anchor:none;}
+  .code-history-hint{font-size:12px;color:var(--muted);margin:8px 0;}
+  .code-day-heading{padding:8px 12px;background:var(--surface-2);border-bottom:1px solid var(--border);font-size:12px;font-weight:700;color:var(--blue-600);min-height:32px;}
   .code-sheet-head{
-    display:flex; align-items:center; background:var(--surface-2); min-width:480px;
+    display:flex; align-items:center; background:var(--surface-2); min-width:480px;position:sticky;top:0;z-index:2;
     border-bottom:1px solid var(--border); font-size:12.5px; font-weight:700;
     color:var(--muted); letter-spacing:.2px;
   }
@@ -599,8 +601,9 @@
       </div>
       <button class="confirm-btn" id="bulk-delete-btn" data-i18n="deleteSelected">Delete Selected</button>
     </div>
+    <p class="code-history-hint" id="code-history-hint" hidden></p>
     <div class="code-sheet">
-      <div class="code-sheet-scroll">
+      <div class="code-sheet-scroll" id="code-sheet-viewport" tabindex="0" role="region" aria-label="Codes">
         <div class="code-sheet-head">
           <div class="col-check"><input type="checkbox" id="select-all-codes"></div>
           <div class="col-n">#</div>
@@ -1400,6 +1403,7 @@ function showPanel(id){
   document.querySelectorAll('section.panel').forEach(p=>p.classList.remove('active'));
   document.getElementById('account-menu-btn').classList.toggle('active',id==='settings');
   document.getElementById('panel-'+id).classList.add('active');
+  if(id==='codes'){codeTimelineReset=true;positionCodeTimeline();}
   if(id==='trainees' && typeof Trainees!=='undefined')Trainees.open();
 }
 document.querySelectorAll('nav.tabs button').forEach(btn=>{
@@ -1890,6 +1894,45 @@ document.getElementById('prometric-login-card').addEventListener('keydown',async
 
 // ---------- PANEL 3: CODES ----------
 let activeCategory = Object.keys(state.codesByCategory)[0];
+let codeTimelineReset=true,codeTimelineFrame=0;
+
+function codeDayNumber(value){
+  const date=parseAnyDateString(value || '');
+  return date?Date.UTC(date.year,date.month-1,date.day):0;
+}
+function orderedCodeTimeline(list){
+  const ordered=list.map((code,index)=>({code,index,day:state.usedCodes[code]?codeDayNumber(state.usedCodes[code]):Infinity}));
+  ordered.sort((a,b)=>a.day-b.day || (Date.parse(state.codeUseTimes?.[a.code])||0)-(Date.parse(state.codeUseTimes?.[b.code])||0) || a.index-b.index);
+  const today=codeDayNumber(todayStr());
+  let start=ordered.findIndex(item=>item.day>=today);
+  if(start<0&&ordered.length){const newest=ordered[ordered.length-1].day;start=ordered.findIndex(item=>item.day===newest);}
+  return {ordered,start};
+}
+function captureCodeTimeline(){
+  const scroll=document.getElementById('code-sheet-viewport'),grid=document.getElementById('code-grid');
+  if(codeTimelineReset||grid.dataset.category!==activeCategory||typeof scroll.getBoundingClientRect!=='function'||!document.getElementById('panel-codes').classList.contains('active'))return null;
+  const top=scroll.getBoundingClientRect().top+scroll.querySelector('.code-sheet-head').offsetHeight;
+  const first=[...grid.querySelectorAll('.code-row')].find(row=>row.getBoundingClientRect().bottom>top);
+  return {code:first?.dataset.code,delta:first?first.getBoundingClientRect().top-top:0,scrollTop:scroll.scrollTop};
+}
+function positionCodeTimeline(previous=null){
+  if(typeof window.requestAnimationFrame!=='function')return;
+  window.cancelAnimationFrame(codeTimelineFrame);
+  codeTimelineFrame=window.requestAnimationFrame(()=>{
+    if(!document.getElementById('panel-codes').classList.contains('active'))return;
+    const scroll=document.getElementById('code-sheet-viewport'),grid=document.getElementById('code-grid'),head=scroll.querySelector('.code-sheet-head');
+    const anchor=grid.querySelector('.code-current-start');
+    grid.style.paddingBottom='0px';scroll.style.height=grid.dataset.hasHistory==='true'?'min(62vh,600px)':'';
+    const top=scroll.getBoundingClientRect().top,headHeight=head.offsetHeight;
+    const target=anchor?anchor.getBoundingClientRect().top-top+scroll.scrollTop-headHeight:0;
+    if(grid.dataset.hasHistory==='true')grid.style.paddingBottom=Math.max(0,scroll.clientHeight-(headHeight+grid.offsetHeight-target))+'px';
+    if(previous&&!codeTimelineReset){
+      const row=[...grid.querySelectorAll('.code-row')].find(row=>row.dataset.code===previous.code);
+      scroll.scrollTop=row?row.getBoundingClientRect().top-top+scroll.scrollTop-headHeight-previous.delta:previous.scrollTop;
+    }else scroll.scrollTop=Math.max(0,target);
+    codeTimelineReset=false;
+  });
+}
 
 function renderCodeTabs(){
   const wrap = document.getElementById('code-cat-tabs');
@@ -1976,19 +2019,33 @@ function updateBulkBar(){
 function renderCodeGrid(){
   renderKeycodes();
   const grid = document.getElementById('code-grid');
+  const previous=captureCodeTimeline();
   grid.innerHTML = '';
   const list = state.codesByCategory[activeCategory] || [];
+  const timeline=orderedCodeTimeline(list);
+  grid.dataset.category=activeCategory || '';grid.dataset.hasHistory=String(timeline.start>0);
+  const hint=document.getElementById('code-history-hint');hint.hidden=timeline.start<=0;
+  hint.textContent=currentLang==='ar'?'الأيام الأقدم موجودة بالأعلى — مرّر لأعلى داخل جدول الأكواد لعرضها.':'Earlier days are above — scroll up inside the code table to view them.';
+  document.getElementById('code-sheet-viewport').setAttribute('aria-label',currentLang==='ar'?'الأكواد — مرّر لأعلى للأيام الأقدم':'Codes — scroll up for earlier days');
   const dayColors = getDayColors();
   renderStats();
   updateBulkBar();
   if(list.length === 0){
     grid.innerHTML = `<div class="empty-state" style="border:none; box-shadow:none;">${t('noCodesYet')}</div>`;
+    positionCodeTimeline();
     return;
   }
-  list.forEach((code, i)=>{
+  let previousDay=null;
+  timeline.ordered.forEach(({code,index:i},position)=>{
     const used = state.usedCodes[code];
+    const day=used || '';
+    if(day!==previousDay){
+      const heading=document.createElement('div');heading.className='code-day-heading'+(position===timeline.start?' code-current-start':'');
+      heading.textContent=used || (currentLang==='ar'?'أكواد غير مستخدمة':'Unused codes');grid.appendChild(heading);previousDay=day;
+    }
     const row = document.createElement('div');
     row.className = 'code-row' + (used ? ' used' : '');
+    row.dataset.code=code;
 
     const checkCell = document.createElement('div');
     checkCell.className = 'col-check';
@@ -2095,6 +2152,7 @@ function renderCodeGrid(){
     grid.appendChild(row);
   });
   Cloud.decorate();
+  positionCodeTimeline(previous);
 }
 
 document.getElementById('select-all-codes').addEventListener('change', async (e)=>{
