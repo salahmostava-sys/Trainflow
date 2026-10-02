@@ -26,5 +26,7 @@ const styled=D.format({direction:'rtl',fontSize:18,hidden:[1,3],styles:{'0:2':{b
 const removed=D.removeRows(duplicateRows,styled,new Set([0]));assert.deepEqual(removed.format.styles['0:2'],{color:'#112233',size:20});
 assert.deepEqual(styled.styles['0:2'],{bg:'#aabbcc',bold:true},'Deleting rows leaves undo snapshot intact');
 assert.deepEqual(D.format({styles:{'0:1':{bg:'url(https://example.invalid)',size:200},'1000000:0':{bg:'#ffffff'}}}).styles,{});
-assert.equal(D.format({hidden:Array.from({length:13},(_,i)=>i)}).hidden.length,12,'At least one column remains visible');
+assert.equal(D.format({hidden:Array.from({length:13},(_,i)=>i)}).hidden.length,13,'Dynamic sheets can hide the base columns while custom columns remain visible');
 console.log('PASS: result normalization, duplicate IDs, formatting validation and row remapping');
+assert.deepEqual(D.format({headers:{500:'invalid'},styles:{'0:500':{bold:true}}}).headers,{});
+assert.deepEqual(D.format({styles:{'0:500':{bold:true}}}).styles,{});

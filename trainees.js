@@ -354,8 +354,14 @@ const Trainees=(()=>{
   function node(tag,text,attrs={}){const el=document.createElement(tag);if(text!==undefined)el.textContent=text;for(const [key,value]of Object.entries(attrs))el.setAttribute(key,value);return el;}
   function button(text,fn,cls){const b=node('button',text,{type:'button'});if(cls)b.className=cls;b.addEventListener('click',fn);return b;}
   const message=(text,error=false)=>{if(!$('sheet-status'))return;$('sheet-status').textContent=text;$('sheet-status').dataset.error=String(error);};
-  const errorMessage=error=>/CONFLICT|23505/.test((error?.message||'')+' '+error?.code)?tr('تم تعديل الجدول من نافذة أخرى. انسخ تعديلاتك ثم أعد التحميل.','Another window changed this sheet. Copy your edits, then reload.'):
-    tr('تعذر الحفظ أو التحميل. تعديلاتك الحالية ما زالت هنا؛ جرّب مرة أخرى.','Could not save or load. Your current edits are still here; please retry.');
+  const errorMessage=error=>{
+    const code=String(error?.code||''),message=String(error?.message||'');
+    if(/CONFLICT|23505/.test(message+' '+code))return tr('تم تعديل الجدول من نافذة أخرى. انسخ تعديلاتك ثم أعد التحميل.','Another window changed this sheet. Copy your edits, then reload.');
+    if(/Invalid sheet|PAYLOAD_TOO_LARGE|CELL_LIMIT/.test(message))return tr('حجم الجدول أو بيانات التنسيق تجاوزت الحدود المسموحة. تعديلاتك ما زالت هنا؛ انسخها قبل إعادة التحميل.','Sheet size or formatting exceeds the allowed limits. Your edits are still here; copy them before reloading.');
+    if(/AUTH_REQUIRED|ADMIN_REQUIRED|IBTA_NOT_APPROVED|permission denied/.test(message))return tr('تعذر الوصول للجدول بصلاحيات الحساب الحالية. انسخ تعديلاتك قبل إعادة تسجيل الدخول.','Your account cannot access this sheet. Copy your edits before signing in again.');
+    const diagnostic=/^[A-Z][A-Z0-9_]{2,60}$/.test(message)?message:/^[A-Z0-9]{4,10}$/.test(code)?code:'';
+    return tr('تعذر الحفظ أو التحميل. تعديلاتك الحالية ما زالت هنا؛ جرّب مرة أخرى.','Could not save or load. Your current edits are still here; please retry.')+(diagnostic?' ['+diagnostic+']':'');
+  };
   function init(){
     if(initialized)return;initialized=true;
     setTimeout(()=>TraineeReports.mount($('sheet-workspace'),()=>({owner,rows:cells}),async()=>{commitEdit();return await flush();}),0);

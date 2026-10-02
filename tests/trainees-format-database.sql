@@ -23,9 +23,9 @@ do $$ declare v bigint; f jsonb:='{"direction":"rtl","fontSize":18,"hidden":[1,1
   exception when raise_exception then if sqlerrm<>'Access denied' then raise;end if;end;
   if private.ibta_valid_sheet_format('{"styles":{"0:0":{"bg":"url(https://example.invalid)"}}}')
      or private.ibta_valid_sheet_format('{"fontSize":999}')
-     or private.ibta_valid_sheet_format('{"styles":{"5000:0":{"bold":true}}}')
+     or private.ibta_valid_sheet_format('{"styles":{"1000000:0":{"bold":true}}}')
      or private.ibta_valid_sheet_format('{"hidden":[1,1]}')
-     or private.ibta_valid_sheet_format('{"hidden":[0,1,2,3,4,5,6,7,8,9,10,11,12]}')
+     or private.ibta_valid_sheet_format('{"hidden":[500]}')
      or private.ibta_valid_sheet_format('{"direction":"other"}') then raise exception 'FAIL: invalid format accepted';end if;
   begin
     update public.ibta_trainee_sheets set format='{"fontSize":999}' where owner_id=auth.uid();raise exception 'FAIL: direct invalid format allowed';

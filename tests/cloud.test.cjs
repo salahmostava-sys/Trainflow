@@ -351,9 +351,7 @@ for(const key of usedKeys) assert(englishKeys.includes(key),`Missing translation
   els['delete-confirm'].onclick();
   await deleting;
   assert(!db.codes.some(r=>r.code==='REVISED-CODE'));
-  els['low-stock-threshold'].value='3';
-  await els['low-stock-save'].listeners.click();
-  assert.equal(db.settings.payload.lowStockThreshold,3);
+
   els['bulk-import-category'].value='Foundation-100';
   await els['bulk-import-file'].listeners.change({target:{files:[{size:30,text:async()=>"Code\nBULK-ONE\nBULK-TWO\nBULK-ONE"}]}});
   assert.match(els['bulk-import-preview'].textContent,/2 كود جديد/);

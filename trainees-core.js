@@ -19,11 +19,11 @@
     if(value.headers&&typeof value.headers==='object'){
       out.headers={};
       for(const [c,name] of Object.entries(value.headers)){
-        if(/^\d+$/.test(c)&&typeof name==='string')out.headers[c]=name.slice(0,100);
+        if(/^\d+$/.test(c)&&Number(c)<MAX_COLS&&typeof name==='string')out.headers[c]=name.slice(0,100);
       }
     }
     if(value.styles&&typeof value.styles==='object')for(const [key,style]of Object.entries(value.styles)){
-      if(!/^(0|[1-9]\d*):(\d+)$/.test(key)||Number(key.split(':')[0])>=MAX_ROWS||!style||typeof style!=='object')continue;
+      if(!/^(0|[1-9]\d*):(\d+)$/.test(key)||Number(key.split(':')[0])>=MAX_ROWS||Number(key.split(':')[1])>=MAX_COLS||!style||typeof style!=='object')continue;
       const next={};for(const field of ['bg','color'])if(/^#[0-9a-f]{6}$/i.test(style[field]))next[field]=style[field];
       if(typeof style.bold==='boolean')next.bold=style.bold;
       if(Number.isInteger(style.size)&&style.size>=10&&style.size<=32)next.size=style.size;
