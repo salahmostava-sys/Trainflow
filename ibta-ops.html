@@ -327,7 +327,7 @@
     background:var(--surface); box-shadow:var(--shadow); transition:max-height .2s ease;
   }
   .code-sheet-scroll{
-    overflow:auto; max-height:calc(100vh - 200px); min-height:450px; position:relative; overflow-anchor:none;
+    overflow:auto; max-height:calc(100vh - 200px); min-height:120px; position:relative; overflow-anchor:none;
   }
   .code-sheet-scroll.expanded{
     max-height:calc(100vh - 100px) !important;
@@ -538,6 +538,14 @@
   #auth-message{min-height:44px;font-size:12px;line-height:1.9;color:#78879b;text-align:center;border-top:1px solid #edf0f5;padding-top:18px;margin:22px 0 0;overflow-wrap:anywhere;white-space:pre-line;}
   #auth-actions[inert]{opacity:.55;}
   @media(max-width:760px){#auth-box{padding:20px 14px;align-items:flex-start;}.auth-shell{max-width:480px;grid-template-columns:1fr;border-radius:20px;}.auth-story{min-height:0;padding:25px 28px;}.auth-intro{margin:20px 0 0;}.auth-intro h2{font-size:25px;margin:0;}.auth-eyebrow,.auth-intro>p,.auth-features,.auth-story-footer{display:none;}.auth-main{padding:32px 28px;}.auth-main h1{font-size:27px;}.auth-subtitle{margin-bottom:24px;}}
+  @media(max-width:700px){
+    .col-actions{width:90px}
+    .code-row .col-actions{gap:6px}
+    .code-row .col-actions button{min-width:38px;min-height:38px}
+    .code-row{min-height:44px}
+    .kc-order-btn{min-width:36px;min-height:36px}
+    .code-row .col-notes input{min-height:38px}
+  }
 </style>
 </head>
 <body>
@@ -2043,7 +2051,8 @@ function positionCodeTimeline(previous=null){
     const scroll=document.getElementById('code-sheet-viewport'),grid=document.getElementById('code-grid'),head=scroll.querySelector('.code-sheet-head');
     const anchor=grid.querySelector('.code-current-start');
     grid.style.paddingBottom='0px';
-    const targetHeight=codeExpanded?'calc(100vh - 100px)':'min(82vh,850px)';
+    const maximumHeight=codeExpanded?Math.max(120,window.innerHeight-100):Math.min(window.innerHeight*.82,850);
+    const targetHeight=Math.min(maximumHeight,Math.max(120,grid.offsetHeight+head.offsetHeight))+'px';
     scroll.style.height=grid.dataset.hasHistory==='true'?targetHeight:'';
     const top=scroll.getBoundingClientRect().top,headHeight=head.offsetHeight;
     const target=anchor?anchor.getBoundingClientRect().top-top+scroll.scrollTop-headHeight:0;

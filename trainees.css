@@ -117,3 +117,25 @@
 #sheet-workspace .sheet-grid.sheet-freeze-column thead .sheet-frozen-cell{z-index:5}
 #sheet-workspace .sheet-scroll[dir=rtl] .sheet-grid.sheet-freeze-column .sheet-frozen-cell{left:auto;right:46px}
 #sheet-workspace .sheet-format-tools button[aria-pressed=true]{background:#dbeafe;color:#1d4ed8;border-color:#2563eb}
+.sheet-mobile-toggle{display:none}
+.sheet-report-panel summary{display:flex;justify-content:space-between;gap:12px;cursor:pointer;font-weight:700}
+.sheet-report-panel .sheet-report-state{font-size:12px;font-weight:500;color:#475569}
+#sheet-workspace .sheet-report-panel label{display:grid;gap:5px;min-width:180px}
+#sheet-workspace .sheet-report-panel input{padding:8px;border:1px solid #cbd5e1;border-radius:4px;width:100%;min-width:0}
+#sheet-workspace .sheet-report-panel[open]{display:grid;gap:12px}
+#sheet-workspace .sheet-help,#sheet-workspace .sheet-footer p{font-size:12px;color:#475569}
+@media(max-width:700px){
+  #sheet-workspace .sheet-mobile-toggle{display:block;width:100%;min-height:40px;text-align:start;padding:8px 12px;border:0;border-bottom:1px solid #cbd5e1;background:#eff6ff;color:#1d4ed8;font-weight:600}
+  #sheet-workspace:not(.sheet-show-tools) .sheet-ribbon-group:not(.sheet-essential-tools),#sheet-workspace:not(.sheet-show-tools) .sheet-format-tools,#sheet-workspace:not(.sheet-show-tools) .sheet-filters{display:none}
+  #sheet-workspace .sheet-essential-tools{border:0;flex:1 1 100%;padding:7px}
+  #sheet-workspace .sheet-essential-tools small{display:none}
+  #sheet-workspace .sheet-ribbon-actions button,#sheet-workspace .sheet-format-tools button{min-height:38px}
+  #sheet-workspace .sheet-status{padding:4px 8px;font-size:12px}
+  #sheet-workspace .sheet-formula input{min-height:36px}
+  #sheet-workspace .sheet-report-panel summary{min-height:40px;align-items:center}
+  #sheet-workspace .sheet-report-panel label{width:100%}
+  #sheet-workspace .sheet-report-panel button{min-height:42px}
+  #sheet-workspace .sheet-footer{font-size:12px}
+}
+.sheet-local-note{flex-basis:100%;font-size:11px;color:#475569;line-height:1.6}
+@media(max-width:700px){.sheet-local-note{font-size:12px}}

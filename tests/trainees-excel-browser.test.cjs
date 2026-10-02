@@ -29,6 +29,16 @@ const {spawn}=require('node:child_process');
     assert.equal(await page.locator('#sheet-status').getAttribute('data-error'),'true');
     assert.equal(await page.locator('.sheet-ribbon-group').count(),3);
     await page.setViewportSize({width:390,height:844});await page.locator('#sheet-address').fill('A1');await page.locator('#sheet-address').press('Enter');
+    assert.equal(await page.locator('#sheet-wrap').isVisible(),false,'Advanced tools are collapsed on mobile');
+    await page.locator('#sheet-more-tools').click();assert.equal(await page.locator('#sheet-wrap').isVisible(),true);
+    await page.locator('#sheet-more-tools').click();assert.equal(await page.locator('#sheet-save').isVisible(),true,'Save remains available');
+    assert.equal(await page.locator('#sheet-count').textContent().then(s=>s.includes('إجمالي الصفوف')),true);
+    await page.locator('.sheet-report-panel summary').click();
+    assert.equal(await page.locator('[data-action="operations"]').isDisabled(),true);
+    await page.locator('[data-field="operations"]').fill('https://docs.google.com/spreadsheets/d/example/edit');
+    await page.locator('[data-field="bridge"]').fill('https://script.google.com/macros/s/example/exec');
+    assert.equal(await page.locator('[data-action="operations"]').isEnabled(),true);
+    assert.equal(await page.locator('[data-action="success"]').isDisabled(),true);
     assert.equal(await page.locator('#sheet-address').inputValue(),'A1');
     // The old design fixture omits reports and some non-trainee page globals.
     const fixtureErrors=new Set(['codes is not defined',"Cannot read properties of null (reading 'addEventListener')",'TraineeReports is not defined']);
