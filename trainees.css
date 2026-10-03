@@ -143,4 +143,7 @@
   #sheet-workspace .sheet-footer{font-size:12px}
 }
 .sheet-local-note{flex-basis:100%;font-size:11px;color:#475569;line-height:1.6}
+/* Excel focus: a subtle overlay keeps saved fills and result colors visible. */
+#sheet-workspace .sheet-grid td.sheet-focus-axis:not(.sheet-current)::after{content:'';position:absolute;inset:0;background:rgba(37,99,235,.055);pointer-events:none}
+#sheet-workspace .sheet-grid th.sheet-rownum.sheet-focus-row-header{background:#eef4ff!important;color:#1d4ed8;box-shadow:inset 3px 0 #2563eb}
 @media(max-width:700px){.sheet-local-note{font-size:12px}}

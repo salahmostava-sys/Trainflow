@@ -22,6 +22,16 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),path
     const cell=(r,c)=>page.locator(`td[data-v="${r}"][data-col="${c}"]`);
     const paste=async(r,c,text)=>{await cell(r,c).click();await cell(r,c).evaluate((el,text)=>{const data=new DataTransfer();data.setData('text/plain',text);el.dispatchEvent(new ClipboardEvent('paste',{clipboardData:data,bubbles:true,cancelable:true}));},text);};
     assert.equal(await page.locator('#sheet-grid thead th[data-col]').count(),52);
+    await cell(2,3).click();
+    assert.equal(await page.locator('td.sheet-current').getAttribute('data-v'),'2');
+    assert.equal(await page.locator('td.sheet-focus-axis').count(),76,'Focus shades the entire row and column in a 25 by 52 grid');
+    assert.equal(await cell(2,20).evaluate(el=>getComputedStyle(el,'::after').backgroundColor),'rgba(37, 99, 235, 0.055)');
+    assert.equal(await cell(10,3).evaluate(el=>getComputedStyle(el,'::after').pointerEvents),'none','Focus never blocks editing or selection');
+    assert.equal(await cell(10,4).evaluate(el=>el.classList.contains('sheet-focus-axis')),false);
+    await page.keyboard.press('ArrowDown');
+    assert.equal(await page.locator('th.sheet-focus-row-header').getAttribute('data-rowv'),'3');
+    assert.equal(await cell(2,20).evaluate(el=>el.classList.contains('sheet-focus-axis')),false,'Previous row highlight clears on keyboard movement');
+    assert.equal(await cell(3,20).evaluate(el=>el.classList.contains('sheet-focus-axis')),true);
     assert.equal(await page.locator('body').evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(255, 255, 255)');
     for(const selector of ['.sheet-format-tools','.sheet-formula','.sheet-footer'])assert.equal(await page.locator(selector).evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(255, 255, 255)');
     await paste(0,13,'a\tb\tc\td');
