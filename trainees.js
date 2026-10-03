@@ -707,13 +707,33 @@ const Trainees=(()=>{
     badge.dataset.result=value==='ناجح'?'pass':value==='راسب'?'fail':value==='لم يدخل'?'absent':'';return badge;
   }
   let traineeHoverTimer;
+  function copyDetailValue(value,label,extraClass='',direction='auto'){
+    if(!value)return node('span','—');
+    const control=button(value,async()=>{if(await copyText(value))showToast(tr('تم النسخ','Copied'));else showToast(tr('تعذر النسخ. حاول مرة أخرى.','Could not copy. Please retry.'));},'sheet-detail-copy-value '+extraClass);
+    control.dir=direction;control.title=tr('اضغط لنسخ ','Click to copy ')+label;control.setAttribute('aria-label',tr('نسخ ','Copy ')+label);
+    return control;
+  }
   function appendDetailField(dl,row,pair,column){
     const keycode=column===7?D.courseKeycode(row[column],DEFAULT_KEYCODES):null;
-    const label=column===7&&keycode?tr('كي كود الدورة','Course keycode'):tr(...pair);
-    dl.append(node('dt',label));const dd=node('dd',undefined,{dir:keycode?'ltr':'auto'});
-    dd.append(column===11?resultBadge(row[column]):node('span',keycode?keycode.code:row[column]||'—'));
-    if(column===7&&!keycode&&row[column])dd.append(node('small',tr(' — لا يوجد كي كود مطابق',' — No matching keycode')));
+    dl.append(node('dt',column===7?tr('الدورة','Course'):tr(...pair)));const dd=node('dd',undefined,{dir:'auto'});
+    dd.append(copyDetailValue(row[column],tr(...pair),column===11?'sheet-detail-result':''));
+    if(column===11){const badge=dd.firstChild;badge.dataset.result=row[column]==='ناجح'?'pass':row[column]==='راسب'?'fail':row[column]==='لم يدخل'?'absent':'';}
+    if(column===7){
+      const meta=node('div',undefined,{class:'sheet-detail-course-meta'});
+      meta.append(node('span',tr('كي كود:','Keycode:')));
+      if(keycode){
+        meta.append(copyDetailValue(keycode.code,tr('كي كود الدورة','Course keycode'),'sheet-detail-keycode','ltr'));
+        const category=state.keycodeOverrides?.[keycode.code]||keycode.category;
+        meta.append(category?copyDetailValue(displayCatName(category),tr('الفئة','Category'),'sheet-detail-category'):node('span',tr('فئة غير محددة','No category')));
+      }else meta.append(node('span',tr('لا يوجد كي كود مطابق','No matching keycode')));
+      dd.append(meta);
+    }
     dl.append(dd);
+  }
+  function appendPrometricDetails(dl){
+    for(const [label,value]of [['Prometric Account',PROMETRIC_ACCOUNT],['Prometric Password',PROMETRIC_PASSWORD]]){
+      const dd=node('dd',undefined,{dir:'ltr'});dd.append(value?copyDetailValue(value,label,'','ltr'):node('span',tr('غير محدد','Not configured')));dl.append(node('dt',label,{dir:'ltr'}),dd);
+    }
   }
   function closeTraineeDetails(){clearTimeout(traineeHoverTimer);const dialog=$('sheet-trainee-dialog');if(dialog?.open)dialog.close();}
   function initTraineeDetails(){
@@ -728,7 +748,7 @@ const Trainees=(()=>{
       hideDuplicateHint();dialog.dir=formatting.direction;
       $('sheet-trainee-title').textContent=tr('بيانات المتدرب — ','Trainee details — ')+row[9];
       const dl=node('dl');labels.forEach((pair,c)=>{if(c>=baseLabels.length&&!row[c]&&!formatting.headers[c])return;appendDetailField(dl,row,pair,c);});
-      $('sheet-trainee-record').replaceChildren(dl);if(!dialog.open)dialog.show();
+      appendPrometricDetails(dl);$('sheet-trainee-record').replaceChildren(dl);if(!dialog.open)dialog.show();
     };
     const grid=$('sheet-grid');
     grid.addEventListener('pointerover',e=>{const td=e.target.closest('td[data-col="9"]');if(!td||td.contains(e.relatedTarget)||editing||dragging)return;clearTimeout(traineeHoverTimer);traineeHoverTimer=setTimeout(()=>show(td),650);});
@@ -869,7 +889,7 @@ const Trainees=(()=>{
   function change(next,redraw=true,nextFormat=formatting){
     if(!loaded)return;history.push(snapshot());if(history.length>30)history.shift();future=[];cells=next;formatting=D.format(nextFormat);revision++;schedule();if(redraw)render();else{$('sheet-undo').disabled=false;$('sheet-redo').disabled=true;}
   }
-  function undo(redo){commitEdit();const from=redo?future:history,to=redo?history:future;if(!from.length)return;to.push(snapshot());const next=from.pop();cells=next.cells;formatting=D.format(next.format);cellAlignments={...next.alignments};saveAlignments();revision++;schedule();render();}
+  function undo(redo){commitEdit();const from=redo?future:history,to=redo?history:future;if(!from.length)return;to.push(snapshot());const next=from.pop();cells=next.cells;formatting=D.format(next.format);cellAlignments={...next.alignments};saveAlignments();revision++;schedule();render();if(view.length)focusCell(cursor.r,cursor.c);}
   function schedule(){clearTimeout(timer);message(tr('تعديلات غير محفوظة…','Unsaved changes…'));const saveWhenIdle=()=>{if(editing?.el.dataset.composing==='true'){timer=setTimeout(saveWhenIdle,900);return;}flush(true);};timer=setTimeout(saveWhenIdle,900);}
   function hasDraft(){return !!editing||revision!==savedRevision||!!saving;}
   async function flush(keepEditing=false){
@@ -930,7 +950,7 @@ const Trainees=(()=>{
     }catch{limitError();}
   }
   function handleUndoShortcut(e){
-    if(e.defaultPrevented)return false;
+    if(e.defaultPrevented||e.isComposing)return false;
     if(!loaded)return false;
     const panel=$('panel-trainees');
     if(!panel||!panel.classList.contains('active')||panel.hidden)return false;
@@ -939,8 +959,8 @@ const Trainees=(()=>{
     const activeId=document.activeElement?.id;
     if(activeId==='sheet-search'||activeId==='sheet-org'||activeId==='sheet-date'||activeId==='sheet-code-search'||activeId==='sheet-add-bulk-count')return false;
 
-    const isCtrlZ=(e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z';
-    const isCtrlY=(e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='y';
+    const isCtrlZ=(e.ctrlKey||e.metaKey)&&(e.code==='KeyZ'||e.key.toLowerCase()==='z');
+    const isCtrlY=(e.ctrlKey||e.metaKey)&&(e.code==='KeyY'||e.key.toLowerCase()==='y');
     if(!isCtrlZ&&!isCtrlY)return false;
 
     e.preventDefault();
@@ -951,14 +971,7 @@ const Trainees=(()=>{
       return true;
     }
     if(isCtrlZ){
-      if(editing){
-        if(editing.el&&editing.el.textContent!==editing.old){
-          commitEdit(true);
-          message(tr('تم التراجع عن تعديل الخلية','Cell edit undone'));
-          return true;
-        }
-        commitEdit(true);
-      }
+      if(editing)commitEdit();
       if(history.length){
         undo(false);
         message(tr('تم التراجع (Undo)','Undo'));

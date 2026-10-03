@@ -32,6 +32,15 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),path
     assert.equal(await page.locator('th.sheet-focus-row-header').getAttribute('data-rowv'),'3');
     assert.equal(await cell(2,20).evaluate(el=>el.classList.contains('sheet-focus-axis')),false,'Previous row highlight clears on keyboard movement');
     assert.equal(await cell(3,20).evaluate(el=>el.classList.contains('sheet-focus-axis')),true);
+    const arabicShortcut=async(code,key,shift=false)=>page.evaluate(({code,key,shift})=>document.activeElement.dispatchEvent(new KeyboardEvent('keydown',{code,key,ctrlKey:true,shiftKey:shift,bubbles:true,cancelable:true})),{code,key,shift});
+    await paste(0,2,'First');await paste(0,2,'Second');
+    await arabicShortcut('KeyZ','ئ');assert.equal(await cell(0,2).textContent(),'First','Ctrl+Z works with Arabic keyboard layout');
+    await arabicShortcut('KeyZ','ئ',true);assert.equal(await cell(0,2).textContent(),'Second');
+    await cell(0,2).dblclick();await page.keyboard.press('Control+a');await page.keyboard.insertText('Third');
+    await arabicShortcut('KeyZ','ئ');assert.equal(await cell(0,2).textContent(),'Second','Undo works during cell editing');
+    await arabicShortcut('KeyY','غ');assert.equal(await cell(0,2).textContent(),'Third','The undone cell edit remains available for redo');
+    await page.locator('#sheet-bold').focus();await arabicShortcut('KeyZ','ئ');assert.equal(await cell(0,2).textContent(),'Second','Undo also works when the toolbar has focus');
+    assert.equal(await cell(0,2).evaluate(el=>el===document.activeElement),true,'Undo restores keyboard focus to the active cell');
     assert.equal(await page.locator('body').evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(255, 255, 255)');
     for(const selector of ['.sheet-format-tools','.sheet-formula','.sheet-footer'])assert.equal(await page.locator(selector).evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(255, 255, 255)');
     await paste(0,13,'a\tb\tc\td');
@@ -51,19 +60,30 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),path
     await page.locator('#sheet-reload').click();await page.waitForFunction(()=>document.getElementById('sheet-status').textContent==='تم الحفظ');
     assert.equal(await cell(0,51).textContent(),'EXTRA-AZ');
     await page.locator('th[data-col="50"] button').click();assert.deepEqual(errors,[],'Blank extra columns can be sorted');await page.locator('#sheet-clear-filters').click();
-    await page.evaluate(()=>{DEFAULT_KEYCODES=[{title:'Sales',lang:'Arabic',code:'LIVE-SALES-AR'},{title:'Sales',lang:'English',code:'LIVE-SALES-EN'}];});
+    await page.evaluate(()=>{DEFAULT_KEYCODES=[{title:'Sales',lang:'Arabic',code:'LIVE-SALES-AR',category:'Foundation'},{title:'Sales',lang:'English',code:'LIVE-SALES-EN',category:'Foundation'}];state.keycodeOverrides['LIVE-SALES-AR']='Review-category';(state.categoryLabels||={})['Review-category']='فئة المراجعة';PROMETRIC_ACCOUNT='demo-prometric-account';PROMETRIC_PASSWORD='demo-prometric-password';});
     await paste(0,0,['CODE','hidden@example.invalid','متدرب','Trainee','123','050','Org','محترف الأعمال المعتمد في المبيعات CBP-S','04/10/2026','trainee-user','demo-password','ناجح','AD'].join('\t'));
     await page.locator('#sheet-save').click();await page.waitForFunction(()=>!Trainees.hasDraft());
     await page.locator('#sheet-columns summary').click();await page.locator('[data-column-toggle="1"]').uncheck();await page.locator('#sheet-columns summary').click();
     await cell(0,9).hover();await page.locator('#sheet-trainee-dialog').waitFor({state:'visible'});
     const details=await page.locator('#sheet-trainee-record').textContent();assert.match(details,/hidden@example.invalid/);assert.match(details,/demo-password/);assert.match(details,/EXTRA-AZ/);
-    assert.match(details,/كي كود الدورة/);assert.match(details,/LIVE-SALES-AR/);assert.doesNotMatch(details,/LIVE-SALES-EN|محترف الأعمال المعتمد في المبيعات/);
+    assert.match(details,/كي كود:/);assert.match(details,/LIVE-SALES-AR/);assert.doesNotMatch(details,/LIVE-SALES-EN/);
+    assert.match(details,/محترف الأعمال المعتمد في المبيعات CBP-S/);
+    assert.equal(await page.locator('#sheet-trainee-record .sheet-detail-category').textContent(),'فئة المراجعة','Shows the effective category, including overrides and display labels');
+    assert.match(details,/Prometric Accountdemo-prometric-account/);assert.match(details,/Prometric Passworddemo-prometric-password/);
     assert.equal(await cell(0,7).textContent(),'محترف الأعمال المعتمد في المبيعات CBP-S','Source course name remains intact');
     assert.equal(await page.locator('#sheet-trainee-dialog input,#sheet-trainee-dialog [contenteditable]').count(),0,'Details are read only');
+    await page.evaluate(()=>{Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async value=>{window.detailCopied=value;}}});});
+    for(const [selector,value]of [['.sheet-detail-keycode','LIVE-SALES-AR'],['.sheet-detail-category','فئة المراجعة'],['button[aria-label="نسخ Prometric Account"]','demo-prometric-account'],['button[aria-label="نسخ Prometric Password"]','demo-prometric-password'],['button[aria-label="نسخ الجوال"]','050']]){
+      await page.locator('#sheet-trainee-record '+selector).click();assert.equal(await page.evaluate(()=>window.detailCopied),value,'One click copies the exact value');
+    }
     await page.keyboard.press('Escape');await page.locator('#sheet-trainee-dialog').waitFor({state:'hidden'});
     await cell(0,9).click();await page.keyboard.press('Enter');await page.locator('#sheet-trainee-dialog').waitFor({state:'visible'});
     await page.setViewportSize({width:390,height:844});
     assert.ok(await page.locator('#sheet-trainee-dialog').evaluate(el=>el.scrollWidth<=el.clientWidth+1));
+    const full=await page.locator('#sheet-trainee-dialog').evaluate(el=>{const rect=el.getBoundingClientRect();return {x:rect.x,y:rect.y,width:rect.width,height:rect.height};});
+    assert.deepEqual(full,{x:0,y:0,width:390,height:844},'Mobile detail dialog fills the viewport');
+    assert.equal(await page.locator('#sheet-trainee-record dd').first().evaluate(el=>getComputedStyle(el).fontSize),'16px');
+    await page.locator('#sheet-trainee-record button[aria-label="نسخ Prometric Password"]').click();assert.equal(await page.evaluate(()=>window.detailCopied),'demo-prometric-password');
     await page.locator('#sheet-trainee-dialog .sheet-detail-close').click();
     await page.setViewportSize({width:1500,height:1000});await page.locator('#sheet-save').click();await page.waitForFunction(()=>!Trainees.hasDraft());
     await page.locator('#sheet-owner').selectOption('demo-user');await page.waitForFunction(()=>document.getElementById('sheet-owner').value==='demo-user'&&!document.getElementById('sheet-owner').disabled);
