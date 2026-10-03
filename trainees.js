@@ -663,7 +663,8 @@ const Trainees=(()=>{
     labels.forEach((pair,c)=>{
       if(!cols.includes(c))return;
       const th=node('th',undefined,{scope:'col','data-col':c});
-      th.append(button(colLetter(c)+' · '+tr(...pair)+(sortCol===c?(sortDir===1?' ↑':' ↓'):''),()=>{commitEdit();sortDir=sortCol===c?-sortDir:1;sortCol=c;page=0;anchor=cursor={r:0,c:cols[0]};render();}));
+      th.append(button(colLetter(c)+' · '+tr(...pair),e=>{commitEdit();const firstCol=e.shiftKey?anchor.c:c;page=0;anchor={r:Math.max(0,view.length-1),c:firstCol};cursor={r:0,c};render();$('sheet-grid').querySelector(`td[data-v="0"][data-col="${c}"]`)?.focus();}));
+      th.title=tr('تحديد العمود كله · Shift لتحديد عدة أعمدة','Select entire column · Shift to select multiple columns');
       if(c>=baseLabels.length){
         th.title=tr('انقر مرتين لتعديل اسم العمود · اسحب لتغيير العرض','Double-click to rename column · Drag to resize');
         th.addEventListener('dblclick',e=>{
@@ -735,14 +736,16 @@ const Trainees=(()=>{
     dd.append(copyDetailValue(row[column],tr(...pair),column===11?'sheet-detail-result':''));
     if(column===11){const badge=dd.firstChild;badge.dataset.result=row[column]==='ناجح'?'pass':row[column]==='راسب'?'fail':row[column]==='لم يدخل'?'absent':'';}
     if(column===7){
-      const meta=node('div',undefined,{class:'sheet-detail-course-meta'});
-      meta.append(node('span',tr('كي كود:','Keycode:')));
+      dl.append(dd);
       if(keycode){
-        meta.append(copyDetailValue(keycode.code,tr('كي كود الدورة','Course keycode'),'sheet-detail-keycode','ltr'));
+        const keyValue=node('dd',undefined,{dir:'ltr'});keyValue.append(copyDetailValue(keycode.code,tr('كي كود الدورة','Course keycode'),'sheet-detail-keycode','ltr'));
+        dl.append(node('dt',tr('كي كود:','Keycode:')),keyValue);
         const category=state.keycodeOverrides?.[keycode.code]||keycode.category;
-        meta.append(category?copyDetailValue(displayCatName(category),tr('الفئة','Category'),'sheet-detail-category'):node('span',tr('فئة غير محددة','No category')));
-      }else meta.append(node('span',tr('لا يوجد كي كود مطابق','No matching keycode')));
-      dd.append(meta);
+        const categoryValue=node('dd',undefined,{class:'sheet-detail-category-value',dir:'auto'});
+        categoryValue.append(category?copyDetailValue(displayCatName(category),tr('الفئة','Category'),'sheet-detail-category'):node('span',tr('فئة غير محددة','No category')));
+        dl.append(node('dt',tr('الفئة','Category')),categoryValue);
+      }else dd.append(node('div',tr('لا يوجد كي كود مطابق','No matching keycode')));
+      return;
     }
     dl.append(dd);
   }
@@ -761,7 +764,7 @@ const Trainees=(()=>{
     const show=td=>{
       if(!td?.isConnected||editing||dragging)return;
       const index=view[+td.dataset.v],row=cells[index];if(!row?.[9])return;
-      hideDuplicateHint();dialog.dir=formatting.direction;
+      hideDuplicateHint();dialog.dir=currentLang==='ar'?'rtl':'ltr';
       $('sheet-trainee-title').textContent=tr('بيانات المتدرب — ','Trainee details — ')+row[9];
       const dl=node('dl');labels.forEach((pair,c)=>{if(c>=baseLabels.length&&!row[c]&&!formatting.headers[c])return;appendDetailField(dl,row,pair,c);});
       appendPrometricDetails(dl);$('sheet-trainee-record').replaceChildren(dl);if(!dialog.open)dialog.show();

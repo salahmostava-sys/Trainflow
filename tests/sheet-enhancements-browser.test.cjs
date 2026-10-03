@@ -72,7 +72,12 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),path
     await paste(0,51,'EXTRA-AZ');await page.locator('#sheet-save').click();await page.waitForFunction(()=>!Trainees.hasDraft());
     await page.locator('#sheet-reload').click();await page.waitForFunction(()=>document.getElementById('sheet-status').textContent==='تم الحفظ');
     assert.equal(await cell(0,51).textContent(),'EXTRA-AZ');
-    await page.locator('th[data-col="50"] button').click();assert.deepEqual(errors,[],'Blank extra columns can be sorted');await page.locator('#sheet-clear-filters').click();
+    await page.locator('th[data-col="50"] button').click();
+    assert.equal(await page.locator('td.sheet-selected').count(),await page.locator('#sheet-grid tbody tr').count(),'Header selects all rows in the column');
+    await page.locator('th[data-col="51"] button').click({modifiers:['Shift']});
+    assert.equal(await page.locator('td.sheet-selected').count(),2*await page.locator('#sheet-grid tbody tr').count(),'Shift selects adjacent entire columns');
+    assert.equal(await cell(0,51).textContent(),'EXTRA-AZ','Header clicks do not reorder data');
+    assert.deepEqual(errors,[]);await page.locator('#sheet-clear-filters').click();
     await page.evaluate(()=>{DEFAULT_KEYCODES=[{title:'Sales',lang:'Arabic',code:'LIVE-SALES-AR',category:'Foundation'},{title:'Sales',lang:'English',code:'LIVE-SALES-EN',category:'Foundation'}];state.keycodeOverrides['LIVE-SALES-AR']='Review-category';(state.categoryLabels||={})['Review-category']='فئة المراجعة';PROMETRIC_ACCOUNT='demo-prometric-account';PROMETRIC_PASSWORD='demo-prometric-password';});
     await paste(0,0,['CODE','hidden@example.invalid','متدرب','Trainee','123','050','Org','محترف الأعمال المعتمد في المبيعات CBP-S','04/10/2026','trainee-user','demo-password','ناجح','AD'].join('\t'));
     await page.locator('#sheet-save').click();await page.waitForFunction(()=>!Trainees.hasDraft());
@@ -82,6 +87,9 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),path
     assert.match(details,/كي كود:/);assert.match(details,/LIVE-SALES-AR/);assert.doesNotMatch(details,/LIVE-SALES-EN/);
     assert.match(details,/محترف الأعمال المعتمد في المبيعات CBP-S/);
     assert.equal(await page.locator('#sheet-trainee-record .sheet-detail-category').textContent(),'فئة المراجعة','Shows the effective category, including overrides and display labels');
+    assert.equal(await page.locator('#sheet-trainee-record .sheet-detail-category').evaluate(el=>el.parentElement.tagName),'DD','Category has its own field');
+    assert.equal(await page.locator('#sheet-trainee-record .sheet-detail-category-value').evaluate(el=>getComputedStyle(el).textAlign),'right');
+    assert.equal(await page.locator('#sheet-trainee-record .sheet-detail-keycode').evaluate(el=>getComputedStyle(el,'::after').content),'none','Copy icon is removed while copying remains available');
     assert.match(details,/Prometric Accountdemo-prometric-account/);assert.match(details,/Prometric Passworddemo-prometric-password/);
     assert.equal(await cell(0,7).textContent(),'محترف الأعمال المعتمد في المبيعات CBP-S','Source course name remains intact');
     assert.equal(await page.locator('#sheet-trainee-dialog input,#sheet-trainee-dialog [contenteditable]').count(),0,'Details are read only');
