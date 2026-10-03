@@ -62,6 +62,12 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),path
     assert.equal(await page.locator('body').evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(255, 255, 255)');
     for(const selector of ['.sheet-format-tools','.sheet-formula','.sheet-footer'])assert.equal(await page.locator(selector).evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(255, 255, 255)');
     await paste(0,13,'a\tb\tc\td');
+    await page.locator('th[data-col="13"] button').click({button:'right'});await page.locator('[data-action="insert-column-left"]').click();
+    assert.equal(await cell(0,14).textContent(),'a');assert.equal(await page.locator('#sheet-grid thead th[data-col]').count(),53);
+    await page.locator('#sheet-undo').click();assert.equal(await cell(0,13).textContent(),'a');
+    await page.locator('th[data-col="14"] button').click({button:'right'});await page.locator('[data-action="delete-column"]').click();
+    assert.equal(await cell(0,14).textContent(),'c');await page.locator('#sheet-undo').click();assert.equal(await cell(0,14).textContent(),'b');
+    await page.locator('th[data-col="7"] button').click({button:'right'});assert.equal(await page.locator('[data-action="delete-column"]').isDisabled(),true);await page.keyboard.press('Escape');
     await cell(0,15).click();await page.locator('#sheet-bold').click();
     await cell(0,14).click({button:'right'});await page.locator('[data-action="delete-left"]').click();
     assert.equal(await cell(0,14).textContent(),'c');assert.equal(await cell(0,15).textContent(),'d');
@@ -102,6 +108,15 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),path
     for(const [selector,value]of [['.sheet-detail-keycode','LIVE-SALES-AR'],['.sheet-detail-category','فئة المراجعة'],['button[aria-label="نسخ Prometric Account"]','demo-prometric-account'],['button[aria-label="نسخ Prometric Password"]','demo-prometric-password'],['button[aria-label="نسخ الجوال"]','050']]){
       await page.locator('#sheet-trainee-record '+selector).click();assert.equal(await page.evaluate(()=>window.detailCopied),value,'One click copies the exact value');
     }
+    await page.evaluate(()=>{
+      window.claimCount=0;Cloud.claimTraineeCode=async(category,targetOwner)=>{if(category!=='Review-category'||targetOwner!=='demo-admin')throw Error('Wrong category or owner');window.claimCount++;previewCodes.push({code:'ALLOCATED-DEMO',category,owner_id:targetOwner,used_on:'04/10/2026',version:2});window.previewSaveError='NETWORK';return 'ALLOCATED-DEMO';};
+    });
+    await page.locator('.sheet-get-exam-code').click();await page.waitForFunction(()=>window.claimCount===1&&Trainees.hasDraft());
+    assert.equal(await cell(0,0).textContent(),'ALLOCATED-DEMO','Claim is written to the current trainee');
+    await page.evaluate(()=>window.previewSaveError='');await page.locator('.sheet-get-exam-code').click();await page.waitForFunction(()=>!Trainees.hasDraft());
+    assert.equal(await page.evaluate(()=>window.claimCount),1,'Retry after a sheet save failure does not reserve another code');
+    assert.equal(await page.evaluate(()=>window.detailCopied),'ALLOCATED-DEMO');
+    assert.equal(await page.evaluate(()=>previewSheets.get('demo-admin').cells[0][0]),'ALLOCATED-DEMO');
     await page.keyboard.press('Escape');await page.locator('#sheet-trainee-dialog').waitFor({state:'hidden'});
     await cell(0,9).click();await page.keyboard.press('Enter');await page.locator('#sheet-trainee-dialog').waitFor({state:'visible'});
     await page.setViewportSize({width:390,height:844});

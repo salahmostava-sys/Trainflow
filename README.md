@@ -90,6 +90,10 @@ The application requires manual sign-in again at **17:00 Asia/Riyadh** every day
 
 For Cloudflare Pages Git integration, use `main` as the production branch, `node tools/build-site.cjs` as the build command, and `dist` as the output directory. The build publishes `ibta-ops.html` (as `index.html`), the browser scripts and trainee stylesheet, plus the Cloudflare API worker and route configuration; SQL files, tests, and backups are not included in the website. The Supabase publishable key in `cloud.js` is intended for public clients; no secret/service-role key is used. The client library is pinned to Supabase JS 2.116.0 on jsDelivr. After deployment, set the Supabase Auth Site URL to the final HTTPS address.
 
+Right-click cells or column headers to insert or delete extra columns. Values, headers, formatting and alignment move together and support Undo. The original 13 schema columns remain fixed and can be hidden. Row insertion and deletion are also available in the context menu.
+
+The username details dialog includes **Get exam code**. It resolves the course's effective category to its inventory category, reserves an unused code for the sheet owner using the existing version-checked RPCs, saves it to the trainee's Code cell, then copies it. Administrators can allocate unassigned stock; ordinary accounts use their assigned stock. If saving fails after reservation, the draft retains the code and retry reuses it without claiming another code. No database migration is required.
+
 ## Verification
 
 Install development dependencies with `pnpm install --frozen-lockfile` (Node.js 20 or newer). Run `pnpm test` for all JavaScript unit suites and `pnpm test:browser` for the browser suites, which require Microsoft Edge. Run `pnpm build` to generate the Cloudflare Pages site, including trainee scripts/styles and the API worker. Browser suites run sequentially because two share the same preview port. SQL regression files require a separately authenticated test database session; they are not run by these commands.

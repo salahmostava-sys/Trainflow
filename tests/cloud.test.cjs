@@ -40,6 +40,9 @@ const client={
   async rpc(name,args){
     events.push({name,args:clone(args)});
     if(conflict)return {error:{message:'CONFLICT: reload required'}};
+    if(name==='ibta_assign_codes'){
+      for(const item of args.items){const row=db.codes.find(r=>r.code===item.code);assert.equal(row.version,item.version);row.owner_id=args.target_owner;row.version++;}return {};
+    }
     if(name==='ibta_change_supervisor_stock'){
       let row=db.stock.find(item=>item.category===args.target_category);
       if(args.mode==='opening'){
@@ -378,6 +381,10 @@ for(const key of usedKeys) assert(englishKeys.includes(key),`Missing translation
   assert.equal(els['restore-button'].disabled,true);
   assert(db.codes.some(row=>row.code==='BULK-TWO'));
   console.log('PASS: backup restore, bulk code import, account profile, reports, cloud persistence, and categories.');
+  db.codes.push({code:'TRAINEE-ALLOCATE',category:'TRAINEE-CATEGORY',version:1,used_on:null,owner_id:null});
+  assert.equal(await run("Cloud.claimTraineeCode('TRAINEE-CATEGORY','user-1')"),'TRAINEE-ALLOCATE');
+  const allocation=db.codes.find(r=>r.code==='TRAINEE-ALLOCATE');assert.equal(allocation.owner_id,'user-1');assert.equal(allocation.used_by,'user-1');assert.ok(allocation.used_on);
+  await assert.rejects(run("Cloud.claimTraineeCode('NONEXISTENT','user-1')"));
   let resets=0,flushes=0;
   ctx.Trainees={flush:async()=>{flushes++;return false;},hasDraft:()=>true,reset(){resets++;}};
   ctx.testExpiry=ctx.SessionPolicy.expiresAt(accessToken);

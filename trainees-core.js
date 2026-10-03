@@ -139,7 +139,17 @@
     if(preferred.length)matches=preferred;
     return new Set(matches.map(item=>item.code)).size===1?matches[0]:null;
   }
-  const api={BASE_WIDTH,WIDTH,MAX_ROWS,MAX_COLS,MAX_CELL,blank,normalize,parse,tsv,paste,result:normalizeResult,defaultFormat,format,idKey,duplicates,removeRows,deleteCells,courseKeycode};
+  function columns(rows,formatting,start,count,insert,width){
+    if(start<BASE_WIDTH||start>=width+(insert?1:0)||count<1||(!insert&&start+count>width)||(insert&&width+count>MAX_COLS))throw Error('COLUMN_BOUNDS');
+    const fmt=format(formatting),map=c=>insert?(c>=start?c+count:c):(c<start?c:c>=start+count?c-count:null);
+    const cells=rows.map(row=>{const next=blank(width);row.forEach((v,c)=>next[c]=v);next.splice(start,insert?0:count,...(insert?Array(count).fill(''):[]));return next;});
+    fmt.headers={};for(let c=BASE_WIDTH;c<width;c++){const target=map(c);if(target!==null)fmt.headers[target]=formatting.headers?.[c]||'Column '+(c+1);}
+    if(insert)for(let c=start;c<start+count;c++)fmt.headers[c]='New column';
+    fmt.hidden=(formatting.hidden||[]).map(map).filter(c=>c!==null);
+    fmt.styles={};for(const [key,style]of Object.entries(formatting.styles||{})){const [r,c]=key.split(':').map(Number),target=map(c);if(target!==null)fmt.styles[r+':'+target]={...style};}
+    return {cells:normalize(cells),format:fmt};
+  }
+  const api={BASE_WIDTH,WIDTH,MAX_ROWS,MAX_COLS,MAX_CELL,blank,normalize,parse,tsv,paste,result:normalizeResult,defaultFormat,format,idKey,duplicates,removeRows,deleteCells,courseKeycode,columns};
   if(typeof module!=='undefined'&&module.exports)module.exports=api;
   else root.TraineeData=api;
 })(globalThis);

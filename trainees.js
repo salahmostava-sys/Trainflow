@@ -158,6 +158,7 @@ const Trainees=(()=>{
     }catch{limitError();}
   }
   function initContextMenu(){
+    // Column actions keep the 13 fixed operational fields in their original positions.
     if($('sheet-context-menu'))return;
     const menu=node('div',undefined,{id:'sheet-context-menu',class:'sheet-context-menu',hidden:''});
     menu.innerHTML=`
@@ -169,6 +170,9 @@ const Trainees=(()=>{
       <button type="button" data-action="insert-below"><span>⬇️ <span class="sheet-menu-label"></span></span></button>
       <button type="button" data-action="insert-1000"><span>➕ <span class="sheet-menu-label"></span></span></button>
       <button type="button" data-action="delete-row"><span>🗑️ <span class="sheet-menu-label"></span></span></button>
+      <button type="button" data-action="insert-column-left"><span>← <span class="sheet-menu-label"></span></span></button>
+      <button type="button" data-action="insert-column-right"><span>→ <span class="sheet-menu-label"></span></span></button>
+      <button type="button" data-action="delete-column"><span>🗑️ <span class="sheet-menu-label"></span></span></button>
       <hr>
       <button type="button" data-action="clear-contents"><span>🧹 <span class="sheet-menu-label"></span></span><span class="sheet-menu-shortcut">Del</span></button>
       <button type="button" data-action="delete-left"><span>← <span class="sheet-menu-label"></span></span></button>
@@ -189,6 +193,9 @@ const Trainees=(()=>{
         case 'insert-below':insertRow('below');break;
         case 'insert-1000':addBulkRows(1000);break;
         case 'delete-row':deleteSelectedRows();break;
+        case 'insert-column-left':editColumns('left');break;
+        case 'insert-column-right':editColumns('right');break;
+        case 'delete-column':editColumns('delete');break;
         case 'clear-contents':clearSelection();break;
         case 'delete-left':deleteSelectedCells('left');break;
         case 'delete-right':deleteSelectedCells('right');break;
@@ -201,6 +208,7 @@ const Trainees=(()=>{
   }
   function openContextMenu(clientX,clientY){
     const menu=$('sheet-context-menu');if(!menu)return;
+    const remove=menu.querySelector('[data-action="delete-column"]');remove.disabled=bounds()[2]<D.BASE_WIDTH;remove.title=remove.disabled?tr('الأعمدة الأساسية ثابتة؛ يمكن إخفاؤها.','Core columns are fixed; they can be hidden.') : '';
     menu.hidden=false;
     const menuW=menu.offsetWidth||190,menuH=menu.offsetHeight||270;
     let x=clientX,y=clientY;
@@ -209,6 +217,20 @@ const Trainees=(()=>{
     menu.style.left=x+'px';menu.style.top=y+'px';
   }
   function closeContextMenu(){const menu=$('sheet-context-menu');if(menu)menu.hidden=true;}
+  function editColumns(action){
+    if(!loaded)return;commitEdit();const [,,c1,c2]=bounds(),insert=action!=='delete';
+    let start=insert?Math.max(D.BASE_WIDTH,cursor.c+((action==='right')!==(formatting.direction==='rtl')?1:0)):c1;
+    const count=insert?1:c2-c1+1;
+    if(!insert&&(start<D.BASE_WIDTH||!confirm(tr('حذف الأعمدة المحددة بكل بياناتها؟ يمكنك التراجع.','Delete selected columns and their data? You can undo.'))))return;
+    let name='';if(insert){name=prompt(tr('اسم العمود الجديد:','New column name:'),tr('عمود جديد','New column'));if(name===null)return;}
+    let next;try{next=D.columns(cells,formatting,start,count,insert,colCount());}catch{limitError();return;}
+    if(insert)next.format.headers[start]=name.trim()||tr('عمود جديد','New column');
+    change(next.cells,false,next.format);
+    const prefix=(owner||'default')+':',mapped={};
+    for(const [key,value]of Object.entries(cellAlignments)){if(!key.startsWith(prefix)){mapped[key]=value;continue;}const [r,c]=key.slice(prefix.length).split(':').map(Number),target=insert?(c>=start?c+count:c):(c<start?c:c>=start+count?c-count:null);if(target!==null)mapped[prefix+r+':'+target]=value;}
+    cellAlignments=mapped;saveAlignments();anchor=cursor={r:cursor.r,c:Math.min(start,colCount()-1)};render();
+    message(tr('تم تحديث الأعمدة. يمكنك التراجع.','Columns updated. You can undo.'));
+  }
   function updateContextMenuTranslations(){
     const menu=$('sheet-context-menu');if(!menu)return;
     const labels={
@@ -217,6 +239,9 @@ const Trainees=(()=>{
       'insert-1000':tr('إدراج 1000 صف في الأسفل','Insert 1,000 rows at bottom'),
       'delete-row':tr('حذف الصف','Delete row'),'clear-contents':tr('مسح المحتويات','Clear contents'),
       'clear-format':tr('مسح التنسيق','Clear formatting'),
+      'insert-column-left':tr('إضافة عمود على اليسار','Insert column left'),
+      'insert-column-right':tr('إضافة عمود على اليمين','Insert column right'),
+      'delete-column':tr('حذف الأعمدة المحددة','Delete selected columns'),
       'delete-left':tr('حذف الخلايا وإزاحة لليسار','Delete cells and shift left'),
       'delete-right':tr('حذف الخلايا وإزاحة لليمين','Delete cells and shift right'),
       'select-all':tr('تحديد الكل','Select all')
@@ -482,13 +507,15 @@ const Trainees=(()=>{
     grid.addEventListener('copy',e=>{if(editing)return;e.preventDefault();e.clipboardData.setData('text/plain',selectionText());e.clipboardData.setData('text/html',selectionHtml());});
     grid.addEventListener('cut',e=>{if(editing)return;e.preventDefault();e.clipboardData.setData('text/plain',selectionText());clearSelection();});
     grid.addEventListener('contextmenu',e=>{
-      const td=e.target.closest('td[data-col]'),th=e.target.closest('th.sheet-rownum');
-      if(!td&&!th)return;
+      const td=e.target.closest('td[data-col]'),th=e.target.closest('th.sheet-rownum'),header=e.target.closest('thead th[data-col]');
+      if(!td&&!th&&!header)return;
       e.preventDefault();
       if(td){
         const vr=+td.dataset.v,vc=+td.dataset.col;
         const [r1,r2,c1,c2]=bounds();
         if(vr<r1||vr>r2||vc<c1||vc>c2)selectCell(vr,vc);
+      }else if(header){
+        commitEdit();const c=+header.dataset.col,[,,c1,c2]=bounds();if(c<c1||c>c2||anchor.r!==view.length-1){anchor={r:Math.max(0,view.length-1),c};cursor={r:0,c};paint();}
       }else if(th&&th.parentElement){
         const firstTd=th.parentElement.querySelector('td[data-col]');
         if(firstTd){
@@ -764,7 +791,27 @@ const Trainees=(()=>{
       hideDuplicateHint();dialog.dir=currentLang==='ar'?'rtl':'ltr';
       $('sheet-trainee-title').textContent=tr('بيانات المتدرب — ','Trainee details — ')+row[9];
       const dl=node('dl');labels.forEach((pair,c)=>{if(c>=baseLabels.length&&!row[c]&&!formatting.headers[c])return;appendDetailField(dl,row,pair,c);});
-      appendPrometricDetails(dl);$('sheet-trainee-record').replaceChildren(dl);if(!dialog.open)dialog.show();
+      appendPrometricDetails(dl);$('sheet-trainee-record').replaceChildren(dl);
+      const exam=D.courseKeycode(row[7],DEFAULT_KEYCODES),category=exam&&(state.keycodeOverrides?.[exam.code]||exam.category),codeCategory=category&&getLinkedCodesCat(category);
+      const action=button(tr('جلب كود الاختبار ونسخه','Get and copy exam code'),async()=>{
+        if(action.disabled)return;action.disabled=true;const token=epoch,selectedOwner=owner;
+        try{
+          if(!await flush())throw Error(tr('احفظ تعديلات الجدول أولًا.','Save sheet changes first.'));
+          let code=cells[index]?.[0]||'',known=Cloud.codeSnapshot().find(r=>r.code===code&&r.owner_id===selectedOwner&&r.category===codeCategory&&r.used_on);
+          if(!known){
+            if(code&&!confirm(tr('استبدال كود المتدرب الحالي بكود جديد؟','Replace this trainee’s current code with a new code?')))return;
+            code=await Cloud.claimTraineeCode(codeCategory,selectedOwner);
+            if(token!==epoch||owner!==selectedOwner)throw Error('CONFLICT');
+            change(D.paste(cells,[[code]],index,0),false);
+            const codeCell=$('sheet-grid').querySelector(`td[data-v="${view.indexOf(index)}"][data-col="0"]`);if(codeCell)decorateCell(codeCell,index,0);paint();
+          }
+          if(!await flush())throw Error(tr('تم حجز الكود لكن تعذر حفظ الجدول. التعديل محفوظ في الصفحة؛ أعد المحاولة.','Code reserved but sheet save failed. Your draft remains in this page; retry.'));
+          if(!await copyText(code))throw Error(tr('تم حفظ الكود. اضغط على قيمة الكود لنسخه.','Code saved. Click the code value to copy it.'));
+          show(td);showToast(tr('تم حجز الكود وحفظه ونسخه','Code reserved, saved and copied'));
+        }catch(error){showToast(error.message||tr('تعذر جلب الكود','Could not get code'));}finally{action.disabled=!codeCategory;}
+      },'sheet-primary sheet-get-exam-code');
+      action.disabled=!codeCategory;action.title=codeCategory?displayCatName(category):tr('لا توجد فئة اختبار مطابقة','No matching exam category');
+      $('sheet-trainee-record').append(action);if(!dialog.open)dialog.show();
     };
     const grid=$('sheet-grid');
     grid.addEventListener('pointerover',e=>{const td=e.target.closest('td[data-col="9"]');if(!td||td.contains(e.relatedTarget)||editing||dragging)return;clearTimeout(traineeHoverTimer);traineeHoverTimer=setTimeout(()=>show(td),650);});

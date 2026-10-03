@@ -11,3 +11,11 @@ assert.deepEqual(right.format.styles,{'0:3':{bg:'#123456'},'1:1':{color:'#abcdef
 assert.equal(rows[0][1],'b','Source remains available for undo');
 assert.throws(()=>D.deleteCells(rows,fmt,new Set([0]),0,52,'left',52),/DELETE_BOUNDS/);
 console.log('PASS: delete/shift in both directions preserves unrelated rows and moves formatting');
+const columnRows=D.normalize([Array.from({length:16},(_,i)=>'v'+i)]),columnFormat=D.defaultFormat();
+columnFormat.headers={13:'Custom',14:'Next'};columnFormat.hidden=[14];columnFormat.styles={'0:14':{bold:true}};
+const inserted=D.columns(columnRows,columnFormat,13,1,true,16);
+assert.equal(inserted.cells[0][13],'');assert.equal(inserted.cells[0][14],'v13');assert.equal(inserted.format.headers[14],'Custom');assert.deepEqual(inserted.format.hidden,[15]);assert.deepEqual(inserted.format.styles,{'0:15':{bold:true}});
+const removed=D.columns(inserted.cells,inserted.format,13,1,false,17);
+assert.deepEqual(removed.cells,columnRows);assert.equal(removed.format.headers[13],'Custom');
+assert.throws(()=>D.columns(columnRows,columnFormat,7,1,false,16),/COLUMN_BOUNDS/);
+assert.throws(()=>D.columns(columnRows,columnFormat,13,1,true,500),/COLUMN_BOUNDS/);

@@ -143,6 +143,8 @@
   #sheet-workspace .sheet-footer{font-size:12px}
 }
 .sheet-local-note{flex-basis:100%;font-size:11px;color:#475569;line-height:1.6}
+.sheet-context-menu{max-height:calc(100dvh - 20px);overflow-y:auto}
+.sheet-trainee-dialog .sheet-get-exam-code{display:block;width:100%;margin-top:16px;padding:10px 14px;background:var(--blue);border-color:var(--blue);color:white;font-weight:700}
 #sheet-workspace .sheet-grid tbody tr,#sheet-workspace .sheet-grid tbody td,#sheet-workspace .sheet-grid tbody th.sheet-rownum{height:calc(15pt * var(--sheet-zoom,1))!important;min-height:calc(15pt * var(--sheet-zoom,1))!important;max-height:calc(15pt * var(--sheet-zoom,1))!important;line-height:calc(15pt * var(--sheet-zoom,1))!important}
 #sheet-workspace .sheet-grid tbody th.sheet-rownum button{height:calc(15pt * var(--sheet-zoom,1))!important;line-height:calc(15pt * var(--sheet-zoom,1))!important}
 #sheet-workspace .sheet-grid tbody td{padding:0 calc(6px * var(--sheet-zoom,1))!important}

@@ -295,6 +295,21 @@ const Cloud = (() => {
     }catch(error){try{await load();}catch{}fail(error);return false;}
     finally{lock(false);}
   }
+  async function claimTraineeCode(category,targetOwner){
+    if(!ready||busy)throw Error('BUSY');lock(true);
+    try{
+      await load();
+      let candidate=[...rows.values()].find(r=>r.category===category&&!r.used_on&&(r.owner_id===targetOwner||role==='admin'&&!r.owner_id));
+      if(!candidate)throw Error(currentLang==='ar'?'لا توجد أكواد متاحة لهذه الفئة للمستخدم.':'No available codes in this category for this user.');
+      if(candidate.owner_id!==targetOwner){
+        const {error}=await client.rpc('ibta_assign_codes',{target_owner:targetOwner,items:[{code:candidate.code,version:candidate.version}]});if(error)throw error;
+        await load();candidate=rows.get(candidate.code);if(!candidate||candidate.used_on||candidate.owner_id!==targetOwner)throw Error('CONFLICT');
+      }
+      const {data,error}=await client.rpc('ibta_claim_code',{target_code:candidate.code,expected_version:candidate.version,use_date:todayStr()});
+      if(error)throw error;if(!data?.length)throw Error('CONFLICT');rows.set(candidate.code,data[0]);
+      try{await load();}catch{project();}return candidate.code;
+    }catch(error){fail(error);throw error;}finally{lock(false);}
+  }
   async function refresh(background = false){
     if(!ready || busy) return false;
     if(background === true && (Date.now() < nextBackgroundRefresh || hasDraftInput())) return false;
@@ -620,7 +635,7 @@ const Cloud = (() => {
     if(error)throw error;
     await load();
   }
-  return {boot,persist,copyCode,editCode,decorate,refresh,translateUi,restoreData,importCodes,listMembers,updateMember,auditEvents,exportCodesCsv,changeSupervisorStock,saveInventoryMessageSettings,
+  return {boot,persist,copyCode,claimTraineeCode,editCode,decorate,refresh,translateUi,restoreData,importCodes,listMembers,updateMember,auditEvents,exportCodesCsv,changeSupervisorStock,saveInventoryMessageSettings,
     reportSession:async()=>{if(!ready)throw Error('AUTH_REQUIRED');const {data,error}=await client.auth.getSession();if(error||!data.session)throw Error('AUTH_REQUIRED');return {token:data.session.access_token,url:SUPABASE_URL,key:KEY};},
     readTrainees,saveTrainees,assignCodes,userId:()=>user?.id || '',codeSnapshot:()=>[...rows.values()].map(row=>({...row})),
     role:()=>role,email:()=>user?.email || '',existingCodes:()=>[...rows.keys()],stockSnapshot:()=>Object.fromEntries(stock),inventoryMessageSettings:()=>({number:config?.payload?.inventoryWhatsappNumber || '',name:config?.payload?.inventorySupervisorName || '',language:config?.payload?.inventoryMessageLanguage==='en'?'en':'ar'})};
