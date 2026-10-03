@@ -117,7 +117,29 @@
     }
     return {cells:normalize(next),format:fmt};
   }
-  const api={BASE_WIDTH,WIDTH,MAX_ROWS,MAX_COLS,MAX_CELL,blank,normalize,parse,tsv,paste,result:normalizeResult,defaultFormat,format,idKey,duplicates,removeRows,deleteCells};
+  const courseAliases=[
+    ['CBP-M','Marketing','التسويق'],['CBP-S','Sales','المبيعات'],['CBP-CS','Customer Service','خدمة العملاء'],
+    ['CBP-AI','Artificial Intelligence','الذكاء الاصطناعي'],['CBP-L','Leadership','القيادة الإدارية','القيادة'],
+    ['CBP-PM','Project Management','إدارة المشاريع'],['CBP-CYBP','CYBP','Certified Young Business Professional','Youth Business','ريادة الأعمال','ريادة الاعمال'],
+    ['CBP-ME','Employee Motivation','Motivating Employees','تحفيز الموظفين'],['CBP-CM','Conflict Management','إدارة النزاعات'],
+    ['CBP-LTC','Leading Through Change','القيادة خلال التغيير'],['CBP-ES','Executive Secretarial','Executive Secretary','السكرتارية التنفيذية'],
+    ['CBP-AB','Accounting and Budgeting','Accounting & Budgeting','المحاسبة والميزانية'],['CBP-BC','Business Communication','Business Communications','اتصالات الأعمال'],
+    ['CBP-CMPR','Crisis Management and Public Relations','Crisis Management & Public Relations','Crisis Management in Public Relations','إدارة الأزمات في العلاقات العامة'],
+    ['CBP-ECM','Event and Crowd Management','Event & Crowd Management','Events and Crowd Management','Event and Conference Management','Events and Conferences Management','Event Management','إدارة الفعاليات والحشود'],
+    ['CBP-TOT','Training of Trainers','Train the Trainer','Training Trainers','تدريب المدربين'],['CBP-BM','Business Management','إدارة الأعمال']
+  ];
+  const courseName=value=>String(value||'').normalize('NFKC').toLowerCase().replace(/[\u064b-\u065f\u0670\u0640\u200e\u200f\u061c]/g,'').replace(/[أإآ]/g,'ا').replace(/ى/g,'ي').replace(/محترف الاعمال المعتمد\s*(?:في)?/g,'').replace(/certified business professional\s*(?:in)?/g,'').replace(/[^a-z0-9\u0621-\u064a]/g,'');
+  function courseKeycode(value,catalog){
+    const identity=text=>{const identifier=String(text||'').match(/\bCBP[-\s]*(CMPR|CYBP|LTC|ECM|TOT|CS|AI|PM|ME|CM|ES|AB|BC|BM|M|S|L)\b/i);return courseName(identifier?'CBP-'+identifier[1]:text);};
+    const name=identity(value);if(!name)return null;
+    const aliases=courseAliases.find(group=>group.some(alias=>courseName(alias)===name));
+    const names=new Set((aliases||[value]).map(courseName));
+    let matches=(Array.isArray(catalog)?catalog:[]).filter(item=>item&&typeof item.code==='string'&&item.code.trim()&&(names.has(identity(item.title))||names.has(courseName(item.code))));
+    const preferred=matches.filter(item=>/^(arabic|ar|العربية|عربي)$/i.test(String(item.lang||'').trim()));
+    if(preferred.length)matches=preferred;
+    return new Set(matches.map(item=>item.code)).size===1?matches[0]:null;
+  }
+  const api={BASE_WIDTH,WIDTH,MAX_ROWS,MAX_COLS,MAX_CELL,blank,normalize,parse,tsv,paste,result:normalizeResult,defaultFormat,format,idKey,duplicates,removeRows,deleteCells,courseKeycode};
   if(typeof module!=='undefined'&&module.exports)module.exports=api;
   else root.TraineeData=api;
 })(globalThis);

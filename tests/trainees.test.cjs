@@ -1,5 +1,15 @@
 const assert=require('node:assert/strict');
 const D=require('../trainees-core.js');
+const courseFixtures=[['CBP-M','Marketing','التسويق'],['CBP-S','Sales','المبيعات'],['CBP-CS','Customer Service','خدمة العملاء'],['CBP-AI','Artificial Intelligence','الذكاء الاصطناعي'],['CBP-L','Leadership','القيادة الإدارية'],['CBP-PM','Project Management','إدارة المشاريع'],['CBP-CYBP','CYBP','ريادة الاعمال'],['CBP-ME','Employee Motivation','تحفيز الموظفين'],['CBP-CM','Conflict Management','إدارة النزاعات'],['CBP-LTC','Leading Through Change','القيادة خلال التغيير'],['CBP-ES','Executive Secretarial','السكرتارية التنفيذية'],['CBP-AB','Accounting and Budgeting','المحاسبة والميزانية'],['CBP-BC','Business Communication','اتصالات الاعمال'],['CBP-CMPR','Crisis Management and Public Relations','إدارة الأزمات في العلاقات العامة'],['CBP-ECM','Event and Conference Management','إدارة الفعاليات والحشود'],['CBP-TOT','Training of Trainers','تدريب المدربين'],['CBP-BM','Business Management','إدارة الاعمال']];
+const catalog=courseFixtures.flatMap(([id,title])=>[{title,code:id+'-AR-KEY',lang:'Arabic'},{title,code:id+'-EN-KEY',lang:'English'}]);
+for(const [id,title,arabic]of courseFixtures){
+  for(const name of [id,title,'محترف الأعمال المعتمد في '+arabic,'محترف الأعمال المعتمد في '+arabic+' '+id])assert.equal(D.courseKeycode(name,catalog)?.code,id+'-AR-KEY',name);
+}
+assert.equal(D.courseKeycode('دورة غير معروفة',catalog),null);
+assert.equal(D.courseKeycode('Sales',[{title:'Sales',code:'ONE',lang:'Arabic'},{title:'Sales',code:'TWO',lang:'Arabic'}]),null,'Ambiguous matches never choose an arbitrary code');
+assert.equal(D.courseKeycode('CBP-M',[{title:'Marketing',code:'ONLY',lang:'English'}])?.code,'ONLY');
+assert.equal(D.courseKeycode('محترف الأعمال المعتمد في التسويق',[{title:'محترف الأعمال المعتمد في التسويق CBP-M',code:'AR-FULL-TITLE',lang:'Arabic'}])?.code,'AR-FULL-TITLE');
+assert.equal(D.courseKeycode('CBP-M',catalog.map(item=>item.code==='CBP-M-AR-KEY'?{...item,code:'UPDATED-KEY'}:item))?.code,'UPDATED-KEY','Uses the current shared catalog');
 const row=D.blank();row[0]='000023';row[2]='اسم عربي';row[4]='001001';row[5]='0501234567';row[10]='a"b\tc\nd';row[12]='001234567';
 assert.deepEqual(D.normalize(D.parse(D.tsv([row]))),[row],'Excel clipboard preserves strings, quotes, tabs, line breaks and Arabic');
 assert.deepEqual(D.parse('a\tb\r\nc\td\r\n'),[['a','b'],['c','d']]);

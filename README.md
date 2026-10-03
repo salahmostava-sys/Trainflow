@@ -80,6 +80,8 @@ Validation: `node tests/trainees.test.cjs`, `node tests/cloud.test.cjs`, and `no
 
 ## Hosting configuration
 
+Floating trainee records display the exam's current course keycode from the shared Keycodes catalog. The 17 supplied CBP course identifiers and Arabic/English course names are matched; Arabic catalog entries take preference. Unknown or ambiguous matches show the source course name with a no-match note. The imported sheet value is preserved.
+
 The trainee sheet starts with 52 visible columns (A–AZ); the original 13 retain their labels, and additional columns accept new data. **Add column** extends it to the existing 500-column limit. Right-click a cell or rectangular selection to delete cells and shift the remaining row data physically left or right, including hidden columns. Values, formatting and alignment move together, and Undo restores them. Hover over a nonempty Username cell, click it, or press Enter to show a floating read-only record, including hidden fields and populated extra columns. Close it with × or Escape.
 
 The application requires manual sign-in again at **17:00 Asia/Riyadh** every day. A sign-in at or after 17:00 lasts until the following day's cutoff. Token refresh does not extend this deadline. The browser timer and visibility/focus checks hide the application at expiry; the API worker also rejects expired sessions. Saving is attempted shortly before the cutoff. Failed sheet saves retain their draft in the open page and require signing back in with the same account; keep that page open until saved. This application/API rule does not change Supabase's separately accessible REST API or the Google reports bridge.

@@ -41,11 +41,14 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),path
     await page.locator('#sheet-reload').click();await page.waitForFunction(()=>document.getElementById('sheet-status').textContent==='تم الحفظ');
     assert.equal(await cell(0,51).textContent(),'EXTRA-AZ');
     await page.locator('th[data-col="50"] button').click();assert.deepEqual(errors,[],'Blank extra columns can be sorted');await page.locator('#sheet-clear-filters').click();
-    await paste(0,0,['CODE','hidden@example.invalid','متدرب','Trainee','123','050','Org','Exam','04/10/2026','trainee-user','demo-password','ناجح','AD'].join('\t'));
+    await page.evaluate(()=>{DEFAULT_KEYCODES=[{title:'Sales',lang:'Arabic',code:'LIVE-SALES-AR'},{title:'Sales',lang:'English',code:'LIVE-SALES-EN'}];});
+    await paste(0,0,['CODE','hidden@example.invalid','متدرب','Trainee','123','050','Org','محترف الأعمال المعتمد في المبيعات CBP-S','04/10/2026','trainee-user','demo-password','ناجح','AD'].join('\t'));
     await page.locator('#sheet-save').click();await page.waitForFunction(()=>!Trainees.hasDraft());
     await page.locator('#sheet-columns summary').click();await page.locator('[data-column-toggle="1"]').uncheck();await page.locator('#sheet-columns summary').click();
     await cell(0,9).hover();await page.locator('#sheet-trainee-dialog').waitFor({state:'visible'});
     const details=await page.locator('#sheet-trainee-record').textContent();assert.match(details,/hidden@example.invalid/);assert.match(details,/demo-password/);assert.match(details,/EXTRA-AZ/);
+    assert.match(details,/كي كود الدورة/);assert.match(details,/LIVE-SALES-AR/);assert.doesNotMatch(details,/LIVE-SALES-EN|محترف الأعمال المعتمد في المبيعات/);
+    assert.equal(await cell(0,7).textContent(),'محترف الأعمال المعتمد في المبيعات CBP-S','Source course name remains intact');
     assert.equal(await page.locator('#sheet-trainee-dialog input,#sheet-trainee-dialog [contenteditable]').count(),0,'Details are read only');
     await page.keyboard.press('Escape');await page.locator('#sheet-trainee-dialog').waitFor({state:'hidden'});
     await cell(0,9).click();await page.keyboard.press('Enter');await page.locator('#sheet-trainee-dialog').waitFor({state:'visible'});

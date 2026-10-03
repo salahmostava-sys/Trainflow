@@ -707,6 +707,14 @@ const Trainees=(()=>{
     badge.dataset.result=value==='ناجح'?'pass':value==='راسب'?'fail':value==='لم يدخل'?'absent':'';return badge;
   }
   let traineeHoverTimer;
+  function appendDetailField(dl,row,pair,column){
+    const keycode=column===7?D.courseKeycode(row[column],DEFAULT_KEYCODES):null;
+    const label=column===7&&keycode?tr('كي كود الدورة','Course keycode'):tr(...pair);
+    dl.append(node('dt',label));const dd=node('dd',undefined,{dir:keycode?'ltr':'auto'});
+    dd.append(column===11?resultBadge(row[column]):node('span',keycode?keycode.code:row[column]||'—'));
+    if(column===7&&!keycode&&row[column])dd.append(node('small',tr(' — لا يوجد كي كود مطابق',' — No matching keycode')));
+    dl.append(dd);
+  }
   function closeTraineeDetails(){clearTimeout(traineeHoverTimer);const dialog=$('sheet-trainee-dialog');if(dialog?.open)dialog.close();}
   function initTraineeDetails(){
     const dialog=node('dialog',undefined,{id:'sheet-trainee-dialog',class:'sheet-duplicate-dialog sheet-trainee-dialog','aria-labelledby':'sheet-trainee-title'});
@@ -719,7 +727,7 @@ const Trainees=(()=>{
       const index=view[+td.dataset.v],row=cells[index];if(!row?.[9])return;
       hideDuplicateHint();dialog.dir=formatting.direction;
       $('sheet-trainee-title').textContent=tr('بيانات المتدرب — ','Trainee details — ')+row[9];
-      const dl=node('dl');labels.forEach((pair,c)=>{if(c>=baseLabels.length&&!row[c]&&!formatting.headers[c])return;dl.append(node('dt',tr(...pair)));const dd=node('dd',undefined,{dir:'auto'});dd.append(c===11?resultBadge(row[c]):node('span',row[c]||'—'));dl.append(dd);});
+      const dl=node('dl');labels.forEach((pair,c)=>{if(c>=baseLabels.length&&!row[c]&&!formatting.headers[c])return;appendDetailField(dl,row,pair,c);});
       $('sheet-trainee-record').replaceChildren(dl);if(!dialog.open)dialog.show();
     };
     const grid=$('sheet-grid');
@@ -784,7 +792,7 @@ const Trainees=(()=>{
     $('sheet-duplicate-title').textContent=tr('بيانات الهوية / الإقامة: ','National / Iqama ID: ')+detailKey;
     $('sheet-duplicate-description').textContent=tr('مكرر ','Repeated ')+count+tr(' مرات في جدول المستخدم المعروض.',' times in the selected user’s sheet.');
     const box=$('sheet-duplicate-records');box.replaceChildren();
-    pageMatches.forEach(i=>{const card=node('section',undefined,{class:'sheet-detail-record'});card.append(node('h3',tr('الصف ','Row ')+(i+1)+' · '+(cells[i][2]||cells[i][3]||'—')));const dl=node('dl');labels.forEach((pair,c)=>{if(c>=baseLabels.length&&!cells[i][c]&&!formatting.headers[c])return;dl.append(node('dt',tr(...pair)));const dd=node('dd',undefined,{dir:'auto'});dd.append(c===11?resultBadge(cells[i][c]):node('span',cells[i][c]||'—'));dl.append(dd);});card.append(dl);box.append(card);});
+    pageMatches.forEach(i=>{const card=node('section',undefined,{class:'sheet-detail-record'});card.append(node('h3',tr('الصف ','Row ')+(i+1)+' · '+(cells[i][2]||cells[i][3]||'—')));const dl=node('dl');labels.forEach((pair,c)=>{if(c>=baseLabels.length&&!cells[i][c]&&!formatting.headers[c])return;appendDetailField(dl,cells[i],pair,c);});card.append(dl);box.append(card);});
     const hasPages=pageCount>1;
     $('sheet-detail-page').style.display=hasPages?'':'none';
     $('sheet-detail-prev').style.display=hasPages?'':'none';
