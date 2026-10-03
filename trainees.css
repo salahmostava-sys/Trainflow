@@ -143,6 +143,11 @@
   #sheet-workspace .sheet-footer{font-size:12px}
 }
 .sheet-local-note{flex-basis:100%;font-size:11px;color:#475569;line-height:1.6}
+.sheet-zoom-tools{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-inline-start:auto;color:var(--text)}
+#panel-trainees .sheet-zoom-tools button{min-width:32px;min-height:32px;padding:3px 8px;border:1px solid var(--border);border-radius:5px;background:#fff;color:var(--text)}
+#panel-trainees .sheet-zoom-tools input[type=range]{width:130px;min-width:90px;accent-color:var(--blue);cursor:pointer}
+#sheet-zoom-reset{min-width:58px!important;font-variant-numeric:tabular-nums}
+@media(max-width:700px){.sheet-zoom-tools{width:100%;justify-content:center;margin:0}#panel-trainees .sheet-zoom-tools button{min-height:38px}}
 .sheet-detail-course-meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:7px;font-size:12px}
 .sheet-detail-keycode{font-weight:700;overflow-wrap:anywhere}
 .sheet-detail-category{padding:2px 7px;border:1px solid var(--border);border-radius:5px;font-size:11px}

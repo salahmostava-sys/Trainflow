@@ -15,10 +15,19 @@ const Trainees=(()=>{
   let members=[],mode='sheet',codeMode='owned',codeBusy=false,initialized=false;
   let dragging=false,dragMoved=false,rowDragging=false;
   let formatting=D.defaultFormat(),duplicateIds=new Map();
-  let excelView={wrap:false,freeze:false};
-  try{const pref=JSON.parse(localStorage.getItem('ibta_sheet_view')||'{}');excelView={wrap:pref.wrap===true,freeze:pref.freeze===true};}catch{}
+  let excelView={wrap:false,freeze:false,zoom:100};
+  try{const pref=JSON.parse(localStorage.getItem('ibta_sheet_view')||'{}');excelView={wrap:pref.wrap===true,freeze:pref.freeze===true,zoom:Number.isInteger(pref.zoom)&&pref.zoom>=50&&pref.zoom<=200?pref.zoom:100};}catch{}
+  function setZoom(value){
+    const previous=excelView.zoom,scroll=$('sheet-grid').parentElement;
+    excelView.zoom=Math.max(50,Math.min(200,Math.round(Number(value)/10)*10||100));
+    applyExcelView();scroll.scrollLeft*=excelView.zoom/previous;scroll.scrollTop*=excelView.zoom/previous;
+    try{localStorage.setItem('ibta_sheet_view',JSON.stringify(excelView));}catch{}
+  }
   function applyExcelView(){
     const grid=$('sheet-grid');if(!grid)return;
+    grid.style.zoom=excelView.zoom/100;
+    $('sheet-zoom-slider').value=String(excelView.zoom);$('sheet-zoom-reset').textContent=excelView.zoom+'%';
+    $('sheet-zoom-out').disabled=excelView.zoom<=50;$('sheet-zoom-in').disabled=excelView.zoom>=200;
     grid.classList.toggle('sheet-wrap-text',excelView.wrap);
     grid.classList.toggle('sheet-freeze-column',excelView.freeze);
     grid.querySelectorAll('.sheet-frozen-cell').forEach(el=>el.classList.remove('sheet-frozen-cell'));
@@ -337,12 +346,12 @@ const Trainees=(()=>{
   }
   function initColumnResize(e,colIndex,thEl){
     e.preventDefault();e.stopPropagation();
-    const startX=e.clientX,startWidth=thEl.getBoundingClientRect().width;
+    const zoom=excelView.zoom/100,startX=e.clientX,startWidth=thEl.getBoundingClientRect().width/zoom;
     const isRtl=formatting.direction==='rtl';
     const resizer=thEl.querySelector('.sheet-col-resizer');
     resizer?.classList.add('sheet-resizing');
     function onPointerMove(moveEvent){
-      const delta=(moveEvent.clientX-startX)*(isRtl?-1:1);
+      const delta=(moveEvent.clientX-startX)*(isRtl?-1:1)/zoom;
       const newWidth=Math.max(45,Math.min(600,Math.round(startWidth+delta)));
       setColumnWidth(colIndex,newWidth);
     }
@@ -412,6 +421,11 @@ const Trainees=(()=>{
     const localNote=node('small',undefined,{id:'sheet-local-note',class:'sheet-local-note'});$('sheet-workspace').querySelector('.sheet-format-tools').append(localNote);
     const more=button(tr('التنسيق وأدوات إضافية','Formatting & more tools'),()=>{const expanded=$('sheet-workspace').classList.toggle('sheet-show-tools');more.setAttribute('aria-expanded',String(expanded));});more.id='sheet-more-tools';more.className='sheet-mobile-toggle';more.setAttribute('aria-expanded','false');toolbar.before(more);
     for(const key of ['wrap','freeze'])$('sheet-'+key).onclick=()=>{commitEdit();excelView[key]=!excelView[key];try{localStorage.setItem('ibta_sheet_view',JSON.stringify(excelView));}catch{}applyExcelView();};
+    const zoomTools=node('div',undefined,{class:'sheet-zoom-tools',dir:'ltr'});
+    zoomTools.innerHTML='<span id="sheet-zoom-label"></span><button type="button" id="sheet-zoom-out">−</button><input type="range" id="sheet-zoom-slider" min="50" max="200" step="10" value="100"><button type="button" id="sheet-zoom-in">+</button><button type="button" id="sheet-zoom-reset">100%</button>';
+    $('sheet-workspace').querySelector('.sheet-footer').append(zoomTools);
+    $('sheet-zoom-out').onclick=()=>setZoom(excelView.zoom-10);$('sheet-zoom-in').onclick=()=>setZoom(excelView.zoom+10);
+    $('sheet-zoom-slider').oninput=()=>setZoom($('sheet-zoom-slider').value);$('sheet-zoom-reset').onclick=()=>setZoom(100);
     $('sheet-address').addEventListener('keydown',e=>{
       if(e.key==='Escape'){e.preventDefault();$('sheet-address').blur();paint();return;}
       if(e.key!=='Enter')return;e.preventDefault();if(!loaded)return;
@@ -554,6 +568,8 @@ const Trainees=(()=>{
   function translate(){
     $('trainees-tab').textContent=tr('المتدربون','Trainees');if(!initialized)return;
     $('sheet-more-tools').textContent=tr('التنسيق وأدوات إضافية','Formatting & more tools');
+    $('sheet-zoom-label').textContent=tr('زوم الجدول','Table zoom');
+    for(const [id,ar,en]of [['sheet-zoom-out','تصغير الجدول','Zoom out'],['sheet-zoom-in','تكبير الجدول','Zoom in'],['sheet-zoom-slider','نسبة زوم الجدول','Table zoom percentage'],['sheet-zoom-reset','إرجاع الزوم إلى 100%','Reset zoom to 100%']]){$(id).setAttribute('aria-label',tr(ar,en));$(id).title=tr(ar,en);}
     document.querySelectorAll('.sheet-ribbon-group small[data-ar]').forEach(el=>el.textContent=tr(el.dataset.ar,el.dataset.en));
     if(typeof TraineeReports!=='undefined')TraineeReports.translate();
     const text={

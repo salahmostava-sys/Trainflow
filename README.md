@@ -80,6 +80,8 @@ Validation: `node tests/trainees.test.cjs`, `node tests/cloud.test.cjs`, and `no
 
 ## Hosting configuration
 
+The trainee table has an Excel-style zoom control in its footer: minus/plus buttons, a 50–200% slider, and a percentage button that resets to 100%. Zoom scales cells, rows and column headings together; toolbar controls keep their size. It is a browser preference and survives reload without changing shared data or saved formatting.
+
 Floating trainee records display the course name exactly as stored in the sheet, followed by its current keycode and effective category from the shared Keycodes catalog. The 17 supplied CBP course identifiers and Arabic/English course names are matched; Arabic catalog entries take preference. Unknown or ambiguous matches show a no-match note. Username details also show the shared Prometric account and password already available to the signed-in account. Click any populated value to copy its exact text. On narrow screens the details fill the viewport with larger text and vertical scrolling. The imported sheet values are preserved. Ctrl+Z, Ctrl+Y and Ctrl+Shift+Z support Arabic keyboard layouts, including edits in progress.
 
 The trainee sheet starts with 52 visible columns (A–AZ); the original 13 retain their labels, and additional columns accept new data. **Add column** extends it to the existing 500-column limit. Right-click a cell or rectangular selection to delete cells and shift the remaining row data physically left or right, including hidden columns. Values, formatting and alignment move together, and Undo restores them. Hover over a nonempty Username cell, click it, or press Enter to show a floating read-only record, including hidden fields and populated extra columns. Close it with × or Escape.

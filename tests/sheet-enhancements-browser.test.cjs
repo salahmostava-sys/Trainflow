@@ -32,6 +32,19 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),path
     assert.equal(await page.locator('th.sheet-focus-row-header').getAttribute('data-rowv'),'3');
     assert.equal(await cell(2,20).evaluate(el=>el.classList.contains('sheet-focus-axis')),false,'Previous row highlight clears on keyboard movement');
     assert.equal(await cell(3,20).evaluate(el=>el.classList.contains('sheet-focus-axis')),true);
+    const normalWidth=await cell(0,0).evaluate(el=>el.getBoundingClientRect().width);
+    const footerFont=await page.locator('.sheet-footer').evaluate(el=>getComputedStyle(el).fontSize);
+    await page.locator('#sheet-zoom-in').click();assert.equal(await page.locator('#sheet-zoom-reset').textContent(),'110%');
+    await page.locator('#sheet-zoom-slider').evaluate(el=>{el.value='150';el.dispatchEvent(new Event('input',{bubbles:true}));});
+    assert.ok(Math.abs(await cell(0,0).evaluate(el=>el.getBoundingClientRect().width)-normalWidth*1.5)<2,'Zoom scales the whole table');
+    assert.equal(await page.locator('.sheet-footer').evaluate(el=>getComputedStyle(el).fontSize),footerFont,'Controls remain their normal size');
+    await page.reload();await page.locator('#trainees-tab').click();await page.waitForFunction(()=>document.getElementById('sheet-status').textContent==='تم الحفظ');
+    assert.equal(await page.locator('#sheet-zoom-reset').textContent(),'150%','Zoom preference survives reload');
+    for(const [value,disabled]of [['200','sheet-zoom-in'],['50','sheet-zoom-out']]){
+      await page.locator('#sheet-zoom-slider').evaluate((el,value)=>{el.value=value;el.dispatchEvent(new Event('input',{bubbles:true}));},value);
+      assert.equal(await page.locator('#'+disabled).isDisabled(),true);
+    }
+    await page.locator('#sheet-zoom-reset').click();assert.equal(await page.locator('#sheet-zoom-reset').textContent(),'100%');
     const arabicShortcut=async(code,key,shift=false)=>page.evaluate(({code,key,shift})=>document.activeElement.dispatchEvent(new KeyboardEvent('keydown',{code,key,ctrlKey:true,shiftKey:shift,bubbles:true,cancelable:true})),{code,key,shift});
     await paste(0,2,'First');await paste(0,2,'Second');
     await arabicShortcut('KeyZ','ئ');assert.equal(await cell(0,2).textContent(),'First','Ctrl+Z works with Arabic keyboard layout');
