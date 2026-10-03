@@ -80,7 +80,7 @@ Validation: `node tests/trainees.test.cjs`, `node tests/cloud.test.cjs`, and `no
 
 ## Hosting configuration
 
-The trainee table has an Excel-style zoom control in its footer: minus/plus buttons, a 50–200% slider, and a percentage button that resets to 100%. Zoom scales cells, rows and column headings together; toolbar controls keep their size. It is a browser preference and survives reload without changing shared data or saved formatting.
+The trainee table has an Excel-style zoom control in its footer: minus/plus buttons, a 50–200% slider, and a percentage button that resets to 100%. Zoom scales data cells and their contents. Column headings, row-number text and toolbar controls keep their font size; column widths stay aligned with the cells. Editing uses the cells directly; the separate value-editing box has been removed. It is a browser preference and survives reload without changing shared data or saved formatting.
 
 Floating trainee records display the course name exactly as stored in the sheet, followed by its current keycode and effective category from the shared Keycodes catalog. The 17 supplied CBP course identifiers and Arabic/English course names are matched; Arabic catalog entries take preference. Unknown or ambiguous matches show a no-match note. Username details also show the shared Prometric account and password already available to the signed-in account. Click any populated value to copy its exact text. On narrow screens the details fill the viewport with larger text and vertical scrolling. The imported sheet values are preserved. Ctrl+Z, Ctrl+Y and Ctrl+Shift+Z support Arabic keyboard layouts, including edits in progress.
 

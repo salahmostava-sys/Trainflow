@@ -33,10 +33,15 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),path
     assert.equal(await cell(2,20).evaluate(el=>el.classList.contains('sheet-focus-axis')),false,'Previous row highlight clears on keyboard movement');
     assert.equal(await cell(3,20).evaluate(el=>el.classList.contains('sheet-focus-axis')),true);
     const normalWidth=await cell(0,0).evaluate(el=>el.getBoundingClientRect().width);
+    assert.equal(await page.locator('#sheet-formula').count(),0,'Value-editing box is removed');
+    const headerFont=await page.locator('th[data-col="0"]').evaluate(el=>getComputedStyle(el).fontSize);
+    const cellFont=await cell(0,0).evaluate(el=>parseFloat(getComputedStyle(el).fontSize));
     const footerFont=await page.locator('.sheet-footer').evaluate(el=>getComputedStyle(el).fontSize);
     await page.locator('#sheet-zoom-in').click();assert.equal(await page.locator('#sheet-zoom-reset').textContent(),'110%');
     await page.locator('#sheet-zoom-slider').evaluate(el=>{el.value='150';el.dispatchEvent(new Event('input',{bubbles:true}));});
-    assert.ok(Math.abs(await cell(0,0).evaluate(el=>el.getBoundingClientRect().width)-normalWidth*1.5)<2,'Zoom scales the whole table');
+    assert.ok(Math.abs(await cell(0,0).evaluate(el=>el.getBoundingClientRect().width)-normalWidth*1.5)<2,'Zoom scales cell dimensions');
+    assert.equal(await cell(0,0).evaluate(el=>parseFloat(getComputedStyle(el).fontSize)),cellFont*1.5);
+    assert.equal(await page.locator('th[data-col="0"]').evaluate(el=>getComputedStyle(el).fontSize),headerFont,'Header text keeps its normal size');
     assert.equal(await page.locator('.sheet-footer').evaluate(el=>getComputedStyle(el).fontSize),footerFont,'Controls remain their normal size');
     await page.reload();await page.locator('#trainees-tab').click();await page.waitForFunction(()=>document.getElementById('sheet-status').textContent==='تم الحفظ');
     assert.equal(await page.locator('#sheet-zoom-reset').textContent(),'150%','Zoom preference survives reload');

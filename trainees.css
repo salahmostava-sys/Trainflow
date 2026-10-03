@@ -28,21 +28,21 @@
 .sheet-col-resizer{position:absolute;top:0;bottom:0;inset-inline-end:-3px;width:7px;cursor:col-resize;z-index:10;touch-action:none;user-select:none}
 .sheet-col-resizer:hover,.sheet-col-resizer.sheet-resizing{background:var(--blue);width:3px;inset-inline-end:0}
 
-.sheet-grid th[data-col="0"],.sheet-grid td[data-col="0"]{--col-w:var(--col-w-0,160px)}
-.sheet-grid th[data-col="1"],.sheet-grid td[data-col="1"]{--col-w:var(--col-w-1,190px)}
-.sheet-grid th[data-col="2"],.sheet-grid td[data-col="2"]{--col-w:var(--col-w-2,220px)}
-.sheet-grid th[data-col="3"],.sheet-grid td[data-col="3"]{--col-w:var(--col-w-3,220px)}
-.sheet-grid th[data-col="4"],.sheet-grid td[data-col="4"]{--col-w:var(--col-w-4,105px);text-align:center}
-.sheet-grid th[data-col="5"],.sheet-grid td[data-col="5"]{--col-w:var(--col-w-5,105px);text-align:center}
-.sheet-grid th[data-col="6"],.sheet-grid td[data-col="6"]{--col-w:var(--col-w-6,200px)}
-.sheet-grid th[data-col="7"],.sheet-grid td[data-col="7"]{--col-w:var(--col-w-7,220px)}
-.sheet-grid th[data-col="8"],.sheet-grid td[data-col="8"]{--col-w:var(--col-w-8,140px)}
-.sheet-grid th[data-col="9"],.sheet-grid td[data-col="9"]{--col-w:var(--col-w-9,150px)}
+.sheet-grid th[data-col="0"],.sheet-grid td[data-col="0"]{--col-w:calc(var(--col-w-0,160px) * var(--sheet-zoom,1))}
+.sheet-grid th[data-col="1"],.sheet-grid td[data-col="1"]{--col-w:calc(var(--col-w-1,190px) * var(--sheet-zoom,1))}
+.sheet-grid th[data-col="2"],.sheet-grid td[data-col="2"]{--col-w:calc(var(--col-w-2,220px) * var(--sheet-zoom,1))}
+.sheet-grid th[data-col="3"],.sheet-grid td[data-col="3"]{--col-w:calc(var(--col-w-3,220px) * var(--sheet-zoom,1))}
+.sheet-grid th[data-col="4"],.sheet-grid td[data-col="4"]{--col-w:calc(var(--col-w-4,105px) * var(--sheet-zoom,1));text-align:center}
+.sheet-grid th[data-col="5"],.sheet-grid td[data-col="5"]{--col-w:calc(var(--col-w-5,105px) * var(--sheet-zoom,1));text-align:center}
+.sheet-grid th[data-col="6"],.sheet-grid td[data-col="6"]{--col-w:calc(var(--col-w-6,200px) * var(--sheet-zoom,1))}
+.sheet-grid th[data-col="7"],.sheet-grid td[data-col="7"]{--col-w:calc(var(--col-w-7,220px) * var(--sheet-zoom,1))}
+.sheet-grid th[data-col="8"],.sheet-grid td[data-col="8"]{--col-w:calc(var(--col-w-8,140px) * var(--sheet-zoom,1))}
+.sheet-grid th[data-col="9"],.sheet-grid td[data-col="9"]{--col-w:calc(var(--col-w-9,150px) * var(--sheet-zoom,1))}
 /* Col 10: Password column sized for A@a#$1970 */
-.sheet-grid th[data-col="10"],.sheet-grid td[data-col="10"]{--col-w:var(--col-w-10,120px)}
+.sheet-grid th[data-col="10"],.sheet-grid td[data-col="10"]{--col-w:calc(var(--col-w-10,120px) * var(--sheet-zoom,1))}
 /* Col 11: Result column sized for 8 characters */
-.sheet-grid th[data-col="11"],.sheet-grid td[data-col="11"]{--col-w:var(--col-w-11,85px);text-align:center;padding:0!important}
-.sheet-grid th[data-col="12"],.sheet-grid td[data-col="12"]{--col-w:var(--col-w-12,140px)}
+.sheet-grid th[data-col="11"],.sheet-grid td[data-col="11"]{--col-w:calc(var(--col-w-11,85px) * var(--sheet-zoom,1));text-align:center;padding:0!important}
+.sheet-grid th[data-col="12"],.sheet-grid td[data-col="12"]{--col-w:calc(var(--col-w-12,140px) * var(--sheet-zoom,1))}
 
 .sheet-grid th[data-col="4"] button,.sheet-grid th[data-col="5"] button,.sheet-grid th[data-col="11"] button{padding:2px 4px!important;font-size:11px!important;white-space:normal!important;line-height:1.2!important}
 .sheet-grid td[data-col="4"] .sheet-duplicate-badge{font-size:9px!important;padding:0 3px!important;margin-inline-start:3px!important}
@@ -143,6 +143,10 @@
   #sheet-workspace .sheet-footer{font-size:12px}
 }
 .sheet-local-note{flex-basis:100%;font-size:11px;color:#475569;line-height:1.6}
+#sheet-workspace .sheet-grid tbody tr,#sheet-workspace .sheet-grid tbody td,#sheet-workspace .sheet-grid tbody th.sheet-rownum{height:calc(15pt * var(--sheet-zoom,1))!important;min-height:calc(15pt * var(--sheet-zoom,1))!important;max-height:calc(15pt * var(--sheet-zoom,1))!important;line-height:calc(15pt * var(--sheet-zoom,1))!important}
+#sheet-workspace .sheet-grid tbody th.sheet-rownum button{height:calc(15pt * var(--sheet-zoom,1))!important;line-height:calc(15pt * var(--sheet-zoom,1))!important}
+#sheet-workspace .sheet-grid tbody td{padding:0 calc(6px * var(--sheet-zoom,1))!important}
+#panel-trainees #sheet-workspace .sheet-result-select{font-size:calc(11px * var(--sheet-zoom,1))!important;line-height:calc(15pt * var(--sheet-zoom,1))!important}
 .sheet-zoom-tools{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-inline-start:auto;color:var(--text)}
 #panel-trainees .sheet-zoom-tools button{min-width:32px;min-height:32px;padding:3px 8px;border:1px solid var(--border);border-radius:5px;background:#fff;color:var(--text)}
 #panel-trainees .sheet-zoom-tools input[type=range]{width:130px;min-width:90px;accent-color:var(--blue);cursor:pointer}

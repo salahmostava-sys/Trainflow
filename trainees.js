@@ -25,7 +25,7 @@ const Trainees=(()=>{
   }
   function applyExcelView(){
     const grid=$('sheet-grid');if(!grid)return;
-    grid.style.zoom=excelView.zoom/100;
+    grid.style.setProperty('--sheet-zoom',String(excelView.zoom/100));
     $('sheet-zoom-slider').value=String(excelView.zoom);$('sheet-zoom-reset').textContent=excelView.zoom+'%';
     $('sheet-zoom-out').disabled=excelView.zoom<=50;$('sheet-zoom-in').disabled=excelView.zoom>=200;
     grid.classList.toggle('sheet-wrap-text',excelView.wrap);
@@ -399,7 +399,7 @@ const Trainees=(()=>{
           <button type="button" id="sheet-clear-format"></button><button type="button" id="sheet-wrap" aria-pressed="false">التفاف النص / Wrap text</button><button type="button" id="sheet-freeze" aria-pressed="false">تثبيت أول عمود / Freeze first column</button><label><span id="sheet-direction-label"></span><select id="sheet-direction"><option value="rtl">يمين ← يسار</option><option value="ltr">Left → Right</option></select></label>
         </div>
         <div class="sheet-filters"><input id="sheet-search" type="search"><input id="sheet-org" type="search"><input id="sheet-date" type="search"><select id="sheet-result"></select><label class="sheet-duplicates-filter"><input type="checkbox" id="sheet-duplicates-only"><span id="sheet-duplicates-label"></span></label><button type="button" id="sheet-clear-filters"></button></div>
-        <div class="sheet-formula"><input id="sheet-address" value="A1" aria-label="عنوان الخلية / Cell address" title="D150" autocomplete="off" spellcheck="false" dir="ltr"><span class="sheet-fx" id="sheet-value-label">قيمة</span><input id="sheet-formula" autocomplete="off" spellcheck="false" dir="auto"></div>
+        <div class="sheet-formula"><input id="sheet-address" value="A1" aria-label="عنوان الخلية / Cell address" title="D150" autocomplete="off" spellcheck="false" dir="ltr"></div>
         <div class="sheet-scroll"><table class="sheet-grid" id="sheet-grid" role="grid" aria-label="Trainees"><thead></thead><tbody></tbody></table></div>
         <div class="sheet-add-rows-bar">
           <span id="sheet-add-prefix"></span>
@@ -464,8 +464,6 @@ const Trainees=(()=>{
     $('sheet-duplicates-only').onchange=()=>{commitEdit();page=0;anchor=cursor={r:0,c:0};render();};
     $('sheet-clear-filters').onclick=()=>{commitEdit();clearFilters();render();};
     $('sheet-prev').onclick=()=>{commitEdit();page=Math.max(0,page-1);render();};$('sheet-next').onclick=()=>{commitEdit();page++;render();};
-    $('sheet-formula').addEventListener('change',()=>{if(!loaded)return;const idx=view[cursor.r];if(idx===undefined)return;try{change(D.paste(cells,[[$('sheet-formula').value]],idx,cursor.c));}catch{limitError();}});
-    $('sheet-formula').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();$('sheet-formula').blur();focusCell(cursor.r,cursor.c);}});
     const grid=$('sheet-grid');
     initDuplicateDetails();
     initTraineeDetails();
@@ -592,7 +590,6 @@ const Trainees=(()=>{
       'sheet-find-next':['بحث عن التالي','Find Next'],'sheet-find-replace-one':['استبدال','Replace'],'sheet-find-replace-all':['استبدال الكل','Replace All']
     };for(const [id,pair]of Object.entries(text))$(id)&&($(id).textContent=tr(...pair));
     for(const [id,pair]of Object.entries({'sheet-search':['بحث في الجدول…','Search sheet…'],'sheet-org':['فلترة بالجهة…','Filter organization…'],'sheet-date':['فلترة بتاريخ الاختبار…','Filter exam date…'],'sheet-code-search':['بحث عن كود…','Search codes…']})){$(id)&&($(id).placeholder=tr(...pair));$(id)&&($(id).setAttribute('aria-label',tr(...pair)));}
-    $('sheet-formula').setAttribute('aria-label',tr('محتوى الخلية المحددة','Selected cell value'));
     $('sheet-prev').setAttribute('aria-label',tr('الصفحة السابقة','Previous page'));$('sheet-next').setAttribute('aria-label',tr('الصفحة التالية','Next page'));
     const value=$('sheet-result').value;$('sheet-result').replaceChildren();
     [['',tr('كل النتائج','All results')],['ناجح','ناجح'],['راسب','راسب'],['لم يدخل','لم يدخل']].forEach(([v,label])=>$('sheet-result').append(node('option',label,{value:v})));
@@ -662,7 +659,7 @@ const Trainees=(()=>{
     const header=node('tr');header.append(node('th','#',{class:'sheet-rownum'}));
     labels.forEach((pair,c)=>{
       if(!cols.includes(c))return;
-      const th=node('th',undefined,{scope:'col','data-col':c});
+      const th=node('th',undefined,{scope:'col','data-col':c});if(c>=baseLabels.length)th.style.setProperty('--col-w','calc(var(--col-w-'+c+',160px) * var(--sheet-zoom,1))');
       th.append(button(colLetter(c)+' · '+tr(...pair),e=>{commitEdit();const firstCol=e.shiftKey?anchor.c:c;page=0;anchor={r:Math.max(0,view.length-1),c:firstCol};cursor={r:0,c};render();$('sheet-grid').querySelector(`td[data-v="0"][data-col="${c}"]`)?.focus();}));
       th.title=tr('تحديد العمود كله · Shift لتحديد عدة أعمدة','Select entire column · Shift to select multiple columns');
       if(c>=baseLabels.length){
@@ -698,8 +695,8 @@ const Trainees=(()=>{
   }
   function decorateCell(td,index,column){
     const value=cells[index]?.[column]||'',style=formatting.styles[index+':'+column]||{};
-    td.replaceChildren();td.style.backgroundColor=style.bg||'';td.style.color=style.color||'';
-    td.style.fontSize=style.size?style.size+'px':'';td.style.fontWeight=style.bold?'700':'';
+    td.replaceChildren();if(column>=baseLabels.length)td.style.setProperty('--col-w','calc(var(--col-w-'+column+',160px) * var(--sheet-zoom,1))');td.style.backgroundColor=style.bg||'';td.style.color=style.color||'';
+    td.style.fontSize='calc('+(style.size||formatting.fontSize)+'px * var(--sheet-zoom,1))';td.style.fontWeight=style.bold?'700':'';
     const align=getCellAlign(index,column);
     if(align)td.style.textAlign=align;else td.style.removeProperty('text-align');
     td.classList.remove('sheet-result-pass','sheet-result-fail','sheet-result-absent','sheet-id-duplicate');td.removeAttribute('title');td.removeAttribute('aria-haspopup');
@@ -869,7 +866,6 @@ const Trainees=(()=>{
     if(document.activeElement!==$('sheet-address'))$('sheet-address').value=colLetter(cursor.c)+((view[cursor.r]??0)+1);
     $('sheet-grid').querySelectorAll('thead th[data-col]').forEach(th=>th.classList.toggle('sheet-active-header',+th.dataset.col>=c1&&+th.dataset.col<=c2));
     $('sheet-grid').querySelectorAll('th[data-rowv]').forEach(th=>th.classList.toggle('sheet-focus-row-header',+th.dataset.rowv===cursor.r));
-    if(document.activeElement!==$('sheet-formula'))$('sheet-formula').value=cells[view[cursor.r]]?.[cursor.c]||'';
     const style=formatting.styles[(view[cursor.r]??0)+':'+cursor.c]||{};
     $('sheet-bold').setAttribute('aria-pressed',String(!!style.bold));$('sheet-selection-size').value=String(style.size||formatting.fontSize);
     $('sheet-fill').value=style.bg||'#ffffff';$('sheet-text-color').value=style.color||'#16324f';
