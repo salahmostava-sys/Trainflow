@@ -1,6 +1,7 @@
 /* Cloudflare Pages advanced-mode JavaScript backend.
  * Only the caller's JWT is forwarded: database RLS stays authoritative.
  */
+import '../session-policy.js';
 const DATABASE_URL='https://xaeffreqwtozsgqajzpc.supabase.co';
 const PUBLIC_KEY='sb_publishable_TB0SB3SNFP1ygpRvMoeSGg_s8o0mHeO';
 const tables=new Set(['ibta_codes','ibta_settings','ibta_supervisor_stock','ibta_members','ibta_audit','ibta_trainee_sheets']);
@@ -22,13 +23,14 @@ export async function handleApi(request,env={},fetcher=(...args)=>globalThis.fet
   let stage='auth';
   try{
     const auth=await fetcher(databaseUrl+'/auth/v1/user',{headers,redirect:'manual'});
-    if(!auth.ok)return json(auth.status>=500?503:401,'AUTH_REQUIRED');
+    if(!auth.ok)return json(auth.status===429?429:auth.status>=500?503:401,auth.status===429?'AUTH_RATE_LIMITED':auth.status>=500?'AUTH_UNAVAILABLE':'AUTH_REQUIRED');
     const user=await auth.json();if(!user.id)return json(401,'AUTH_REQUIRED');
+    if(globalThis.SessionPolicy.expired(authorization.slice(7)))return json(401,'DAILY_SIGN_IN_REQUIRED');
     // The first allowlisted login may not yet have a user_id attached.
     const query='select=role,active,user_id,email&or='+encodeURIComponent('(user_id.eq.'+user.id+',and(user_id.is.null,email.eq.'+String(user.email||'').toLowerCase()+'))');
     stage='membership';
     const membership=await fetcher(databaseUrl+'/rest/v1/ibta_members?'+query,{headers,redirect:'manual'});
-    if(!membership.ok)return json(403,'IBTA_NOT_APPROVED');
+    if(!membership.ok)return json(membership.status===429?429:membership.status>=500?503:403,membership.status===429?'MEMBERSHIP_RATE_LIMITED':membership.status>=500?'MEMBERSHIP_UNAVAILABLE':'IBTA_NOT_APPROVED');
     const members=await membership.json(),member=members.find(m=>m.active&&(m.user_id===user.id||m.user_id==null&&m.email===String(user.email||'').toLowerCase())&&['admin','operator','copy_only'].includes(m.role));
     if(!member)return json(403,'IBTA_NOT_APPROVED');
     if((adminRpc.has(name)||name==='ibta_members'&&request.method!=='GET')&&member.role!=='admin')return json(403,'ADMIN_REQUIRED');
@@ -47,6 +49,7 @@ export async function handleApi(request,env={},fetcher=(...args)=>globalThis.fet
         const part=name=>parts.find(p=>p.type===name).value;
         payload.use_date=part('day')+'/'+part('month')+'/'+part('year');body=JSON.stringify(payload);
       }
+      if(name==='ibta_apply_changes'&&(!Array.isArray(payload.changes)||payload.changes.some(c=>!c||typeof c!=='object'||Array.isArray(c)||typeof c.op!=='string')))return json(400,'INVALID_CHANGES');
       if(name==='ibta_apply_changes'&&member.role!=='admin'){
         if(payload.settings_payload!=null||!Array.isArray(payload.changes)||payload.changes.some(c=>c.op!=='update'))return json(403,'ADMIN_REQUIRED');
       }

@@ -1,0 +1,13 @@
+const assert=require('node:assert/strict'),D=require('../trainees-core.js');
+const rows=D.normalize([['a','b','c','d','e'],['untouched']]);
+const fmt=D.defaultFormat();fmt.styles={'0:1':{bold:true},'0:3':{bg:'#123456'},'1:1':{color:'#abcdef'}};
+const left=D.deleteCells(rows,fmt,new Set([0]),1,2,'left',52);
+assert.deepEqual(left.cells[0].slice(0,5),['a','d','e','','']);
+assert.deepEqual(left.cells[1].slice(0,13),rows[1]);
+assert.deepEqual(left.format.styles,{'0:1':{bg:'#123456'},'1:1':{color:'#abcdef'}});
+const right=D.deleteCells(rows,fmt,new Set([0]),1,2,'right',52);
+assert.deepEqual(right.cells[0].slice(0,5),['','','a','d','e']);
+assert.deepEqual(right.format.styles,{'0:3':{bg:'#123456'},'1:1':{color:'#abcdef'}});
+assert.equal(rows[0][1],'b','Source remains available for undo');
+assert.throws(()=>D.deleteCells(rows,fmt,new Set([0]),0,52,'left',52),/DELETE_BOUNDS/);
+console.log('PASS: delete/shift in both directions preserves unrelated rows and moves formatting');

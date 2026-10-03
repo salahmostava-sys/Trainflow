@@ -1,18 +1,20 @@
 import assert from 'node:assert/strict';
 import {handleApi} from '../server/worker.mjs';
 let role='operator',active=true,calls=[];
+const token=timestamp=>'header.'+Buffer.from(JSON.stringify({amr:[{method:'password',timestamp}]})).toString('base64url')+'.signature';
+const bearer='Bearer '+token(Math.floor(Date.now()/1000));
 const upstream=async(url,options)=>{assert.equal(options.redirect,'manual');calls.push({url,options});if(url.includes('/auth/'))return Response.json({id:'user',email:'user@example.invalid'});if(url.includes('ibta_members?select=role'))return Response.json([{role,active,user_id:'user',email:'user@example.invalid'}]);return Response.json([{code:'VISIBLE'}]);};
-const request=(path,options={})=>new Request('https://site.invalid/api/data/'+path,{headers:{Authorization:'Bearer valid.jwt',...options.headers},...options});
+const request=(path,options={})=>new Request('https://site.invalid/api/data/'+path,{...options,headers:{Authorization:bearer,...options.headers}});
 assert.equal((await handleApi(new Request('https://site.invalid/api/data/ibta_codes'),{},upstream)).status,401);
 assert.equal(calls.length,0);
 assert.equal((await handleApi(request('unknown'),{},upstream)).status,404);
-let response=await handleApi(request('ibta_codes?select=code'),{},upstream);assert.equal(response.status,200);assert.equal(response.headers.get('cache-control'),'no-store');assert.equal(calls.at(-1).options.headers.get('Authorization'),'Bearer valid.jwt');
+let response=await handleApi(request('ibta_codes?select=code'),{},upstream);assert.equal(response.status,200);assert.equal(response.headers.get('cache-control'),'no-store');assert.equal(calls.at(-1).options.headers.get('Authorization'),bearer);
 active=false;assert.equal((await handleApi(request('ibta_codes'),{},upstream)).status,403);active=true;
-const post={method:'POST',headers:{Authorization:'Bearer valid.jwt','Content-Type':'application/json'},body:JSON.stringify({changes:[],settings_payload:{}})};
+const post={method:'POST',headers:{Authorization:bearer,'Content-Type':'application/json'},body:JSON.stringify({changes:[],settings_payload:{}})};
 assert.equal((await handleApi(request('rpc/ibta_apply_changes',post),{},upstream)).status,403);
 assert.equal((await handleApi(request('rpc/ibta_restore_backup',post),{},upstream)).status,403);
 role='admin';assert.equal((await handleApi(request('rpc/ibta_restore_backup',post),{},upstream)).status,200);
-assert.equal((await handleApi(request('ibta_codes',{headers:{Authorization:'Bearer valid.jwt',Origin:'https://evil.invalid'}}),{},upstream)).status,403);
+assert.equal((await handleApi(request('ibta_codes',{headers:{Authorization:bearer,Origin:'https://evil.invalid'}}),{},upstream)).status,403);
 assert.equal((await handleApi(request('rpc/ibta_claim_code',{...post,body:'{'}),{},upstream)).status,400);
 assert.equal((await handleApi(request('rpc/ibta_claim_code',{...post,body:JSON.stringify({target_code:'TEST',expected_version:1,use_date:'01/01/1900'})}),{},upstream)).status,200);
 assert.notEqual(JSON.parse(calls.at(-1).options.body).use_date,'01/01/1900');
@@ -24,3 +26,27 @@ for(const status of [204,205]){
   assert.equal(response.status,status);assert.equal(response.body,null);
 }
 console.log('PASS: empty database responses do not become SERVER_UNAVAILABLE');
+for(const status of [429,500,503]){
+  const expected=status===429?429:503;
+  assert.equal((await handleApi(request('ibta_codes'),{},async()=>Response.json({}, {status}))).status,expected,'Auth outages preserve retryable status');
+  const membershipFailure=async(url,options)=>url.includes('/auth/')?upstream(url,options):Response.json({}, {status});
+  assert.equal((await handleApi(request('ibta_codes'),{},membershipFailure)).status,expected,'Membership outages must not deny approval');
+}
+for(const memberRole of ['operator','admin']){
+  role=memberRole;
+  for(const changes of [null,{},[null],[1],[[]],[{}]]){
+    const before=calls.length;
+    const result=await handleApi(request('rpc/ibta_apply_changes',{...post,body:JSON.stringify({changes})}),{},upstream);
+    assert.equal(result.status,400,'Malformed changes are client errors');
+    assert.equal(calls.length-before,2,'Invalid changes never reach the database mutation');
+  }
+}
+console.log('PASS: retryable upstream failures and malformed change validation');
+for(const stale of [token(Math.floor(Date.now()/1000)-86400),'invalid.jwt']){
+  const before=calls.length;
+  const result=await handleApi(request('ibta_codes',{headers:{Authorization:'Bearer '+stale}}),{},upstream);
+  assert.equal(result.status,401);
+  assert.equal((await result.json()).message,'DAILY_SIGN_IN_REQUIRED');
+  assert.equal(calls.length-before,1,'Expired sessions cannot read membership or operational data');
+}
+console.log('PASS: daily session expiry blocks reads on the server');

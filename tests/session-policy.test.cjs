@@ -1,0 +1,14 @@
+const assert=require('node:assert/strict');
+const policy=require('../session-policy.js');
+const token=(date,extra=[])=>'header.'+Buffer.from(JSON.stringify({amr:[{method:'password',timestamp:Date.parse(date)/1000},...extra]})).toString('base64url')+'.signature';
+const cutoff=Date.parse('2026-10-04T17:00:00+03:00');
+const before=token('2026-10-04T16:59:59+03:00');
+assert.equal(policy.expiresAt(before),cutoff);
+assert.equal(policy.expired(before,cutoff-1),false);
+assert.equal(policy.expired(before,cutoff),true);
+assert.equal(policy.expiresAt(token('2026-10-04T17:00:00+03:00')),cutoff+86400000);
+assert.equal(policy.expiresAt(token('2026-10-05T02:00:00+03:00')),cutoff+86400000);
+assert.equal(policy.expired(token('2026-10-03T18:00:00+03:00'),cutoff),true);
+assert.equal(policy.expiresAt(token('2026-10-04T16:59:59+03:00',[{method:'token_refresh',timestamp:cutoff/1000+10},{method:'email_change',timestamp:cutoff/1000+20}])),cutoff,'Refresh and email changes cannot extend sign-in');
+for(const bad of ['', 'bad.token', 'header.'+Buffer.from('{}').toString('base64url')+'.signature'])assert.equal(policy.expired(bad,cutoff),true);
+console.log('PASS: daily Saudi cutoff, overnight sign-in, missed deadlines and refreshed tokens');

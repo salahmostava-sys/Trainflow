@@ -10,9 +10,9 @@
 <title id="doc-title">IBTA Tools</title>
 <style>
   :root{
-    --bg:#F4F7FC;
+    --bg:#FFFFFF;
     --surface:#FFFFFF;
-    --surface-2:#EFF5FF;
+    --surface-2:#FFFFFF;
     --border:#E1E9F5;
     --blue:#0070F3;
     --blue-600:#0058C7;
@@ -163,7 +163,7 @@
     border-bottom:1px solid var(--border); transition:background .1s;
   }
   .kc-row:last-child{border-bottom:none;}
-  .kc-row:nth-child(even){background:#FAFCFF;}
+  .kc-row:nth-child(even){background:#ffffff;}
   .kc-row:hover{background:var(--blue-50);}
   .kc-row.copied{background:var(--blue-100);}
   .kc-row .kc-col-title{font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
@@ -356,7 +356,7 @@
     border-bottom:1px solid var(--border); transition:background .1s; font-size:14px; min-height:32px;
   }
   .code-row:last-child{border-bottom:none;}
-  .code-row:nth-child(even){background:#FAFCFF;}
+  .code-row:nth-child(even){background:#ffffff;}
   .code-row:hover{background:var(--blue-50);}
   .code-row .col-n{color:var(--muted); font-family:var(--mono); font-size:12.5px;}
   .code-row .col-code{font-family:var(--mono); font-weight:600; font-size:14px; white-space:nowrap; direction:ltr;}
@@ -498,7 +498,11 @@
   .cloud-popover input:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-50);}
   #auth-message{font-size:14px;line-height:1.6;}
   @media(max-width:600px){.cloud-popover{padding:17px;}}
-  #auth-box{font-family:var(--ui-font);min-height:100svh;padding:36px 24px;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at 90% 5%,#e2eeff 0,transparent 45%),#f5f7fb;}
+  #auth-box{font-family:var(--ui-font);min-height:100svh;padding:36px 24px;display:flex;align-items:center;justify-content:center;background:#fff;}
+  #startup-screen{min-height:100svh;display:grid;place-content:center;gap:16px;text-align:center;background:#fff;color:var(--text);font-family:var(--ui-font)}
+  .startup-spinner{width:30px;height:30px;margin:auto;border:3px solid #fff;border-top-color:var(--blue);border-radius:50%;animation:startup-spin .8s linear infinite}
+  @keyframes startup-spin{to{transform:rotate(360deg)}}
+  @media(prefers-reduced-motion:reduce){.startup-spinner{animation:none}}
   .auth-shell{width:100%;max-width:1040px;display:grid;grid-template-columns:1fr 1fr;background:white;border:1px solid #e2e9f3;border-radius:28px;overflow:hidden;box-shadow:0 24px 80px -28px #233b6b30;}
   .auth-story{position:relative;overflow:hidden;padding:44px 42px;background:linear-gradient(145deg,#12396e,#0c2450);color:white;display:flex;flex-direction:column;justify-content:space-between;min-height:620px;}
   .auth-story::after{content:'';position:absolute;width:430px;height:430px;border:1px solid #ffffff0f;border-radius:50%;left:-220px;bottom:-160px;box-shadow:0 0 0 58px #ffffff04,0 0 0 116px #ffffff03;pointer-events:none;}
@@ -522,7 +526,7 @@
   .auth-subtitle{font-size:15px;line-height:1.8;color:#718198;margin:0 0 32px;}
   #auth-form label{display:block;font-size:14px;font-weight:700;color:#30425c;margin-bottom:9px;}
   .auth-field{position:relative;margin-bottom:22px;}
-  #auth-form input{display:block;width:100%;height:52px;border:1px solid #dce4ee;border-radius:10px;background:#fafbfd;padding:0 15px 0 44px;font:500 15px var(--ui-font);direction:ltr;color:#152c4c;transition:border-color .15s,box-shadow .15s;}
+  #auth-form input{display:block;width:100%;height:52px;border:1px solid #dce4ee;border-radius:10px;background:#ffffff;padding:0 15px 0 44px;font:500 15px var(--ui-font);direction:ltr;color:#152c4c;transition:border-color .15s,box-shadow .15s;}
   #auth-form input::placeholder{color:#a1adbc;font-weight:400;}
   #auth-form input:focus{outline:none;border-color:#327ce3;background:white;box-shadow:0 0 0 4px #327ce312;}
   .auth-field svg{position:absolute;left:15px;top:17px;width:18px;height:18px;stroke:#8495ab;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;pointer-events:none;}
@@ -549,7 +553,9 @@
 </style>
 </head>
 <body>
-<section id="auth-box" dir="rtl" lang="ar">
+<section id="startup-screen" role="status" aria-live="polite" aria-busy="true"><span class="startup-spinner" aria-hidden="true"></span><span id="startup-message">جارٍ تحميل مساحة العمل…</span></section>
+<noscript>يلزم تفعيل JavaScript لفتح البرنامج.</noscript>
+<section id="auth-box" dir="rtl" lang="ar" hidden>
   <div class="auth-shell">
     <aside class="auth-story" aria-label="عن البرنامج">
       <div class="auth-brand"><span class="auth-logo" aria-hidden="true">IB</span><div><strong data-i18n="appTitle">أدوات IBTA</strong><small data-i18n="authBrandTagline">مساحة عمل فريقك</small></div><button id="auth-lang-btn" class="auth-lang-btn" type="button">EN</button></div>
@@ -885,6 +891,7 @@
 </dialog>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.116.0/dist/umd/supabase.js"></script>
+<script src="session-policy.js"></script>
 <script src="cloud.js"></script>
 <script>
 // ---------- TRANSLATIONS ----------

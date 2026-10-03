@@ -5,7 +5,7 @@ const Trainees=(()=>{
   let PAGE=100;
   const baseLabels=[['الكود','Code'],['البريد الإلكتروني','Email'],['الاسم بالعربي','Arabic name'],['الاسم بالإنجليزي','English name'],['رقم الهوية / الإقامة','National / Iqama ID'],['الجوال','Phone'],['الجهة','Organization'],['الاختبار','Exam'],['تاريخ الاختبار','Exam date'],['اسم المستخدم','Username'],['كلمة المرور','Password'],['النتيجة','Result'],['AnyDesk ID','AnyDesk ID']];
   function colLetter(c){let s='';c++;while(c>0){const m=(c-1)%26;s=String.fromCharCode(65+m)+s;c=Math.floor((c-m)/26);}return s;}
-  function colCount(){let count=baseLabels.length;if(cells&&cells.length&&cells[0]&&cells[0].length>count)count=cells[0].length;if(formatting&&formatting.headers){for(const k of Object.keys(formatting.headers)){const idx=Number(k);if(idx>=count)count=idx+1;}}return count;}
+  function colCount(){let count=52;if(cells&&cells.length&&cells[0]&&cells[0].length>count)count=cells[0].length;if(formatting&&formatting.headers){for(const k of Object.keys(formatting.headers)){const idx=Number(k);if(idx>=count)count=idx+1;}}return Math.min(D.MAX_COLS,count);}
   function getColLabel(c){if(formatting&&formatting.headers&&formatting.headers[c])return [formatting.headers[c],formatting.headers[c]];if(c<baseLabels.length)return baseLabels[c];const l=colLetter(c);return ['عمود '+l,'Column '+l];}
   function allLabels(){const n=colCount(),res=[];for(let c=0;c<n;c++)res.push(getColLabel(c));return res;}
   const labels=new Proxy(baseLabels,{get(target,prop){if(prop==='length')return colCount();if(prop==='map')return fn=>allLabels().map(fn);if(prop==='forEach')return fn=>allLabels().forEach(fn);if(prop==='filter')return fn=>allLabels().filter(fn);if(prop==='slice')return (s,e)=>allLabels().slice(s,e);if(typeof prop==='string'&&/^\d+$/.test(prop)){return getColLabel(Number(prop));}return target[prop];}});
@@ -162,6 +162,8 @@ const Trainees=(()=>{
       <button type="button" data-action="delete-row"><span>🗑️ <span class="sheet-menu-label"></span></span></button>
       <hr>
       <button type="button" data-action="clear-contents"><span>🧹 <span class="sheet-menu-label"></span></span><span class="sheet-menu-shortcut">Del</span></button>
+      <button type="button" data-action="delete-left"><span>← <span class="sheet-menu-label"></span></span></button>
+      <button type="button" data-action="delete-right"><span>→ <span class="sheet-menu-label"></span></span></button>
       <button type="button" data-action="clear-format"><span>✨ <span class="sheet-menu-label"></span></span></button>
       <hr>
       <button type="button" data-action="select-all"><span>☑️ <span class="sheet-menu-label"></span></span><span class="sheet-menu-shortcut">Ctrl+A</span></button>
@@ -179,6 +181,8 @@ const Trainees=(()=>{
         case 'insert-1000':addBulkRows(1000);break;
         case 'delete-row':deleteSelectedRows();break;
         case 'clear-contents':clearSelection();break;
+        case 'delete-left':deleteSelectedCells('left');break;
+        case 'delete-right':deleteSelectedCells('right');break;
         case 'clear-format':formatSelection(null);break;
         case 'select-all':anchor={r:0,c:0};cursor={r:Math.max(0,view.length-1),c:colCount()-1};paint();break;
       }
@@ -204,6 +208,8 @@ const Trainees=(()=>{
       'insert-1000':tr('إدراج 1000 صف في الأسفل','Insert 1,000 rows at bottom'),
       'delete-row':tr('حذف الصف','Delete row'),'clear-contents':tr('مسح المحتويات','Clear contents'),
       'clear-format':tr('مسح التنسيق','Clear formatting'),
+      'delete-left':tr('حذف الخلايا وإزاحة لليسار','Delete cells and shift left'),
+      'delete-right':tr('حذف الخلايا وإزاحة لليمين','Delete cells and shift right'),
       'select-all':tr('تحديد الكل','Select all')
     };
     menu.querySelectorAll('button[data-action]').forEach(b=>{
@@ -350,7 +356,7 @@ const Trainees=(()=>{
     document.addEventListener('pointerup',onPointerUp);
   }
   const visibleCols=()=>labels.map((_,c)=>c).filter(c=>!formatting.hidden.includes(c));
-  const snapshot=()=>({cells:cells.map(r=>[...r]),format:D.format(formatting)});
+  const snapshot=()=>({cells:cells.map(r=>[...r]),format:D.format(formatting),alignments:{...cellAlignments}});
   function node(tag,text,attrs={}){const el=document.createElement(tag);if(text!==undefined)el.textContent=text;for(const [key,value]of Object.entries(attrs))el.setAttribute(key,value);return el;}
   function button(text,fn,cls){const b=node('button',text,{type:'button'});if(cls)b.className=cls;b.addEventListener('click',fn);return b;}
   const message=(text,error=false)=>{if(!$('sheet-status'))return;$('sheet-status').textContent=text;$('sheet-status').dataset.error=String(error);};
@@ -379,7 +385,7 @@ const Trainees=(()=>{
             <button type="button" id="sheet-align-center" title="توسيط"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="4" y1="5" x2="20" y2="5"></line><line x1="7" y1="12" x2="17" y2="12"></line><line x1="5" y1="19" x2="19" y2="19"></line></svg></button>
             <button type="button" id="sheet-align-left" title="محاذاة لليسار"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="3" y1="5" x2="21" y2="5"></line><line x1="3" y1="12" x2="15" y2="12"></line><line x1="3" y1="19" x2="19" y2="19"></line></svg></button>
           </div>
-          <label><span id="sheet-fill-label"></span><input type="color" id="sheet-fill" value="#fff2cc"></label>
+          <label><span id="sheet-fill-label"></span><input type="color" id="sheet-fill" value="#ffffff"></label>
           <label><span id="sheet-text-color-label"></span><input type="color" id="sheet-text-color" value="#16324f"></label>
           <button type="button" id="sheet-clear-format"></button><button type="button" id="sheet-wrap" aria-pressed="false">التفاف النص / Wrap text</button><button type="button" id="sheet-freeze" aria-pressed="false">تثبيت أول عمود / Freeze first column</button><label><span id="sheet-direction-label"></span><select id="sheet-direction"><option value="rtl">يمين ← يسار</option><option value="ltr">Left → Right</option></select></label>
         </div>
@@ -448,6 +454,7 @@ const Trainees=(()=>{
     $('sheet-formula').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();$('sheet-formula').blur();focusCell(cursor.r,cursor.c);}});
     const grid=$('sheet-grid');
     initDuplicateDetails();
+    initTraineeDetails();
     initContextMenu();
     initFindDialog();
     grid.addEventListener('pointerdown',e=>{const td=e.target.closest('td[data-col]');if(e.target.closest('select')){commitEdit();if(td){cursor=anchor={r:+td.dataset.v,c:+td.dataset.col};paint();}return;}if(e.button!==0||e.pointerType==='touch'||!td||editing?.el===td)return;e.preventDefault();dragging=true;dragMoved=false;selectCell(+td.dataset.v,+td.dataset.col,e.shiftKey);});
@@ -474,7 +481,7 @@ const Trainees=(()=>{
         const firstTd=th.parentElement.querySelector('td[data-col]');
         if(firstTd){
           const vr=+firstTd.dataset.v;
-          commitEdit();anchor={r:vr,c:0};cursor={r:vr,c:12};paint();
+          commitEdit();anchor={r:vr,c:0};cursor={r:vr,c:colCount()-1};paint();
         }
       }
       openContextMenu(e.clientX,e.clientY);
@@ -494,8 +501,10 @@ const Trainees=(()=>{
     const createBtn=button('+ '+tr('إنشاء عمود جديد','Create new column'),()=>{
       commitEdit();
       const newColIdx=colCount();
+      if(newColIdx>=D.MAX_COLS){limitError();return;}
       const letter=colLetter(newColIdx);
       const colName=prompt(tr('اسم العمود الجديد (اختياري):','New column name (optional):'),tr('عمود ','Column ')+letter);
+      if(colName===null)return;
       const nextFormat=D.format(formatting);
       if(colName&&colName.trim()){
         if(!nextFormat.headers)nextFormat.headers={};
@@ -620,11 +629,11 @@ const Trainees=(()=>{
     const search=$('sheet-search').value.toLocaleLowerCase(),org=$('sheet-org').value.toLocaleLowerCase(),date=$('sheet-date').value.toLocaleLowerCase(),result=$('sheet-result').value;
     duplicateIds=D.duplicates(cells);
     view=cells.map((_,i)=>i).filter(i=>(!search||cells[i].some(v=>v.toLocaleLowerCase().includes(search)))&&(!org||cells[i][6].toLocaleLowerCase().includes(org))&&(!date||cells[i][8].toLocaleLowerCase().includes(date))&&(!result||cells[i][11]===result)&&(!$('sheet-duplicates-only').checked||duplicateIds.has(D.idKey(cells[i][4]))));
-    if(sortCol>=0)view.sort((a,b)=>sortDir*cells[a][sortCol].localeCompare(cells[b][sortCol],currentLang,{numeric:true})||a-b);
+    if(sortCol>=0)view.sort((a,b)=>sortDir*(cells[a][sortCol]||'').localeCompare(cells[b][sortCol]||'',currentLang,{numeric:true})||a-b);
     if(!filtered())for(let i=cells.length;i<Math.min(D.MAX_ROWS,Math.max(25,cells.length+5));i++)view.push(i);
   }
   function render(){
-    if(!initialized)return;hideDuplicateHint();clearTimeout(detailTimer);buildView();page=Math.min(page,Math.max(0,Math.ceil(view.length/PAGE)-1));
+    if(!initialized)return;closeTraineeDetails();hideDuplicateHint();clearTimeout(detailTimer);buildView();page=Math.min(page,Math.max(0,Math.ceil(view.length/PAGE)-1));
     const cols=visibleCols();if(!cols.includes(cursor.c))cursor.c=cols[0];if(!cols.includes(anchor.c))anchor.c=cursor.c;
     $('panel-trainees').dir=formatting.direction;
     $('sheet-workspace').style.setProperty('--sheet-font-size',formatting.fontSize+'px');
@@ -697,6 +706,31 @@ const Trainees=(()=>{
     const badge=node('span',value||'—',{class:'sheet-detail-result',dir:'rtl'});
     badge.dataset.result=value==='ناجح'?'pass':value==='راسب'?'fail':value==='لم يدخل'?'absent':'';return badge;
   }
+  let traineeHoverTimer;
+  function closeTraineeDetails(){clearTimeout(traineeHoverTimer);const dialog=$('sheet-trainee-dialog');if(dialog?.open)dialog.close();}
+  function initTraineeDetails(){
+    const dialog=node('dialog',undefined,{id:'sheet-trainee-dialog',class:'sheet-duplicate-dialog sheet-trainee-dialog','aria-labelledby':'sheet-trainee-title'});
+    const head=node('div',undefined,{class:'sheet-detail-header'}),close=button('×',closeTraineeDetails,'sheet-detail-close');
+    close.setAttribute('aria-label',tr('إغلاق','Close'));head.append(node('h2','',{id:'sheet-trainee-title'}),close);
+    dialog.append(head,node('div',undefined,{id:'sheet-trainee-record',class:'sheet-detail-record'}));document.body.append(dialog);
+    dialog.addEventListener('close',()=>{$('sheet-trainee-record').replaceChildren();$('sheet-trainee-title').textContent='';});
+    const show=td=>{
+      if(!td?.isConnected||editing||dragging)return;
+      const index=view[+td.dataset.v],row=cells[index];if(!row?.[9])return;
+      hideDuplicateHint();dialog.dir=formatting.direction;
+      $('sheet-trainee-title').textContent=tr('بيانات المتدرب — ','Trainee details — ')+row[9];
+      const dl=node('dl');labels.forEach((pair,c)=>{if(c>=baseLabels.length&&!row[c]&&!formatting.headers[c])return;dl.append(node('dt',tr(...pair)));const dd=node('dd',undefined,{dir:'auto'});dd.append(c===11?resultBadge(row[c]):node('span',row[c]||'—'));dl.append(dd);});
+      $('sheet-trainee-record').replaceChildren(dl);if(!dialog.open)dialog.show();
+    };
+    const grid=$('sheet-grid');
+    grid.addEventListener('pointerover',e=>{const td=e.target.closest('td[data-col="9"]');if(!td||td.contains(e.relatedTarget)||editing||dragging)return;clearTimeout(traineeHoverTimer);traineeHoverTimer=setTimeout(()=>show(td),650);});
+    grid.addEventListener('pointerout',e=>{if(e.target.closest('td[data-col="9"]')&&!e.target.closest('td[data-col="9"]').contains(e.relatedTarget))clearTimeout(traineeHoverTimer);});
+    grid.addEventListener('click',e=>{const td=e.target.closest('td[data-col="9"]');if(td&&!editing&&!e.shiftKey){clearTimeout(traineeHoverTimer);traineeHoverTimer=setTimeout(()=>show(td),300);}});
+    grid.addEventListener('dblclick',closeTraineeDetails);
+    grid.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.closest('td[data-col="9"]')&&!editing){e.preventDefault();show(e.target.closest('td'));}});
+    document.addEventListener('pointerdown',e=>{clearTimeout(traineeHoverTimer);if(dialog.open&&!dialog.contains(e.target))closeTraineeDetails();});
+    document.addEventListener('keydown',e=>{if(e.key==='Escape')closeTraineeDetails();});
+  }
   function initDuplicateDetails(){
     const hint=node('div',undefined,{id:'sheet-duplicate-hint',class:'sheet-duplicate-hint',role:'tooltip',hidden:''});document.body.append(hint);
     const dialog=node('dialog',undefined,{id:'sheet-duplicate-dialog',class:'sheet-duplicate-dialog','aria-labelledby':'sheet-duplicate-title'});
@@ -722,7 +756,7 @@ const Trainees=(()=>{
     clearTimeout(hoverTimer);clearTimeout(hoverHideTimer);hoverCell?.removeAttribute('aria-describedby');hoverCell=null;
     const hint=$('sheet-duplicate-hint');if(hint){hint.hidden=true;hint.replaceChildren();}
   }
-  function closeDuplicateDetails(){clearTimeout(detailTimer);hideDuplicateHint();if($('sheet-duplicate-dialog')?.open)$('sheet-duplicate-dialog').close();}
+  function closeDuplicateDetails(){closeTraineeDetails();clearTimeout(detailTimer);hideDuplicateHint();if($('sheet-duplicate-dialog')?.open)$('sheet-duplicate-dialog').close();}
   function showDuplicateHint(td){
     if(!td.isConnected||editing||$('sheet-duplicate-dialog').open||(!td.matches(':hover')&&document.activeElement!==td))return;
     const index=view[+td.dataset.v],matches=duplicateIds.get(D.idKey(cells[index]?.[4]||''));if(!matches)return;
@@ -750,7 +784,7 @@ const Trainees=(()=>{
     $('sheet-duplicate-title').textContent=tr('بيانات الهوية / الإقامة: ','National / Iqama ID: ')+detailKey;
     $('sheet-duplicate-description').textContent=tr('مكرر ','Repeated ')+count+tr(' مرات في جدول المستخدم المعروض.',' times in the selected user’s sheet.');
     const box=$('sheet-duplicate-records');box.replaceChildren();
-    pageMatches.forEach(i=>{const card=node('section',undefined,{class:'sheet-detail-record'});card.append(node('h3',tr('الصف ','Row ')+(i+1)+' · '+(cells[i][2]||cells[i][3]||'—')));const dl=node('dl');labels.forEach((pair,c)=>{dl.append(node('dt',tr(...pair)));const dd=node('dd',undefined,{dir:'auto'});dd.append(c===11?resultBadge(cells[i][c]):node('span',cells[i][c]||'—'));dl.append(dd);});card.append(dl);box.append(card);});
+    pageMatches.forEach(i=>{const card=node('section',undefined,{class:'sheet-detail-record'});card.append(node('h3',tr('الصف ','Row ')+(i+1)+' · '+(cells[i][2]||cells[i][3]||'—')));const dl=node('dl');labels.forEach((pair,c)=>{if(c>=baseLabels.length&&!cells[i][c]&&!formatting.headers[c])return;dl.append(node('dt',tr(...pair)));const dd=node('dd',undefined,{dir:'auto'});dd.append(c===11?resultBadge(cells[i][c]):node('span',cells[i][c]||'—'));dl.append(dd);});card.append(dl);box.append(card);});
     const hasPages=pageCount>1;
     $('sheet-detail-page').style.display=hasPages?'':'none';
     $('sheet-detail-prev').style.display=hasPages?'':'none';
@@ -790,7 +824,7 @@ const Trainees=(()=>{
     if(document.activeElement!==$('sheet-formula'))$('sheet-formula').value=cells[view[cursor.r]]?.[cursor.c]||'';
     const style=formatting.styles[(view[cursor.r]??0)+':'+cursor.c]||{};
     $('sheet-bold').setAttribute('aria-pressed',String(!!style.bold));$('sheet-selection-size').value=String(style.size||formatting.fontSize);
-    $('sheet-fill').value=style.bg||'#fff2cc';$('sheet-text-color').value=style.color||'#16324f';
+    $('sheet-fill').value=style.bg||'#ffffff';$('sheet-text-color').value=style.color||'#16324f';
     const curAlign=getCellAlign(view[cursor.r]??0,cursor.c)||'';
     $('sheet-align-right')?.setAttribute('aria-pressed',String(curAlign==='right'));
     $('sheet-align-center')?.setAttribute('aria-pressed',String(curAlign==='center'));
@@ -826,7 +860,7 @@ const Trainees=(()=>{
   function change(next,redraw=true,nextFormat=formatting){
     if(!loaded)return;history.push(snapshot());if(history.length>30)history.shift();future=[];cells=next;formatting=D.format(nextFormat);revision++;schedule();if(redraw)render();else{$('sheet-undo').disabled=false;$('sheet-redo').disabled=true;}
   }
-  function undo(redo){commitEdit();const from=redo?future:history,to=redo?history:future;if(!from.length)return;to.push(snapshot());const next=from.pop();cells=next.cells;formatting=D.format(next.format);revision++;schedule();render();}
+  function undo(redo){commitEdit();const from=redo?future:history,to=redo?history:future;if(!from.length)return;to.push(snapshot());const next=from.pop();cells=next.cells;formatting=D.format(next.format);cellAlignments={...next.alignments};saveAlignments();revision++;schedule();render();}
   function schedule(){clearTimeout(timer);message(tr('تعديلات غير محفوظة…','Unsaved changes…'));const saveWhenIdle=()=>{if(editing?.el.dataset.composing==='true'){timer=setTimeout(saveWhenIdle,900);return;}flush(true);};timer=setTimeout(saveWhenIdle,900);}
   function hasDraft(){return !!editing||revision!==savedRevision||!!saving;}
   async function flush(keepEditing=false){
@@ -861,6 +895,24 @@ const Trainees=(()=>{
     html+='</table>';return html;
   }
   function clearSelection(){if(!loaded)return;const next=cells.map(row=>[...row]);const [r1,r2,c1,c2]=bounds();for(let r=r1;r<=r2;r++){const idx=view[r];if(!next[idx])continue;for(const c of visibleCols().filter(c=>c>=c1&&c<=c2))next[idx][c]='';}change(D.normalize(next));}
+  function deleteSelectedCells(direction){
+    if(!loaded)return;commitEdit();
+    const [r1,r2,c1,c2]=bounds(),indices=new Set(view.slice(r1,r2+1));
+    if(!confirm(tr('حذف الخلايا المحددة وإزاحة باقي بيانات الصف؟ يشمل الأعمدة المخفية.','Delete selected cells and shift the remaining row data? Hidden columns are included.')))return;
+    const logical=formatting.direction==='rtl'?(direction==='left'?'right':'left'):direction;
+    const next=D.deleteCells(cells,formatting,indices,c1,c2,logical,colCount());
+    change(next.cells,false,next.format);
+    const prefix=(owner||'default')+':',shift=c2-c1+1,mapped={};
+    for(const [key,value]of Object.entries(cellAlignments)){
+      if(!key.startsWith(prefix)){mapped[key]=value;continue;}
+      const [r,c]=key.slice(prefix.length).split(':').map(Number);
+      if(!indices.has(r)){mapped[key]=value;continue;}
+      const target=logical==='left'?(c<c1?c:c>c2?c-shift:null):(c>c2?c:c<c1?c+shift:null);
+      if(target!==null)mapped[prefix+r+':'+target]=value;
+    }
+    cellAlignments=mapped;saveAlignments();render();
+    message(tr('تم حذف الخلايا. يمكنك التراجع.','Cells deleted. You can undo.'));
+  }
   function paste(e){
     if(!loaded)return;e.preventDefault();commitEdit();
     try{
@@ -909,6 +961,7 @@ const Trainees=(()=>{
     return false;
   }
   function keyDown(e){
+    if(e.defaultPrevented)return;
     if(!loaded)return;
     if(handleUndoShortcut(e))return;
     clearTimeout(detailTimer);
@@ -961,6 +1014,7 @@ const Trainees=(()=>{
     finally{codeBusy=false;$('sheet-code-workspace').inert=false;$('sheet-owner').disabled=false;}
   }
   function reset(){closeDuplicateDetails();closeContextMenu();$('sheet-find-dialog')?.close();clearTimeout(timer);epoch++;owner='';cells=[];formatting=D.defaultFormat();loaded=false;loading=false;editing=null;history=[];future=[];revision=savedRevision=0;if(initialized){render();$('sheet-owner').replaceChildren();$('sheet-code-list').replaceChildren();$('sheet-workspace').inert=true;}}
-  return {open,translate,hasDraft,flush,reset};
+  function suspend(){closeDuplicateDetails();closeContextMenu();$('sheet-find-dialog')?.close();clearTimeout(timer);}
+  return {open,translate,hasDraft,flush,reset,suspend};
 })();
 Trainees.translate();

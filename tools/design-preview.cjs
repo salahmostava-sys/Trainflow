@@ -23,6 +23,8 @@ const mock=`const previewSheets=new Map();const previewCodes=[{code:'DEMO-PRIVAT
     document.getElementById('auth-message').textContent=t('authAccessHelp');
   },
   boot(){
+    document.getElementById('startup-screen').hidden=true;
+    document.getElementById('auth-box').hidden=false;
     if(location.search.includes('auth')){applyLanguage();return;}
     const categories=['Foundation','Master','BIS','CYBP','Corporate'];
     state={codesByCategory:{},usedCodes:{},codeNotes:{},categoryOrder:categories,keycodeOverrides:{},keycodeOrder:{},dateColors:{},settings:{autoChain:false},uiLang:'ar'};
@@ -38,7 +40,7 @@ const mock=`const previewSheets=new Map();const previewCodes=[{code:'DEMO-PRIVAT
 };`;
 http.createServer((req,res)=>{
   const pathname=new URL(req.url,'http://localhost').pathname;
-  if(['/trainees.js','/trainees-core.js','/trainees.css','/ops-ui.js','/trainee-reports.js'].includes(pathname)){
+  if(['/trainees.js','/trainees-core.js','/trainees.css','/ops-ui.js','/trainee-reports.js','/session-policy.js'].includes(pathname)){
     res.setHeader('Content-Type',pathname.endsWith('.css')?'text/css':'text/javascript');
     return res.end(fs.readFileSync(path.join(__dirname,'..',pathname.slice(1))));
   }

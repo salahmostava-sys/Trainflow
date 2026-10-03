@@ -100,7 +100,24 @@
     });
     return normalize(next);
   }
-  const api={BASE_WIDTH,WIDTH,MAX_ROWS,MAX_COLS,MAX_CELL,blank,normalize,parse,tsv,paste,result:normalizeResult,defaultFormat,format,idKey,duplicates,removeRows};
+  function deleteCells(rows,formatting,indices,start,end,direction,width){
+    if(!['left','right'].includes(direction)||start<0||end<start||end>=width||width>MAX_COLS)throw Error('DELETE_BOUNDS');
+    const count=end-start+1,next=rows.map(row=>[...row]),fmt=format(formatting);
+    const destination=c=>direction==='left'?(c<start?c:c>end?c-count:null):(c>end?c:c<start?c+count:null);
+    for(const r of indices){
+      if(!next[r])continue;
+      const row=blank(width);
+      for(let c=0;c<width;c++){const target=destination(c);if(target!==null)row[target]=next[r][c]||'';}
+      next[r]=row;
+    }
+    fmt.styles={};
+    for(const [key,style]of Object.entries(formatting.styles)){
+      const [r,c]=key.split(':').map(Number),target=indices.has(r)?destination(c):c;
+      if(target!==null)fmt.styles[r+':'+target]={...style};
+    }
+    return {cells:normalize(next),format:fmt};
+  }
+  const api={BASE_WIDTH,WIDTH,MAX_ROWS,MAX_COLS,MAX_CELL,blank,normalize,parse,tsv,paste,result:normalizeResult,defaultFormat,format,idKey,duplicates,removeRows,deleteCells};
   if(typeof module!=='undefined'&&module.exports)module.exports=api;
   else root.TraineeData=api;
 })(globalThis);

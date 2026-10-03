@@ -12,6 +12,27 @@ const Cloud = (() => {
     return fetch(input,init);
   }
   let client, rows = new Map(), stock = new Map(), config, user, role, busy = false, ready = false;
+  let sessionDeadline=0,sessionTimer,endingSession=false,retainedDraftUser='';
+  const dailyMessage=()=>currentLang==='ar'?'انتهت الجلسة الساعة 5 مساءً بتوقيت السعودية. سجّل الدخول من جديد.':'Your session ended at 5 PM Saudi time. Please sign in again.';
+  async function endDailySession(){
+    if(endingSession)return;endingSession=true;clearTimeout(sessionTimer);
+    $('app').hidden=true;$('cloud-tools').hidden=true;
+    if(typeof Trainees!=='undefined')Trainees.suspend?.();
+    const priorUser=user?.id;
+    try{
+      if(typeof Trainees!=='undefined'){
+        await Trainees.flush();
+        if(Trainees.hasDraft())retainedDraftUser=priorUser;
+      }
+      ready=false;pendingChain=null;
+      await client.auth.signOut({scope:'local'});
+    }finally{
+      ready=false;$('app').hidden=true;$('cloud-tools').hidden=true;$('sign-out').hidden=true;$('auth-box').hidden=false;
+      $('auth-message').textContent=dailyMessage()+(retainedDraftUser?(currentLang==='ar'?' تعديلات الجدول محفوظة مؤقتًا في الصفحة. ادخل بنفس الحساب ولا تغلق الصفحة.':' Sheet edits remain in this page. Sign in with the same account and keep the page open.'):'');
+      endingSession=false;
+    }
+  }
+  function checkDailySession(){if(ready&&Date.now()>=sessionDeadline){void endDailySession().catch(()=>{});return true;}return false;}
   let nextBackgroundRefresh = 0;
   let statusKey = '', statusArgs = [], statusError = false, authStatusKey = 'authAccessHelp', authStatusArgs = [];
   let profileStatusKey='',profileStatusError=false;
@@ -37,6 +58,9 @@ const Cloud = (() => {
   }
   function errorText(error){
     const raw=error?.message || String(error);
+    if(raw==='DAILY_SIGN_IN_REQUIRED')return dailyMessage();
+    if(raw==='AUTH_RATE_LIMITED'||raw==='MEMBERSHIP_RATE_LIMITED')return currentLang==='ar'?'طلبات كثيرة. انتظر قليلًا ثم حاول مرة أخرى.':'Too many requests. Wait a moment and retry.';
+    if(raw==='AUTH_UNAVAILABLE'||raw==='MEMBERSHIP_UNAVAILABLE')return currentLang==='ar'?'خدمة التحقق من الحساب غير متاحة مؤقتًا. حاول مرة أخرى.':'Account verification is temporarily unavailable. Please retry.';
     if(raw.startsWith('SERVER_UNAVAILABLE'))return currentLang==='ar'?'تعذر إكمال الاتصال بالسيرفر. حاول مرة أخرى؛ وإذا استمرت المشكلة أرسل رمز الخطأ: '+raw:'The server could not complete the request. Retry; if it persists, share this code: '+raw;
     if(raw==='IBTA_AUTH_INVALID_INPUT') return t('authInvalidInput');
     if(raw==='IBTA_NOT_APPROVED') return t('authNotApproved');
@@ -380,12 +404,17 @@ const Cloud = (() => {
   async function enter(session){
     if(!session){ready=false;$('app').hidden=true;$('cloud-tools').hidden=true;$('sign-out').hidden=true;$('auth-box').hidden=false;return;}
     user=session.user;
+    if(retainedDraftUser&&retainedDraftUser!==user.id){await client.auth.signOut({scope:'local'});throw Error(currentLang==='ar'?'ادخل بالحساب السابق لحفظ تعديلات الجدول أولًا.':'Sign in with the previous account to save your sheet edits first.');}
+    sessionDeadline=SessionPolicy.expiresAt(session.access_token||'');
+    if(Date.now()>=sessionDeadline){await endDailySession();return;}
     let member=await client.from('ibta_members').select('role,active,user_id').eq('user_id',user.id).maybeSingle();
     if(member.error)throw member.error;
     if(!member.data)member=await client.from('ibta_members').select('role,active,user_id').eq('email',user.email.toLowerCase()).maybeSingle();
     if(member.error || !member.data?.active || (member.data.user_id && member.data.user_id!==user.id))throw Error('IBTA_NOT_APPROVED');
     role=member.data.role;
     await load();ready=true;
+    clearTimeout(sessionTimer);sessionTimer=setTimeout(()=>{void endDailySession().catch(()=>{});},Math.max(0,sessionDeadline-Date.now()));
+    if(retainedDraftUser&&typeof Trainees!=='undefined'){if(await Trainees.flush())retainedDraftUser='';}
     $('auth-box').hidden=true;$('app').hidden=false;$('cloud-tools').hidden=false;$('sign-out').hidden=false;
     setStatus('dbConnected');
   }
@@ -537,6 +566,8 @@ const Cloud = (() => {
     if(error)throw error;return data;
   }
   async function boot(){
+    $('auth-box').hidden=true;$('startup-screen').hidden=false;
+    $('startup-message').textContent=currentLang==='ar'?'جارٍ تحميل مساحة العمل…':'Loading workspace…';
     try{
       if(!window.supabase) throw Error('IBTA_LIBRARY_LOAD_FAILED');
       client=window.supabase.createClient(SUPABASE_URL,KEY,{global:{fetch:serverFetch},auth:{storage:sessionStorage,persistSession:true,detectSessionInUrl:false}});
@@ -557,16 +588,21 @@ const Cloud = (() => {
         location.reload();
       });
       client.auth.onAuthStateChange((event,session)=>{
-        if(event==='SIGNED_OUT'){ready=false;if(typeof Trainees!=='undefined')Trainees.reset();$('app').hidden=true;$('cloud-tools').hidden=true;$('sign-out').hidden=true;$('auth-box').hidden=false;}
+        if(event==='SIGNED_OUT'){ready=false;clearTimeout(sessionTimer);if(typeof Trainees!=='undefined'&&!retainedDraftUser)Trainees.reset();$('app').hidden=true;$('cloud-tools').hidden=true;$('sign-out').hidden=true;$('auth-box').hidden=false;}
         if(event==='USER_UPDATED' && session?.user){user=session.user;translateUi();}
       });
       const {data,error}=await client.auth.getSession();if(error)throw error;
       await enter(data.session);
       setInterval(()=>{
+        if(checkDailySession())return;
+        if(ready&&sessionDeadline-Date.now()<60000&&typeof Trainees!=='undefined'&&Trainees.hasDraft()){void Trainees.flush();}
         if(ready&&!busy&&!document.hidden&&!document.activeElement?.matches('input,textarea,select')&&!selectedCodes.size){refresh(true);}
       },30000);
+      window.addEventListener('focus',checkDailySession);
+      document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkDailySession();});
       window.addEventListener('beforeunload',e=>{if(busy){e.preventDefault();e.returnValue='';}});
     }catch(e){setAuthStatus('error',e);}
+    finally{$('startup-screen').hidden=true;if(!ready)$('auth-box').hidden=false;}
   }
   async function readTrainees(owner){
     if(!ready)throw Error('AUTH_REQUIRED');

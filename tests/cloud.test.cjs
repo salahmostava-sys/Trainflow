@@ -18,8 +18,12 @@ const db={settings:{id:1,version:1,payload:{keycodes:[],categoryOrder:['Foundati
 const clone=x=>JSON.parse(JSON.stringify(x));
 let conflict=false,clipboardFails=false,codeReads=0;
 const authUser={id:'user-1',email:'test@example.invalid',user_metadata:{}};
+const windowListeners={};let authListener,signOuts=0;
+let releaseInitialSession,firstSessionRead=true,sessionReadError=false;
+const initialSessionRead=new Promise(resolve=>{releaseInitialSession=resolve;});
+const accessToken='header.'+Buffer.from(JSON.stringify({amr:[{method:'password',timestamp:Math.floor(Date.now()/1000)}]})).toString('base64url')+'.signature';
 const client={
-  auth:{getSession:async()=>({data:{session:{user:clone(authUser)}}}),onAuthStateChange(){},signOut:async()=>({}),updateUser:async args=>{events.push({name:'auth_update',args:clone(args)});if(args.data)authUser.user_metadata={...authUser.user_metadata,...args.data};return {data:{user:clone(authUser)}};}},
+  auth:{getSession:async()=>{if(firstSessionRead){firstSessionRead=false;await initialSessionRead;}return sessionReadError?{error:Error('NETWORK')}:{data:{session:{user:clone(authUser),access_token:accessToken}}};},onAuthStateChange(fn){authListener=fn;},signOut:async()=>{signOuts++;authListener?.('SIGNED_OUT',null);return {};},updateUser:async args=>{events.push({name:'auth_update',args:clone(args)});if(args.data)authUser.user_metadata={...authUser.user_metadata,...args.data};return {data:{user:clone(authUser)}};}},
   from(table){
     if(table==='ibta_supervisor_stock')return {select:async()=>({data:clone(db.stock),error:null})};
     if(table==='ibta_members'){
@@ -87,13 +91,15 @@ const client={
     return {};
   }
 };
-const ctx=vm.createContext({document,URL,localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v)},sessionStorage:{},window:{supabase:{createClient:()=>client},addEventListener(){}},navigator:{clipboard:{writeText:async text=>{if(clipboardFails)throw Error('denied');events.push({name:'clipboard',text});}}},setInterval(){},setTimeout(){},clearTimeout(){},confirm:()=>true,location:{reload(){}}});
+const ctx=vm.createContext({document,URL,localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v)},sessionStorage:{},window:{supabase:{createClient:()=>client},addEventListener(name,fn){windowListeners[name]=fn;}},navigator:{clipboard:{writeText:async text=>{if(clipboardFails)throw Error('denied');events.push({name:'clipboard',text});}}},setInterval(){},setTimeout(){},clearTimeout(){},confirm:()=>true,location:{reload(){}}});
 els['account-menu-popover']=new Element();els['account-menu-popover'].hidden=true;
 els['inventory-current-quantity']=new Element();
 els['inventory-purchased-quantity']=new Element();
 els['inventory-whatsapp-number']=new Element();
 els['inventory-supervisor-name']=new Element();
 els['inventory-message-language']=new Element();
+ctx.atob=atob;
+vm.runInContext(fs.readFileSync(path.join(__dirname,'../session-policy.js'),'utf8'),ctx);
 vm.runInContext(fs.readFileSync(path.join(__dirname,'../cloud.js'),'utf8'),ctx);
 const html=fs.readFileSync(path.join(__dirname,'../ibta-ops.html'),'utf8');
 assert.match(html,/family=IBM\+Plex\+Sans\+Arabic/);
@@ -130,8 +136,13 @@ const usedKeys=[...html.matchAll(/data-i18n="([^"]+)"|\bt\('([^']+)'\)/g),
   .map(match=>match[1] || match[2] || match[3]);
 for(const key of usedKeys) assert(englishKeys.includes(key),`Missing translation: ${key}`);
 (async()=>{
+  assert.equal(els['auth-box'].hidden,true,'Login stays hidden while session restoration is pending');
+  assert.equal(els['startup-screen'].hidden,false);
+  assert.match(html,/<section id="auth-box"[^>]* hidden>/);
+  releaseInitialSession();
   await new Promise(setImmediate);
   assert.equal(els['auth-box'].hidden,true);assert.equal(els.app.hidden,false);
+  assert.equal(els['startup-screen'].hidden,true,'Restored sessions go directly to the app');
   assert.equal(els['settings-tab-data'].hidden,false);
   els['settings-tab-data'].listeners.click();
   assert.equal(els['settings-pane-data'].hidden,false);
@@ -367,4 +378,19 @@ for(const key of usedKeys) assert(englishKeys.includes(key),`Missing translation
   assert.equal(els['restore-button'].disabled,true);
   assert(db.codes.some(row=>row.code==='BULK-TWO'));
   console.log('PASS: backup restore, bulk code import, account profile, reports, cloud persistence, and categories.');
+  let resets=0,flushes=0;
+  ctx.Trainees={flush:async()=>{flushes++;return false;},hasDraft:()=>true,reset(){resets++;}};
+  ctx.testExpiry=ctx.SessionPolicy.expiresAt(accessToken);
+  vm.runInContext('Date.now=()=>testExpiry;',ctx);
+  windowListeners.focus();await new Promise(setImmediate);
+  assert.equal(signOuts,1,'Daily cutoff signs out even when saving fails');
+  assert.equal(flushes,1);assert.equal(resets,0,'Failed saves retain the draft in memory');
+  assert.equal(els.app.hidden,true);assert.equal(els['auth-box'].hidden,false);
+  assert.match(els['auth-message'].textContent,/5 مساءً/);
+  assert.match(els['auth-message'].textContent,/بنفس الحساب/);
+  console.log('PASS: forced daily sign-out retains a failed sheet draft and shows manual login');
+  sessionReadError=true;await vm.runInContext('Cloud.boot()',ctx);
+  assert.equal(els['startup-screen'].hidden,true,'Failed initialization does not leave a permanent loading screen');
+  assert.equal(els['auth-box'].hidden,false);
+  console.log('PASS: delayed session restoration avoids login flash and initialization errors reveal login');
 })().catch(e=>{console.error(e);process.exitCode=1;});
