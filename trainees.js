@@ -22,12 +22,25 @@ const Trainees=(()=>{
   function updateLastDataRow(){lastDataRow=cells.length-1;while(lastDataRow>=0&&!cells[lastDataRow].some(Boolean))lastDataRow--;}
   const totalInputRows=()=>Math.min(D.MAX_ROWS,Math.max(cells.length,lastDataRow+1001));
   let excelView={wrap:false,freeze:false,zoom:100};
+  let expandedView=false,previousViewZoom=null;
   try{const pref=JSON.parse(localStorage.getItem('ibta_sheet_view')||'{}');excelView={wrap:pref.wrap===true,freeze:pref.freeze===true,zoom:Number.isInteger(pref.zoom)&&pref.zoom>=50&&pref.zoom<=200?pref.zoom:100};}catch{}
   function setZoom(value){
+    if(expandedView)previousViewZoom=null;
     const previous=excelView.zoom,scroll=$('sheet-grid').parentElement;
     excelView.zoom=Math.max(50,Math.min(200,Math.round(Number(value)/10)*10||100));
     applyExcelView();scroll.scrollLeft*=excelView.zoom/previous;scroll.scrollTop*=excelView.zoom/previous;resetRowHeights();rebuildRowOffsets();drawRows(true);
-    try{localStorage.setItem('ibta_sheet_view',JSON.stringify(excelView));}catch{}
+    saveExcelView();
+  }
+  function saveExcelView(){try{localStorage.setItem('ibta_sheet_view',JSON.stringify({...excelView,zoom:previousViewZoom??excelView.zoom}));}catch{}}
+  function expandedZoom(){const scroll=$('sheet-grid').parentElement,head=$('sheet-grid').querySelector('thead').getBoundingClientRect().height;const row=Math.max(16,formatting.fontSize*1.2);return Math.max(50,Math.min(previousViewZoom??excelView.zoom,Math.floor(((scroll.clientHeight-head-18)/45-1)/row*10)*10));}
+  function setExpandedView(active){
+    if(!initialized||expandedView===active)return;commitEdit();const grid=$('sheet-grid'),scroll=grid.parentElement,first=rowAtOffset(scroll.scrollTop),offset=scroll.scrollTop-rowOffsets[first],oldZoom=excelView.zoom,left=scroll.scrollLeft;
+    expandedView=active;$('sheet-workspace').classList.toggle('sheet-expanded-view',active);document.body.classList.toggle('sheet-expanded-open',active);
+    $('sheet-expanded').setAttribute('aria-pressed',String(active));$('sheet-workspace').classList.remove('sheet-expanded-tools');$('sheet-expanded-tools').setAttribute('aria-pressed','false');
+    if(active){previousViewZoom=excelView.zoom;excelView.zoom=expandedZoom();}else{excelView.zoom=previousViewZoom??excelView.zoom;previousViewZoom=null;}
+    applyExcelView();resetRowHeights();rebuildRowOffsets();const top=rowOffsets[first]+offset*excelView.zoom/oldZoom;scroll.scrollTop=top;scroll.scrollLeft=left*excelView.zoom/oldZoom;drawRows(true);
+    const measuredTop=rowOffsets[first]+offset*excelView.zoom/oldZoom;if(Math.abs(scroll.scrollTop-measuredTop)>1){scroll.scrollTop=measuredTop;drawRows(true);}
+    if(active)$('sheet-expanded-close').focus({preventScroll:true});else $('sheet-expanded').focus({preventScroll:true});
   }
   function applyExcelView(){
     const grid=$('sheet-grid');if(!grid)return;
@@ -442,10 +455,12 @@ const Trainees=(()=>{
     toolbar.append($('sheet-status'));
     const localNote=node('small',undefined,{id:'sheet-local-note',class:'sheet-local-note'});$('sheet-workspace').querySelector('.sheet-format-tools').append(localNote);
     const more=button(tr('التنسيق وأدوات إضافية','Formatting & more tools'),()=>{const expanded=$('sheet-workspace').classList.toggle('sheet-show-tools');more.setAttribute('aria-expanded',String(expanded));});more.id='sheet-more-tools';more.className='sheet-mobile-toggle';more.setAttribute('aria-expanded','false');toolbar.before(more);
-    for(const key of ['wrap','freeze'])$('sheet-'+key).onclick=()=>{commitEdit();excelView[key]=!excelView[key];try{localStorage.setItem('ibta_sheet_view',JSON.stringify(excelView));}catch{}applyExcelView();resetRowHeights();rebuildRowOffsets();drawRows(true);};
+    for(const key of ['wrap','freeze'])$('sheet-'+key).onclick=()=>{commitEdit();excelView[key]=!excelView[key];saveExcelView();applyExcelView();resetRowHeights();rebuildRowOffsets();drawRows(true);};
     const zoomTools=node('div',undefined,{class:'sheet-zoom-tools',dir:'ltr'});
     zoomTools.innerHTML='<span id="sheet-zoom-label"></span><button type="button" id="sheet-zoom-out">−</button><input type="range" id="sheet-zoom-slider" min="50" max="200" step="10" value="100"><button type="button" id="sheet-zoom-in">+</button><button type="button" id="sheet-zoom-reset">100%</button>';
     $('sheet-workspace').querySelector('.sheet-footer').append(zoomTools);
+    const expandedButton=button('',()=>setExpandedView(true));expandedButton.id='sheet-expanded';expandedButton.setAttribute('aria-pressed','false');zoomTools.prepend(expandedButton);
+    const expandedBar=node('div',undefined,{class:'sheet-expanded-bar'}),exit=button('',()=>setExpandedView(false)),expandedTools=button('',()=>{const show=$('sheet-workspace').classList.toggle('sheet-expanded-tools');expandedTools.setAttribute('aria-pressed',String(show));queueDraw(true);});exit.id='sheet-expanded-close';expandedTools.id='sheet-expanded-tools';expandedTools.setAttribute('aria-pressed','false');expandedBar.append(exit,expandedTools,node('output',undefined,{id:'sheet-visible-rows',role:'status'}));$('sheet-workspace').prepend(expandedBar);
     $('sheet-zoom-out').onclick=()=>setZoom(excelView.zoom-10);$('sheet-zoom-in').onclick=()=>setZoom(excelView.zoom+10);
     $('sheet-zoom-slider').oninput=()=>setZoom($('sheet-zoom-slider').value);$('sheet-zoom-reset').onclick=()=>setZoom(100);
     toolbar.querySelector('.sheet-essential-tools .sheet-ribbon-actions').append(node('input',undefined,{id:'sheet-address',value:'A1','aria-label':'عنوان الخلية / Cell address',title:'D150',autocomplete:'off',spellcheck:'false',dir:'ltr'}));
@@ -488,7 +503,15 @@ const Trainees=(()=>{
     $('sheet-clear-filters').onclick=()=>{commitEdit();clearFilters();render();};
     const grid=$('sheet-grid');
     grid.parentElement.addEventListener('scroll',()=>queueDraw(),{passive:true});
-    new ResizeObserver(()=>{if(view.length>100||visibleCols().length>80)queueDraw();}).observe(grid.parentElement);
+    new ResizeObserver(()=>{
+      if(expandedView&&previousViewZoom!==null&&!editing&&!$('sheet-workspace').classList.contains('sheet-expanded-tools')){
+        const zoom=expandedZoom();if(zoom!==excelView.zoom){
+          const scroll=grid.parentElement,first=rowAtOffset(scroll.scrollTop),offset=scroll.scrollTop-rowOffsets[first],previous=excelView.zoom,left=scroll.scrollLeft;
+          excelView.zoom=zoom;applyExcelView();resetRowHeights();rebuildRowOffsets();const top=rowOffsets[first]+offset*zoom/previous;scroll.scrollTop=top;scroll.scrollLeft=left*zoom/previous;drawRows(true);const measuredTop=rowOffsets[first]+offset*zoom/previous;if(Math.abs(scroll.scrollTop-measuredTop)>1){scroll.scrollTop=measuredTop;drawRows(true);}
+        }
+      }
+      if(view.length>100||visibleCols().length>80||expandedView)queueDraw();
+    }).observe(grid.parentElement);
     initDuplicateDetails();
     initTraineeDetails();
     initContextMenu();
@@ -503,6 +526,7 @@ const Trainees=(()=>{
     grid.addEventListener('dblclick',e=>{clearTimeout(detailTimer);hideDuplicateHint();const td=e.target.closest('td[data-col]');if(td&&!(+td.dataset.col===3&&cells[view[+td.dataset.v]]?.[3]))beginEdit(td);});
     grid.addEventListener('keydown',keyDown);grid.addEventListener('paste',paste);
     document.addEventListener('keydown',handleUndoShortcut);
+    document.addEventListener('keydown',e=>{if(e.key==='Escape'&&expandedView&&!e.defaultPrevented&&!editing&&!document.querySelector('dialog[open]')&&$('sheet-context-menu')?.hidden!==false)setExpandedView(false);});
     grid.addEventListener('copy',e=>{if(editing)return;e.preventDefault();e.clipboardData.setData('text/plain',selectionText());e.clipboardData.setData('text/html',selectionHtml());});
     grid.addEventListener('cut',e=>{if(editing)return;e.preventDefault();e.clipboardData.setData('text/plain',selectionText());clearSelection();});
     grid.addEventListener('contextmenu',e=>{
@@ -611,6 +635,7 @@ const Trainees=(()=>{
     if(typeof TraineeReports!=='undefined')TraineeReports.translate();
     const text={
       'sheet-title':['جدول المتدربين','Trainee sheet'],'sheet-subtitle':['جدول خاص بكل مستخدم · حفظ تلقائي','A private sheet for each user · Autosave'],
+      'sheet-expanded':['عرض موسّع · 45 صف','Expanded view · 45 rows'],'sheet-expanded-close':['رجوع للعرض العادي','Exit expanded view'],'sheet-expanded-tools':['الأدوات','Tools'],
       'sheet-owner-label':['عرض بيانات المستخدم','View user'],'sheet-mode':['المتدربون','Trainees'],'sheet-codes-mode':['أكواد المستخدم','User codes'],
       'sheet-local-note':['التنسيق يُحفظ مع الجدول؛ الزوم وتثبيت الأعمدة وعرضها تفضيلات لهذا الجهاز.','Formatting is saved with the sheet; zoom, frozen columns and widths are preferences for this device.'],'sheet-value-label':['قيمة','Value'],'sheet-add':['+ إضافة صف','+ Add row'],'sheet-wrap':['التفاف النص','Wrap text'],'sheet-freeze':['تثبيت أول عمود','Freeze first column'],
       'sheet-add-prefix':['إضافة','Add'],'sheet-add-suffix':['صف في الأسفل','more rows at bottom'],'sheet-add-bulk-btn':['+ إضافة','+ Add'],
@@ -740,7 +765,7 @@ const Trainees=(()=>{
     rowHeights.clear();for(const [key,style]of Object.entries(formatting.styles)){const r=Number(key.split(':')[0]),height=Math.max((style.height||0)*excelView.zoom/100,style.rotation?70:0);if(height)rowHeights.set(r,Math.max(rowHeights.get(r)||0,height));}
   }
   function rebuildRowOffsets(){
-    const estimate=Math.max((excelView.wrap?28:21)*excelView.zoom/100,formatting.fontSize*excelView.zoom/100*(excelView.wrap?1.5:1.2));
+    const estimate=Math.max((excelView.wrap?28:expandedView?17:21)*excelView.zoom/100,formatting.fontSize*excelView.zoom/100*(excelView.wrap?1.5:1.2));
     rowOffsets=new Float64Array(view.length+1);for(let r=0;r<view.length;r++)rowOffsets[r+1]=rowOffsets[r]+(rowHeights.get(view[r])||estimate);
   }
   function rowAtOffset(offset){let low=0,high=view.length;while(low<high){const mid=(low+high)>>1;if(rowOffsets[mid+1]<=offset)low=mid+1;else high=mid;}return Math.min(low,Math.max(0,view.length-1));}
@@ -763,7 +788,7 @@ const Trainees=(()=>{
     const height=scroll.clientHeight||400,head=grid.querySelector('thead').getBoundingClientRect().height||36;
     const first=rowAtOffset(Math.max(0,scroll.scrollTop-head)),start=view.length<=100?0:Math.max(0,first-8),end=view.length<=100?view.length:Math.min(view.length,rowAtOffset(scroll.scrollTop+height)+10);
     const merges=sheetMerges(),segments=columnWindow(cols,merges,start,end),columnKey=segments.map(s=>s.gap?'gap:'+s.count+':'+s.width:s.c).join(',');
-    if(!force&&start===drawnStart&&end===drawnEnd&&columnKey===drawnColumns)return;
+    if(!force&&start===drawnStart&&end===drawnEnd&&columnKey===drawnColumns){updateVisibleRows();return;}
     const hadFocus=grid.contains(document.activeElement),previousTop=scroll.scrollTop,previousLeft=scroll.scrollLeft;commitEdit();drawnStart=start;drawnEnd=end;drawnColumns=columnKey;const fragment=document.createDocumentFragment();
     const spacer=(height)=>{const row=node('tr',undefined,{class:'sheet-spacer','aria-hidden':'true'}),cell=node('td',undefined,{colspan:cols.length+1});row.style.setProperty('height',height+'px','important');cell.style.setProperty('height',height+'px','important');row.append(cell);return row;};
     const top=spacer(rowOffsets[start]),bottom=spacer(rowOffsets[view.length]-rowOffsets[end]);if(start)fragment.append(top);
@@ -790,7 +815,13 @@ const Trainees=(()=>{
     if(start){top.style.setProperty('height',rowOffsets[start]+'px','important');top.firstChild.style.setProperty('height',rowOffsets[start]+'px','important');}
     if(end<view.length){const remaining=rowOffsets[view.length]-rowOffsets[end];bottom.style.setProperty('height',remaining+'px','important');bottom.firstChild.style.setProperty('height',remaining+'px','important');}
     scroll.scrollTop=previousTop+rowOffsets[first]-oldFirst;scroll.scrollLeft=previousLeft;
+    updateVisibleRows();
     if(hadFocus){const active=grid.querySelector(`td[data-v="${cursor.r}"][data-col="${cursor.c}"]`);if(active)active.focus({preventScroll:true});else{grid.tabIndex=-1;grid.focus({preventScroll:true});}}
+  }
+  function updateVisibleRows(){
+    if(!expandedView)return;const grid=$('sheet-grid'),scroll=grid.parentElement,top=grid.querySelector('thead').getBoundingClientRect().bottom,bottom=scroll.getBoundingClientRect().top+scroll.clientHeight;
+    let count=0;grid.querySelectorAll('th[data-rowv]').forEach(th=>{const rect=th.parentElement.getBoundingClientRect();if(rect.top>=top-1&&rect.bottom<=bottom+1)count++;});
+    $('sheet-visible-rows').textContent=tr('الصفوف الظاهرة: ','Visible rows: ')+count;
   }
   function decorateCell(td,index,column){
     const value=cells[index]?.[column]||'',style=formatting.styles[index+':'+column]||{};
@@ -836,7 +867,7 @@ const Trainees=(()=>{
     control.dir=direction;control.title=tr('اضغط لنسخ ','Click to copy ')+label;control.setAttribute('aria-label',tr('نسخ ','Copy ')+label);
     return control;
   }
-  function appendDetailField(dl,row,pair,column){
+  function appendDetailField(dl,row,pair,column,includeKeycode=true){
     const keycode=column===7?D.courseKeycode(row[column],DEFAULT_KEYCODES):null;
     dl.append(node('dt',column===7?tr('الدورة','Course'):tr(...pair)));const dd=node('dd',undefined,{dir:'auto'});
     dd.append(copyDetailValue(row[column],tr(...pair),column===11?'sheet-detail-result':''));
@@ -844,8 +875,7 @@ const Trainees=(()=>{
     if(column===7){
       dl.append(dd);
       if(keycode){
-        const keyValue=node('dd',undefined,{dir:'ltr'});keyValue.append(copyDetailValue(keycode.code,tr('كي كود الدورة','Course keycode'),'sheet-detail-keycode','ltr'));
-        dl.append(node('dt',tr('كي كود','Keycode')),keyValue);
+        if(includeKeycode)appendDetailKeycode(dl,keycode);
         const category=state.keycodeOverrides?.[keycode.code]||keycode.category;
         const categoryValue=node('dd',undefined,{class:'sheet-detail-category-value',dir:'auto'});
         categoryValue.append(category?copyDetailValue(displayCatName(category),tr('الفئة','Category'),'sheet-detail-category'):node('span',tr('فئة غير محددة','No category')));
@@ -854,6 +884,10 @@ const Trainees=(()=>{
       return;
     }
     dl.append(dd);
+  }
+  function appendDetailKeycode(dl,keycode){
+    const dd=node('dd',undefined,{dir:'ltr'});dd.append(keycode?copyDetailValue(keycode.code,tr('كي كود الدورة','Course keycode'),'sheet-detail-keycode','ltr'):node('span',tr('لا يوجد كي كود مطابق','No matching keycode')));
+    dl.append(node('dt',tr('كي كود','Keycode')),dd);
   }
   function appendPrometricDetails(dl){
     for(const [label,value]of [['Prometric Account',PROMETRIC_ACCOUNT],['Prometric Password',PROMETRIC_PASSWORD]]){
@@ -872,8 +906,10 @@ const Trainees=(()=>{
       const index=view[+td.dataset.v],row=cells[index];if(!row?.[3])return;
       hideDuplicateHint();dialog.dir=currentLang==='ar'?'rtl':'ltr';
       $('sheet-trainee-title').textContent=tr('بيانات المتدرب — ','Trainee details — ')+row[3];
-      const dl=node('dl');labels.forEach((pair,c)=>{if(c>=baseLabels.length&&!row[c]&&!formatting.headers[c])return;appendDetailField(dl,row,pair,c);});
-      appendPrometricDetails(dl);$('sheet-trainee-record').replaceChildren(dl);
+      const dl=node('dl'),login=node('dd',undefined,{dir:'ltr'});login.append(PROMETRIC_LOGIN_URL?copyDetailValue(PROMETRIC_LOGIN_URL,'Prometric login link','','ltr'):node('span',tr('غير محدد','Not configured')));
+      dl.append(node('dt','Prometric login link',{dir:'ltr'}),login);appendDetailKeycode(dl,D.courseKeycode(row[7],DEFAULT_KEYCODES));appendPrometricDetails(dl);appendDetailField(dl,row,labels[0],0);
+      labels.forEach((pair,c)=>{if(c===0||c>=baseLabels.length&&!row[c]&&!formatting.headers[c])return;appendDetailField(dl,row,pair,c,false);});
+      $('sheet-trainee-record').replaceChildren(dl);
       const refreshRecord=()=>show($('sheet-grid').querySelector(`td[data-v="${view.indexOf(index)}"][data-col="3"]`)||td);
       const exam=D.courseKeycode(row[7],DEFAULT_KEYCODES),category=exam&&(state.keycodeOverrides?.[exam.code]||exam.category),codeCategory=category&&getLinkedCodesCat(category);
       const action=button(tr('جلب كود الاختبار ونسخه','Get and copy exam code'),async()=>{
@@ -1186,8 +1222,8 @@ const Trainees=(()=>{
     catch(error){$('sheet-code-status').textContent=/CONFLICT/.test(error.message||'')?tr('تغيرت الأكواد. حدّث القائمة وحاول مجددًا.','Codes changed. Refresh and try again.'):tr('تعذر تخصيص الأكواد. تأكد أن المستخدم نشط ثم حدّث القائمة.','Could not assign codes. Check that the user is active, then refresh.');}
     finally{codeBusy=false;$('sheet-code-workspace').inert=false;$('sheet-owner').disabled=false;}
   }
-  function reset(){excelTools?.closeFiles();closeDuplicateDetails();closeContextMenu();$('sheet-find-dialog')?.close();clearTimeout(timer);epoch++;owner='';cells=[];formatting=D.defaultFormat();loaded=false;loading=false;editing=null;history=[];future=[];revision=savedRevision=0;if(initialized){render();$('sheet-owner').replaceChildren();$('sheet-code-list').replaceChildren();$('sheet-workspace').inert=true;}}
-  function suspend(){excelTools?.closeFiles();closeDuplicateDetails();closeContextMenu();$('sheet-find-dialog')?.close();clearTimeout(timer);}
+  function reset(){setExpandedView(false);excelTools?.closeFiles();closeDuplicateDetails();closeContextMenu();$('sheet-find-dialog')?.close();clearTimeout(timer);epoch++;owner='';cells=[];formatting=D.defaultFormat();loaded=false;loading=false;editing=null;history=[];future=[];revision=savedRevision=0;if(initialized){render();$('sheet-owner').replaceChildren();$('sheet-code-list').replaceChildren();$('sheet-workspace').inert=true;}}
+  function suspend(){setExpandedView(false);excelTools?.closeFiles();closeDuplicateDetails();closeContextMenu();$('sheet-find-dialog')?.close();clearTimeout(timer);}
   return {open,translate,hasDraft,flush,reset,suspend};
 })();
 Trainees.translate();

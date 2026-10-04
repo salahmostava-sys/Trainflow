@@ -4,7 +4,9 @@ const courseFixtures=[['CBP-M','Marketing','التسويق'],['CBP-S','Sales','�
 const catalog=courseFixtures.flatMap(([id,title])=>[{title,code:id+'-AR-KEY',lang:'Arabic'},{title,code:id+'-EN-KEY',lang:'English'}]);
 for(const [id,title,arabic]of courseFixtures){
   for(const name of [id,title,'محترف الأعمال المعتمد في '+arabic,'محترف الأعمال المعتمد في '+arabic+' '+id])assert.equal(D.courseKeycode(name,catalog)?.code,id+'-AR-KEY',name);
+  for(const name of [id+' محترف الأعمال المعتمد في '+arabic,'محترف الأعمال المعتمد في '+arabic+' '+id.toLowerCase(),'محترف الاعمال المعتمد في '+arabic+' '+id])assert.equal(D.courseKeycode(name,catalog)?.code,id+'-AR-KEY','Form course matches Arabic keycode: '+name);
 }
+assert.equal(D.courseKeycode('محترف الأعمال المعتمد للشباب في ريادة الاعمال CBP-CYBP',catalog)?.code,'CBP-CYBP-AR-KEY');
 assert.equal(D.courseKeycode('دورة غير معروفة',catalog),null);
 assert.equal(D.courseKeycode('Sales',[{title:'Sales',code:'ONE',lang:'Arabic'},{title:'Sales',code:'TWO',lang:'Arabic'}]),null,'Ambiguous matches never choose an arbitrary code');
 assert.equal(D.courseKeycode('CBP-M',[{title:'Marketing',code:'ONLY',lang:'English'}])?.code,'ONLY');
