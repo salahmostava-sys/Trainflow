@@ -1,0 +1,66 @@
+{
+  "manifest_version": 3,
+  "name": "Prometric Auto Register — IBTA",
+  "version": "4.1.0",
+  "description": "Prometric registration linked to your IBTA trainee sheet",
+  "permissions": [
+    "tabs",
+    "storage",
+    "downloads",
+    "contextMenus",
+    "unlimitedStorage",
+    "notifications"
+  ],
+  "host_permissions": [
+    "https://tcnet1.prometric.com/*",
+    "https://docs.google.com/*",
+    "https://ibta-ops.pages.dev/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icon16.png",
+      "48": "icon48.png",
+      "128": "icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icon16.png",
+    "48": "icon48.png",
+    "128": "icon128.png"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://tcnet1.prometric.com/*"
+      ],
+      "js": [
+        "bridge.js"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://tcnet1.prometric.com/*"
+      ],
+      "js": [
+        "dom-utils.js",
+        "content.js"
+      ],
+      "run_at": "document_idle",
+      "world": "MAIN"
+    },
+    {
+      "matches": [
+        "https://ibta-ops.pages.dev/*"
+      ],
+      "js": [
+        "ibta-bridge.js"
+      ],
+      "run_at": "document_start"
+    }
+  ]
+}

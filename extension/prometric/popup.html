@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<title>Prometric Auto Register</title>
+<link rel="icon" type="image/png" sizes="128x128" href="icon128.png"/>
+<link rel="icon" type="image/png" sizes="48x48" href="icon48.png"/>
+<link rel="icon" type="image/png" sizes="16x16" href="icon16.png"/>
+<link rel="shortcut icon" href="icon48.png"/>
+<link rel="stylesheet" href="popup.css"/>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="hdr">
+  <div class="hdr-icon"></div>
+  <div class="hdr-info">
+    <div class="hdr-title">Prometric Auto Register</div>
+    <div class="hdr-sub">IBTA MEA · Automated Registration</div>
+  </div>
+  <div id="statusPill" class="status-pill idle">
+    <span class="status-dot"></span>
+    <span id="statusPillText">Idle</span>
+  </div>
+  <div class="hdr-right">
+    <button class="theme-toggle" id="ibtaOpen">IBTA</button>
+    <button class="theme-toggle" id="popoutBtn" title="Open in dedicated window (stays open permanently)">⧉ Pop-out</button>
+    <button class="theme-toggle" id="speedToggle" title="Toggle Speed Mode">Turbo</button>
+    <button class="theme-toggle" id="themeToggle" title="Toggle Light/Dark Mode">Light</button>
+    <div class="badge" id="versionBadge">v4.0</div>
+  </div>
+</div>
+
+<!-- CLIPBOARD BANNER -->
+<div class="clip-banner" id="clipBanner">
+  <div class="clip-timer">
+    <svg viewBox="0 0 28 28" width="28" height="28">
+      <circle cx="14" cy="14" r="11.5"/>
+      <circle class="prog" id="clipTimerCircle" cx="14" cy="14" r="11.5"/>
+    </svg>
+  </div>
+  <span class="clip-text" id="clipText">Copied!</span>
+  <button class="clip-copy" id="clipCopyBtn">Copy Again</button>
+</div>
+
+<!-- TABS -->
+<div class="tabs">
+  <div class="tab active" data-tab="single">Single</div>
+  <div class="tab" data-tab="batch">Excel / CSV</div>
+  <div class="tab" data-tab="sheet">Google Sheet</div>
+  <div class="tab" data-tab="history">History</div>
+  <div class="tab" data-tab="settings">Settings</div>
+</div>
+
+<!-- GLOBAL BATCH BANNER -->
+<div class="running-banner global-batch-banner" id="globalBatchBanner">
+  <div class="spinner" id="globalBatchSpinner"></div>
+  <div class="global-batch-info">
+    <div class="global-batch-title" id="globalBatchTitle">Batch Running...</div>
+    <div class="global-batch-progress" id="globalBatchProgress">0 / 0 completed</div>
+  </div>
+  <div class="global-batch-actions">
+    <button class="btn banner-btn btn-yellow" id="globalPauseBatch">Pause</button>
+    <button class="btn banner-btn btn-blue" id="globalResumeBatch" style="display:none">Resume</button>
+    <button class="btn banner-btn btn-red" id="globalStopBatch">Stop</button>
+  </div>
+</div>
+
+<!-- ══════ SINGLE PANE ══════ -->
+<div class="pane active" id="pane-single">
+  <div class="field">
+    <label for="sName">Full Name</label>
+    <input type="text" id="sName" placeholder="e.g. ABDULLAH MOHAMMED S AL OTHAYMIN"/>
+  </div>
+  <div class="field">
+    <label for="sEmail">Email Address</label>
+    <input type="email" id="sEmail" placeholder="example@email.com"/>
+    <div id="sEmailHint" class="field-hint" style="display:none"></div>
+  </div>
+
+  <!-- Live Credential Preview Card -->
+  <div class="preview-card" id="sPreviewCard">
+    <div class="preview-label">Live Preview</div>
+    <div class="preview-row">
+      <span class="preview-key">USER</span>
+      <span class="preview-val user" id="sPreviewUser">—</span>
+      <button class="preview-copy" id="sCopyUser" title="Copy Username">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+        Copy
+      </button>
+    </div>
+    <div class="preview-row">
+      <span class="preview-key">PASS</span>
+      <span class="preview-val pass" id="sPreviewPass">—</span>
+      <button class="preview-copy" id="sCopyPass" title="Copy Password">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+        Copy
+      </button>
+    </div>
+    <div class="strength-wrap">
+      <div class="strength-label">
+        <span>Password Strength</span>
+        <span id="sStrengthLabel">—</span>
+      </div>
+      <div class="strength-bar-bg">
+        <div class="strength-bar-fill" id="sStrengthBar" style="width:0%"></div>
+      </div>
+    </div>
+  </div>
+
+  <button class="btn btn-green" id="sStart" disabled>Start Registration</button>
+  <div class="msg" id="sMsg"></div>
+
+  <!-- Saved Credentials Panel -->
+  <div class="saved-creds" id="savedCredsPanel">
+    <div class="saved-creds-row">
+      <span class="saved-creds-label">NAME</span>
+      <span class="saved-creds-val" id="scName">-</span>
+    </div>
+    <div class="saved-creds-row">
+      <span class="saved-creds-label">USER</span>
+      <span class="saved-creds-val mono" id="scUser">-</span>
+      <button class="sc-copy" data-copy="scUser" title="Copy Username">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      </button>
+    </div>
+    <div class="saved-creds-row">
+      <span class="saved-creds-label">PASS</span>
+      <span class="saved-creds-val mono" id="scPass">-</span>
+      <button class="sc-copy" data-copy="scPass" title="Copy Password">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ BATCH PANE ══════ -->
+<div class="pane" id="pane-batch">
+  <div class="upload-header">
+    <span>Data File</span>
+    <div class="upload-actions">
+      <button class="dl-template" id="pasteNamesBtn">📋 Paste Names</button>
+      <button class="dl-template" id="downloadTemplate">Download Template (CSV)</button>
+    </div>
+  </div>
+
+  <!-- Paste Names Modal -->
+  <div id="pasteModal" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-hdr">
+        <div class="modal-title">📋 Paste Candidate Names</div>
+        <button id="pasteModalClose" class="modal-close-btn" title="Close">✕</button>
+      </div>
+      <div class="modal-sub">أدخل كل اسم في سطر مستقل. سيتم إنشاء البريد الإلكتروني تلقائياً وفق النطاق المحدد:</div>
+      <div class="field" style="margin:0">
+        <label for="pasteEmailDomain">Email Domain</label>
+        <input type="text" id="pasteEmailDomain" placeholder="e.g. gmail.com" style="font-family:'Consolas',monospace"/>
+        <div class="modal-example">
+          <span>مثال:</span>
+          <span class="code-chip blue" dir="ltr">gmail.com</span>
+          <span>← النتيجة:</span>
+          <span class="code-chip green" dir="ltr">firstname.lastname@gmail.com</span>
+        </div>
+      </div>
+      <div class="field" style="margin:0">
+        <label for="pasteNamesArea">Names <span id="pasteNamesCount" style="color:var(--blue);font-weight:700"></span></label>
+        <textarea id="pasteNamesArea" class="modal-textarea" rows="8" placeholder="AHMED ALI HASSAN&#10;SARA NOOR KHALID&#10;OMAR FAISAL AL-RASHIDI&#10;..."></textarea>
+      </div>
+      <div id="pastePreviewBox" class="modal-preview-box">
+        <div class="modal-preview-hdr">Preview (first 3)</div>
+        <div id="pastePreviewItems"></div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-green" id="pasteLoadBtn" disabled style="margin:0;flex:1">Load to Batch</button>
+        <button class="btn" id="pasteCancelBtn" style="margin:0;flex:0 0 auto;width:auto;padding:11px 18px;background:var(--surface2);border:1px solid var(--border);color:var(--muted)">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <label class="upload-area" id="uploadArea" for="fileInput">
+    <input type="file" id="fileInput" accept=".csv,.xlsx,.xls"/>
+    <div class="upload-btn">Choose File</div>
+    <div class="upload-text">
+      <div class="upload-title">Upload Data File</div>
+      <div class="upload-sub">Excel (.xlsx) or CSV</div>
+    </div>
+  </label>
+
+  <div class="validation-panel" id="batchValidation">
+    <div class="validation-head">
+      <span>File Check</span>
+      <span id="batchValidationStatus">Ready</span>
+    </div>
+    <div class="validation-body" id="batchValidationBody"></div>
+  </div>
+
+  <!-- Stats Cards + Progress Bar (shown when running) -->
+  <div id="batchStatsWrap" style="display:none">
+    <div class="stats-row">
+      <div class="stat-card done"><div class="stat-card-val" id="statDone">0</div><div class="stat-card-lbl">Done</div></div>
+      <div class="stat-card failed"><div class="stat-card-val" id="statFailed">0</div><div class="stat-card-lbl">Failed</div></div>
+      <div class="stat-card running"><div class="stat-card-val" id="statRunning">0</div><div class="stat-card-lbl">Running</div></div>
+      <div class="stat-card pending"><div class="stat-card-val" id="statPending">0</div><div class="stat-card-lbl">Waiting</div></div>
+    </div>
+    <div class="progress-wrap">
+      <div class="progress-header">
+        <span class="progress-label" id="progressLabel">Progress</span>
+        <span class="progress-pct" id="progressPct">0%</span>
+      </div>
+      <div class="progress-bar-bg">
+        <div class="progress-bar-fill" id="progressBarFill" style="width:0%"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="queue-wrap" id="queueWrap" style="display:none">
+    <div class="queue-hdr">
+      <span id="qCount">0 people</span>
+      <div style="display:flex;gap:6px">
+        <button class="copy" id="exportQueue">Export</button>
+        <button class="copy" id="clearQueue">Clear</button>
+      </div>
+    </div>
+    <div id="queueList"></div>
+  </div>
+
+  <div class="controls-row">
+    <button class="btn btn-green" id="bStart" disabled>Start Batch Registration</button>
+    <button class="btn btn-blue" id="retryFailed" style="display:none">Retry Failed</button>
+  </div>
+  <button class="btn btn-red" id="clearSession" style="display:none">Clear Current Session</button>
+  <div class="log-panel" id="batchLogPanel">
+    <div class="log-head">
+      <span>Activity Logs</span>
+      <button class="copy" id="clearLogs">Clear</button>
+    </div>
+    <div class="log-list" id="batchLogs"></div>
+  </div>
+  <div class="msg" id="bMsg"></div>
+</div>
+
+<!-- ══════ GOOGLE SHEET PANE ══════ -->
+<div class="pane" id="pane-sheet">
+  <div class="field">
+    <label for="sheetUrl">Google Sheet URL</label>
+    <div style="display:flex;gap:8px">
+      <input type="text" id="sheetUrl" placeholder="https://docs.google.com/spreadsheets/d/..."/>
+      <button class="btn btn-blue" id="sheetFetch" style="width:auto;white-space:nowrap;padding:8px 14px;margin-top:0">Load Columns</button>
+    </div>
+  </div>
+
+  <div id="sheetCols" class="sheet-cols-card">
+    <div class="sheet-cols-title">تعيين أعمدة البيانات · COLUMN MAPPING</div>
+    <div class="sheet-cols-grid">
+      <div class="sheet-col-field">
+        <label for="sheetNameCol">* (Name En) الاسم بالإنجليزية</label>
+        <select id="sheetNameCol" class="sheet-col-select" style="height:28px!important;padding:3px 6px!important;font-size:10px!important;border-radius:6px!important;"></select>
+      </div>
+      <div class="sheet-col-field">
+        <label for="sheetEmailCol">* (Email) البريد الإلكتروني</label>
+        <select id="sheetEmailCol" class="sheet-col-select" style="height:28px!important;padding:3px 6px!important;font-size:10px!important;border-radius:6px!important;"></select>
+      </div>
+      <div class="sheet-col-field">
+        <label for="sheetDayCol">(Day Filter) يوم الاختبار</label>
+        <select id="sheetDayCol" class="sheet-col-select" style="height:28px!important;padding:3px 6px!important;font-size:10px!important;border-radius:6px!important;">
+          <option value="-1">- None -</option>
+        </select>
+      </div>
+      <div class="sheet-col-field">
+        <label for="sheetCertCol" title="(Cert Filter) الشهادة المطلوب الإختبار فيها">(Cert Filter) الشهادة المطلوب الإختبار فيها</label>
+        <select id="sheetCertCol" class="sheet-col-select" style="height:28px!important;padding:3px 6px!important;font-size:10px!important;border-radius:6px!important;">
+          <option value="-1">- None -</option>
+        </select>
+      </div>
+    </div>
+    <div id="sheetFiltersRow" class="sheet-filters-row">
+      <div id="sheetDayFilter" class="sheet-day-filter-wrap">
+        <div class="sheet-day-filter-lbl" title="تحديد أيام الاختبار للتصفية (FILTER BY DAY)">تحديد أيام الاختبار للتصفية (FILTER BY DAY):</div>
+        <div class="custom-multiselect-wrap" id="dayMultiSelectWrap">
+          <div id="dayMultiTrigger" class="custom-multiselect-trigger" tabindex="0" role="button" aria-haspopup="listbox" aria-expanded="false">
+            <span id="dayMultiTriggerText" class="custom-multiselect-text">-- جميع الأيام (All Days) --</span>
+            <span class="custom-multiselect-arrow">▾</span>
+          </div>
+          <div id="dayMultiMenu" class="custom-multiselect-menu" style="display:none;">
+            <div class="custom-multiselect-actions">
+              <button type="button" id="daySelectAllBtn" class="btn-cert-quick">تحديد الكل (Select All)</button>
+              <button type="button" id="dayDeselectAllBtn" class="btn-cert-quick" style="display:none;">إلغاء التحديد (Clear)</button>
+            </div>
+            <div id="dayMultiOptionsList" class="custom-multiselect-options"></div>
+          </div>
+          <div id="sheetDayBadges" style="display:none;"></div>
+        </div>
+      </div>
+      <div id="sheetCertFilter" class="sheet-cert-filter-wrap">
+        <div class="sheet-cert-filter-lbl" title="تحديد الشهادة للتصفية (FILTER BY CERTIFICATE)">تحديد الشهادة للتصفية (FILTER BY CERTIFICATE):</div>
+        <div class="custom-multiselect-wrap" id="certMultiSelectWrap">
+          <div id="certMultiTrigger" class="custom-multiselect-trigger" tabindex="0" role="button" aria-haspopup="listbox" aria-expanded="false">
+            <span id="certMultiTriggerText" class="custom-multiselect-text">-- جميع الشهادات (All Certificates) --</span>
+            <span class="custom-multiselect-arrow">▾</span>
+          </div>
+          <div id="certMultiMenu" class="custom-multiselect-menu" style="display:none;">
+            <div class="custom-multiselect-actions">
+              <button type="button" id="certSelectAllBtn" class="btn-cert-quick">تحديد الكل (Select All)</button>
+              <button type="button" id="certDeselectAllBtn" class="btn-cert-quick" style="display:none;">إلغاء التحديد (Clear)</button>
+            </div>
+            <div id="certMultiOptionsList" class="custom-multiselect-options"></div>
+          </div>
+          <select id="sheetCertPicker" style="display:none;"><option value="all">All</option></select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="sheetPreviewWrap" class="sheet-preview-wrap">
+    <div class="sheet-preview-hdr">
+      <div class="sheet-preview-title">Preview & Filter Results</div>
+      <div id="sheetPreviewCount" class="sheet-preview-count">0 people</div>
+    </div>
+    <div class="queue-wrap" style="margin-bottom:10px">
+      <div class="sheet-grid-hdr">
+        <div><input type="checkbox" id="sheetSelectAll" class="sheet-checkbox" title="Select / Deselect All" checked/></div>
+        <div>Name</div><div>Email</div><div>Username</div><div>Password</div><div></div>
+      </div>
+      <div id="sheetPreviewList" class="sheet-preview-list"></div>
+    </div>
+  </div>
+
+  <!-- Sheet Stats Cards + Progress Bar (shown when running Google Sheet) -->
+  <div id="sheetStatsWrap" style="display:none;margin-top:14px">
+    <div class="stats-row">
+      <div class="stat-card done"><div class="stat-card-val" id="sheetStatDone">0</div><div class="stat-card-lbl">Done</div></div>
+      <div class="stat-card failed"><div class="stat-card-val" id="sheetStatFailed">0</div><div class="stat-card-lbl">Failed</div></div>
+      <div class="stat-card running"><div class="stat-card-val" id="sheetStatRunning">0</div><div class="stat-card-lbl">Running</div></div>
+      <div class="stat-card pending"><div class="stat-card-val" id="sheetStatPending">0</div><div class="stat-card-lbl">Waiting</div></div>
+    </div>
+    <div class="progress-wrap">
+      <div class="progress-header">
+        <span class="progress-label" id="sheetProgressLabel">Progress</span>
+        <span class="progress-pct" id="sheetProgressPct">0%</span>
+      </div>
+      <div class="progress-bar-bg">
+        <div class="progress-bar-fill" id="sheetProgressBarFill" style="width:0%"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="controls-row" style="margin-top:14px">
+    <button class="btn btn-green" id="sheetStart" disabled>Start Batch Registration</button>
+    <button class="btn btn-blue" id="sheetRetryFailed" style="display:none">Retry Failed</button>
+  </div>
+  <button class="btn btn-red" id="sheetClearSession" style="display:none;margin-top:8px">Clear Current Session</button>
+
+  <div class="log-panel" id="sheetLogPanel" style="display:none;margin-top:14px">
+    <div class="log-head">
+      <span>Activity Logs</span>
+      <button class="copy" id="clearSheetLogs">Clear</button>
+    </div>
+    <div class="log-list" id="sheetLogs"></div>
+  </div>
+  <div class="msg" id="sheetMsg"></div>
+</div>
+
+<!-- ══════ HISTORY PANE ══════ -->
+<div class="pane" id="pane-history">
+  <div class="hist-toolbar">
+    <span id="histCount">0 records</span>
+    <div class="hist-search-wrap">
+      <input class="hist-search" id="histSearch" type="text" placeholder="Search name / user..."/>
+    </div>
+    <div class="hist-filter-tabs">
+      <button class="hist-filter-tab active" data-filter="all">All</button>
+      <button class="hist-filter-tab" data-filter="done">Done</button>
+      <button class="hist-filter-tab" data-filter="failed">Failed</button>
+    </div>
+    <div style="display:flex;gap:6px">
+      <button class="export-btn" id="exportCSV">Export CSV</button>
+      <button class="export-btn" id="clearHist">Clear</button>
+    </div>
+  </div>
+  <div id="histAnalytics">
+    <!-- Today's Summary -->
+    <div class="analytics-section-hdr">Today's Summary</div>
+    <div class="analytics-grid-row">
+      <div class="analytics-card green">
+        <div class="analytics-card-val green" id="statSuccess">0</div>
+        <div class="analytics-card-lbl">Successful</div>
+      </div>
+      <div class="analytics-card red">
+        <div class="analytics-card-val red" id="statFail">0</div>
+        <div class="analytics-card-lbl">Failed</div>
+      </div>
+      <div class="analytics-card blue">
+        <div class="analytics-card-val blue" id="statTodayRate">—</div>
+        <div class="analytics-card-lbl">Success Rate</div>
+      </div>
+    </div>
+    <!-- All-Time Summary -->
+    <div class="analytics-section-hdr">All-Time Performance</div>
+    <div class="analytics-grid-row">
+      <div class="analytics-card">
+        <div class="analytics-card-val green" id="statAllSuccess">0</div>
+        <div class="analytics-card-lbl">Done</div>
+      </div>
+      <div class="analytics-card">
+        <div class="analytics-card-val red" id="statAllFail">0</div>
+        <div class="analytics-card-lbl">Failed</div>
+      </div>
+      <div class="analytics-card">
+        <div class="analytics-card-val blue" id="statAllDays">0</div>
+        <div class="analytics-card-lbl">Active Days</div>
+      </div>
+      <div class="analytics-card">
+        <div class="analytics-card-val yellow" id="statAllRate">—</div>
+        <div class="analytics-card-lbl">Total Rate</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="hist-list" id="histList"><div class="hist-empty">No registrations yet</div></div>
+</div>
+
+<!-- ══════ SETTINGS PANE ══════ -->
+<div class="pane" id="pane-settings">
+  <div class="settings-section">
+    <div class="settings-title blue">Automation Control</div>
+    <div class="settings-card">
+      <div class="field" style="margin:0">
+        <label for="pageDelay">Page Delay (Seconds)</label>
+        <input type="number" id="pageDelay" value="2" min="0.5" max="15" step="0.5"/>
+        <div class="field-hint">Wait time between pages / automated steps.</div>
+      </div>
+      <div class="field" style="margin:0">
+        <label for="userDelay">Next User Delay (Seconds)</label>
+        <input type="number" id="userDelay" value="5" min="0.5" max="60" step="0.5"/>
+        <div class="field-hint">Wait time between users during batch execution.</div>
+      </div>
+      <div class="settings-toggle-row">
+        <div class="settings-toggle-info">
+          <div class="settings-toggle-title">Run in Background</div>
+          <div class="settings-toggle-desc">Prevent stealing focus from active browser tab.</div>
+        </div>
+        <input type="checkbox" id="backgroundMode" class="settings-checkbox"/>
+      </div>
+      <div class="settings-toggle-row">
+        <div class="settings-toggle-info">
+          <div class="settings-toggle-title">Fully Automated Mode</div>
+          <div class="settings-toggle-desc">Automatically submit registration without stopping.</div>
+        </div>
+        <input type="checkbox" id="autoSubmit" class="settings-checkbox"/>
+      </div>
+      <div class="settings-toggle-row">
+        <div class="settings-toggle-info">
+          <div class="settings-toggle-title">Auto-Retry Failed Items</div>
+          <div class="settings-toggle-desc">Automatically retry failed registrations once.</div>
+        </div>
+        <input type="checkbox" id="autoRetry" class="settings-checkbox"/>
+      </div>
+      <div class="settings-toggle-row">
+        <div class="settings-toggle-info">
+          <div class="settings-toggle-title">Stability Mode</div>
+          <div class="settings-toggle-desc">Apply extended waits for slow or unstable network connections.</div>
+        </div>
+        <input type="checkbox" id="stabilityMode" class="settings-checkbox"/>
+      </div>
+    </div>
+  </div>
+
+  <div class="settings-section">
+    <div class="settings-title green">Default Personal Data</div>
+    <div class="settings-card">
+      <div class="field" style="margin:0">
+        <label for="defAddress">Mailing Address</label>
+        <input type="text" id="defAddress" value="Al-Alameya"/>
+      </div>
+      <div class="settings-grid-2">
+        <div class="field" style="margin:0">
+          <label for="defCity">City</label>
+          <input type="text" id="defCity" value="JEDDAH"/>
+        </div>
+        <div class="field" style="margin:0">
+          <label for="defState">State</label>
+          <input type="text" id="defState" value="JEDDAH"/>
+        </div>
+      </div>
+      <div class="settings-grid-postal">
+        <div class="field" style="margin:0">
+          <label for="defPostal">Postal Code</label>
+          <input type="text" id="defPostal" value="00000"/>
+        </div>
+        <div class="field" style="margin:0">
+          <label for="defCountry">Country</label>
+          <input type="text" id="defCountry" value="Saudi Arabia"/>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="settings-section">
+    <div class="settings-title yellow">Account & Security</div>
+    <div class="settings-card">
+      <div class="field" style="margin:0">
+        <label for="defAnswer">Security Answer</label>
+        <input type="text" id="defAnswer" value="a"/>
+      </div>
+      <div class="field" style="margin:0">
+        <label for="passPattern">Password Pattern</label>
+        <input type="text" id="passPattern" value="{F}@{f}#$1970"/>
+        <div class="field-hint">Tags: {F} First UPPER · {f} first lower · {L} Last UPPER · {l} last lower</div>
+        <!-- Live pattern preview -->
+        <div id="patternPreview" class="pattern-preview-box"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="settings-section">
+    <div class="settings-title blue">Notifications</div>
+    <div class="settings-card">
+      <div class="settings-toggle-row">
+        <div class="settings-toggle-info">
+          <div class="settings-toggle-title">Desktop Notifications</div>
+          <div class="settings-toggle-desc">Show desktop notification when batch completes.</div>
+        </div>
+        <input type="checkbox" id="desktopNotifications" class="settings-checkbox"/>
+      </div>
+    </div>
+  </div>
+
+  <div class="settings-section">
+    <div class="settings-title green">Backup & Restore</div>
+    <div class="settings-card">
+      <div class="field-hint">Export or import your extension configurations safely.</div>
+      <div class="backup-actions">
+        <button class="btn btn-blue" id="exportSettingsBtn" style="margin-top:0;flex:1;font-size:12px;padding:8px 12px">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+          Export Backup
+        </button>
+        <button class="btn btn-blue" id="importSettingsBtn" style="margin-top:0;flex:1;font-size:12px;padding:8px 12px">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+          Import Backup
+        </button>
+        <input type="file" id="importSettingsFile" accept=".json" style="display:none"/>
+      </div>
+      <div id="settingsBackupMsg" class="msg" style="margin-top:2px"></div>
+    </div>
+  </div>
+
+  <div class="settings-footer-actions">
+    <button class="btn btn-green" id="saveSettings" style="flex:2">Save Settings</button>
+    <button class="btn btn-blue" id="resetSettings" style="flex:1;background:var(--surface2);border:1px solid var(--border);color:var(--text)">Default</button>
+    <button class="btn" id="cancelSettings" style="flex:1;background:none;border:1px solid var(--border);color:var(--muted)">✕ Cancel</button>
+  </div>
+
+  <div class="settings-danger-zone">
+    <button class="btn btn-blue" id="clearCurrentSessionSettings" style="width:100%;font-size:11.5px">Clear Current Session Only</button>
+    <button class="btn btn-danger-soft" id="clearAllData">Reset System (Clear History & Active Queue)</button>
+  </div>
+</div>
+
+<script src="utils.js"></script>
+<script src="parsers.js"></script>
+<script src="popup.js"></script>
+<script src="ibta-popup.js"></script>
+</body>
+</html>

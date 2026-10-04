@@ -16,7 +16,7 @@ const Trainees=(()=>{
   let formatting=D.defaultFormat(),duplicateIds=new Map();
   let rowOffsets=[0],rowHeights=new Map(),drawnStart=-1,drawnEnd=-1,drawnColumns='',scrollFrame=0;
   let visibleCache=null,columnOptionsKey='',headersKey='',mergeCacheFormat=null,mergeCache=[];
-  let excelTools=null,formulaCache=new Map();
+  let excelTools=null,prometricTools=null,formulaCache=new Map();
   const searchRows=new WeakMap();
   let lastDataRow=-1;
   function updateLastDataRow(){lastDataRow=cells.length-1;while(lastDataRow>=0&&!cells[lastDataRow].some(Boolean))lastDataRow--;}
@@ -559,6 +559,8 @@ const Trainees=(()=>{
       select:(a,b)=>{commitEdit();anchor=a;cursor=b;paint();},
       flush,sort:(column,direction)=>{commitEdit();sortCol=column;sortDir=direction;render();},
       resetSort:()=>{sortCol=-1;render();},setColumnWidth,saveColumnWidths,resetColumnWidth});
+    if(typeof TraineePrometric!=='undefined')prometricTools=TraineePrometric.mount({D,$,tr,node,button,
+      state:()=>({cells,view,owner,epoch,user:Cloud.userId(),loaded:loaded&&!loading,editing:!!editing,bounds:bounds()}),commitEdit,change,flush,focusCell,message});
     translate();
   }
   function addColumn(){
@@ -668,6 +670,7 @@ const Trainees=(()=>{
     $('sheet-copy').title=tr('نسخ كل الأعمدة بما فيها المخفية','Copy every column, including hidden columns');
     updateContextMenuTranslations();
     excelTools?.translate();
+    prometricTools?.translate();
     if(!editing)render();renderCodes();
   }
   async function open(){
@@ -680,9 +683,11 @@ const Trainees=(()=>{
     members.filter(m=>m.user_id&&m.user_id!==Cloud.userId()).forEach(m=>selector.append(node('option',m.email+(m.active?'':tr(' (غير نشط)',' (inactive)')),{value:m.user_id})));
     if(!owner||!loaded)await switchOwner(owner||Cloud.userId());else selector.value=owner;
     renderCodes();
+    prometricTools?.poll();
   }
   async function switchOwner(next,discard=false){
     if(loading)return false;
+    prometricTools?.reset();
     excelTools?.closeFiles();
     closeDuplicateDetails();
     commitEdit();if(!discard&&!await flush())return false;
@@ -910,6 +915,7 @@ const Trainees=(()=>{
       dl.append(node('dt','Prometric login link',{dir:'ltr'}),login);appendDetailKeycode(dl,D.courseKeycode(row[7],DEFAULT_KEYCODES));appendPrometricDetails(dl);appendDetailField(dl,row,labels[0],0);
       labels.forEach((pair,c)=>{if(c===0||c>=baseLabels.length&&!row[c]&&!formatting.headers[c])return;appendDetailField(dl,row,pair,c,false);});
       $('sheet-trainee-record').replaceChildren(dl);
+      if(prometricTools&&!row[9]?.trim()&&!row[10]?.trim())$('sheet-trainee-record').append(button(tr('إنشاء حساب Prometric','Create Prometric account'),()=>{closeTraineeDetails();prometricTools.open([index]);},'sheet-primary sheet-create-prometric'));
       const refreshRecord=()=>show($('sheet-grid').querySelector(`td[data-v="${view.indexOf(index)}"][data-col="3"]`)||td);
       const exam=D.courseKeycode(row[7],DEFAULT_KEYCODES),category=exam&&(state.keycodeOverrides?.[exam.code]||exam.category),codeCategory=category&&getLinkedCodesCat(category);
       const action=button(tr('جلب كود الاختبار ونسخه','Get and copy exam code'),async()=>{
@@ -1222,8 +1228,8 @@ const Trainees=(()=>{
     catch(error){$('sheet-code-status').textContent=/CONFLICT/.test(error.message||'')?tr('تغيرت الأكواد. حدّث القائمة وحاول مجددًا.','Codes changed. Refresh and try again.'):tr('تعذر تخصيص الأكواد. تأكد أن المستخدم نشط ثم حدّث القائمة.','Could not assign codes. Check that the user is active, then refresh.');}
     finally{codeBusy=false;$('sheet-code-workspace').inert=false;$('sheet-owner').disabled=false;}
   }
-  function reset(){setExpandedView(false);excelTools?.closeFiles();closeDuplicateDetails();closeContextMenu();$('sheet-find-dialog')?.close();clearTimeout(timer);epoch++;owner='';cells=[];formatting=D.defaultFormat();loaded=false;loading=false;editing=null;history=[];future=[];revision=savedRevision=0;if(initialized){render();$('sheet-owner').replaceChildren();$('sheet-code-list').replaceChildren();$('sheet-workspace').inert=true;}}
-  function suspend(){setExpandedView(false);excelTools?.closeFiles();closeDuplicateDetails();closeContextMenu();$('sheet-find-dialog')?.close();clearTimeout(timer);}
+  function reset(){prometricTools?.reset();setExpandedView(false);excelTools?.closeFiles();closeDuplicateDetails();closeContextMenu();$('sheet-find-dialog')?.close();clearTimeout(timer);epoch++;owner='';cells=[];formatting=D.defaultFormat();loaded=false;loading=false;editing=null;history=[];future=[];revision=savedRevision=0;if(initialized){render();$('sheet-owner').replaceChildren();$('sheet-code-list').replaceChildren();$('sheet-workspace').inert=true;}}
+  function suspend(){prometricTools?.reset();setExpandedView(false);excelTools?.closeFiles();closeDuplicateDetails();closeContextMenu();$('sheet-find-dialog')?.close();clearTimeout(timer);}
   return {open,translate,hasDraft,flush,reset,suspend};
 })();
 Trainees.translate();

@@ -120,6 +120,34 @@ Install development dependencies with `pnpm install --frozen-lockfile` (Node.js 
 
 Run `node tests/cloud.test.cjs` for frontend storage, import, inventory, and backup-restore regression checks. `database-tests.sql` checks RLS, claims, stale updates, role restrictions, inventory allocation, import, restore, and audit inside a transaction that rolls back all fixtures. Apply `migrations/20260929_ops_hardening.sql`, `migrations/20260929_settings_shape.sql`, `migrations/20260930_supervisor_stock.sql`, `migrations/20260930_supervisor_stock_policy.sql`, and `migrations/20260930_code_copy_time.sql` before deploying this frontend; all have been applied to the current project. `database.sql` records the original schema already applied to this project; it is not an idempotent setup script and should not be rerun on the provisioned database. New code claims store a server timestamp and display its time in the Codes date column in Riyadh time. Older claims continue to show their date only because their exact time was never recorded.
 
+## Prometric registration from trainee rows
+
+The trainee ribbon includes **Prometric registration** for selected rows. A single
+trainee's details also provides **Create Prometric account** when Username and
+Password are both empty. The preview skips existing credentials, invalid emails,
+incomplete English names and duplicate row identities before creation. Batches
+support up to 5,000 selected trainees and run sequentially in one dedicated tab.
+
+Download the integrated extension from this dialog, extract it to a permanent
+folder, disable the old Prometric extension, and Load unpacked in the same Chrome
+profile as IBTA. Reload both websites. The extension retains the original popup
+and registration settings; a new extension instance may need those settings
+configured again. See [extension setup](extension/prometric/README.md).
+
+Confirmed registrations write only blank Username/Password cells in the matching
+private sheet. Matching uses the trainee identity and exam rather than the old
+row number. Unconfirmed failures require checking Prometric before retrying.
+Results remain in extension storage until a successful sheet save is acknowledged.
+Reloading reconnects the current tab; a closed tab's results can be explicitly
+recovered for the same sheet owner. Changed, duplicate or occupied rows require
+manual review and never cause automatic credential replacement. No database
+migration or additional Supabase permissions are required.
+
+`tests/prometric.test.cjs` checks row matching and extension message isolation.
+`tests/prometric-flow-browser.test.cjs` loads the real MV3 extension in an isolated
+Edge profile against local registration fixtures, including failed saves, reloads
+and closed-tab recovery. These tests create no real Prometric accounts.
+
 ## Daily WhatsApp inventory messages
 
 Settings → Inventory includes a daily automatic send switch and a configurable
