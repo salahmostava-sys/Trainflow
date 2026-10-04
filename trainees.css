@@ -192,6 +192,7 @@
 #sheet-italic{font-style:italic}#sheet-underline{text-decoration:underline}#sheet-font-family{direction:ltr;width:135px}
 #sheet-excel-font #sheet-selection-size-label{display:none}
 .sheet-grid td.sheet-merged{white-space:pre-wrap;overflow-wrap:anywhere}
+#sheet-workspace .sheet-grid tbody td.sheet-column-spacer{width:var(--gap-width)!important;min-width:var(--gap-width)!important;max-width:var(--gap-width)!important;padding:0!important;border:0;pointer-events:none}
 @media(max-width:700px){.sheet-excel-group{width:100%;border-inline-end:0;border-bottom:1px solid var(--border)}.sheet-excel-actions{max-width:100%}.sheet-excel-menu>summary{min-height:38px;box-sizing:border-box}}
 #sheet-workspace .sheet-grid td.sheet-focus-axis:not(.sheet-current)::after{content:'';position:absolute;inset:0;background:rgba(37,99,235,.055);pointer-events:none}
 #sheet-workspace .sheet-grid th.sheet-rownum.sheet-focus-row-header{background:#eef4ff!important;color:#1d4ed8;box-shadow:inset 3px 0 #2563eb}

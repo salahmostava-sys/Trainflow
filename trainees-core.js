@@ -2,6 +2,10 @@
 (function(root){
   'use strict';
   const BASE_WIDTH=13,WIDTH=13,MAX_ROWS=1000000,MAX_COLS=500,MAX_CELL=2000;
+  // Validated snapshots are immutable. Unchanged rows can safely be shared by
+  // edits, undo history and pending saves instead of copying every cell.
+  const validatedSheets=new WeakSet(),validatedRows=new WeakSet();
+  const storageRows=new WeakMap();
   const blank=(w=BASE_WIDTH)=>Array(Math.max(BASE_WIDTH,w)).fill('');
   function normalizeResult(value){
     const key=value.trim().toLocaleLowerCase();
@@ -49,12 +53,14 @@
   }
   function normalize(rows){
     if(!Array.isArray(rows)||rows.length>MAX_ROWS)throw Error('ROW_LIMIT');
+    if(validatedSheets.has(rows))return rows;
     let width=BASE_WIDTH;
     for(let i=0;i<rows.length;i++){
       if(!Array.isArray(rows[i]))throw Error('COLUMN_LIMIT');
       if(rows[i].length>width)width=Math.min(MAX_COLS,rows[i].length);
     }
     const result=rows.map(row=>{
+      if(row.length===width&&validatedRows.has(row))return row;
       const next=blank(width);
       row.forEach((value,i)=>{
         if(i>=MAX_COLS)return;
@@ -62,10 +68,20 @@
         next[i]=value;
       });
       if(next.length>11)next[11]=normalizeResult(next[11]);
-      return next;
+      Object.freeze(next);validatedRows.add(next);return next;
     });
     while(result.length&&result[result.length-1].every(value=>value===''))result.pop();
-    return result;
+    Object.freeze(result);validatedSheets.add(result);return result;
+  }
+  function storage(rows){
+    const sheet=normalize(rows);
+    // The first row retains the sheet width. Other rows omit empty trailing
+    // custom cells; loading normalizes them back to the same rectangular sheet.
+    return sheet.map((row,i)=>{
+      if(i===0)return row;if(storageRows.has(row))return storageRows.get(row);
+      let end=row.length;while(end>BASE_WIDTH&&row[end-1]==='')end--;
+      const compact=end===row.length?row:Object.freeze(row.slice(0,end));storageRows.set(row,compact);return compact;
+    });
   }
   // Excel clipboard TSV supports quoted tabs, newlines and doubled quotes.
   function parse(text){
@@ -88,15 +104,15 @@
   const quote=value=>/[\t\r\n"]/.test(value)?'"'+value.replaceAll('"','""')+'"':value;
   const tsv=rows=>rows.map(row=>row.map(quote).join('\t')).join('\r\n');
   function paste(rows,values,rowIndex,columnIndex){
-    if(rowIndex<0||columnIndex<0||rowIndex+values.length>MAX_ROWS||values.some(r=>columnIndex+r.length>MAX_COLS))throw Error('PASTE_BOUNDS');
-    const next=rows.map(row=>[...row]);
-    let targetWidth=BASE_WIDTH;
-    if(next.length&&next[0].length>targetWidth)targetWidth=next[0].length;
+    if(!Number.isInteger(rowIndex)||!Number.isInteger(columnIndex)||rowIndex<0||columnIndex<0||rowIndex+values.length>MAX_ROWS||values.some(r=>columnIndex+r.length>MAX_COLS))throw Error('PASTE_BOUNDS');
+    const normalized=normalize(rows),next=normalized.slice();
+    let targetWidth=normalized[0]?.length||Math.min(MAX_COLS,rows.reduce((width,row)=>Math.max(width,row.length),BASE_WIDTH));
     values.forEach(r=>{
       if(columnIndex+r.length>targetWidth)targetWidth=Math.min(MAX_COLS,columnIndex+r.length);
     });
     values.forEach((row,r)=>{
       while(next.length<=rowIndex+r)next.push(blank(targetWidth));
+      next[rowIndex+r]=[...next[rowIndex+r]];
       row.forEach((value,c)=>{
         const col=columnIndex+c;
         if(col<MAX_COLS){
@@ -157,9 +173,9 @@
     return {cells:normalize(cells),format:fmt};
   }
   function pasteMapped(rows,values,rowIndex,targets){
-    if(rowIndex<0||rowIndex+values.length>MAX_ROWS||targets.some(c=>!Number.isInteger(c)||c<0||c>=MAX_COLS)||values.some(r=>r.length>targets.length))throw Error('PASTE_BOUNDS');
-    const width=Math.max(BASE_WIDTH,rows[0]?.length||0,...targets.map(c=>c+1)),next=rows.map(r=>[...r]);
-    for(let y=0;y<values.length;y++){while(next.length<=rowIndex+y)next.push(blank(width));for(let x=0;x<values[y].length;x++){while(next[rowIndex+y].length<=targets[x])next[rowIndex+y].push('');next[rowIndex+y][targets[x]]=values[y][x];}}
+    if(!Number.isInteger(rowIndex)||rowIndex<0||rowIndex+values.length>MAX_ROWS||targets.some(c=>!Number.isInteger(c)||c<0||c>=MAX_COLS)||values.some(r=>r.length>targets.length))throw Error('PASTE_BOUNDS');
+    const normalized=normalize(rows),width=Math.max(normalized[0]?.length||Math.min(MAX_COLS,rows.reduce((width,row)=>Math.max(width,row.length),BASE_WIDTH)),...targets.map(c=>c+1)),next=normalized.slice();
+    for(let y=0;y<values.length;y++){while(next.length<=rowIndex+y)next.push(blank(width));next[rowIndex+y]=[...next[rowIndex+y]];for(let x=0;x<values[y].length;x++){while(next[rowIndex+y].length<=targets[x])next[rowIndex+y].push('');next[rowIndex+y][targets[x]]=values[y][x];}}
     return normalize(next);
   }
   function address(value){const m=/^\$?([A-Z]+)\$?([1-9]\d*)$/i.exec(value);if(!m)return null;let c=0;for(const ch of m[1].toUpperCase())c=c*26+ch.charCodeAt(0)-64;const r=Number(m[2])-1;return r<MAX_ROWS&&c<=MAX_COLS?{r,c:c-1}:null;}
@@ -183,7 +199,7 @@
     }catch(error){result=typeof error==='string'&&error.startsWith('#')?error:'#VALUE!';}finally{visiting.delete(key);}cache.set(key,result);return result;
   }
   function shiftFormula(value,dr,dc){return value.startsWith('=')?value.replace(/(\$?)([A-Z]+)(\$?)([1-9]\d*)/gi,(all,ac,col,ar,row)=>{const a=address(col+row);if(!a)return '#REF!';const r=a.r+(ar?0:dr),c=a.c+(ac?0:dc);return r<0||r>=MAX_ROWS||c<0||c>=MAX_COLS?'#REF!':ac+letter(c)+ar+(r+1);}):value;}
-  const api={BASE_WIDTH,WIDTH,MAX_ROWS,MAX_COLS,MAX_CELL,blank,normalize,parse,tsv,paste,pasteMapped,result:normalizeResult,defaultFormat,format,idKey,duplicates,removeRows,deleteCells,courseKeycode,columns,address,letter,number,formulaValue,shiftFormula};
+  const api={BASE_WIDTH,WIDTH,MAX_ROWS,MAX_COLS,MAX_CELL,blank,normalize,storage,parse,tsv,paste,pasteMapped,result:normalizeResult,defaultFormat,format,idKey,duplicates,removeRows,deleteCells,courseKeycode,columns,address,letter,number,formulaValue,shiftFormula};
   if(typeof module!=='undefined'&&module.exports)module.exports=api;
   else root.TraineeData=api;
 })(globalThis);

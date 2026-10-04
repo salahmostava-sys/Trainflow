@@ -1,0 +1,34 @@
+const {chromium}=require('playwright'),assert=require('node:assert/strict'),path=require('node:path'),{spawn}=require('node:child_process');
+(async()=>{
+  const server=spawn(process.execPath,[path.join(__dirname,'../tools/design-preview.cjs')],{env:{...process.env,IBTA_PREVIEW_PORT:'4181'},stdio:['ignore','pipe','inherit']});let browser;
+  try{
+    await new Promise((resolve,reject)=>{server.stdout.once('data',resolve);server.once('error',reject);});
+    browser=await chromium.launch({headless:true,channel:'msedge'});
+    const page=await browser.newPage({viewport:{width:1500,height:1000}}),errors=[];
+    page.on('pageerror',e=>errors.push(e.message));await page.goto('http://127.0.0.1:4181/');await page.locator('#trainees-tab').click();
+    await page.waitForFunction(()=>document.getElementById('sheet-status').textContent==='تم الحفظ');
+    await page.evaluate(()=>{const old=previewSheets.get('demo-admin')||{version:0};previewSheets.set('demo-admin',{...old,cells:Array.from({length:3068},(_,i)=>Array.from({length:500},(_,c)=>c===2?'Trainee '+i:c===499?'Last '+i:'')),format:{direction:'ltr',headers:{499:'Last column'},styles:{'0:250':{mergeCols:4,mergeRows:2},'10:499':{height:60,wrap:true}}}});});
+    await page.locator('#sheet-reload').click();await page.waitForFunction(()=>document.getElementById('sheet-status').textContent==='تم الحفظ');
+    const mounted=()=>page.locator('#sheet-grid td[data-col]').count();assert.ok(await mounted()<2000,'Visible rows and columns bound DOM size even for 1.5 million data cells');
+    const go=async(address)=>{await page.locator('#sheet-address').fill(address);await page.locator('#sheet-address').press('Enter');};
+    const aligned=async()=>{const delta=await page.locator('td.sheet-current').evaluate(td=>{const th=document.querySelector('thead th[data-col="'+td.dataset.col+'"]');return Math.abs(td.getBoundingClientRect().left-th.getBoundingClientRect().left);});assert.ok(delta<2,'Column spacers retain header/cell alignment');};
+    await go('SF3068');assert.equal(await page.locator('td.sheet-current').textContent(),'Last 3067');await aligned();assert.ok(await mounted()<2000);
+    await page.keyboard.press('F2');await page.keyboard.press('Control+a');await page.keyboard.insertText('Changed last');
+    await page.setViewportSize({width:1400,height:1000});
+    assert.equal(await page.locator('td.sheet-current').getAttribute('contenteditable'),'true','Resizing does not interrupt typing');
+    await page.keyboard.press('Enter');await page.locator('#sheet-save').click();await page.waitForFunction(()=>!Trainees.hasDraft());
+    assert.equal(await page.evaluate(()=>previewSheets.get('demo-admin').cells[3067][499]),'Changed last');
+    await page.locator('#sheet-undo').click();await go('SF3068');assert.equal(await page.locator('td.sheet-current').textContent(),'Last 3067');
+    await page.locator('#sheet-redo').click();await go('SF3068');assert.equal(await page.locator('td.sheet-current').textContent(),'Changed last');
+    await go('IQ1');assert.equal(await page.locator('td.sheet-current').getAttribute('colspan'),'4','A far-column merge stays intact');await aligned();
+    await go('SF11');assert.ok(await page.locator('td.sheet-current').evaluate(el=>el.getBoundingClientRect().height)>=60);
+    await page.locator('#sheet-freeze').click();await go('SF100');assert.equal(await page.locator('td[data-v="99"][data-col="0"]').count(),1,'Frozen first column stays mounted');
+    await page.locator('#sheet-direction').selectOption('rtl');await go('C100');assert.equal(await page.locator('td.sheet-current').textContent(),'Trainee 99');await aligned();
+    await go('SF2000');assert.equal(await page.locator('td.sheet-current').textContent(),'Last 1999');await aligned();
+    await page.locator('#sheet-zoom-in').click();await go('SF3068');await aligned();
+    await page.setViewportSize({width:390,height:844});await go('C1');await aligned();assert.ok(await mounted()<1000);
+    await page.locator('#sheet-save').click();await page.waitForFunction(()=>!Trainees.hasDraft());await page.locator('#sheet-reload').click();await page.waitForFunction(()=>document.getElementById('sheet-status').textContent==='تم الحفظ');
+    await go('SF3068');assert.equal(await page.locator('td.sheet-current').textContent(),'Changed last','Far edits survive compact persistence and reload');
+    assert.deepEqual(errors,[]);console.log('PASS: 3068 × 500 viewport, distant cells/merges, undo, save, frozen column, RTL alignment, zoom, resize during editing and mobile');
+  }finally{await browser?.close();server.kill();}
+})().catch(e=>{console.error(e);process.exitCode=1;});

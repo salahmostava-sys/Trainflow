@@ -14,14 +14,16 @@ const Trainees=(()=>{
   let members=[],mode='sheet',codeMode='owned',codeBusy=false,initialized=false;
   let dragging=false,dragMoved=false,rowDragging=false;
   let formatting=D.defaultFormat(),duplicateIds=new Map();
-  let rowOffsets=[0],rowHeights=new Map(),drawnStart=-1,drawnEnd=-1,scrollFrame=0;
+  let rowOffsets=[0],rowHeights=new Map(),drawnStart=-1,drawnEnd=-1,drawnColumns='',scrollFrame=0;
+  let visibleCache=null,columnOptionsKey='',headersKey='',mergeCacheFormat=null,mergeCache=[];
   let excelTools=null,formulaCache=new Map();
+  const searchRows=new WeakMap();
   let excelView={wrap:false,freeze:false,zoom:100};
   try{const pref=JSON.parse(localStorage.getItem('ibta_sheet_view')||'{}');excelView={wrap:pref.wrap===true,freeze:pref.freeze===true,zoom:Number.isInteger(pref.zoom)&&pref.zoom>=50&&pref.zoom<=200?pref.zoom:100};}catch{}
   function setZoom(value){
     const previous=excelView.zoom,scroll=$('sheet-grid').parentElement;
     excelView.zoom=Math.max(50,Math.min(200,Math.round(Number(value)/10)*10||100));
-    applyExcelView();scroll.scrollLeft*=excelView.zoom/previous;scroll.scrollTop*=excelView.zoom/previous;rowHeights.clear();rebuildRowOffsets();drawRows(true);
+    applyExcelView();scroll.scrollLeft*=excelView.zoom/previous;scroll.scrollTop*=excelView.zoom/previous;resetRowHeights();rebuildRowOffsets();drawRows(true);
     try{localStorage.setItem('ibta_sheet_view',JSON.stringify(excelView));}catch{}
   }
   function applyExcelView(){
@@ -45,6 +47,7 @@ const Trainees=(()=>{
   function setColumnWidth(c,width){
     colWidths[c]=Math.round(width);
     const ws=$('sheet-workspace');if(ws)ws.style.setProperty('--col-w-'+c,width+'px');
+    queueDraw(true);
   }
   function resetColumnWidth(c){
     delete colWidths[c];
@@ -91,13 +94,12 @@ const Trainees=(()=>{
     if(cells.length>=D.MAX_ROWS)return limitError();
     let targetIdx=view[cursor.r]??cells.length;
     if(pos==='below')targetIdx++;
-    const next=cells.map(r=>[...r]);
+    const next=cells.slice();
     while(next.length<targetIdx)next.push(D.blank());
     next.splice(targetIdx,0,D.blank());
     const nextFmt=shiftStylesOnInsert(formatting,targetIdx);
     shiftAlignmentsOnInsert(targetIdx);
     change(next,true,nextFmt);
-    render();
     focusCell(pos==='above'?cursor.r:cursor.r+1,cursor.c);
     message(tr('تم إدراج صف جديد','New row inserted'));
   }
@@ -380,7 +382,7 @@ const Trainees=(()=>{
     document.addEventListener('pointermove',onPointerMove);
     document.addEventListener('pointerup',onPointerUp);
   }
-  const visibleCols=()=>labels.map((_,c)=>c).filter(c=>!formatting.hidden.includes(c));
+  const visibleCols=()=>{const width=cells[0]?.length||0;if(visibleCache?.format===formatting&&visibleCache.width===width)return visibleCache.cols;const hidden=new Set(formatting.hidden),cols=Array.from({length:colCount()},(_,c)=>c).filter(c=>!hidden.has(c));visibleCache={format:formatting,width,cols};return cols;};
   // Every data mutation creates a new matrix, so history can retain the old matrix safely.
   const snapshot=()=>({cells,format:D.format(formatting),alignments:{...cellAlignments}});
   function node(tag,text,attrs={}){const el=document.createElement(tag);if(text!==undefined)el.textContent=text;for(const [key,value]of Object.entries(attrs))el.setAttribute(key,value);return el;}
@@ -437,7 +439,7 @@ const Trainees=(()=>{
     toolbar.append($('sheet-status'));
     const localNote=node('small',undefined,{id:'sheet-local-note',class:'sheet-local-note'});$('sheet-workspace').querySelector('.sheet-format-tools').append(localNote);
     const more=button(tr('التنسيق وأدوات إضافية','Formatting & more tools'),()=>{const expanded=$('sheet-workspace').classList.toggle('sheet-show-tools');more.setAttribute('aria-expanded',String(expanded));});more.id='sheet-more-tools';more.className='sheet-mobile-toggle';more.setAttribute('aria-expanded','false');toolbar.before(more);
-    for(const key of ['wrap','freeze'])$('sheet-'+key).onclick=()=>{commitEdit();excelView[key]=!excelView[key];try{localStorage.setItem('ibta_sheet_view',JSON.stringify(excelView));}catch{}applyExcelView();rowHeights.clear();rebuildRowOffsets();drawRows(true);};
+    for(const key of ['wrap','freeze'])$('sheet-'+key).onclick=()=>{commitEdit();excelView[key]=!excelView[key];try{localStorage.setItem('ibta_sheet_view',JSON.stringify(excelView));}catch{}applyExcelView();resetRowHeights();rebuildRowOffsets();drawRows(true);};
     const zoomTools=node('div',undefined,{class:'sheet-zoom-tools',dir:'ltr'});
     zoomTools.innerHTML='<span id="sheet-zoom-label"></span><button type="button" id="sheet-zoom-out">−</button><input type="range" id="sheet-zoom-slider" min="50" max="200" step="10" value="100"><button type="button" id="sheet-zoom-in">+</button><button type="button" id="sheet-zoom-reset">100%</button>';
     $('sheet-workspace').querySelector('.sheet-footer').append(zoomTools);
@@ -456,7 +458,7 @@ const Trainees=(()=>{
     $('sheet-owner').addEventListener('change',async()=>{const next=$('sheet-owner').value;$('sheet-owner').value=owner;await switchOwner(next);});
     if($('sheet-mode'))$('sheet-mode').onclick=()=>setMode('sheet');if($('sheet-codes-mode'))$('sheet-codes-mode').onclick=()=>setMode('codes');
     $('sheet-save').onclick=()=>flush();$('sheet-reload').onclick=()=>reload();
-    $('sheet-add').onclick=()=>{commitEdit();clearFilters();const r=cells.length;if(r>=D.MAX_ROWS)return limitError();const next=cells.map(row=>[...row]);next.push(D.blank());change(next,false);render();focusCell(r,0);};
+    $('sheet-add').onclick=()=>{commitEdit();clearFilters();const r=cells.length;if(r>=D.MAX_ROWS)return limitError();const next=cells.slice();next.push(D.blank());change(next,false);render();focusCell(r,0);};
 
     $('sheet-add-bulk-btn').onclick=()=>{const count=Number($('sheet-add-bulk-count').value)||1000;addBulkRows(count);};
     $('sheet-add-bulk-count').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();addBulkRows(Number($('sheet-add-bulk-count').value)||1000);}});
@@ -482,7 +484,8 @@ const Trainees=(()=>{
     $('sheet-duplicates-only').onchange=()=>{commitEdit();anchor=cursor={r:0,c:0};render();};
     $('sheet-clear-filters').onclick=()=>{commitEdit();clearFilters();render();};
     const grid=$('sheet-grid');
-    grid.parentElement.addEventListener('scroll',()=>{if(scrollFrame)return;scrollFrame=requestAnimationFrame(()=>{scrollFrame=0;drawRows();});},{passive:true});
+    grid.parentElement.addEventListener('scroll',()=>queueDraw(),{passive:true});
+    new ResizeObserver(()=>{if(view.length>100||visibleCols().length>80)queueDraw();}).observe(grid.parentElement);
     initDuplicateDetails();
     initTraineeDetails();
     initContextMenu();
@@ -664,10 +667,15 @@ const Trainees=(()=>{
   }
   function clearFilters(){['sheet-search','sheet-org','sheet-date','sheet-result'].forEach(id=>$(id).value='');$('sheet-duplicates-only').checked=false;sortCol=-1;}
   function filtered(){return sortCol>=0||$('sheet-duplicates-only').checked||['sheet-search','sheet-org','sheet-date','sheet-result'].some(id=>$(id).value);}
+  function matchesSearch(row,search){
+    if(!search)return true;
+    let values=searchRows.get(row);if(!values){values=row.filter(Boolean).map(value=>value.toLocaleLowerCase());if(Object.isFrozen(row))searchRows.set(row,values);}
+    return values.some(value=>value.includes(search));
+  }
   function buildView(){
     const search=$('sheet-search').value.toLocaleLowerCase(),org=$('sheet-org').value.toLocaleLowerCase(),date=$('sheet-date').value.toLocaleLowerCase(),result=$('sheet-result').value;
     duplicateIds=D.duplicates(cells);
-    view=cells.map((_,i)=>i).filter(i=>(!search||cells[i].some(v=>v.toLocaleLowerCase().includes(search)))&&(!org||cells[i][6].toLocaleLowerCase().includes(org))&&(!date||cells[i][8].toLocaleLowerCase().includes(date))&&(!result||cells[i][11]===result)&&(!$('sheet-duplicates-only').checked||duplicateIds.has(D.idKey(cells[i][4]))));
+    view=cells.map((_,i)=>i).filter(i=>matchesSearch(cells[i],search)&&(!org||cells[i][6].toLocaleLowerCase().includes(org))&&(!date||cells[i][8].toLocaleLowerCase().includes(date))&&(!result||cells[i][11]===result)&&(!$('sheet-duplicates-only').checked||duplicateIds.has(D.idKey(cells[i][4]))));
     if(sortCol>=0)view.sort((a,b)=>sortDir*(cells[a][sortCol]||'').localeCompare(cells[b][sortCol]||'',currentLang,{numeric:true})||a-b);
     if(!filtered())for(let i=cells.length;i<Math.min(D.MAX_ROWS,Math.max(25,cells.length+5));i++)view.push(i);
   }
@@ -681,7 +689,9 @@ const Trainees=(()=>{
     $('sheet-font-minus').disabled=formatting.fontSize<=10;$('sheet-font-plus').disabled=formatting.fontSize>=32;
     renderColumnOptions();
     applySavedColWidths();
-    const grid=$('sheet-grid'),thead=grid.querySelector('thead'),tbody=grid.querySelector('tbody');thead.replaceChildren();tbody.replaceChildren();
+    const grid=$('sheet-grid'),thead=grid.querySelector('thead'),tbody=grid.querySelector('tbody');
+    const nextHeadersKey=JSON.stringify([currentLang,cols,allLabels()]);
+    if(headersKey!==nextHeadersKey){headersKey=nextHeadersKey;thead.replaceChildren();
     const header=node('tr');header.append(node('th','#',{class:'sheet-rownum'}));
     labels.forEach((pair,c)=>{
       if(!cols.includes(c))return;
@@ -707,33 +717,53 @@ const Trainees=(()=>{
       header.append(th);
     });
     thead.append(header);
-    rowHeights.clear();rebuildRowOffsets();drawRows(true);
+    }
+    resetRowHeights();rebuildRowOffsets();drawRows(true);
     grid.setAttribute('aria-rowcount',String(view.length+1));
     $('sheet-count').textContent=tr('سجلات: ','Records: ')+cells.filter(r=>r.some(Boolean)).length+tr(' · إجمالي الصفوف: ',' · Total rows: ')+cells.length;
     $('sheet-undo').disabled=!history.length;$('sheet-redo').disabled=!future.length;
     if($('sheet-duplicate-dialog')?.open)renderDuplicateDetails();
+  }
+  function resetRowHeights(){
+    rowHeights.clear();for(const [key,style]of Object.entries(formatting.styles)){const r=Number(key.split(':')[0]),height=Math.max((style.height||0)*excelView.zoom/100,style.rotation?70:0);if(height)rowHeights.set(r,Math.max(rowHeights.get(r)||0,height));}
   }
   function rebuildRowOffsets(){
     const estimate=Math.max((excelView.wrap?28:21)*excelView.zoom/100,formatting.fontSize*excelView.zoom/100*(excelView.wrap?1.5:1.2));
     rowOffsets=new Float64Array(view.length+1);for(let r=0;r<view.length;r++)rowOffsets[r+1]=rowOffsets[r]+(rowHeights.get(view[r])||estimate);
   }
   function rowAtOffset(offset){let low=0,high=view.length;while(low<high){const mid=(low+high)>>1;if(rowOffsets[mid+1]<=offset)low=mid+1;else high=mid;}return Math.min(low,Math.max(0,view.length-1));}
+  let forceDraw=false;
+  function queueDraw(force=false){forceDraw=forceDraw||force;if(scrollFrame)return;scrollFrame=requestAnimationFrame(()=>{scrollFrame=0;if(editing){forceDraw=true;return;}const redraw=forceDraw;forceDraw=false;drawRows(redraw);});}
+  function sheetMerges(){
+    if(mergeCacheFormat!==formatting){mergeCacheFormat=formatting;mergeCache=Object.entries(formatting.styles).filter(([,s])=>(s.mergeCols||1)>1||(s.mergeRows||1)>1).map(([key,s])=>{const [r,c]=key.split(':').map(Number);return {r,c,endR:r+(s.mergeRows||1)-1,endC:c+(s.mergeCols||1)-1};});}return filtered()?[]:mergeCache;
+  }
+  function columnWindow(cols,merges,start,end){
+    if(cols.length<=80)return cols.map(c=>({c}));
+    const grid=$('sheet-grid'),scroll=grid.parentElement,rect=scroll.getBoundingClientRect(),widths=new Map(),shown=new Set();
+    grid.querySelectorAll('thead th[data-col]').forEach(th=>{const c=+th.dataset.col,box=th.getBoundingClientRect();widths.set(c,box.width);if(box.right>=rect.left-320&&box.left<=rect.right+320)shown.add(c);});
+    if(excelView.freeze)shown.add(cols[0]);
+    // Keep a merge intact when any part intersects the row/column viewport.
+    for(const m of merges)if(m.r<end&&m.endR>=start&&cols.some(c=>shown.has(c)&&c>=m.c&&c<=m.endC))for(const c of cols)if(c>=m.c&&c<=m.endC)shown.add(c);
+    const segments=[];for(const c of cols){if(shown.has(c))segments.push({c});else{const last=segments[segments.length-1];if(last?.gap){last.count++;last.width+=widths.get(c)||160;}else segments.push({gap:true,count:1,width:widths.get(c)||160});}}return segments;
+  }
   function drawRows(force=false){
     if(!initialized||editing&&!force)return;const grid=$('sheet-grid'),scroll=grid.parentElement,tbody=grid.querySelector('tbody'),cols=visibleCols();
     const height=scroll.clientHeight||400,head=grid.querySelector('thead').getBoundingClientRect().height||36;
     const first=rowAtOffset(Math.max(0,scroll.scrollTop-head)),start=view.length<=100?0:Math.max(0,first-8),end=view.length<=100?view.length:Math.min(view.length,rowAtOffset(scroll.scrollTop+height)+10);
-    if(!force&&start===drawnStart&&end===drawnEnd)return;
-    const hadFocus=grid.contains(document.activeElement);commitEdit();drawnStart=start;drawnEnd=end;const fragment=document.createDocumentFragment();
+    const merges=sheetMerges(),segments=columnWindow(cols,merges,start,end),columnKey=segments.map(s=>s.gap?'gap:'+s.count+':'+s.width:s.c).join(',');
+    if(!force&&start===drawnStart&&end===drawnEnd&&columnKey===drawnColumns)return;
+    const hadFocus=grid.contains(document.activeElement);commitEdit();drawnStart=start;drawnEnd=end;drawnColumns=columnKey;const fragment=document.createDocumentFragment();
     const spacer=(height)=>{const row=node('tr',undefined,{class:'sheet-spacer','aria-hidden':'true'}),cell=node('td',undefined,{colspan:cols.length+1});row.style.setProperty('height',height+'px','important');cell.style.setProperty('height',height+'px','important');row.append(cell);return row;};
     const top=spacer(rowOffsets[start]),bottom=spacer(rowOffsets[view.length]-rowOffsets[end]);if(start)fragment.append(top);
-    const merges=filtered()?[]:Object.entries(formatting.styles).filter(([,s])=>(s.mergeCols||1)>1||(s.mergeRows||1)>1).map(([key,s])=>{const [r,c]=key.split(':').map(Number);return {r,c,endR:r+(s.mergeRows||1)-1,endC:c+(s.mergeCols||1)-1};});
     for(let v=start;v<end;v++){
-      const idx=view[v],trEl=node('tr');const number=node('th',undefined,{class:'sheet-rownum',scope:'row','data-rowv':v});
+      const idx=view[v],trEl=node('tr');if(rowHeights.has(idx))trEl.style.setProperty('height',rowHeights.get(idx)+'px','important');const number=node('th',undefined,{class:'sheet-rownum',scope:'row','data-rowv':v});
       const rowBtn=button(String(idx+1),e=>{commitEdit();const maxC=colCount()-1;if(e.shiftKey){cursor={r:v,c:maxC};anchor.c=0;}else{anchor={r:v,c:0};cursor={r:v,c:maxC};}paint();});
       rowBtn.addEventListener('pointerdown',e=>{if(e.button!==0)return;e.preventDefault();e.stopPropagation();commitEdit();rowDragging=true;dragMoved=false;const maxC=colCount()-1;if(e.shiftKey){cursor={r:v,c:maxC};anchor.c=0;}else{anchor={r:v,c:0};cursor={r:v,c:maxC};}paint();});
       number.append(rowBtn);trEl.append(number);
       trEl.setAttribute('aria-rowindex',String(v+2));
-      cols.forEach(c=>{
+      segments.forEach(segment=>{
+        if(segment.gap){const gap=node('td',undefined,{class:'sheet-column-spacer',colspan:segment.count,'aria-hidden':'true'});gap.style.setProperty('--gap-width',segment.width+'px');trEl.append(gap);return;}
+        const c=segment.c;
         const merge=merges.find(m=>idx>=m.r&&idx<=m.endR&&c>=m.c&&c<=m.endC);
         const firstMergeCol=merge&&cols.find(x=>x>=merge.c&&x<=merge.endC);
         if(merge&&(c!==firstMergeCol||v!==Math.max(start,merge.r)))return;
@@ -744,7 +774,7 @@ const Trainees=(()=>{
       });fragment.append(trEl);
     }
     if(end<view.length)fragment.append(bottom);tbody.replaceChildren(fragment);applyExcelView();paint();
-    const oldFirst=rowOffsets[first];tbody.querySelectorAll('th[data-rowv]').forEach(th=>rowHeights.set(view[+th.dataset.rowv],th.parentElement.getBoundingClientRect().height));rebuildRowOffsets();
+    const oldFirst=rowOffsets[first];let heightChanged=false;tbody.querySelectorAll('th[data-rowv]').forEach(th=>{const index=view[+th.dataset.rowv],height=Math.max(rowHeights.get(index)||0,th.parentElement.getBoundingClientRect().height);if(rowHeights.get(index)!==height){rowHeights.set(index,height);heightChanged=true;}});if(heightChanged)rebuildRowOffsets();
     if(start){top.style.setProperty('height',rowOffsets[start]+'px','important');top.firstChild.style.setProperty('height',rowOffsets[start]+'px','important');}
     if(end<view.length){const remaining=rowOffsets[view.length]-rowOffsets[end];bottom.style.setProperty('height',remaining+'px','important');bottom.firstChild.style.setProperty('height',remaining+'px','important');}
     if(Math.abs(rowOffsets[first]-oldFirst)>.5)scroll.scrollTop+=rowOffsets[first]-oldFirst;
@@ -925,6 +955,7 @@ const Trainees=(()=>{
     $('sheet-detail-edit').textContent=tr('تعديل رقم الهوية','Edit ID');
   }
   function renderColumnOptions(){
+    const key=JSON.stringify([currentLang,allLabels(),formatting.hidden]);if(columnOptionsKey===key)return;columnOptionsKey=key;
     const box=$('sheet-column-options');box.replaceChildren();
     box.append(button(tr('إظهار الكل','Show all'),()=>{commitEdit();const next=D.format(formatting);next.hidden=[];change(cells,true,next);}));
     labels.forEach((pair,c)=>{const label=node('label'),input=node('input',undefined,{type:'checkbox','data-column-toggle':c});input.checked=!formatting.hidden.includes(c);input.disabled=input.checked&&visibleCols().length===1;input.onchange=()=>{commitEdit();const next=D.format(formatting);next.hidden=input.checked?next.hidden.filter(i=>i!==c):[...next.hidden,c];change(cells,true,next);};label.append(input,node('span',tr(...pair)));box.append(label);});
@@ -964,7 +995,9 @@ const Trainees=(()=>{
   function selectCell(r,c,extend=false){commitEdit();cursor={r,c};if(!extend)anchor={r,c};paint();$('sheet-grid').querySelector(`td[data-v="${r}"][data-col="${c}"]`)?.focus();}
   function focusCell(r,c,extend=false){
     r=Math.max(0,Math.min(view.length-1,r));c=Math.max(0,Math.min(colCount()-1,c));if(!visibleCols().includes(c))c=visibleCols()[0];
-    if(r<drawnStart||r>=drawnEnd){commitEdit();$('sheet-grid').parentElement.scrollTop=rowOffsets[r]||0;drawRows(true);}selectCell(r,c,extend);
+    const grid=$('sheet-grid'),scroll=grid.parentElement;
+    if(r<drawnStart||r>=drawnEnd){commitEdit();scroll.scrollTop=rowOffsets[r]||0;drawRows(true);}
+    if(!grid.querySelector(`td[data-v="${r}"][data-col="${c}"]`)){commitEdit();const header=grid.querySelector(`thead th[data-col="${c}"]`),box=header?.getBoundingClientRect(),viewport=scroll.getBoundingClientRect();if(box){if(box.right>viewport.right)scroll.scrollLeft+=box.right-viewport.right;else if(box.left<viewport.left+46)scroll.scrollLeft+=box.left-viewport.left-46;}drawRows(true);}selectCell(r,c,extend);
   }
   function beginEdit(td,initial){
     if(!loaded||loading)return;commitEdit();const r=+td.dataset.v,c=+td.dataset.col;cursor=anchor={r,c};paint();
@@ -988,6 +1021,7 @@ const Trainees=(()=>{
     duplicateIds=D.duplicates(cells);decorateCell(edit.el,edit.index,edit.column);
     if(edit.column===4){$('sheet-grid').querySelectorAll('td[data-col="4"]').forEach(td=>decorateCell(td,view[+td.dataset.v],4));}
     paint();
+    if(forceDraw)queueDraw(true);
   }
   function change(next,redraw=true,nextFormat=formatting){
     if(!loaded)return;history.push(snapshot());if(history.length>30)history.shift();future=[];cells=next;formatting=D.format(nextFormat);formulaCache.clear();revision++;schedule();if(redraw)render();else{$('sheet-undo').disabled=false;$('sheet-redo').disabled=true;}
@@ -998,7 +1032,7 @@ const Trainees=(()=>{
   async function flush(keepEditing=false){
     commitEdit(false,keepEditing);clearTimeout(timer);if(saving){const ok=await saving;if(!ok)return false;return flush(keepEditing);}
     if(!loaded||revision===savedRevision)return true;
-    const token=epoch,snapshot=revision,saveOwner=owner,data=D.normalize(cells),saveFormat=D.format(formatting);
+    const token=epoch,snapshot=revision,saveOwner=owner,data=D.storage(cells),saveFormat=D.format(formatting);
     message(tr('جارٍ الحفظ…','Saving…'));
     saving=(async()=>{
       try{const result=await Cloud.saveTrainees(saveOwner,data,version,saveFormat);if(token!==epoch)return false;version=Number(result);savedRevision=snapshot;message(revision===savedRevision?tr('تم الحفظ','Saved'):tr('تعديلات غير محفوظة…','Unsaved changes…'));return true;}
@@ -1026,7 +1060,7 @@ const Trainees=(()=>{
     }
     html+='</table>';return html;
   }
-  function clearSelection(){if(!loaded)return;const next=cells.map(row=>[...row]);const [r1,r2,c1,c2]=bounds();for(let r=r1;r<=r2;r++){const idx=view[r];if(!next[idx])continue;for(const c of visibleCols().filter(c=>c>=c1&&c<=c2))next[idx][c]='';}change(D.normalize(next));}
+  function clearSelection(){if(!loaded)return;const next=cells.slice();const [r1,r2,c1,c2]=bounds(),cols=visibleCols().filter(c=>c>=c1&&c<=c2);for(let r=r1;r<=r2;r++){const idx=view[r];if(!next[idx])continue;next[idx]=[...next[idx]];for(const c of cols)next[idx][c]='';}change(D.normalize(next));}
   function deleteSelectedCells(direction){
     if(!loaded)return;commitEdit();
     const [r1,r2,c1,c2]=bounds(),indices=new Set(view.slice(r1,r2+1));

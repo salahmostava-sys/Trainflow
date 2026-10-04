@@ -10,8 +10,12 @@ const TraineeExcel=(()=>{
     const menu=(host,id,ar,en,items)=>{const details=node('details',undefined,{id,class:'sheet-excel-menu'}),list=node('div',undefined,{class:'sheet-excel-menu-items'});details.append(text(node('summary'),ar,en),list);for(const [key,a,e,run]of items)list.append(action(id+'-'+key,a,e,()=>{details.open=false;run();}));host.append(details);return details;};
     const state=()=>h.state(),style=()=>{const s=state();return s.formatting.styles[s.view[s.cursor.r]+':'+s.cursor.c]||{};};
     const rows=s=>s.view.slice(s.bounds[0],s.bounds[1]+1),columns=s=>s.cols.filter(c=>c>=s.bounds[2]&&c<=s.bounds[3]);
-    const mutate=(run)=>{const s=state(),cells=s.cells.map(r=>[...r]),fmt=D.format(s.formatting);run(cells,fmt,s);h.change(D.normalize(cells),true,fmt);};
-    const selected=(run)=>mutate((cells,fmt,s)=>{for(const r of rows(s))for(const c of columns(s))run(cells,fmt,r,c,s);});
+    const mutate=(run)=>{
+      const s=state(),cells=s.cells.slice(),fmt=D.format(s.formatting),changed=new Set();
+      const rowAt=r=>{while(cells.length<=r)cells.push(D.blank());if(!changed.has(r)){cells[r]=[...cells[r]];changed.add(r);}return cells[r];};
+      run(cells,fmt,s,rowAt);h.change(D.normalize(cells),true,fmt);
+    };
+    const selected=(run)=>mutate((cells,fmt,s,rowAt)=>{const cols=columns(s);for(const r of rows(s))for(const c of cols)run(cells,fmt,r,c,s,rowAt);});
     const toggle=field=>h.formatSelection({[field]:!style()[field]});
     const cloneStyles=()=>{const s=state();return rows(s).map(r=>columns(s).map(c=>({...s.formatting.styles[r+':'+c]})));};
     const capture=()=>{const s=state();copied={values:rows(s).map(r=>columns(s).map(c=>s.cells[r]?.[c]||'')),display:rows(s).map(r=>columns(s).map(c=>String(D.formulaValue(s.cells,r,c)))),styles:cloneStyles()};};
@@ -19,7 +23,7 @@ const TraineeExcel=(()=>{
       try{const raw=await navigator.clipboard.readText();if(!raw)return;let values=mode==='values'&&copied&&raw===D.tsv(copied.values)?copied.display:D.parse(raw);if(mode==='transpose')values=Array.from({length:Math.max(...values.map(r=>r.length))},(_,c)=>values.map(r=>r[c]||''));
         const useStyles=mode==='all'&&copied&&raw===D.tsv(copied.values),s=state(),targets=s.cols.filter(c=>c>=s.bounds[2]);
         if(s.filtered&&values.length>1){h.message(tr('امسح الفلاتر والفرز قبل لصق عدة صفوف.','Clear filters and sorting before pasting multiple rows.'),true);return;}
-        mutate((cells,fmt)=>{const start=s.view[s.bounds[0]]??cells.length;for(let y=0;y<values.length;y++)for(let x=0;x<values[y].length;x++){const c=targets[x]??s.cols.length+x-targets.length;if(c>=D.MAX_COLS)throw Error(tr('وصلت للحد الأقصى للأعمدة','Column limit reached'));while(cells.length<=start+y)cells.push(D.blank());while(cells[start+y].length<=c)cells[start+y].push('');cells[start+y][c]=values[y][x];if(useStyles){const v={...copied.styles[y]?.[x]};delete v.mergeRows;delete v.mergeCols;fmt.styles[(start+y)+':'+c]=v;}}});
+        mutate((cells,fmt,_,rowAt)=>{const start=s.view[s.bounds[0]]??cells.length;for(let y=0;y<values.length;y++)for(let x=0;x<values[y].length;x++){const c=targets[x]??s.cols.length+x-targets.length;if(c>=D.MAX_COLS)throw Error(tr('وصلت للحد الأقصى للأعمدة','Column limit reached'));const row=rowAt(start+y);while(row.length<=c)row.push('');row[c]=values[y][x];if(useStyles){const v={...copied.styles[y]?.[x]};delete v.mergeRows;delete v.mergeCols;fmt.styles[(start+y)+':'+c]=v;}}});
       }catch{h.message(tr('اسمح بالوصول للحافظة، أو استخدم Ctrl+V.','Allow clipboard access or press Ctrl+V.'),true);}
     };
     const clipboard=$('sheet-copy').closest('.sheet-ribbon-group').querySelector('.sheet-ribbon-actions');
@@ -47,9 +51,9 @@ const TraineeExcel=(()=>{
       const s=state();if(s.filtered){h.message(tr('امسح الفلاتر والفرز قبل الدمج.','Clear filters and sorting before merging.'),true);return;}const [r1,r2,c1,c2]=s.bounds,a=s.view[r1],b=s.view[r2];
       if(mode!=='unmerge'&&r1===r2&&c1===c2)return;
       const occupied=rows(s).some(r=>columns(s).some(c=>(r!==a||c!==c1)&&s.cells[r]?.[c]));if(mode!=='unmerge'&&occupied&&!confirm(tr('الدمج يحتفظ بقيمة أول خلية فقط. متابعة؟ يمكنك التراجع.','Merge keeps only the first cell value. Continue? You can undo.')))return;
-      mutate((cells,fmt)=>{for(const [key,v]of Object.entries(fmt.styles)){const [r,c]=key.split(':').map(Number);if(r<=b&&(r+(v.mergeRows||1)-1)>=a&&c<=c2&&(c+(v.mergeCols||1)-1)>=c1){delete v.mergeRows;delete v.mergeCols;}}
+      mutate((cells,fmt,_,rowAt)=>{for(const [key,v]of Object.entries(fmt.styles)){const [r,c]=key.split(':').map(Number);if(r<=b&&(r+(v.mergeRows||1)-1)>=a&&c<=c2&&(c+(v.mergeCols||1)-1)>=c1){delete v.mergeRows;delete v.mergeCols;}}
         if(mode==='unmerge')return;
-        for(const r of rows(s)){while(cells.length<=r)cells.push(D.blank());for(const c of columns(s)){if((mode==='across'?c!==c1:r!==a||c!==c1)){while(cells[r].length<=c)cells[r].push('');cells[r][c]='';}}}
+        for(const r of rows(s)){const row=rowAt(r);for(const c of columns(s)){if((mode==='across'?c!==c1:r!==a||c!==c1)){while(row.length<=c)row.push('');row[c]='';}}}
         const anchors=mode==='across'?rows(s):[a];for(const r of anchors){const key=r+':'+c1;fmt.styles[key]={...fmt.styles[key],mergeCols:c2-c1+1,mergeRows:mode==='across'?1:b-a+1,...(mode==='center'?{align:'center',valign:'middle'}:{})};}
       });
     };
@@ -58,19 +62,19 @@ const TraineeExcel=(()=>{
     ]);
     const editing=group('sheet-excel-editing','التحرير','Editing');editing.append($('sheet-clear-format'));
     const autoSum=fn=>{const s=state();if(s.filtered){h.message(tr('امسح الفلاتر والفرز قبل الحساب.','Clear filters and sorting before calculating.'),true);return;}let [r1,r2,c1,c2]=s.bounds;if(c1<=11&&c2>=11){h.message(tr('خانة النتيجة مخصصة لحالة الاختبار؛ اختر عمودًا رقميًا.','Result is an exam status field. Select a numeric column.'),true);return;}
-      if(r1===r2&&c1===c2){let start=r1-1;while(start>=0&&D.number(D.formulaValue(s.cells,s.view[start],c1))!==null)start--;if(start<r1-1){r2=r1-1;r1=start+1;}else{let left=c1-1;while(left>=0&&D.number(D.formulaValue(s.cells,s.view[r1],left))!==null)left--;if(left===c1-1){h.message(tr('حدد خلايا تحتوي أرقامًا أولًا.','Select numeric cells first.'),true);return;}const formula='='+fn+'('+D.letter(left+1)+(s.view[r1]+1)+':'+D.letter(c1-1)+(s.view[r1]+1)+')';mutate(cells=>{while(cells.length<=s.view[r1])cells.push(D.blank());while(cells[s.view[r1]].length<=c1)cells[s.view[r1]].push('');cells[s.view[r1]][c1]=formula;});return;}}
+      if(r1===r2&&c1===c2){let start=r1-1;while(start>=0&&D.number(D.formulaValue(s.cells,s.view[start],c1))!==null)start--;if(start<r1-1){r2=r1-1;r1=start+1;}else{let left=c1-1;while(left>=0&&D.number(D.formulaValue(s.cells,s.view[r1],left))!==null)left--;if(left===c1-1){h.message(tr('حدد خلايا تحتوي أرقامًا أولًا.','Select numeric cells first.'),true);return;}const formula='='+fn+'('+D.letter(left+1)+(s.view[r1]+1)+':'+D.letter(c1-1)+(s.view[r1]+1)+')';mutate((cells,fmt,s,rowAt)=>{const row=rowAt(s.view[r1]);while(row.length<=c1)row.push('');row[c1]=formula;});return;}}
       const target=s.view[r2]+1;if(c1<=11&&c2>=11){h.message(tr('خانة النتيجة مخصصة لحالة الاختبار؛ اختر عمودًا رقميًا.','Result is an exam status field. Select a numeric column.'),true);return;}
       if(Array.from({length:c2-c1+1},(_,i)=>s.cells[target]?.[c1+i]).some(Boolean)&&!confirm(tr('استبدال الخلايا أسفل المحدد بنتائج الحساب؟','Replace cells below the selection with totals?')))return;
-      mutate(cells=>{while(cells.length<=target)cells.push(D.blank());for(let c=c1;c<=c2;c++){while(cells[target].length<=c)cells[target].push('');cells[target][c]='='+fn+'('+D.letter(c)+(s.view[r1]+1)+':'+D.letter(c)+(s.view[r2]+1)+')';}});h.focusCell(target,c1);
+      mutate((cells,fmt,_,rowAt)=>{const row=rowAt(target);for(let c=c1;c<=c2;c++){while(row.length<=c)row.push('');row[c]='='+fn+'('+D.letter(c)+(s.view[r1]+1)+':'+D.letter(c)+(s.view[r2]+1)+')';}});h.focusCell(target,c1);
     };
     menu(editing,'sheet-autosum-menu','∑ جمع تلقائي ▾','∑ AutoSum ▾',['SUM','AVERAGE','COUNT','MIN','MAX'].map((fn,i)=>[fn,['جمع','متوسط','عدد الأرقام','أقل قيمة','أكبر قيمة'][i],['Sum','Average','Count Numbers','Min','Max'][i],()=>autoSum(fn)]));
-    const fill=direction=>selected((cells,fmt,r,c,s)=>{const [r1,r2,c1,c2]=s.bounds,sourceR=direction==='up'?s.view[r2]:s.view[r1],sourceC=direction==='left'?c2:c1,vertical=['up','down','series'].includes(direction),a=vertical?sourceR:r,b=vertical?c:sourceC;
+    const fill=direction=>selected((cells,fmt,r,c,s,rowAt)=>{const [r1,r2,c1,c2]=s.bounds,sourceR=direction==='up'?s.view[r2]:s.view[r1],sourceC=direction==='left'?c2:c1,vertical=['up','down','series'].includes(direction),a=vertical?sourceR:r,b=vertical?c:sourceC;
       let value=s.cells[a]?.[b]||'';if(direction==='series'){const first=D.number(value),second=D.number(s.cells[s.view[r1+1]]?.[c]);if(first!==null)value=String(first+(r-sourceR)*(second===null?1:second-first));}
-      else value=D.shiftFormula(value,r-a,c-b);while(cells.length<=r)cells.push(D.blank());while(cells[r].length<=c)cells[r].push('');cells[r][c]=value;const sourceStyle=s.formatting.styles[a+':'+b];if(sourceStyle){const next={...sourceStyle};delete next.mergeRows;delete next.mergeCols;fmt.styles[r+':'+c]=next;}
+      else value=D.shiftFormula(value,r-a,c-b);const row=rowAt(r);while(row.length<=c)row.push('');row[c]=value;const sourceStyle=s.formatting.styles[a+':'+b];if(sourceStyle){const next={...sourceStyle};delete next.mergeRows;delete next.mergeCols;fmt.styles[r+':'+c]=next;}
     });
     menu(editing,'sheet-fill-menu','تعبئة ▾','Fill ▾',[['down','لأسفل','Down'],['right','لليمين','Right'],['up','لأعلى','Up'],['left','لليسار','Left'],['series','سلسلة أرقام','Series']].map(([v,a,e])=>[v,a,e,()=>fill(v)]));
     menu(editing,'sheet-clear-menu','مسح ▾','Clear ▾',[
-      ['all','مسح الكل','Clear all',()=>selected((cells,fmt,r,c)=>{if(cells[r])cells[r][c]='';delete fmt.styles[r+':'+c];})],['contents','مسح المحتويات','Clear contents',h.clearSelection],['formats','مسح التنسيق','Clear formats',()=>h.formatSelection(null)]
+      ['all','مسح الكل','Clear all',()=>selected((cells,fmt,r,c,s,rowAt)=>{if(cells[r])rowAt(r)[c]='';delete fmt.styles[r+':'+c];})],['contents','مسح المحتويات','Clear contents',h.clearSelection],['formats','مسح التنسيق','Clear formats',()=>h.formatSelection(null)]
     ]);
     menu(editing,'sheet-sort-menu','فرز وتصفية ▾','Sort & Filter ▾',[
       ['ascending','تصاعدي A → Z','Sort A → Z',()=>h.sort(state().cursor.c,1)],['descending','تنازلي Z → A','Sort Z → A',()=>h.sort(state().cursor.c,-1)],['clear','إلغاء الفرز','Clear sort',h.resetSort],['filter','تصفية','Filter',()=>{$('sheet-workspace').classList.add('sheet-show-tools');$('sheet-search').focus();}]
