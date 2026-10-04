@@ -69,6 +69,13 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),path
     }
     await page.locator('#sheet-undo').click();assert.equal(await cell(0,2).evaluate(el=>getComputedStyle(el).textAlign),'center');
     await page.locator('#sheet-redo').click();assert.equal(await cell(0,3).evaluate(el=>getComputedStyle(el).textAlign),'right');
+    await paste(1,2,'علي\tAli\t123');await cell(1,2).click();await cell(1,4).click({modifiers:['Shift']});
+    const positions={};
+    for(const align of ['left','center','right']){
+      await page.locator('#sheet-align-'+align).click();positions[align]=[];
+      for(const c of [2,3,4])positions[align].push(await cell(1,c).evaluate(el=>{const range=document.createRange();range.selectNodeContents(el.querySelector('.sheet-cell-value'));return range.getBoundingClientRect().left-el.getBoundingClientRect().left;}));
+    }
+    for(let c=0;c<3;c++)assert.ok(positions.left[c]<positions.center[c]&&positions.center[c]<positions.right[c],'Visible text must move for Arabic, English and numeric values: '+JSON.stringify(positions));
     await cell(0,11).click();
     for(const align of ['left','right','center']){
       await page.locator('#sheet-align-'+align).click();
@@ -81,7 +88,10 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),path
     await page.locator('#sheet-undo').click();assert.equal(await cell(0,13).textContent(),'a');
     await page.locator('th[data-col="14"] button').click({button:'right'});await page.locator('[data-action="delete-column"]').click();
     assert.equal(await cell(0,14).textContent(),'c');await page.locator('#sheet-undo').click();assert.equal(await cell(0,14).textContent(),'b');
+    await page.locator('th[data-col="14"] button').click();await page.locator('#sheet-delete-col').click();
+    assert.equal(await cell(0,14).textContent(),'c','Toolbar deletes the selected extra column');await page.locator('#sheet-undo').click();assert.equal(await cell(0,14).textContent(),'b');
     await page.locator('th[data-col="7"] button').click({button:'right'});assert.equal(await page.locator('[data-action="delete-column"]').isDisabled(),true);await page.keyboard.press('Escape');
+    assert.equal(await page.locator('#sheet-delete-col').isDisabled(),true,'Core schema columns stay protected');
     await cell(0,15).click();await page.locator('#sheet-bold').click();
     await cell(0,14).click({button:'right'});await page.locator('[data-action="delete-left"]').click();
     assert.equal(await cell(0,14).textContent(),'c');assert.equal(await cell(0,15).textContent(),'d');
@@ -107,13 +117,19 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),path
     await paste(0,0,['CODE','hidden@example.invalid','متدرب','Trainee','123','050','Org','محترف الأعمال المعتمد في المبيعات CBP-S','04/10/2026','trainee-user','demo-password','ناجح','AD'].join('\t'));
     await page.locator('#sheet-save').click();await page.waitForFunction(()=>!Trainees.hasDraft());
     await page.locator('#sheet-columns summary').click();await page.locator('[data-column-toggle="1"]').uncheck();await page.locator('#sheet-columns summary').click();
-    await cell(0,9).hover();await page.locator('#sheet-trainee-dialog').waitFor({state:'visible'});
+    await cell(0,9).hover();await page.waitForTimeout(750);assert.equal(await page.locator('#sheet-trainee-dialog').isVisible(),false,'Username no longer opens details');
+    await cell(0,3).hover();await page.locator('#sheet-trainee-dialog').waitFor({state:'visible'});
+    assert.ok((await page.locator('#sheet-trainee-title').textContent()).endsWith('Trainee'));
     const details=await page.locator('#sheet-trainee-record').textContent();assert.match(details,/hidden@example.invalid/);assert.match(details,/demo-password/);assert.match(details,/EXTRA-AZ/);
-    assert.match(details,/كي كود:/);assert.match(details,/LIVE-SALES-AR/);assert.doesNotMatch(details,/LIVE-SALES-EN/);
+    assert.match(details,/كي كود/);assert.match(details,/LIVE-SALES-AR/);assert.doesNotMatch(details,/LIVE-SALES-EN/);
     assert.match(details,/محترف الأعمال المعتمد في المبيعات CBP-S/);
     assert.equal(await page.locator('#sheet-trainee-record .sheet-detail-category').textContent(),'فئة المراجعة','Shows the effective category, including overrides and display labels');
     assert.equal(await page.locator('#sheet-trainee-record .sheet-detail-category').evaluate(el=>el.parentElement.tagName),'DD','Category has its own field');
     assert.equal(await page.locator('#sheet-trainee-record .sheet-detail-category-value').evaluate(el=>getComputedStyle(el).textAlign),'right');
+    for(const selector of ['.sheet-detail-keycode','.sheet-detail-category','button[aria-label="نسخ الاختبار"]','button[aria-label="نسخ Prometric Account"]']){
+      const edges=await page.locator('#sheet-trainee-record '+selector).evaluate(el=>({value:el.getBoundingClientRect().right,column:el.parentElement.getBoundingClientRect().right,align:getComputedStyle(el).textAlign}));
+      assert.equal(edges.align,'right');assert.ok(Math.abs(edges.value-edges.column)<1,'Detail values share a consistent right edge');
+    }
     assert.equal(await page.locator('#sheet-trainee-record .sheet-detail-keycode').evaluate(el=>getComputedStyle(el,'::after').content),'none','Copy icon is removed while copying remains available');
     assert.match(details,/Prometric Accountdemo-prometric-account/);assert.match(details,/Prometric Passworddemo-prometric-password/);
     assert.equal(await cell(0,7).textContent(),'محترف الأعمال المعتمد في المبيعات CBP-S','Source course name remains intact');
@@ -132,7 +148,7 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),path
     assert.equal(await page.evaluate(()=>window.detailCopied),'ALLOCATED-DEMO');
     assert.equal(await page.evaluate(()=>previewSheets.get('demo-admin').cells[0][0]),'ALLOCATED-DEMO');
     await page.keyboard.press('Escape');await page.locator('#sheet-trainee-dialog').waitFor({state:'hidden'});
-    await cell(0,9).click();await page.keyboard.press('Enter');await page.locator('#sheet-trainee-dialog').waitFor({state:'visible'});
+    await cell(0,3).click();await page.keyboard.press('Enter');await page.locator('#sheet-trainee-dialog').waitFor({state:'visible'});
     await page.setViewportSize({width:390,height:844});
     assert.ok(await page.locator('#sheet-trainee-dialog').evaluate(el=>el.scrollWidth<=el.clientWidth+1));
     const full=await page.locator('#sheet-trainee-dialog').evaluate(el=>{const rect=el.getBoundingClientRect();return {x:rect.x,y:rect.y,width:rect.width,height:rect.height};});

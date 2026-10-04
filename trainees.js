@@ -436,7 +436,8 @@ const Trainees=(()=>{
       </div>
       <div id="sheet-code-workspace" hidden><div class="sheet-code-tools" id="sheet-code-admin" hidden><button type="button" id="sheet-owned"></button><button type="button" id="sheet-pool"></button><button type="button" id="sheet-assign" class="sheet-primary"></button></div><div class="sheet-code-tools"><input id="sheet-code-search" type="search"><button type="button" id="sheet-code-refresh"></button><span id="sheet-code-count"></span></div><p class="sheet-notice" id="sheet-code-notice"></p><div class="sheet-card sheet-code-list" id="sheet-code-list"></div><p id="sheet-code-status" role="status"></p></div>`;
     const toolbar=$('sheet-workspace').querySelector('.sheet-tools');
-    for(const [label,ids] of [['الحافظة / Clipboard',['sheet-copy','sheet-undo','sheet-redo']],['الصفوف والأعمدة / Rows & columns',['sheet-add','sheet-delete','sheet-add-col']],['تحرير وحفظ / Edit & save',['sheet-find-btn','sheet-save','sheet-reload']]]){
+    toolbar.append(node('button',undefined,{id:'sheet-delete-col',type:'button'}));
+    for(const [label,ids] of [['الحافظة / Clipboard',['sheet-copy','sheet-undo','sheet-redo']],['الصفوف والأعمدة / Rows & columns',['sheet-add','sheet-delete','sheet-add-col','sheet-delete-col']],['تحرير وحفظ / Edit & save',['sheet-find-btn','sheet-save','sheet-reload']]]){
       const group=node('div',undefined,{class:'sheet-ribbon-group'}),actions=node('div',undefined,{class:'sheet-ribbon-actions'});
       for(const id of ids){const el=$(id);actions.append(id==='sheet-add-col'?el.parentElement:el);}
       const caption=node('small');caption.dataset.ar=label.split(' / ')[0];caption.dataset.en=label.split(' / ')[1];caption.textContent=tr(caption.dataset.ar,caption.dataset.en);
@@ -470,6 +471,7 @@ const Trainees=(()=>{
     $('sheet-add-bulk-count').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();addBulkRows(Number($('sheet-add-bulk-count').value)||1000);}});
     if($('sheet-page-size'))$('sheet-page-size').onchange=()=>{PAGE=Number($('sheet-page-size').value)||100;page=0;render();};
     $('sheet-delete').onclick=deleteSelectedRows;
+    $('sheet-delete-col').onclick=()=>editColumns('delete');
     $('sheet-find-btn').onclick=()=>openFindDialog();
     $('sheet-add-col').onclick=(e)=>{e.stopPropagation();commitEdit();toggleAddColumnMenu();};
     document.addEventListener('click',e=>{if(!e.target.closest('.sheet-add-col-wrap')){$('sheet-add-col-popover')&&($('sheet-add-col-popover').hidden=true);}});
@@ -604,7 +606,7 @@ const Trainees=(()=>{
       'sheet-local-note':['المحاذاة والتفاف النص وتثبيت الأعمدة وعرضها تفضيلات لهذا الجهاز.','Alignment, wrapping, frozen columns and widths are preferences for this device.'],'sheet-value-label':['قيمة','Value'],'sheet-add':['+ إضافة صف','+ Add row'],'sheet-wrap':['التفاف النص','Wrap text'],'sheet-freeze':['تثبيت أول عمود','Freeze first column'],
       'sheet-add-prefix':['إضافة','Add'],'sheet-add-suffix':['صف في الأسفل','more rows at bottom'],'sheet-add-bulk-btn':['+ إضافة','+ Add'],
       'sheet-page-size-suffix':['/ صفحة','/ page'],
-      'sheet-delete':['حذف صف','Delete row'],'sheet-add-col':['+ إضافة عمود','+ Add column'],'sheet-undo':['تراجع','Undo'],'sheet-redo':['إعادة','Redo'],
+      'sheet-delete':['حذف صف','Delete row'],'sheet-add-col':['+ إضافة عمود','+ Add column'],'sheet-delete-col':['حذف عمود','Delete column'],'sheet-undo':['تراجع','Undo'],'sheet-redo':['إعادة','Redo'],
       'sheet-copy':['نسخ الجدول','Copy sheet'],'sheet-save':['حفظ الآن','Save now'],'sheet-reload':['إعادة تحميل','Reload'],'sheet-clear-filters':['مسح الفلاتر','Clear filters'],
       'sheet-help':['للكتابة: انقر مرتين أو ابدأ الكتابة · اسحب أو Shift + نقر لتحديد نطاق · Ctrl+C / Ctrl+V · Tab والأسهم للتنقل','Double-click or type to edit · Drag or Shift+click selects a range · Ctrl+C / Ctrl+V · Tab and arrow navigation'],
       'sheet-owned':['أكواد المستخدم','User codes'],'sheet-pool':['المخزون غير المخصص','Unassigned stock'],'sheet-code-refresh':['تحديث الأكواد','Refresh codes']
@@ -764,7 +766,7 @@ const Trainees=(()=>{
       dl.append(dd);
       if(keycode){
         const keyValue=node('dd',undefined,{dir:'ltr'});keyValue.append(copyDetailValue(keycode.code,tr('كي كود الدورة','Course keycode'),'sheet-detail-keycode','ltr'));
-        dl.append(node('dt',tr('كي كود:','Keycode:')),keyValue);
+        dl.append(node('dt',tr('كي كود','Keycode')),keyValue);
         const category=state.keycodeOverrides?.[keycode.code]||keycode.category;
         const categoryValue=node('dd',undefined,{class:'sheet-detail-category-value',dir:'auto'});
         categoryValue.append(category?copyDetailValue(displayCatName(category),tr('الفئة','Category'),'sheet-detail-category'):node('span',tr('فئة غير محددة','No category')));
@@ -788,9 +790,9 @@ const Trainees=(()=>{
     dialog.addEventListener('close',()=>{$('sheet-trainee-record').replaceChildren();$('sheet-trainee-title').textContent='';});
     const show=td=>{
       if(!td?.isConnected||editing||dragging)return;
-      const index=view[+td.dataset.v],row=cells[index];if(!row?.[9])return;
+      const index=view[+td.dataset.v],row=cells[index];if(!row?.[3])return;
       hideDuplicateHint();dialog.dir=currentLang==='ar'?'rtl':'ltr';
-      $('sheet-trainee-title').textContent=tr('بيانات المتدرب — ','Trainee details — ')+row[9];
+      $('sheet-trainee-title').textContent=tr('بيانات المتدرب — ','Trainee details — ')+row[3];
       const dl=node('dl');labels.forEach((pair,c)=>{if(c>=baseLabels.length&&!row[c]&&!formatting.headers[c])return;appendDetailField(dl,row,pair,c);});
       appendPrometricDetails(dl);$('sheet-trainee-record').replaceChildren(dl);
       const exam=D.courseKeycode(row[7],DEFAULT_KEYCODES),category=exam&&(state.keycodeOverrides?.[exam.code]||exam.category),codeCategory=category&&getLinkedCodesCat(category);
@@ -815,11 +817,11 @@ const Trainees=(()=>{
       $('sheet-trainee-record').append(action);if(!dialog.open)dialog.show();
     };
     const grid=$('sheet-grid');
-    grid.addEventListener('pointerover',e=>{const td=e.target.closest('td[data-col="9"]');if(!td||td.contains(e.relatedTarget)||editing||dragging)return;clearTimeout(traineeHoverTimer);traineeHoverTimer=setTimeout(()=>show(td),650);});
-    grid.addEventListener('pointerout',e=>{if(e.target.closest('td[data-col="9"]')&&!e.target.closest('td[data-col="9"]').contains(e.relatedTarget))clearTimeout(traineeHoverTimer);});
-    grid.addEventListener('click',e=>{const td=e.target.closest('td[data-col="9"]');if(td&&!editing&&!e.shiftKey){clearTimeout(traineeHoverTimer);traineeHoverTimer=setTimeout(()=>show(td),300);}});
+    grid.addEventListener('pointerover',e=>{const td=e.target.closest('td[data-col="3"]');if(!td||td.contains(e.relatedTarget)||editing||dragging)return;clearTimeout(traineeHoverTimer);traineeHoverTimer=setTimeout(()=>show(td),650);});
+    grid.addEventListener('pointerout',e=>{if(e.target.closest('td[data-col="3"]')&&!e.target.closest('td[data-col="3"]').contains(e.relatedTarget))clearTimeout(traineeHoverTimer);});
+    grid.addEventListener('click',e=>{const td=e.target.closest('td[data-col="3"]');if(td&&!editing&&!e.shiftKey){clearTimeout(traineeHoverTimer);traineeHoverTimer=setTimeout(()=>show(td),300);}});
     grid.addEventListener('dblclick',closeTraineeDetails);
-    grid.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.closest('td[data-col="9"]')&&!editing){e.preventDefault();show(e.target.closest('td'));}});
+    grid.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.closest('td[data-col="3"]')&&!editing){e.preventDefault();show(e.target.closest('td'));}});
     document.addEventListener('pointerdown',e=>{clearTimeout(traineeHoverTimer);if(dialog.open&&!dialog.contains(e.target))closeTraineeDetails();});
     document.addEventListener('keydown',e=>{if(e.key==='Escape')closeTraineeDetails();});
   }
@@ -910,6 +912,8 @@ const Trainees=(()=>{
   function bounds(){return [Math.min(anchor.r,cursor.r),Math.max(anchor.r,cursor.r),Math.min(anchor.c,cursor.c),Math.max(anchor.c,cursor.c)];}
   function paint(){
     const [r1,r2,c1,c2]=bounds();
+    $('sheet-delete-col').disabled=!loaded||c1<D.BASE_WIDTH;
+    $('sheet-delete-col').title=c1<D.BASE_WIDTH?tr('الأعمدة الأساسية ثابتة؛ يمكن إخفاؤها.','Core columns are fixed; they can be hidden.'):tr('حذف الأعمدة المحددة بكل بياناتها','Delete selected columns and their data');
     $('sheet-grid').querySelectorAll('td[data-col]').forEach(td=>{const r=+td.dataset.v,c=+td.dataset.col,current=r===cursor.r&&c===cursor.c;td.classList.toggle('sheet-selected',r>=r1&&r<=r2&&c>=c1&&c<=c2);td.classList.toggle('sheet-current',current);td.classList.toggle('sheet-focus-axis',r===cursor.r||c===cursor.c);td.tabIndex=current?0:-1;td.setAttribute('aria-selected',String(r>=r1&&r<=r2&&c>=c1&&c<=c2));});
     if(document.activeElement!==$('sheet-address'))$('sheet-address').value=colLetter(cursor.c)+((view[cursor.r]??0)+1);
     $('sheet-grid').querySelectorAll('thead th[data-col]').forEach(th=>th.classList.toggle('sheet-active-header',+th.dataset.col>=c1&&+th.dataset.col<=c2));
