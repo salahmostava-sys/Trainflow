@@ -92,3 +92,13 @@ DOM and actual delivery still require verification after installation.
 
 The optional [Meta server provider](whatsapp-inventory.md) remains available;
 its scheduler does not dispatch while the configured provider is Web.
+
+Version 1.0.2 fixes a syntax error in the popup's last-attempt text that prevented
+the popup from running. It displays the installed version, recipient, next alarm
+and report readiness, and handles absent/rejected background replies explicitly.
+The background also accepts its own extension page when opened in a browser tab.
+`tests/whatsapp-web-extension-browser.test.cjs` loads the real MV3 package in a
+fresh isolated profile and checks the popup/worker connection and Stop, plus
+missing/invalid reply paths. The site build checks every extension script's
+syntax before producing the ZIP. These checks do not enable delivery or send
+external messages.

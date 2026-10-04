@@ -19,8 +19,10 @@ assert.equal(S.due(config,now+120001),false);assert.equal(S.due(config,now-1),fa
   };
   const context=vm.createContext({chrome,WebSchedule:{...S,day:()=>S.day(clock),at:t=>S.at(t,clock),next:t=>S.next(t,clock),due:c=>S.due(c,clock),validSnapshot:(s,c)=>S.validSnapshot(s,c,clock)},importScripts(){},URL,Date:class extends Date{static now(){return clock;}},crypto:{randomUUID:()=> 'job-'+id},console});
   vm.runInContext(fs.readFileSync(path.join(__dirname,'../extension/whatsapp-web/background.js'),'utf8'),context);
-  const drain=()=>vm.runInContext('chain',context),send=(data,url='https://ibta-ops.pages.dev/',tabId=1)=>new Promise(resolve=>events.message(data,{id:'fixture-extension',tab:{id:tabId,url}},resolve));
+  const drain=()=>vm.runInContext('chain',context),send=(data,url='https://ibta-ops.pages.dev/',tabId=1)=>new Promise(resolve=>events.message(data,{id:'fixture-extension',url,tab:{id:tabId,url}},resolve));
   await drain();await send({type:'CONFIG',payload:config},'https://evil.invalid/');assert.equal(store.config,undefined,'Other origins cannot configure the sender');
+  assert.equal((await send({type:'PING'},'chrome-extension://fixture-extension/popup.html')).connected,true,'The extension page can also open in a tab');
+  assert.equal((await send({type:'PING'},'chrome-extension://another-extension/popup.html')).allowed,false,'Other extension pages are not authorized');
   await send({type:'CONFIG',payload:config});assert.equal(alarmMap.get('send').scheduledTime,now);
   await send({type:'SNAPSHOT',payload:{config,report:snapshot}});clock=now;
   await send({type:'SNAPSHOT',payload:{config,report:snapshot}});assert.equal(alarmMap.get('send').scheduledTime,now,'A report arriving at the send time must not defer the alarm until tomorrow');

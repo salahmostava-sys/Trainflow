@@ -5,7 +5,7 @@
   "scripts": {
     "build": "node tools/build-site.cjs",
     "test": "node tests/cloud.test.cjs && node tests/trainees.test.cjs && node tests/trainees-xlsx.test.cjs && node tests/trainees-formulas.test.cjs && node tests/trainees-performance.test.cjs && node tests/sheet-delete.test.cjs && node tests/session-policy.test.cjs && node tests/google-reports.test.cjs && node tests/server.test.mjs && node tests/whatsapp-web.test.cjs",
-    "test:browser": "node tests/trainees-browser.test.cjs && node tests/trainees-excel-browser.test.cjs && node tests/codes-timeline-browser.test.cjs && node tests/sheet-enhancements-browser.test.cjs && node tests/trainees-tools-browser.test.cjs && node tests/trainees-performance-browser.test.cjs && node tests/trainees-xlsx-browser.test.cjs && node tests/inventory-delivery-browser.test.cjs && node tests/whatsapp-web-sender-browser.test.cjs"
+    "test:browser": "node tests/trainees-browser.test.cjs && node tests/trainees-excel-browser.test.cjs && node tests/codes-timeline-browser.test.cjs && node tests/sheet-enhancements-browser.test.cjs && node tests/trainees-tools-browser.test.cjs && node tests/trainees-performance-browser.test.cjs && node tests/trainees-xlsx-browser.test.cjs && node tests/inventory-delivery-browser.test.cjs && node tests/whatsapp-web-sender-browser.test.cjs && node tests/whatsapp-web-extension-browser.test.cjs"
   },
   "devDependencies": {
     "playwright": "1.63.0"

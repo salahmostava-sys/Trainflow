@@ -34,7 +34,7 @@ async function dispatch(){
 }
 chrome.runtime.onMessage.addListener((data,sender,reply)=>{
   const source=sender.tab?.url?new URL(sender.tab.url).origin:'';
-  const popup=!sender.tab&&sender.id===chrome.runtime.id;
+  const popup=sender.id===chrome.runtime.id&&(!sender.tab||sender.url?.startsWith('chrome-extension://'+chrome.runtime.id+'/'));
   serial(async()=>{
     if(source===new URL(SITE).origin){
       if(data.type==='PING')return state();

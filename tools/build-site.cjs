@@ -1,6 +1,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const {createHash}=require('node:crypto');
+const {Script}=require('node:vm');
 
 const root = path.resolve(__dirname, '..');
 const output = path.join(root, 'dist');
@@ -23,7 +24,11 @@ console.log('Cloudflare Pages files ready in dist/');
 fs.writeFileSync(path.join(output,'_worker.js'),fs.readFileSync(path.join(root,'server','worker.mjs'),'utf8').replace("import '../session-policy.js';","import './session-policy.js';"));
 fs.writeFileSync(path.join(output,'_routes.json'),JSON.stringify({version:1,include:['/api/*'],exclude:[]}));
 const JSZip=require(require.resolve('jszip',{paths:[path.dirname(require.resolve('exceljs'))]})),zip=new JSZip();
-for(const file of fs.readdirSync(path.join(root,'extension/whatsapp-web'))){zip.file(file,fs.readFileSync(path.join(root,'extension/whatsapp-web',file),'utf8').replace(/\r\n/g,'\n'),{date:new Date('2026-01-01T00:00:00Z')});}
+for(const file of fs.readdirSync(path.join(root,'extension/whatsapp-web'))){
+  const content=fs.readFileSync(path.join(root,'extension/whatsapp-web',file),'utf8').replace(/\r\n/g,'\n');
+  if(file.endsWith('.js'))new Script(content,{filename:file});
+  zip.file(file,content,{date:new Date('2026-01-01T00:00:00Z')});
+}
 zip.generateAsync({type:'nodebuffer',compression:'DEFLATE'}).then(bytes=>{
   fs.writeFileSync(path.join(output,'ibta-whatsapp-web.zip'),bytes);
   html=html.replaceAll('"ibta-whatsapp-web.zip"','"ibta-whatsapp-web.zip?v='+createHash('sha256').update(bytes).digest('hex').slice(0,12)+'"');
