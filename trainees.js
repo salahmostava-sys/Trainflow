@@ -2,7 +2,6 @@
 const Trainees=(()=>{
   'use strict';
   const D=TraineeData,$=id=>document.getElementById(id);
-  let PAGE=100;
   const baseLabels=[['الكود','Code'],['البريد الإلكتروني','Email'],['الاسم بالعربي','Arabic name'],['الاسم بالإنجليزي','English name'],['رقم الهوية / الإقامة','National / Iqama ID'],['الجوال','Phone'],['الجهة','Organization'],['الاختبار','Exam'],['تاريخ الاختبار','Exam date'],['اسم المستخدم','Username'],['كلمة المرور','Password'],['النتيجة','Result'],['AnyDesk ID','AnyDesk ID']];
   function colLetter(c){let s='';c++;while(c>0){const m=(c-1)%26;s=String.fromCharCode(65+m)+s;c=Math.floor((c-m)/26);}return s;}
   function colCount(){let count=52;if(cells&&cells.length&&cells[0]&&cells[0].length>count)count=cells[0].length;if(formatting&&formatting.headers){for(const k of Object.keys(formatting.headers)){const idx=Number(k);if(idx>=count)count=idx+1;}}return Math.min(D.MAX_COLS,count);}
@@ -11,16 +10,17 @@ const Trainees=(()=>{
   const labels=new Proxy(baseLabels,{get(target,prop){if(prop==='length')return colCount();if(prop==='map')return fn=>allLabels().map(fn);if(prop==='forEach')return fn=>allLabels().forEach(fn);if(prop==='filter')return fn=>allLabels().filter(fn);if(prop==='slice')return (s,e)=>allLabels().slice(s,e);if(typeof prop==='string'&&/^\d+$/.test(prop)){return getColLabel(Number(prop));}return target[prop];}});
   const tr=(ar,en)=>currentLang==='ar'?ar:en;
   let owner='',cells=[],version=0,revision=0,savedRevision=0,loaded=false,loading=false,epoch=0;
-  let timer,saving=null,history=[],future=[],view=[],page=0,sortCol=-1,sortDir=1,anchor={r:0,c:0},cursor={r:0,c:0},editing=null;
+  let timer,saving=null,history=[],future=[],view=[],sortCol=-1,sortDir=1,anchor={r:0,c:0},cursor={r:0,c:0},editing=null;
   let members=[],mode='sheet',codeMode='owned',codeBusy=false,initialized=false;
   let dragging=false,dragMoved=false,rowDragging=false;
   let formatting=D.defaultFormat(),duplicateIds=new Map();
+  let rowOffsets=[0],rowHeights=new Map(),drawnStart=-1,drawnEnd=-1,scrollFrame=0;
   let excelView={wrap:false,freeze:false,zoom:100};
   try{const pref=JSON.parse(localStorage.getItem('ibta_sheet_view')||'{}');excelView={wrap:pref.wrap===true,freeze:pref.freeze===true,zoom:Number.isInteger(pref.zoom)&&pref.zoom>=50&&pref.zoom<=200?pref.zoom:100};}catch{}
   function setZoom(value){
     const previous=excelView.zoom,scroll=$('sheet-grid').parentElement;
     excelView.zoom=Math.max(50,Math.min(200,Math.round(Number(value)/10)*10||100));
-    applyExcelView();scroll.scrollLeft*=excelView.zoom/previous;scroll.scrollTop*=excelView.zoom/previous;
+    applyExcelView();scroll.scrollLeft*=excelView.zoom/previous;scroll.scrollTop*=excelView.zoom/previous;rowHeights.clear();rebuildRowOffsets();drawRows(true);
     try{localStorage.setItem('ibta_sheet_view',JSON.stringify(excelView));}catch{}
   }
   function applyExcelView(){
@@ -114,7 +114,6 @@ const Trainees=(()=>{
     const newRows=Array.from({length:n},()=>D.blank());
     const next=cells.concat(newRows);
     change(next,false);
-    page=Math.floor(startIdx/PAGE);
     render();
     focusCell(startIdx,0);
     message(tr(`تمت إضافة ${n.toLocaleString()} صف دفعة واحدة بنجاح`,`Added ${n.toLocaleString()} rows at once successfully`));
@@ -432,7 +431,7 @@ const Trainees=(()=>{
           <span id="sheet-add-suffix"></span>
           <button type="button" id="sheet-add-bulk-btn" class="sheet-primary"></button>
         </div>
-        <div class="sheet-footer"><p id="sheet-help"></p><div class="sheet-pages"><button type="button" id="sheet-prev">‹</button><span id="sheet-count"></span><button type="button" id="sheet-next">›</button><label class="sheet-page-size-wrap"><select id="sheet-page-size" aria-label="Rows per page"><option value="100" selected>100</option><option value="250">250</option><option value="500">500</option><option value="1000">1000</option></select><span id="sheet-page-size-suffix"></span></label></div></div>
+        <div class="sheet-footer"><p id="sheet-help"></p><span id="sheet-count"></span></div>
       </div>
       <div id="sheet-code-workspace" hidden><div class="sheet-code-tools" id="sheet-code-admin" hidden><button type="button" id="sheet-owned"></button><button type="button" id="sheet-pool"></button><button type="button" id="sheet-assign" class="sheet-primary"></button></div><div class="sheet-code-tools"><input id="sheet-code-search" type="search"><button type="button" id="sheet-code-refresh"></button><span id="sheet-code-count"></span></div><p class="sheet-notice" id="sheet-code-notice"></p><div class="sheet-card sheet-code-list" id="sheet-code-list"></div><p id="sheet-code-status" role="status"></p></div>`;
     const toolbar=$('sheet-workspace').querySelector('.sheet-tools');
@@ -446,7 +445,7 @@ const Trainees=(()=>{
     toolbar.append($('sheet-status'));
     const localNote=node('small',undefined,{id:'sheet-local-note',class:'sheet-local-note'});$('sheet-workspace').querySelector('.sheet-format-tools').append(localNote);
     const more=button(tr('التنسيق وأدوات إضافية','Formatting & more tools'),()=>{const expanded=$('sheet-workspace').classList.toggle('sheet-show-tools');more.setAttribute('aria-expanded',String(expanded));});more.id='sheet-more-tools';more.className='sheet-mobile-toggle';more.setAttribute('aria-expanded','false');toolbar.before(more);
-    for(const key of ['wrap','freeze'])$('sheet-'+key).onclick=()=>{commitEdit();excelView[key]=!excelView[key];try{localStorage.setItem('ibta_sheet_view',JSON.stringify(excelView));}catch{}applyExcelView();};
+    for(const key of ['wrap','freeze'])$('sheet-'+key).onclick=()=>{commitEdit();excelView[key]=!excelView[key];try{localStorage.setItem('ibta_sheet_view',JSON.stringify(excelView));}catch{}applyExcelView();rowHeights.clear();rebuildRowOffsets();drawRows(true);};
     const zoomTools=node('div',undefined,{class:'sheet-zoom-tools',dir:'ltr'});
     zoomTools.innerHTML='<span id="sheet-zoom-label"></span><button type="button" id="sheet-zoom-out">−</button><input type="range" id="sheet-zoom-slider" min="50" max="200" step="10" value="100"><button type="button" id="sheet-zoom-in">+</button><button type="button" id="sheet-zoom-reset">100%</button>';
     $('sheet-workspace').querySelector('.sheet-footer').append(zoomTools);
@@ -469,7 +468,6 @@ const Trainees=(()=>{
 
     $('sheet-add-bulk-btn').onclick=()=>{const count=Number($('sheet-add-bulk-count').value)||1000;addBulkRows(count);};
     $('sheet-add-bulk-count').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();addBulkRows(Number($('sheet-add-bulk-count').value)||1000);}});
-    if($('sheet-page-size'))$('sheet-page-size').onchange=()=>{PAGE=Number($('sheet-page-size').value)||100;page=0;render();};
     $('sheet-delete').onclick=deleteSelectedRows;
     $('sheet-delete-col').onclick=()=>editColumns('delete');
     $('sheet-find-btn').onclick=()=>openFindDialog();
@@ -488,11 +486,11 @@ const Trainees=(()=>{
     for(let size=10;size<=32;size++)$('sheet-selection-size').append(node('option',String(size),{value:size}));
     $('sheet-undo').onclick=()=>undo(false);$('sheet-redo').onclick=()=>undo(true);
     $('sheet-copy').onclick=async()=>{commitEdit();if(await copyText(D.tsv(cells)))message(tr('تم نسخ الجدول بالكامل','Entire sheet copied'));};
-    ['sheet-search','sheet-org','sheet-date','sheet-result'].forEach(id=>$(id).addEventListener('input',()=>{commitEdit();page=0;anchor=cursor={r:0,c:0};render();}));
-    $('sheet-duplicates-only').onchange=()=>{commitEdit();page=0;anchor=cursor={r:0,c:0};render();};
+    ['sheet-search','sheet-org','sheet-date','sheet-result'].forEach(id=>$(id).addEventListener('input',()=>{commitEdit();anchor=cursor={r:0,c:0};render();}));
+    $('sheet-duplicates-only').onchange=()=>{commitEdit();anchor=cursor={r:0,c:0};render();};
     $('sheet-clear-filters').onclick=()=>{commitEdit();clearFilters();render();};
-    $('sheet-prev').onclick=()=>{commitEdit();page=Math.max(0,page-1);render();};$('sheet-next').onclick=()=>{commitEdit();page++;render();};
     const grid=$('sheet-grid');
+    grid.parentElement.addEventListener('scroll',()=>{if(scrollFrame)return;scrollFrame=requestAnimationFrame(()=>{scrollFrame=0;drawRows();});},{passive:true});
     initDuplicateDetails();
     initTraineeDetails();
     initContextMenu();
@@ -605,7 +603,6 @@ const Trainees=(()=>{
       'sheet-owner-label':['عرض بيانات المستخدم','View user'],'sheet-mode':['المتدربون','Trainees'],'sheet-codes-mode':['أكواد المستخدم','User codes'],
       'sheet-local-note':['المحاذاة والتفاف النص وتثبيت الأعمدة وعرضها تفضيلات لهذا الجهاز.','Alignment, wrapping, frozen columns and widths are preferences for this device.'],'sheet-value-label':['قيمة','Value'],'sheet-add':['+ إضافة صف','+ Add row'],'sheet-wrap':['التفاف النص','Wrap text'],'sheet-freeze':['تثبيت أول عمود','Freeze first column'],
       'sheet-add-prefix':['إضافة','Add'],'sheet-add-suffix':['صف في الأسفل','more rows at bottom'],'sheet-add-bulk-btn':['+ إضافة','+ Add'],
-      'sheet-page-size-suffix':['/ صفحة','/ page'],
       'sheet-delete':['حذف صف','Delete row'],'sheet-add-col':['+ إضافة عمود','+ Add column'],'sheet-delete-col':['حذف عمود','Delete column'],'sheet-undo':['تراجع','Undo'],'sheet-redo':['إعادة','Redo'],
       'sheet-copy':['نسخ الجدول','Copy sheet'],'sheet-save':['حفظ الآن','Save now'],'sheet-reload':['إعادة تحميل','Reload'],'sheet-clear-filters':['مسح الفلاتر','Clear filters'],
       'sheet-help':['للكتابة: انقر مرتين أو ابدأ الكتابة · اسحب أو Shift + نقر لتحديد نطاق · Ctrl+C / Ctrl+V · Tab والأسهم للتنقل','Double-click or type to edit · Drag or Shift+click selects a range · Ctrl+C / Ctrl+V · Tab and arrow navigation'],
@@ -620,7 +617,6 @@ const Trainees=(()=>{
       'sheet-find-next':['بحث عن التالي','Find Next'],'sheet-find-replace-one':['استبدال','Replace'],'sheet-find-replace-all':['استبدال الكل','Replace All']
     };for(const [id,pair]of Object.entries(text))$(id)&&($(id).textContent=tr(...pair));
     for(const [id,pair]of Object.entries({'sheet-search':['بحث في الجدول…','Search sheet…'],'sheet-org':['فلترة بالجهة…','Filter organization…'],'sheet-date':['فلترة بتاريخ الاختبار…','Filter exam date…'],'sheet-code-search':['بحث عن كود…','Search codes…']})){$(id)&&($(id).placeholder=tr(...pair));$(id)&&($(id).setAttribute('aria-label',tr(...pair)));}
-    $('sheet-prev').setAttribute('aria-label',tr('الصفحة السابقة','Previous page'));$('sheet-next').setAttribute('aria-label',tr('الصفحة التالية','Next page'));
     const value=$('sheet-result').value;$('sheet-result').replaceChildren();
     [['',tr('كل النتائج','All results')],['ناجح','ناجح'],['راسب','راسب'],['لم يدخل','لم يدخل']].forEach(([v,label])=>$('sheet-result').append(node('option',label,{value:v})));
     $('sheet-result').value=value;$('sheet-result').setAttribute('aria-label',tr('النتيجة','Result'));
@@ -666,7 +662,7 @@ const Trainees=(()=>{
     if(hasDraft()&&!confirm(tr('إعادة التحميل ستستبدل تعديلاتك غير المحفوظة. انسخ الجدول أولًا للاحتفاظ بها. المتابعة؟','Reload replaces unsaved edits. Copy the sheet first to keep them. Continue?')))return;
     clearTimeout(timer);await switchOwner(owner||Cloud.userId(),true);
   }
-  function clearFilters(){['sheet-search','sheet-org','sheet-date','sheet-result'].forEach(id=>$(id).value='');$('sheet-duplicates-only').checked=false;sortCol=-1;page=0;}
+  function clearFilters(){['sheet-search','sheet-org','sheet-date','sheet-result'].forEach(id=>$(id).value='');$('sheet-duplicates-only').checked=false;sortCol=-1;}
   function filtered(){return sortCol>=0||$('sheet-duplicates-only').checked||['sheet-search','sheet-org','sheet-date','sheet-result'].some(id=>$(id).value);}
   function buildView(){
     const search=$('sheet-search').value.toLocaleLowerCase(),org=$('sheet-org').value.toLocaleLowerCase(),date=$('sheet-date').value.toLocaleLowerCase(),result=$('sheet-result').value;
@@ -676,7 +672,7 @@ const Trainees=(()=>{
     if(!filtered())for(let i=cells.length;i<Math.min(D.MAX_ROWS,Math.max(25,cells.length+5));i++)view.push(i);
   }
   function render(){
-    if(!initialized)return;closeTraineeDetails();hideDuplicateHint();clearTimeout(detailTimer);buildView();page=Math.min(page,Math.max(0,Math.ceil(view.length/PAGE)-1));
+    if(!initialized)return;closeTraineeDetails();hideDuplicateHint();clearTimeout(detailTimer);buildView();
     const cols=visibleCols();if(!cols.includes(cursor.c))cursor.c=cols[0];if(!cols.includes(anchor.c))anchor.c=cursor.c;
     $('panel-trainees').dir=formatting.direction;
     $('sheet-workspace').style.setProperty('--sheet-font-size',formatting.fontSize+'px');
@@ -690,7 +686,7 @@ const Trainees=(()=>{
     labels.forEach((pair,c)=>{
       if(!cols.includes(c))return;
       const th=node('th',undefined,{scope:'col','data-col':c});if(c>=baseLabels.length)th.style.setProperty('--col-w','calc(var(--col-w-'+c+',160px) * var(--sheet-zoom,1))');
-      th.append(button(colLetter(c)+' · '+tr(...pair),e=>{commitEdit();const firstCol=e.shiftKey?anchor.c:c;page=0;anchor={r:Math.max(0,view.length-1),c:firstCol};cursor={r:0,c};render();$('sheet-grid').querySelector(`td[data-v="0"][data-col="${c}"]`)?.focus();}));
+      th.append(button(colLetter(c)+' · '+tr(...pair),e=>{commitEdit();const firstCol=e.shiftKey?anchor.c:c;anchor={r:Math.max(0,view.length-1),c:firstCol};cursor={r:0,c};focusCell(0,c,true);}));
       th.title=tr('تحديد العمود كله · Shift لتحديد عدة أعمدة','Select entire column · Shift to select multiple columns');
       if(c>=baseLabels.length){
         th.title=tr('انقر مرتين لتعديل اسم العمود · اسحب لتغيير العرض','Double-click to rename column · Drag to resize');
@@ -711,17 +707,39 @@ const Trainees=(()=>{
       header.append(th);
     });
     thead.append(header);
-    for(let v=page*PAGE;v<Math.min(view.length,(page+1)*PAGE);v++){
+    rowHeights.clear();rebuildRowOffsets();drawRows(true);
+    grid.setAttribute('aria-rowcount',String(view.length+1));
+    $('sheet-count').textContent=tr('سجلات: ','Records: ')+cells.filter(r=>r.some(Boolean)).length+tr(' · إجمالي الصفوف: ',' · Total rows: ')+cells.length;
+    $('sheet-undo').disabled=!history.length;$('sheet-redo').disabled=!future.length;
+    if($('sheet-duplicate-dialog')?.open)renderDuplicateDetails();
+  }
+  function rebuildRowOffsets(){
+    const estimate=Math.max((excelView.wrap?28:21)*excelView.zoom/100,formatting.fontSize*excelView.zoom/100*(excelView.wrap?1.5:1.2));
+    rowOffsets=new Float64Array(view.length+1);for(let r=0;r<view.length;r++)rowOffsets[r+1]=rowOffsets[r]+(rowHeights.get(view[r])||estimate);
+  }
+  function rowAtOffset(offset){let low=0,high=view.length;while(low<high){const mid=(low+high)>>1;if(rowOffsets[mid+1]<=offset)low=mid+1;else high=mid;}return Math.min(low,Math.max(0,view.length-1));}
+  function drawRows(force=false){
+    if(!initialized||editing&&!force)return;const grid=$('sheet-grid'),scroll=grid.parentElement,tbody=grid.querySelector('tbody'),cols=visibleCols();
+    const height=scroll.clientHeight||400,head=grid.querySelector('thead').getBoundingClientRect().height||36;
+    const first=rowAtOffset(Math.max(0,scroll.scrollTop-head)),start=view.length<=100?0:Math.max(0,first-8),end=view.length<=100?view.length:Math.min(view.length,rowAtOffset(scroll.scrollTop+height)+10);
+    if(!force&&start===drawnStart&&end===drawnEnd)return;
+    const hadFocus=grid.contains(document.activeElement);commitEdit();drawnStart=start;drawnEnd=end;const fragment=document.createDocumentFragment();
+    const spacer=(height)=>{const row=node('tr',undefined,{class:'sheet-spacer','aria-hidden':'true'}),cell=node('td',undefined,{colspan:cols.length+1});row.style.setProperty('height',height+'px','important');cell.style.setProperty('height',height+'px','important');row.append(cell);return row;};
+    const top=spacer(rowOffsets[start]),bottom=spacer(rowOffsets[view.length]-rowOffsets[end]);if(start)fragment.append(top);
+    for(let v=start;v<end;v++){
       const idx=view[v],trEl=node('tr');const number=node('th',undefined,{class:'sheet-rownum',scope:'row','data-rowv':v});
       const rowBtn=button(String(idx+1),e=>{commitEdit();const maxC=colCount()-1;if(e.shiftKey){cursor={r:v,c:maxC};anchor.c=0;}else{anchor={r:v,c:0};cursor={r:v,c:maxC};}paint();});
       rowBtn.addEventListener('pointerdown',e=>{if(e.button!==0)return;e.preventDefault();e.stopPropagation();commitEdit();rowDragging=true;dragMoved=false;const maxC=colCount()-1;if(e.shiftKey){cursor={r:v,c:maxC};anchor.c=0;}else{anchor={r:v,c:0};cursor={r:v,c:maxC};}paint();});
       number.append(rowBtn);trEl.append(number);
-      cols.forEach(c=>{const td=node('td',undefined,{'data-v':v,'data-col':c,tabindex:'-1',role:'gridcell',dir:'auto','aria-label':tr(...labels[c])+' '+(idx+1)});decorateCell(td,idx,c);trEl.append(td);});tbody.append(trEl);
+      trEl.setAttribute('aria-rowindex',String(v+2));
+      cols.forEach(c=>{const td=node('td',undefined,{'data-v':v,'data-col':c,tabindex:'-1',role:'gridcell',dir:'auto','aria-label':tr(...labels[c])+' '+(idx+1)});decorateCell(td,idx,c);trEl.append(td);});fragment.append(trEl);
     }
-    $('sheet-count').textContent=tr('سجلات: ','Records: ')+cells.filter(r=>r.some(Boolean)).length+tr(' · إجمالي الصفوف: ',' · Total rows: ')+cells.length+tr(' · صفحة ',' · Page ')+(page+1)+' / '+Math.max(1,Math.ceil(view.length/PAGE));
-    $('sheet-prev').disabled=page===0;$('sheet-next').disabled=(page+1)*PAGE>=view.length;
-    $('sheet-undo').disabled=!history.length;$('sheet-redo').disabled=!future.length;applyExcelView();paint();
-    if($('sheet-duplicate-dialog')?.open)renderDuplicateDetails();
+    if(end<view.length)fragment.append(bottom);tbody.replaceChildren(fragment);applyExcelView();paint();
+    const oldFirst=rowOffsets[first];tbody.querySelectorAll('th[data-rowv]').forEach(th=>rowHeights.set(view[+th.dataset.rowv],th.parentElement.getBoundingClientRect().height));rebuildRowOffsets();
+    if(start){top.style.setProperty('height',rowOffsets[start]+'px','important');top.firstChild.style.setProperty('height',rowOffsets[start]+'px','important');}
+    if(end<view.length){const remaining=rowOffsets[view.length]-rowOffsets[end];bottom.style.setProperty('height',remaining+'px','important');bottom.firstChild.style.setProperty('height',remaining+'px','important');}
+    if(Math.abs(rowOffsets[first]-oldFirst)>.5)scroll.scrollTop+=rowOffsets[first]-oldFirst;
+    if(hadFocus)grid.querySelector(`td[data-v="${cursor.r}"][data-col="${cursor.c}"]`)?.focus({preventScroll:true});
   }
   function decorateCell(td,index,column){
     const value=cells[index]?.[column]||'',style=formatting.styles[index+':'+column]||{};
@@ -928,7 +946,8 @@ const Trainees=(()=>{
   }
   function selectCell(r,c,extend=false){commitEdit();cursor={r,c};if(!extend)anchor={r,c};paint();$('sheet-grid').querySelector(`td[data-v="${r}"][data-col="${c}"]`)?.focus();}
   function focusCell(r,c,extend=false){
-    r=Math.max(0,Math.min(view.length-1,r));c=Math.max(0,Math.min(colCount()-1,c));if(!visibleCols().includes(c))c=visibleCols()[0];const nextPage=Math.floor(r/PAGE);if(page!==nextPage){page=nextPage;render();}selectCell(r,c,extend);
+    r=Math.max(0,Math.min(view.length-1,r));c=Math.max(0,Math.min(colCount()-1,c));if(!visibleCols().includes(c))c=visibleCols()[0];
+    if(r<drawnStart||r>=drawnEnd){commitEdit();$('sheet-grid').parentElement.scrollTop=rowOffsets[r]||0;drawRows(true);}selectCell(r,c,extend);
   }
   function beginEdit(td,initial){
     if(!loaded||loading)return;commitEdit();const r=+td.dataset.v,c=+td.dataset.col;cursor=anchor={r,c};paint();

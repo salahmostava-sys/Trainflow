@@ -40,9 +40,23 @@ const {spawn}=require('node:child_process');
     assert.equal(await page.locator('[data-action="operations"]').isEnabled(),true);
     assert.equal(await page.locator('[data-action="success"]').isDisabled(),true);
     assert.equal(await page.locator('#sheet-address').inputValue(),'A1');
+    await page.setViewportSize({width:1500,height:1000});
+    await page.evaluate(()=>{const old=previewSheets.get('demo-admin');const cells=Array.from({length:3068},(_,i)=>{const row=Array(13).fill('');row[2]='متدرب '+(i+1);row[3]='Trainee '+(i+1);return row;});previewSheets.set('demo-admin',{...old,cells,format:{...old.format,headers:{499:'Last column'}},version:old.version+1});});
+    await page.locator('#sheet-reload').click();await page.waitForFunction(()=>document.getElementById('sheet-status').textContent==='تم الحفظ');
+    assert.equal(await page.locator('#sheet-prev,#sheet-next,#sheet-page-size').count(),0,'Pagination controls are removed');
+    assert.equal(await page.locator('#sheet-grid').getAttribute('aria-rowcount'),'3074','All 3068 data rows, five empty input rows and the header belong to one continuous grid');
+    assert.ok(await page.locator('#sheet-grid tbody th[data-rowv]').count()<100,'Only viewport rows are mounted to keep thousands of records responsive');
+    assert.equal(await page.locator('#sheet-grid thead th[data-col]').count(),500);
+    assert.ok(await page.locator('#sheet-grid td[data-col]').count()<40000,'3068 rows by 500 columns never create a million DOM cells');
+    assert.doesNotMatch(await page.locator('#sheet-count').textContent(),/Page|صفحة/);
+    await page.locator('#sheet-address').fill('C3068');await page.locator('#sheet-address').press('Enter');
+    assert.equal(await page.locator('td.sheet-current').getAttribute('data-v'),'3067','Last row is reachable without changing pages');
+    assert.equal(await page.locator('td[data-v="3067"][data-col="2"]').textContent(),'متدرب 3068');
+    await page.keyboard.press('F2');await page.keyboard.press('Control+a');await page.keyboard.insertText('آخر صف');await page.keyboard.press('Enter');
+    await page.waitForFunction(()=>!Trainees.hasDraft());assert.equal(await page.evaluate(()=>previewSheets.get('demo-admin').cells[3067][2]),'آخر صف');
     // The old design fixture omits reports and some non-trainee page globals.
     const fixtureErrors=new Set(['codes is not defined',"Cannot read properties of null (reading 'addEventListener')",'TraineeReports is not defined']);
     assert.deepEqual(errors.filter(message=>!fixtureErrors.has(message)),[]);
-    console.log('PASS: ribbon controls, address navigation across pages, invalid addresses, active cells and mobile layout');
+    console.log('PASS: ribbon controls, continuous 3068-row sheet, last-row navigation/editing, invalid addresses and mobile layout');
   }finally{await browser.close();server.kill();}
 })().catch(e=>{console.error(e);process.exitCode=1;});
