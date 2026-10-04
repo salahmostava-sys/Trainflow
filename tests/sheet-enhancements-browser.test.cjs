@@ -62,7 +62,7 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),path
     assert.equal(await cell(0,2).evaluate(el=>el===document.activeElement),true,'Undo restores keyboard focus to the active cell');
     assert.equal(await page.locator('body').evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(255, 255, 255)');
     assert.equal(await page.locator('.sheet-formula').count(),0,'Separate formula bar is removed');
-    for(const selector of ['.sheet-compact-toolbar','.sheet-footer'])assert.equal(await page.locator(selector).evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(255, 255, 255)');
+    for(const selector of ['.sheet-clean-toolbar','.sheet-footer'])assert.equal(await page.locator(selector).evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(255, 255, 255)');
     await cell(0,2).click();await cell(0,3).click({modifiers:['Shift']});
     for(const align of ['left','center','right']){
       await page.locator('#sheet-align-'+align).click();
@@ -117,7 +117,7 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),path
     await page.evaluate(()=>{DEFAULT_KEYCODES=[{title:'Sales',lang:'Arabic',code:'LIVE-SALES-AR',category:'Foundation'},{title:'Sales',lang:'English',code:'LIVE-SALES-EN',category:'Foundation'}];state.keycodeOverrides['LIVE-SALES-AR']='Review-category';(state.categoryLabels||={})['Review-category']='فئة المراجعة';PROMETRIC_ACCOUNT='demo-prometric-account';PROMETRIC_PASSWORD='demo-prometric-password';});
     await paste(0,0,['CODE','hidden@example.invalid','متدرب','Trainee','123','050','Org','محترف الأعمال المعتمد في المبيعات CBP-S','04/10/2026','trainee-user','demo-password','ناجح','AD'].join('\t'));
     await page.locator('#sheet-save').click();await page.waitForFunction(()=>!Trainees.hasDraft());
-    await page.locator('#sheet-columns summary').click();await page.locator('[data-column-toggle="1"]').uncheck();await page.locator('#sheet-columns summary').click();
+    await page.locator('#sheet-columns-title').click();await page.locator('[data-column-toggle="1"]').uncheck();await page.locator('#sheet-columns-close').click();
     await cell(0,9).hover();await page.waitForTimeout(750);assert.equal(await page.locator('#sheet-trainee-dialog').isVisible(),false,'Username no longer opens details');
     await cell(0,3).hover();await page.waitForTimeout(750);assert.equal(await page.locator('#sheet-trainee-dialog').isVisible(),false,'Hover does not open trainee details');
     await cell(0,3).click();await page.waitForTimeout(350);assert.equal(await page.locator('#sheet-trainee-dialog').isVisible(),false,'Single click only selects the name');

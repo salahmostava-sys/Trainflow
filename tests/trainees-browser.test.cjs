@@ -64,7 +64,7 @@ const {spawn}=require('node:child_process');
     await page.locator('#sheet-font-minus').click();assert.equal(await cell(0,2).evaluate(el=>getComputedStyle(el).fontSize),'20px');
     await page.locator('#sheet-direction').selectOption('rtl');
     assert.equal(await page.locator('.sheet-scroll').evaluate(el=>getComputedStyle(el).direction),'rtl');
-    await page.locator('#sheet-columns summary').click();await page.locator('[data-column-toggle="1"]').uncheck();await page.locator('#sheet-columns summary').click();
+    await page.locator('#sheet-columns-title').click();await page.locator('[data-column-toggle="1"]').uncheck();await page.locator('#sheet-columns-close').click();
     assert.equal(await cell(0,1).count(),0,'Hidden columns must not be rendered');
     await cell(0,0).click();await page.keyboard.press('Tab');assert.equal(await page.locator('td:focus').getAttribute('data-col'),'2','Tab skips hidden columns');
     await page.keyboard.press('ArrowRight');assert.equal(await page.locator('td:focus').getAttribute('data-col'),'0','RTL arrows follow visual order');

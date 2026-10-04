@@ -529,13 +529,19 @@ const Trainees=(()=>{
     $('sheet-code-refresh').onclick=async()=>{if(await Cloud.refresh())renderCodes();};
     window.addEventListener('beforeunload',e=>{if(hasDraft()){e.preventDefault();e.returnValue='';}});
     if(typeof TraineeExcel!=='undefined')excelTools=TraineeExcel.mount({D,$,tr,node,button,
-      state:()=>({cells,formatting,view,owner,loaded,bounds:bounds(),cursor:{...cursor},cols:visibleCols(),filtered:filtered()}),
+      state:()=>({cells,formatting,view,owner,loaded,labels:allLabels(),bounds:bounds(),cursor:{...cursor},cols:visibleCols(),filtered:filtered()}),
       commitEdit,change,formatSelection,focusCell,render,message,cutSelection,copySelection,pasteSelection,executePaste,
-      insertRow,editColumns,deleteSelectedRows,deleteSelectedCells,clearSelection,openFindDialog,
+      insertRow,addColumn,editColumns,deleteSelectedRows,deleteSelectedCells,clearSelection,openFindDialog,
       select:(a,b)=>{commitEdit();anchor=a;cursor=b;paint();},
       flush,sort:(column,direction)=>{commitEdit();sortCol=column;sortDir=direction;render();},
       resetSort:()=>{sortCol=-1;render();},setColumnWidth,saveColumnWidths,resetColumnWidth});
     translate();
+  }
+  function addColumn(){
+    if(!loaded)return;commitEdit();const c=colCount();if(c>=D.MAX_COLS)return limitError();
+    const name=prompt(tr('اسم العمود الجديد:','New column name:'),tr('عمود ','Column ')+colLetter(c));if(name===null)return;
+    const next=D.columns(cells,formatting,c,1,true,c);next.format.headers[c]=name.trim()||tr('عمود ','Column ')+colLetter(c);
+    change(next.cells,true,next.format);focusCell(cursor.r,c);
   }
   function toggleAddColumnMenu(force){
     const popover=$('sheet-add-col-popover');
@@ -598,7 +604,7 @@ const Trainees=(()=>{
   }
   function translate(){
     $('trainees-tab').textContent=tr('المتدربون','Trainees');if(!initialized)return;
-    $('sheet-more-tools').textContent=tr('التنسيق وأدوات إضافية','Formatting & more tools');
+    if($('sheet-more-tools'))$('sheet-more-tools').textContent=tr('التنسيق وأدوات إضافية','Formatting & more tools');
     $('sheet-zoom-label').textContent=tr('زوم الجدول','Table zoom');
     for(const [id,ar,en]of [['sheet-zoom-out','تصغير الجدول','Zoom out'],['sheet-zoom-in','تكبير الجدول','Zoom in'],['sheet-zoom-slider','نسبة زوم الجدول','Table zoom percentage'],['sheet-zoom-reset','إرجاع الزوم إلى 100%','Reset zoom to 100%']]){$(id).setAttribute('aria-label',tr(ar,en));$(id).title=tr(ar,en);}
     document.querySelectorAll('.sheet-ribbon-group small[data-ar]').forEach(el=>el.textContent=tr(el.dataset.ar,el.dataset.en));
@@ -652,6 +658,7 @@ const Trainees=(()=>{
   }
   async function switchOwner(next,discard=false){
     if(loading)return false;
+    excelTools?.closeFiles();
     closeDuplicateDetails();
     commitEdit();if(!discard&&!await flush())return false;
     const token=++epoch;loading=true;$('sheet-owner').disabled=true;$('sheet-workspace').inert=true;
@@ -1179,8 +1186,8 @@ const Trainees=(()=>{
     catch(error){$('sheet-code-status').textContent=/CONFLICT/.test(error.message||'')?tr('تغيرت الأكواد. حدّث القائمة وحاول مجددًا.','Codes changed. Refresh and try again.'):tr('تعذر تخصيص الأكواد. تأكد أن المستخدم نشط ثم حدّث القائمة.','Could not assign codes. Check that the user is active, then refresh.');}
     finally{codeBusy=false;$('sheet-code-workspace').inert=false;$('sheet-owner').disabled=false;}
   }
-  function reset(){closeDuplicateDetails();closeContextMenu();$('sheet-find-dialog')?.close();clearTimeout(timer);epoch++;owner='';cells=[];formatting=D.defaultFormat();loaded=false;loading=false;editing=null;history=[];future=[];revision=savedRevision=0;if(initialized){render();$('sheet-owner').replaceChildren();$('sheet-code-list').replaceChildren();$('sheet-workspace').inert=true;}}
-  function suspend(){closeDuplicateDetails();closeContextMenu();$('sheet-find-dialog')?.close();clearTimeout(timer);}
+  function reset(){excelTools?.closeFiles();closeDuplicateDetails();closeContextMenu();$('sheet-find-dialog')?.close();clearTimeout(timer);epoch++;owner='';cells=[];formatting=D.defaultFormat();loaded=false;loading=false;editing=null;history=[];future=[];revision=savedRevision=0;if(initialized){render();$('sheet-owner').replaceChildren();$('sheet-code-list').replaceChildren();$('sheet-workspace').inert=true;}}
+  function suspend(){excelTools?.closeFiles();closeDuplicateDetails();closeContextMenu();$('sheet-find-dialog')?.close();clearTimeout(timer);}
   return {open,translate,hasDraft,flush,reset,suspend};
 })();
 Trainees.translate();

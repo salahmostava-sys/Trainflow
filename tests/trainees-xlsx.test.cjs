@@ -1,0 +1,13 @@
+const assert=require('node:assert/strict'),ExcelJS=require('exceljs'),X=require('../trainees-xlsx.js');
+(async()=>{
+  const headers=Array.from({length:500},(_,c)=>'Column '+c),cells=[Array(500).fill(''),Array(500).fill('')];cells[0][4]='0012345678';cells[0][10]='P@#1970';cells[0][7]='محترف الأعمال CBP-L';cells[1][499]='=SUM(A1:A2)';
+  const bytes=await X.write(ExcelJS,cells,headers),book=new ExcelJS.Workbook();await book.xlsx.load(bytes);
+  const decoded=X.sheetData(book.worksheets[0]);assert.equal(decoded.width,500);assert.equal(decoded.rows[1][4],'0012345678');assert.equal(decoded.rows[1][10],'P@#1970');assert.equal(decoded.rows[2][499],'=SUM(A1:A2)');assert.equal(book.worksheets[0].getCell(3,500).type,ExcelJS.ValueType.String,'Formula-like source data stays literal text');
+  const imported=book.addWorksheet('Types');imported.getCell('A1').value=42;imported.getCell('A1').numFmt='000000';imported.getCell('B1').value=new Date('2026-10-04T00:00:00Z');imported.getCell('C1').value={formula:'1+2',result:3};imported.getCell('D1').value={richText:[{text:'A'},{text:'B'}]};assert.deepEqual(X.sheetData(imported).rows[0],['000042','2026-10-04','3','AB']);
+  imported.getCell('A2').value={formula:'1+2'};assert.throws(()=>X.sheetData(imported),/FORMULA_RESULT/);imported.getCell('A2').value='x'.repeat(2001);assert.throws(()=>X.sheetData(imported),/CELL_LIMIT/);imported.getCell('A2').value='';imported.getCell(1,501).value='invalid';assert.throws(()=>X.sheetData(imported),/SHEET_LIMIT/);
+  const labels=Array.from({length:52},(_,c)=>['عمود '+c,'Column '+c]);labels[7]=['الاختبار','Exam'];labels[1]=['البريد الإلكتروني','Email'];labels[4]=['الهوية','ID'];
+  const rows=[['Exam','Email','New field'],['CBP-L','test@example.invalid','00123']];assert.equal(X.detectHeaders(rows,labels),true);const mapped=X.prepare(rows,true,labels);assert.deepEqual(mapped.targets,[7,1,52]);assert.equal(mapped.headers[52],'New field');assert.equal(mapped.rows[0][2],'00123');
+  assert.throws(()=>X.prepare([['Exam','Exam'],['A','B']],true,labels),/HEADER_MAPPING/);assert.deepEqual(X.prepare([['00123','A']],false,labels).targets,[0,1]);
+  const large=Array.from({length:3068},(_,i)=>{const row=Array(500).fill('');row[7]='Exam '+i;row[499]='00123';return row;}),largeBook=new ExcelJS.Workbook();await largeBook.xlsx.load(await X.write(ExcelJS,large,headers));const largeData=X.sheetData(largeBook.worksheets[0]);assert.equal(largeData.rows.length,3069);assert.equal(largeData.rows[3068][499],'00123');
+  console.log('PASS: real XLSX roundtrip, 500 columns, literal formulas, leading zeros, Arabic, dates, cached values, headers and limits');
+})().catch(error=>{console.error(error);process.exitCode=1;});
