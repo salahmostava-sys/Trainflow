@@ -9,6 +9,7 @@ class Element {
   removeAttribute(name){delete this[name];}
   get options(){return this.children;}
   showModal(){this.open=true;}
+  click(){if(this.download)events.push({name:'download',filename:this.download});this.listeners.click?.();}
   close(){this.open=false;}
   set innerHTML(v){this.children=[];this._html=v;} get innerHTML(){return this._html||'';}
 }
@@ -16,6 +17,7 @@ const els={},storage=new Map(),events=[];
 const document={listeners:{},addEventListener(event,fn){this.listeners[event]=fn;},getElementById:id=>els[id] ||= new Element(),createElement:()=>new Element(),querySelectorAll:()=>[],querySelector:()=>new Element(),body:new Element(),execCommand:()=>false,hidden:false};
 const db={settings:{id:1,version:1,payload:{keycodes:[],categoryOrder:['Foundation'],codeCategories:['Foundation-100'],keycodeOrder:{},keycodeOverrides:{},dateColors:{},credentials:{account:'test-account',password:'test-password'},links:{zoom:'https://us02web.zoom.us/j/demo',prometric:'https://tcnet1.prometric.com/Login.aspx?demo=1'}}},codes:[{code:'TEST',category:'Foundation-100',notes:'',used_on:null,used_by:null,version:1}],stock:[],members:[{email:'test@example.invalid',role:'admin',active:true,user_id:'user-1'},{email:'member@example.invalid',role:'operator',active:true,user_id:null}]};
 const clone=x=>JSON.parse(JSON.stringify(x));
+const backupBlobs=[];db.traineeSheets=[];
 let conflict=false,clipboardFails=false,codeReads=0;
 const authUser={id:'user-1',email:'test@example.invalid',user_metadata:{}};
 const windowListeners={};let authListener,signOuts=0;
@@ -25,6 +27,7 @@ const accessToken='header.'+Buffer.from(JSON.stringify({amr:[{method:'password',
 const client={
   auth:{getSession:async()=>{if(firstSessionRead){firstSessionRead=false;await initialSessionRead;}return sessionReadError?{error:Error('NETWORK')}:{data:{session:{user:clone(authUser),access_token:accessToken}}};},onAuthStateChange(fn){authListener=fn;},signOut:async()=>{signOuts++;authListener?.('SIGNED_OUT',null);return {};},updateUser:async args=>{events.push({name:'auth_update',args:clone(args)});if(args.data)authUser.user_metadata={...authUser.user_metadata,...args.data};return {data:{user:clone(authUser)}};}},
   from(table){
+    if(table==='ibta_trainee_sheets')return {select(){return this;},order(){return this;},range:async(from,to)=>({data:clone(db.traineeSheets.slice(from,to+1)),error:null})};
     if(table==='ibta_supervisor_stock')return {select:async()=>({data:clone(db.stock),error:null})};
     if(table==='ibta_members'){
       let filter;
@@ -69,6 +72,7 @@ const client={
       db.settings.payload=clone(args.backup.settings);db.settings.version++;
       db.codes=clone(args.backup.codes).map(row=>({...row,version:1000000}));
       if(args.backup.supervisorStock)db.stock=clone(args.backup.supervisorStock);
+      if(args.backup.traineeSheets)db.traineeSheets=clone(args.backup.traineeSheets);
       return {};
     }
     if(name==='ibta_claim_code'){
@@ -94,7 +98,7 @@ const client={
     return {};
   }
 };
-const ctx=vm.createContext({document,URL,localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v)},sessionStorage:{},window:{supabase:{createClient:()=>client},addEventListener(name,fn){windowListeners[name]=fn;}},navigator:{clipboard:{writeText:async text=>{if(clipboardFails)throw Error('denied');events.push({name:'clipboard',text});}}},setInterval(){},setTimeout(){},clearTimeout(){},confirm:()=>true,location:{reload(){}}});
+const ctx=vm.createContext({document,URL,Blob,localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v)},sessionStorage:{},window:{URL:{createObjectURL(blob){backupBlobs.push(blob);return 'blob:backup-test';},revokeObjectURL(){}},supabase:{createClient:()=>client},addEventListener(name,fn){windowListeners[name]=fn;}},navigator:{clipboard:{writeText:async text=>{if(clipboardFails)throw Error('denied');events.push({name:'clipboard',text});}}},setInterval(){},setTimeout(){},clearTimeout(){},confirm:()=>true,location:{reload(){}}});
 els['account-menu-popover']=new Element();els['account-menu-popover'].hidden=true;
 els['inventory-current-quantity']=new Element();
 els['inventory-purchased-quantity']=new Element();
@@ -129,6 +133,8 @@ vm.runInContext(fs.readFileSync(path.join(__dirname,'../ops-ui.js'),'utf8'),ctx)
 const run=s=>vm.runInContext(s,ctx);
 assert.equal(run("validBackup({format:'ibta-ops-backup',settings:{categoryOrder:[],codeCategories:[],keycodes:[]},codes:[{code:'A',category:'Foundation-100'}]})"),true);
 assert.equal(run("validBackup({settings:{},codes:[{code:'A',category:'X'}]})"),false);
+assert.equal(run("validBackup({settings:{categoryOrder:[],codeCategories:[],keycodes:[]},codes:[],traineeSheets:[{owner_id:'00000000-0000-0000-0000-000000000001',cells:[Array(500).fill('')],format:{styles:{'0:499':{bold:true}}}}]})"),true,'Backups accept custom trainee columns and their formatting');
+assert.equal(run("validBackup({settings:{categoryOrder:[],codeCategories:[],keycodes:[]},codes:[],traineeSheets:[{owner_id:'00000000-0000-0000-0000-000000000001',cells:[Array(501).fill('')]}]})"),false,'Import keeps the column limit');
 assert.equal(run("validBackup({settings:{categoryOrder:[],codeCategories:[],keycodes:[]},codes:[{code:'A',category:'X'},{code:'a',category:'X'}]})"),false);
 assert.deepEqual(JSON.parse(run("JSON.stringify(parseCodeFile('Code\\nNEW-A\\nNEW-A\\nTEST\\n,BAD'))")),{codes:['NEW-A','TEST'],duplicates:1,invalid:1});
 const englishKeys=JSON.parse(run('JSON.stringify(Object.keys(TRANSLATIONS.en))'));
@@ -380,6 +386,15 @@ for(const key of usedKeys) assert(englishKeys.includes(key),`Missing translation
   await els['restore-button'].listeners.click();
   assert.equal(els['restore-button'].disabled,true);
   assert(db.codes.some(row=>row.code==='BULK-TWO'));
+  const wideBackupRow=Array(500).fill('');wideBackupRow[3]='Backup trainee';wideBackupRow[499]='00123';
+  db.traineeSheets=[{owner_id:'00000000-0000-0000-0000-000000000001',cells:[wideBackupRow],format:{headers:{499:'Review'},styles:{'0:499':{bold:true}}}}];
+  await run('Cloud.exportData()');
+  const exportedBackup=JSON.parse(await backupBlobs.at(-1).text());
+  assert.deepEqual(exportedBackup.traineeSheets,db.traineeSheets,'Export includes every custom column and its formatting');
+  assert.deepEqual(exportedBackup.settings,db.settings.payload);assert.equal(exportedBackup.codes.length,db.codes.length);assert.deepEqual(exportedBackup.supervisorStock,db.stock);
+  assert.equal(run('validBackup('+JSON.stringify(exportedBackup)+')'),true,'Exported app backup can be imported again');
+  await run('Cloud.restoreData('+JSON.stringify(exportedBackup)+')');
+  assert.equal(db.traineeSheets[0].cells[0][499],'00123');assert.equal(db.traineeSheets[0].format.styles['0:499'].bold,true);
   console.log('PASS: backup restore, bulk code import, account profile, reports, cloud persistence, and categories.');
   db.codes.push({code:'TRAINEE-ALLOCATE',category:'TRAINEE-CATEGORY',version:1,used_on:null,owner_id:null});
   assert.equal(await run("Cloud.claimTraineeCode('TRAINEE-CATEGORY','user-1')"),'TRAINEE-ALLOCATE');

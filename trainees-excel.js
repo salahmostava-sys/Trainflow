@@ -5,8 +5,8 @@ const TraineeExcel=(()=>{
     const {D,$,tr,node,button}=h,tools=$('sheet-workspace').querySelector('.sheet-format-tools');
     let painter=null,copied=null;
     const text=(el,ar,en)=>{el.dataset.excelAr=ar;el.dataset.excelEn=en;el.textContent=tr(ar,en);return el;};
-    const action=(id,ar,en,run)=>{const el=button('',()=>{h.commitEdit();if(!h.state().loaded)return;try{run();}catch(error){h.message(error.message||tr('تعذر تنفيذ العملية','Could not complete the action'),true);}});el.id=id;return text(el,ar,en);};
-    const group=(id,ar,en)=>{const box=node('div',undefined,{id,class:'sheet-excel-group'}),body=node('div',undefined,{class:'sheet-excel-actions'});box.append(body,text(node('small'),ar,en));tools.append(box);return body;};
+    const action=(id,ar,en,run)=>{const el=button('',()=>{h.commitEdit();if(!h.state().loaded)return;const fail=error=>h.message(error.message||tr('تعذر تنفيذ العملية','Could not complete the action'),true);try{const result=run();if(result?.catch)result.catch(fail);}catch(error){fail(error);}});el.id=id;return text(el,ar,en);};
+    const group=(id,ar,en)=>{const box=node('details',undefined,{id,class:'sheet-excel-group sheet-excel-menu sheet-toolbar-menu'}),body=node('div',undefined,{class:'sheet-excel-actions sheet-toolbar-popover'});box.append(text(node('summary'),ar,en),body);tools.append(box);return body;};
     const menu=(host,id,ar,en,items)=>{const details=node('details',undefined,{id,class:'sheet-excel-menu'}),list=node('div',undefined,{class:'sheet-excel-menu-items'});details.append(text(node('summary'),ar,en),list);for(const [key,a,e,run]of items)list.append(action(id+'-'+key,a,e,()=>{details.open=false;run();}));host.append(details);return details;};
     const state=()=>h.state(),style=()=>{const s=state();return s.formatting.styles[s.view[s.cursor.r]+':'+s.cursor.c]||{};};
     const rows=s=>s.view.slice(s.bounds[0],s.bounds[1]+1),columns=s=>s.cols.filter(c=>c>=s.bounds[2]&&c<=s.bounds[3]);
@@ -94,7 +94,30 @@ const TraineeExcel=(()=>{
     menu(cellsGroup,'sheet-cell-format-menu','تنسيق ▾','Format ▾',[
       ['row-height','ارتفاع الصف','Row height',rowHeight],['column-width','عرض العمود','Column width',()=>columnWidth(false)],['autofit','ضبط عرض العمود تلقائيًا','AutoFit column width',()=>columnWidth(true)],['hide','إخفاء الأعمدة المحددة','Hide selected columns',()=>{const s=state(),fmt=D.format(s.formatting),hide=columns(s);if(hide.length===s.cols.length)return;fmt.hidden=[...new Set([...fmt.hidden,...hide])];h.change(s.cells,true,fmt);}],['show','إظهار جميع الأعمدة','Unhide all columns',()=>{const s=state(),fmt=D.format(s.formatting);fmt.hidden=[];h.change(s.cells,true,fmt);}]
     ]);
+    const toolbar=$('sheet-workspace').querySelector('.sheet-tools'),essential=toolbar.querySelector('.sheet-essential-tools .sheet-ribbon-actions');
+    essential.append($('sheet-undo'),$('sheet-redo'));
+    const compactGroup=(old,id,ar,en)=>{const detail=node('details',undefined,{id,class:'sheet-ribbon-group sheet-excel-menu sheet-toolbar-menu'}),body=old.querySelector('.sheet-ribbon-actions');body.classList.add('sheet-toolbar-popover');detail.append(text(node('summary'),ar,en),body);old.replaceWith(detail);return detail;};
+    compactGroup(clipboard.parentElement,'sheet-clipboard-tools','الحافظة','Clipboard');
+    compactGroup(cellsGroup.parentElement,'sheet-row-column-tools','الصفوف والأعمدة','Rows & columns');
+    const viewMenu=node('details',undefined,{id:'sheet-view-tools',class:'sheet-excel-menu sheet-toolbar-menu'}),viewBody=node('div',undefined,{class:'sheet-toolbar-popover sheet-view-actions'});
+    for(const el of [$('sheet-columns'),$('sheet-freeze'),$('sheet-direction').closest('label'),$('sheet-local-note')])viewBody.append(el);
+    viewMenu.append(text(node('summary'),'عرض الجدول','View'),viewBody);tools.append(viewMenu);
+    const dataMenu=menu(tools,'sheet-data-tools','تصدير / استيراد','Export / Import',[
+      ['export','تصدير كل بيانات البرنامج (JSON)','Export all app data (JSON)',()=>Cloud.exportData()],
+      ['import','استيراد نسخة بيانات (JSON)','Import data backup (JSON)',async()=>{if(Cloud.role()!=='admin'||!await h.flush())return;showPanel('settings');activateSettingsTab('sync');$('admin-tools').open=true;$('restore-file').focus();}],
+      ['codes','تصدير الأكواد (CSV)','Export codes (CSV)',()=>Cloud.exportCodesCsv()]
+    ]);dataMenu.classList.add('sheet-toolbar-menu');dataMenu.querySelector('.sheet-excel-menu-items').classList.add('sheet-toolbar-popover');dataMenu.hidden=Cloud.role()!=='admin';
+    for(const detail of [...tools.children])toolbar.append(detail);
+    tools.remove();toolbar.classList.add('sheet-compact-toolbar');
+    const placePopover=detail=>{const panel=detail.querySelector('.sheet-toolbar-popover'),rect=detail.querySelector('summary').getBoundingClientRect();panel.style.maxHeight=Math.max(120,window.innerHeight-24)+'px';const width=panel.getBoundingClientRect().width,left=getComputedStyle(detail).direction==='rtl'?rect.right-width:rect.left;panel.style.left=Math.max(12,Math.min(left,window.innerWidth-width-12))+'px';panel.style.top=(rect.bottom+6)+'px';const below=window.innerHeight-rect.bottom-18;if(below>=180)panel.style.maxHeight=below+'px';else{panel.style.maxHeight=Math.max(120,rect.top-18)+'px';const height=panel.getBoundingClientRect().height;panel.style.top=Math.max(12,rect.top-height-6)+'px';}};
+    for(const detail of toolbar.querySelectorAll('.sheet-toolbar-menu'))detail.addEventListener('toggle',()=>{if(detail.open){for(const other of toolbar.querySelectorAll('.sheet-toolbar-menu[open]'))if(other!==detail)other.open=false;placePopover(detail);}else{for(const nested of detail.querySelectorAll('details[open]'))nested.open=false;}});
+    const closeMenus=()=>{for(const detail of toolbar.querySelectorAll('.sheet-toolbar-menu[open]'))detail.open=false;};
     document.addEventListener('pointerdown',e=>{for(const detail of document.querySelectorAll('.sheet-excel-menu[open]'))if(!detail.contains(e.target))detail.open=false;});
+    document.addEventListener('keydown',e=>{if(e.key==='Escape'){const open=toolbar.querySelector('.sheet-toolbar-menu[open]');if(open){e.preventDefault();closeMenus();open.querySelector('summary').focus();}}});
+    toolbar.addEventListener('click',e=>{if(e.target.closest('.sheet-toolbar-popover button')&&!e.target.closest('.sheet-add-col-wrap'))closeMenus();});
+    const repositionMenus=()=>{for(const detail of toolbar.querySelectorAll('.sheet-toolbar-menu[open]'))placePopover(detail);};
+    window.addEventListener('resize',repositionMenus);
+    document.addEventListener('scroll',e=>{if(!e.target.closest?.('.sheet-toolbar-popover'))repositionMenus();},true);
     return {translate(){for(const el of document.querySelectorAll('[data-excel-ar]'))el.textContent=tr(el.dataset.excelAr,el.dataset.excelEn);},paint(s){fontName.value=s.font||'IBM Plex Sans Arabic';const size=s.size||state().formatting.fontSize;$('sheet-font-size').textContent=size+' px';$('sheet-font-minus').disabled=size<=10;$('sheet-font-plus').disabled=size>=32;$('sheet-wrap').setAttribute('aria-pressed',String(!!s.wrap));for(const field of ['italic','underline','strike'])$('sheet-'+field).setAttribute('aria-pressed',String(!!s[field]));for(const value of ['top','middle','bottom'])$('sheet-valign-'+value).setAttribute('aria-pressed',String((s.valign||'middle')===value));}};
   }
   return {mount};

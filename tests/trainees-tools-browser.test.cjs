@@ -8,8 +8,13 @@ const {spawn}=require('node:child_process');
   const browser=await chromium.launch({headless:true,channel:'msedge'});
   try{
     const page=await browser.newPage({viewport:{width:1800,height:1100}}),errors=[];let promptValue='48';
+    require('./sheet-toolbar-helper.cjs')(page);
     page.on('pageerror',e=>errors.push(e.message));page.on('dialog',d=>d.accept(d.type()==='prompt'?promptValue:undefined));
     await page.goto('http://127.0.0.1:4179/');await page.locator('#trainees-tab').click();await page.waitForFunction(()=>document.getElementById('sheet-status').textContent==='تم الحفظ');
+    assert.ok(await page.locator('.sheet-compact-toolbar').evaluate(el=>el.getBoundingClientRect().height)<100,'Dropdowns replace the tall ribbon');
+    assert.equal(await page.locator('#sheet-font-family').isVisible(),false);
+    await page.locator('#sheet-excel-font > summary').click();assert.equal(await page.locator('#sheet-font-family').isVisible(),true);
+    await page.keyboard.press('Escape');assert.equal(await page.locator('#sheet-font-family').isVisible(),false,'Escape closes a dropdown');
     await page.evaluate(()=>Object.defineProperty(navigator,'clipboard',{configurable:true,value:{readText:async()=>window.testClipboard||'',writeText:async v=>{window.testClipboard=v;}}}));
     const cell=(r,c)=>page.locator(`td[data-v="${r}"][data-col="${c}"]`);
     const select=async(r,c,endR=r,endC=c)=>{await cell(r,c).click();if(r!==endR||c!==endC)await cell(endR,endC).click({modifiers:['Shift']});};
@@ -37,6 +42,10 @@ const {spawn}=require('node:child_process');
     await page.locator('#sheet-save').click();await page.waitForFunction(()=>!Trainees.hasDraft());await page.locator('#sheet-reload').click();await page.waitForFunction(()=>document.getElementById('sheet-status').textContent==='تم الحفظ');assert.equal(await cell(2,13).textContent(),'80');
     await select(0,13,1,14);await menu('sheet-merge-menu','cells');await page.locator('#sheet-save').click();await page.waitForFunction(()=>!Trainees.hasDraft());await page.locator('#sheet-reload').click();await page.waitForFunction(()=>document.getElementById('sheet-status').textContent==='تم الحفظ');assert.equal(await cell(0,13).getAttribute('colspan'),'2','Merges survive save and reload');
     await menu('sheet-merge-menu','unmerge');
+    await page.evaluate(()=>{window.dataExports=0;window.csvExports=0;Cloud.exportData=async()=>{window.dataExports++;};Cloud.exportCodesCsv=async()=>{window.csvExports++;};});
+    await menu('sheet-data-tools','export');assert.equal(await page.evaluate(()=>window.dataExports),1,'Full backup export is available from the sheet');
+    await menu('sheet-data-tools','codes');assert.equal(await page.evaluate(()=>window.csvExports),1,'Codes CSV export remains a separate action');
+    await menu('sheet-data-tools','import');await page.locator('#restore-file').waitFor({state:'visible'});assert.equal(await page.locator('#restore-file').evaluate(el=>el===document.activeElement),true,'Import opens and focuses the existing backup restore workflow');
     assert.deepEqual(errors,[]);console.log('PASS: ribbon paste/font/painter/borders/merge/undo/formulas/fill/sort/size/hide/clear and cloud reload');
   }finally{await browser.close();server.kill();}
 })().catch(error=>{console.error(error);process.exitCode=1;});

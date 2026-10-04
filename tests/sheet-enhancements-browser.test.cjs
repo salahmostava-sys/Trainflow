@@ -6,6 +6,7 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),path
     await new Promise((resolve,reject)=>{server.stdout.once('data',resolve);server.once('error',reject);server.once('exit',code=>reject(Error('Preview exited '+code)));});
     browser=await chromium.launch({headless:true,channel:'msedge'});
     const page=await browser.newPage({viewport:{width:1500,height:1000}}),errors=[];
+    require('./sheet-toolbar-helper.cjs')(page);
     page.on('pageerror',e=>errors.push(e.message));page.on('dialog',d=>d.accept());
     let releaseStartup;const startupGate=new Promise(resolve=>{releaseStartup=resolve;});
     await page.route('**/session-policy.js',async route=>{await startupGate;await route.continue();});
@@ -24,7 +25,7 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),path
     assert.equal(await page.locator('#sheet-grid thead th[data-col]').count(),52);
     await cell(2,3).click();
     assert.equal(await page.locator('td.sheet-current').getAttribute('data-v'),'2');
-    assert.equal(await page.locator('td.sheet-focus-axis').count(),76,'Focus shades the entire row and column in a 25 by 52 grid');
+    assert.equal(await page.locator('td.sheet-focus-axis').count(),await page.locator('td[data-col="3"]').count()+await page.locator('td[data-v="2"]').count()-1,'Focus shades the mounted row and column');
     assert.equal(await cell(2,20).evaluate(el=>getComputedStyle(el,'::after').backgroundColor),'rgba(37, 99, 235, 0.055)');
     assert.equal(await cell(10,3).evaluate(el=>getComputedStyle(el,'::after').pointerEvents),'none','Focus never blocks editing or selection');
     assert.equal(await cell(10,4).evaluate(el=>el.classList.contains('sheet-focus-axis')),false);
@@ -61,7 +62,7 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),path
     assert.equal(await cell(0,2).evaluate(el=>el===document.activeElement),true,'Undo restores keyboard focus to the active cell');
     assert.equal(await page.locator('body').evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(255, 255, 255)');
     assert.equal(await page.locator('.sheet-formula').count(),0,'Separate formula bar is removed');
-    for(const selector of ['.sheet-format-tools','.sheet-footer'])assert.equal(await page.locator(selector).evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(255, 255, 255)');
+    for(const selector of ['.sheet-compact-toolbar','.sheet-footer'])assert.equal(await page.locator(selector).evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(255, 255, 255)');
     await cell(0,2).click();await cell(0,3).click({modifiers:['Shift']});
     for(const align of ['left','center','right']){
       await page.locator('#sheet-align-'+align).click();
@@ -108,9 +109,9 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),path
     await page.locator('#sheet-reload').click();await page.waitForFunction(()=>document.getElementById('sheet-status').textContent==='تم الحفظ');
     assert.equal(await cell(0,51).textContent(),'EXTRA-AZ');
     await page.locator('th[data-col="50"] button').click();
-    assert.equal(await page.locator('td.sheet-selected').count(),await page.locator('#sheet-grid tbody tr').count(),'Header selects all rows in the column');
+    assert.equal(await page.locator('td.sheet-selected').count(),await page.locator('#sheet-grid tbody th[data-rowv]').count(),'Header selects all mounted rows in the column');
     await page.locator('th[data-col="51"] button').click({modifiers:['Shift']});
-    assert.equal(await page.locator('td.sheet-selected').count(),2*await page.locator('#sheet-grid tbody tr').count(),'Shift selects adjacent entire columns');
+    assert.equal(await page.locator('td.sheet-selected').count(),2*await page.locator('#sheet-grid tbody th[data-rowv]').count(),'Shift selects adjacent entire columns');
     assert.equal(await cell(0,51).textContent(),'EXTRA-AZ','Header clicks do not reorder data');
     assert.deepEqual(errors,[]);await page.locator('#sheet-clear-filters').click();
     await page.evaluate(()=>{DEFAULT_KEYCODES=[{title:'Sales',lang:'Arabic',code:'LIVE-SALES-AR',category:'Foundation'},{title:'Sales',lang:'English',code:'LIVE-SALES-EN',category:'Foundation'}];state.keycodeOverrides['LIVE-SALES-AR']='Review-category';(state.categoryLabels||={})['Review-category']='فئة المراجعة';PROMETRIC_ACCOUNT='demo-prometric-account';PROMETRIC_PASSWORD='demo-prometric-password';});
@@ -118,7 +119,10 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),path
     await page.locator('#sheet-save').click();await page.waitForFunction(()=>!Trainees.hasDraft());
     await page.locator('#sheet-columns summary').click();await page.locator('[data-column-toggle="1"]').uncheck();await page.locator('#sheet-columns summary').click();
     await cell(0,9).hover();await page.waitForTimeout(750);assert.equal(await page.locator('#sheet-trainee-dialog').isVisible(),false,'Username no longer opens details');
-    await cell(0,3).hover();await page.locator('#sheet-trainee-dialog').waitFor({state:'visible'});
+    await cell(0,3).hover();await page.waitForTimeout(750);assert.equal(await page.locator('#sheet-trainee-dialog').isVisible(),false,'Hover does not open trainee details');
+    await cell(0,3).click();await page.waitForTimeout(350);assert.equal(await page.locator('#sheet-trainee-dialog').isVisible(),false,'Single click only selects the name');
+    await cell(0,3).dblclick();await page.locator('#sheet-trainee-dialog').waitFor({state:'visible'});
+    assert.equal(await page.locator('.sheet-get-exam-code').count(),0,'An existing code has no allocation or replacement button');
     assert.ok((await page.locator('#sheet-trainee-title').textContent()).endsWith('Trainee'));
     const details=await page.locator('#sheet-trainee-record').textContent();assert.match(details,/hidden@example.invalid/);assert.match(details,/demo-password/);assert.match(details,/EXTRA-AZ/);
     assert.match(details,/كي كود/);assert.match(details,/LIVE-SALES-AR/);assert.doesNotMatch(details,/LIVE-SALES-EN/);
@@ -138,17 +142,18 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),path
     for(const [selector,value]of [['.sheet-detail-keycode','LIVE-SALES-AR'],['.sheet-detail-category','فئة المراجعة'],['button[aria-label="نسخ Prometric Account"]','demo-prometric-account'],['button[aria-label="نسخ Prometric Password"]','demo-prometric-password'],['button[aria-label="نسخ الجوال"]','050']]){
       await page.locator('#sheet-trainee-record '+selector).click();assert.equal(await page.evaluate(()=>window.detailCopied),value,'One click copies the exact value');
     }
+    await page.keyboard.press('Escape');await cell(0,0).click();await page.keyboard.press('Delete');await cell(0,3).dblclick();
     await page.evaluate(()=>{
-      window.claimCount=0;Cloud.claimTraineeCode=async(category,targetOwner)=>{if(category!=='Review-category'||targetOwner!=='demo-admin')throw Error('Wrong category or owner');window.claimCount++;previewCodes.push({code:'ALLOCATED-DEMO',category,owner_id:targetOwner,used_on:'04/10/2026',version:2});window.previewSaveError='NETWORK';return 'ALLOCATED-DEMO';};
+      window.claimCount=0;Cloud.claimTraineeCode=async(category,targetOwner)=>{if(category!=='Review-category'||targetOwner!=='demo-admin')throw Error('Wrong category or owner');window.claimCount++;previewCodes.push({code:'ALLOCATED-DEMO',category,owner_id:targetOwner,used_on:'04/10/2026',version:2});Trainees.translate();window.previewSaveError='NETWORK';return 'ALLOCATED-DEMO';};
     });
     await page.locator('.sheet-get-exam-code').click();await page.waitForFunction(()=>window.claimCount===1&&Trainees.hasDraft());
     assert.equal(await cell(0,0).textContent(),'ALLOCATED-DEMO','Claim is written to the current trainee');
-    await page.evaluate(()=>window.previewSaveError='');await page.locator('.sheet-get-exam-code').click();await page.waitForFunction(()=>!Trainees.hasDraft());
+    assert.equal(await page.locator('.sheet-get-exam-code').count(),0,'Allocation disappears as soon as the row has a code');
+    await page.evaluate(()=>window.previewSaveError='');await page.keyboard.press('Escape');await page.locator('#sheet-save').click();await page.waitForFunction(()=>!Trainees.hasDraft());
     assert.equal(await page.evaluate(()=>window.claimCount),1,'Retry after a sheet save failure does not reserve another code');
-    assert.equal(await page.evaluate(()=>window.detailCopied),'ALLOCATED-DEMO');
     assert.equal(await page.evaluate(()=>previewSheets.get('demo-admin').cells[0][0]),'ALLOCATED-DEMO');
     await page.keyboard.press('Escape');await page.locator('#sheet-trainee-dialog').waitFor({state:'hidden'});
-    await cell(0,3).click();await page.keyboard.press('Enter');await page.locator('#sheet-trainee-dialog').waitFor({state:'visible'});
+    await cell(0,3).dblclick();await page.locator('#sheet-trainee-dialog').waitFor({state:'visible'});
     await page.setViewportSize({width:390,height:844});
     assert.ok(await page.locator('#sheet-trainee-dialog').evaluate(el=>el.scrollWidth<=el.clientWidth+1));
     const full=await page.locator('#sheet-trainee-dialog').evaluate(el=>{const rect=el.getBoundingClientRect();return {x:rect.x,y:rect.y,width:rect.width,height:rect.height};});

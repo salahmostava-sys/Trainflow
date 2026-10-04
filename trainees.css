@@ -161,8 +161,8 @@
 .sheet-duplicate-dialog button.sheet-detail-copy-value:focus-visible{outline:2px solid var(--blue);outline-offset:3px}
 .sheet-duplicate-dialog button.sheet-detail-category{border:0;padding:3px 0;font-size:inherit;text-align:right}
 .sheet-detail-category-value{text-align:right}
-.sheet-trainee-dialog .sheet-detail-record dl{direction:ltr;grid-template-columns:140px minmax(0,1fr)}
-.sheet-trainee-dialog .sheet-detail-record dt{text-align:left}
+.sheet-trainee-dialog .sheet-detail-record dl{direction:rtl;grid-template-columns:140px minmax(0,1fr);column-gap:32px}
+.sheet-trainee-dialog .sheet-detail-record dt{text-align:right}
 .sheet-trainee-dialog .sheet-detail-record dd{min-width:0;text-align:left}
 .sheet-trainee-dialog button.sheet-detail-copy-value{display:block;width:100%;text-align:left;box-sizing:border-box}
 @media(max-width:760px),(max-height:600px){
@@ -171,7 +171,7 @@
   .sheet-trainee-dialog .sheet-detail-header h2{font-size:18px;min-width:0}
   .sheet-trainee-dialog .sheet-detail-close{flex-shrink:0;min-width:42px;min-height:42px}
   .sheet-trainee-dialog .sheet-detail-record{margin-top:12px;padding:14px;max-width:100%;width:100%;min-width:0}
-  .sheet-trainee-dialog .sheet-detail-record dl{grid-template-columns:minmax(0,1fr);gap:4px;font-size:16px}
+  .sheet-trainee-dialog .sheet-detail-record dl{grid-template-columns:110px minmax(0,1fr);gap:9px 18px;font-size:16px}
   .sheet-trainee-dialog .sheet-detail-record dt{font-size:13px;font-weight:600;margin-top:9px}
   .sheet-trainee-dialog .sheet-detail-record dd{font-size:16px;line-height:1.65}
   .sheet-trainee-dialog button.sheet-detail-copy-value{min-height:36px}
@@ -197,3 +197,28 @@
 #sheet-workspace .sheet-grid td.sheet-focus-axis:not(.sheet-current)::after{content:'';position:absolute;inset:0;background:rgba(37,99,235,.055);pointer-events:none}
 #sheet-workspace .sheet-grid th.sheet-rownum.sheet-focus-row-header{background:#eef4ff!important;color:#1d4ed8;box-shadow:inset 3px 0 #2563eb}
 @media(max-width:700px){.sheet-local-note{font-size:12px}}
+/* Compact dropdown toolbar; fixed panels stay inside the viewport and above the grid. */
+#sheet-workspace>.sheet-compact-toolbar{align-items:center;gap:6px;padding:8px 12px}
+#sheet-workspace .sheet-scroll{overflow-anchor:none}
+#sheet-workspace .sheet-compact-toolbar>.sheet-ribbon-group,#sheet-workspace .sheet-compact-toolbar>.sheet-excel-group{padding:0;border:0;flex:none;display:block;align-self:auto;width:auto}
+#sheet-workspace .sheet-compact-toolbar>.sheet-essential-tools{order:-1}
+#sheet-workspace .sheet-compact-toolbar>.sheet-essential-tools>small{display:none}
+#sheet-workspace .sheet-compact-toolbar .sheet-status{padding:3px 5px}
+#sheet-workspace .sheet-toolbar-menu>summary{display:flex;align-items:center;gap:8px;min-height:30px;background:#fff}
+#sheet-workspace .sheet-toolbar-menu>summary::after{content:'▾';font-size:10px;color:#64748b}
+#sheet-workspace .sheet-toolbar-menu[open]>summary{background:#eff6ff;color:#1d4ed8}
+#sheet-workspace .sheet-toolbar-popover{position:fixed;z-index:90;display:flex;align-items:center;flex-wrap:wrap;gap:8px;width:min(340px,calc(100vw - 24px));max-width:none;max-height:65vh;overflow:auto;padding:12px;background:#fff;border:1px solid #cbd5e1;border-radius:8px;box-shadow:0 8px 28px rgba(15,23,42,.16);box-sizing:border-box;font-size:12px}
+#sheet-workspace .sheet-toolbar-popover button{border:1px solid #cbd5e1;border-radius:4px;padding:6px 9px;font-size:12px;color:var(--text);background:#fff}
+#sheet-workspace .sheet-toolbar-popover button[aria-pressed=true]{background:#dbeafe;border-color:#2563eb;color:#1d4ed8}
+#sheet-workspace .sheet-toolbar-popover label{display:flex;align-items:center;gap:6px;font-size:12px}
+#sheet-workspace .sheet-toolbar-popover select{max-width:100%;border:1px solid #cbd5e1;border-radius:4px;padding:5px;font-size:12px}
+#sheet-workspace .sheet-toolbar-popover .sheet-excel-menu,#sheet-workspace .sheet-toolbar-popover #sheet-columns,#sheet-workspace .sheet-toolbar-popover .sheet-add-col-wrap{width:100%}
+#sheet-workspace .sheet-toolbar-popover .sheet-excel-menu-items,#sheet-workspace .sheet-toolbar-popover #sheet-column-options,#sheet-workspace .sheet-toolbar-popover .sheet-add-col-popover{position:static;min-width:0;width:100%;box-shadow:none;margin-top:5px;max-height:240px;box-sizing:border-box}
+#sheet-workspace .sheet-toolbar-popover .sheet-excel-menu-items button{white-space:normal}
+#sheet-workspace .sheet-view-actions>button{width:100%;text-align:start}
+#sheet-workspace .sheet-compact-toolbar button[aria-pressed=true]{background:#dbeafe;border-color:#2563eb;color:#1d4ed8}
+@media(max-width:700px){
+  #sheet-workspace .sheet-compact-toolbar>.sheet-essential-tools{flex:1 1 100%}
+  #sheet-workspace:not(.sheet-show-tools) .sheet-compact-toolbar>.sheet-toolbar-menu{display:none}
+  #sheet-workspace .sheet-toolbar-menu>summary,#sheet-workspace .sheet-toolbar-popover button{min-height:38px}
+}

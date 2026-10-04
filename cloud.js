@@ -635,7 +635,7 @@ const Cloud = (() => {
     if(error)throw error;
     await load();
   }
-  return {boot,persist,copyCode,claimTraineeCode,editCode,decorate,refresh,translateUi,restoreData,importCodes,listMembers,updateMember,auditEvents,exportCodesCsv,changeSupervisorStock,saveInventoryMessageSettings,
+  return {boot,persist,copyCode,claimTraineeCode,editCode,decorate,refresh,translateUi,restoreData,exportData,importCodes,listMembers,updateMember,auditEvents,exportCodesCsv,changeSupervisorStock,saveInventoryMessageSettings,
     reportSession:async()=>{if(!ready)throw Error('AUTH_REQUIRED');const {data,error}=await client.auth.getSession();if(error||!data.session)throw Error('AUTH_REQUIRED');return {token:data.session.access_token,url:SUPABASE_URL,key:KEY};},
     readTrainees,saveTrainees,assignCodes,userId:()=>user?.id || '',codeSnapshot:()=>[...rows.values()].map(row=>({...row})),
     role:()=>role,email:()=>user?.email || '',existingCodes:()=>[...rows.keys()],stockSnapshot:()=>Object.fromEntries(stock),inventoryMessageSettings:()=>({number:config?.payload?.inventoryWhatsappNumber || '',name:config?.payload?.inventorySupervisorName || '',language:config?.payload?.inventoryMessageLanguage==='en'?'en':'ar'})};

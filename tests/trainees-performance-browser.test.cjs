@@ -5,6 +5,7 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),path
     await new Promise((resolve,reject)=>{server.stdout.once('data',resolve);server.once('error',reject);});
     browser=await chromium.launch({headless:true,channel:'msedge'});
     const page=await browser.newPage({viewport:{width:1500,height:1000}}),errors=[];
+    require('./sheet-toolbar-helper.cjs')(page);
     page.on('pageerror',e=>errors.push(e.message));await page.goto('http://127.0.0.1:4181/');await page.locator('#trainees-tab').click();
     await page.waitForFunction(()=>document.getElementById('sheet-status').textContent==='تم الحفظ');
     await page.evaluate(()=>{const old=previewSheets.get('demo-admin')||{version:0};previewSheets.set('demo-admin',{...old,cells:Array.from({length:3068},(_,i)=>Array.from({length:500},(_,c)=>c===2?'Trainee '+i:c===499?'Last '+i:'')),format:{direction:'ltr',headers:{499:'Last column'},styles:{'0:250':{mergeCols:4,mergeRows:2},'10:499':{height:60,wrap:true}}}});});
@@ -29,6 +30,16 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),path
     await page.setViewportSize({width:390,height:844});await go('C1');await aligned();assert.ok(await mounted()<1000);
     await page.locator('#sheet-save').click();await page.waitForFunction(()=>!Trainees.hasDraft());await page.locator('#sheet-reload').click();await page.waitForFunction(()=>document.getElementById('sheet-status').textContent==='تم الحفظ');
     await go('SF3068');assert.equal(await page.locator('td.sheet-current').textContent(),'Changed last','Far edits survive compact persistence and reload');
+    await page.keyboard.press('Control+ArrowUp');assert.equal(await page.locator('td.sheet-current').getAttribute('data-v'),'0');
+    await page.keyboard.press('Control+ArrowDown');assert.equal(await page.locator('td.sheet-current').getAttribute('data-v'),'3067','Ctrl+Down skips the 1000 empty input rows');
+    await go('C4068');await page.keyboard.press('F2');await page.keyboard.insertText('New last row');await page.keyboard.press('Enter');
+    await page.waitForFunction(()=>document.getElementById('sheet-grid').getAttribute('aria-rowcount')==='5069');
+    await page.keyboard.press('Control+ArrowDown');assert.equal(await page.locator('td.sheet-current').getAttribute('data-v'),'4067','New entries extend both navigation and the 1000-row buffer');
+    const bottom=await page.locator('.sheet-scroll').evaluate(async el=>{el.scrollTop=el.scrollHeight;await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));return el.scrollTop;});
+    await page.evaluate(()=>Trainees.translate());
+    assert.ok(Math.abs(await page.locator('.sheet-scroll').evaluate(el=>el.scrollTop)-bottom)<40,'Background refresh preserves the bottom scroll position');
+    await page.waitForFunction(()=>!Trainees.hasDraft());
+    assert.ok(await page.locator('.sheet-scroll').evaluate(el=>el.scrollTop)>bottom-40,'Autosave never returns the user to the first row');
     assert.deepEqual(errors,[]);console.log('PASS: 3068 × 500 viewport, distant cells/merges, undo, save, frozen column, RTL alignment, zoom, resize during editing and mobile');
   }finally{await browser?.close();server.kill();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

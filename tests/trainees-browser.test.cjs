@@ -8,6 +8,7 @@ const {spawn}=require('node:child_process');
   const browser=await chromium.launch({headless:true,channel:'msedge'});
   try{
     const context=await browser.newContext({viewport:{width:1500,height:1000}}),page=await context.newPage(),errors=[];
+    require('./sheet-toolbar-helper.cjs')(page);
     page.on('pageerror',error=>errors.push(error.message));
     await page.goto('http://127.0.0.1:4174/');
     await page.locator('#trainees-tab').click();
@@ -99,7 +100,7 @@ const {spawn}=require('node:child_process');
     assert.equal(await cell(0,4).evaluate(el=>getComputedStyle(el).color),'rgb(156, 0, 6)');
     await page.mouse.move(1,1);await cell(0,4).hover();await page.locator('#sheet-duplicate-hint').waitFor({state:'visible'});
     const hint=await page.locator('#sheet-duplicate-hint').textContent();
-    assert.match(hint,/مكرر 2 مرات/);assert.match(hint,/demo-user/);assert.match(hint,/demo-password/);assert.match(hint,/راسب/);assert.match(hint,/لم يدخل/);
+    assert.match(hint,/مكرر 2 مرات/);assert.match(hint,/اختبار تجريبي/,'Duplicate preview includes the original exam name');assert.match(hint,/demo-user/);assert.match(hint,/demo-password/);assert.match(hint,/راسب/);assert.match(hint,/لم يدخل/);
     await cell(0,4).click();await page.locator('#sheet-duplicate-dialog').waitFor({state:'visible'});
     assert.equal(await page.locator('#sheet-duplicate-records .sheet-detail-record').count(),2);
     assert.equal(await page.locator('#sheet-duplicate-records dd').count(),26,'All 13 fields of each match are available');
