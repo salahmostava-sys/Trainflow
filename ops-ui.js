@@ -264,7 +264,7 @@ document.getElementById('inventory-save-settings').addEventListener('click',asyn
   const status=document.getElementById('inventory-number-status');
   if(number && !/^\d{8,15}$/.test(number)){status.textContent=t('inventoryPhoneInvalid');return;}
   if(name.length>100 || /[\r\n\x00-\x1f]/.test(name)){status.textContent=t('inventorySupervisorNameInvalid');return;}
-  try{await Cloud.saveInventoryMessageSettings(number,name,language);status.textContent=t('saved');}
+  try{await Cloud.saveInventoryMessageSettings(number,name,language);status.textContent=t('saved');if(typeof InventoryDelivery!=='undefined')InventoryDelivery.ready();}
   catch{status.textContent=t('genericError');}
 });
 document.getElementById('inventory-whatsapp-link').addEventListener('click',e=>{

@@ -43,7 +43,7 @@ Snapshots must match the owner, recipient, scheduled time and Saudi date and
 be less than five minutes old. Dispatch more than two minutes after the due
 time is skipped. Missing, stale or incomplete data is not sent. An attempt is
 recorded before opening WhatsApp and persisted across worker restarts; changing
-the time does not send again on the same day. There is no automatic retry after
+the time does not send again after a sent or ambiguous outcome on the same day. There is no automatic retry after
 failure or an uncertain outcome. Check the conversation before sending manually.
 
 “Sent” means a new outgoing message appeared and the composer cleared. It does
@@ -58,6 +58,20 @@ to re-enable this device. Disable and save in IBTA to turn off the shared
 setting too. Switching to Meta stops this extension when saved on this device;
 other previously configured devices must also stop or receive the updated
 configuration before their own alarms.
+
+Version 1.0.1 shows the actual local recipient, next alarm (including its date),
+and fresh-report readiness in Settings and waits for the extension to acknowledge
+schedule saves. Saving a time after that minute has started schedules tomorrow;
+for a same-day check choose a time at least two minutes ahead. Saving the message
+recipient also refreshes the local report immediately. Refresh send status requests
+a fresh report and reads the local alarm again.
+
+After a confirmed failure before any Send click (missing fresh report, WhatsApp
+not ready/openable, or a mismatching draft), explicitly changing the time or
+recipient and saving allows a new attempt. Sent, in-progress and ambiguous
+outcomes stay blocked for the day to prevent duplicates. Updating the installed
+unpacked extension requires replacing its files and pressing Reload in
+`chrome://extensions`, then reloading IBTA and WhatsApp tabs.
 
 ## Permissions and validation
 

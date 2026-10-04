@@ -12,7 +12,7 @@ assert.equal(S.due(config,now+120001),false);assert.equal(S.due(config,now-1),fa
 (async()=>{
   let clock=now-60000,store={},created=[],events={},alarmMap=new Map(),id=10;
   const clone=v=>JSON.parse(JSON.stringify(v)),add=name=>({addListener(fn){events[name]=fn;}});
-  const chrome={runtime:{id:'fixture-extension',onMessage:add('message'),onInstalled:add('installed'),onStartup:add('startup')},
+  const chrome={runtime:{id:'fixture-extension',getManifest:()=>({version:'1.0.1'}),onMessage:add('message'),onInstalled:add('installed'),onStartup:add('startup')},
     storage:{local:{async get(keys){if(typeof keys==='string')keys=[keys];return Object.fromEntries(keys.filter(k=>k in store).map(k=>[k,clone(store[k])]));},async set(data){Object.assign(store,clone(data));},async remove(keys){for(const key of Array.isArray(keys)?keys:[keys])delete store[key];}}},
     alarms:{onAlarm:add('alarm'),async create(name,options){alarmMap.set(name,{name,scheduledTime:options.when});},async get(name){return alarmMap.get(name);},async clear(name){return alarmMap.delete(name);}},
     tabs:{onUpdated:add('updated'),async query(){return [{id:1,url:'https://ibta-ops.pages.dev/'}];},async sendMessage(){return {};},async create(options){const tab={id:id++,...options};created.push(tab);return tab;}}
@@ -33,6 +33,15 @@ assert.equal(S.due(config,now+120001),false);assert.equal(S.due(config,now-1),fa
   await send({type:'RESULT',id:job.id,state:'sent'},created[0].url,job.tabId);assert.equal(store.last.state,'sent');assert.equal(store.snapshot,undefined);assert.equal(store.attempt,undefined);
   events.alarm({name:'send'});await drain();assert.equal(created.length,1,'A sent day cannot be repeated');
   clock=now+86400000;events.alarm({name:'send'});await drain();assert.equal(created.length,1,'Yesterday\'s report is never sent');assert.equal(store.last.error,'FRESH_REPORT_REQUIRED');
+  const retryConfig={...config,time:'17:01',recipient:'966511111111'};
+  await send({type:'CONFIG',payload:retryConfig});assert.equal(store.last,undefined,'Explicit rescheduling can recover a confirmed failure without a send');
+  assert.equal(alarmMap.get('send').scheduledTime,clock+120000);
+  await send({type:'SNAPSHOT',payload:{config:retryConfig,report:{...snapshot,recipient:retryConfig.recipient,time:retryConfig.time,day:S.day(clock),at:clock}}});
+  const ready=await send({type:'PING'});assert.equal(ready.prepared,true);assert.equal(ready.recipient,retryConfig.recipient);assert.equal(ready.nextSend,clock+120000);
+  clock+=120000;events.alarm({name:'send'});await drain();assert.equal(created.length,2);assert.equal(new URL(created[1].url).searchParams.get('phone'),retryConfig.recipient);
+  const retryJob=store.attempt;await send({type:'CAN_SEND',id:retryJob.id},created[1].url,retryJob.tabId);await send({type:'RESULT',id:retryJob.id,state:'unknown',error:'SEND_UNCONFIRMED'},created[1].url,retryJob.tabId);
+  const changed={...retryConfig,time:'17:03'};await send({type:'CONFIG',payload:changed});assert.equal(store.last.state,'unknown','A possibly sent message cannot be retried by changing time');
+  clock+=120000;await send({type:'SNAPSHOT',payload:{config:changed,report:{...snapshot,recipient:changed.recipient,time:changed.time,day:S.day(clock),at:clock}}});events.alarm({name:'send'});await drain();assert.equal(created.length,2);
   const manifest=JSON.parse(fs.readFileSync(path.join(__dirname,'../extension/whatsapp-web/manifest.json'),'utf8'));
   assert.deepEqual(manifest.permissions,['alarms','storage']);assert.deepEqual(manifest.host_permissions,['https://ibta-ops.pages.dev/*','https://web.whatsapp.com/*']);
   console.log('PASS: Saudi scheduling, midnight, freshness, exact recipient/body, origin checks, one-shot approval, repeated alarms, next-day stale data and minimal permissions');

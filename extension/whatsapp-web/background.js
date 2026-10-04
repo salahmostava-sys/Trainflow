@@ -2,7 +2,8 @@ importScripts('schedule.js');
 const SITE='https://ibta-ops.pages.dev/',WA='https://web.whatsapp.com/';
 let chain=Promise.resolve();
 const serial=task=>{const work=chain.then(task);chain=work.catch(()=>{});return work;};
-const state=async()=>{const s=await chrome.storage.local.get(['config','last','snapshot']);return {connected:true,owner:s.config?.owner||'',enabled:!!s.config?.enabled,time:s.config?.time||'16:59',last:s.last||null,prepared:!!s.snapshot};};
+const noSendErrors=new Set(['FRESH_REPORT_REQUIRED','WHATSAPP_OPEN_FAILED','WHATSAPP_NOT_READY','MESSAGE_MISMATCH']);
+const state=async()=>{const s=await chrome.storage.local.get(['config','last','snapshot']),alarm=await chrome.alarms.get('send');return {connected:true,version:chrome.runtime.getManifest().version,owner:s.config?.owner||'',enabled:!!s.config?.enabled,time:s.config?.time||'16:59',recipient:s.config?.recipient||'',last:s.last||null,prepared:!!(s.config&&WebSchedule.validSnapshot(s.snapshot,s.config)),nextSend:alarm?.scheduledTime||null,blockedToday:s.last?.day===WebSchedule.day()&&['preparing','sending','sent','unknown','failed'].includes(s.last.state)};};
 async function broadcast(){const payload=await state();for(const tab of await chrome.tabs.query({url:SITE+'*'}))void chrome.tabs.sendMessage(tab.id,{type:'STATE',payload}).catch(()=>{});}
 async function status(status,error='',day=WebSchedule.day()){await chrome.storage.local.set({last:{state:status,error,day,at:Date.now()}});await broadcast();}
 async function arm(){
@@ -39,6 +40,10 @@ chrome.runtime.onMessage.addListener((data,sender,reply)=>{
       if(data.type==='PING')return state();
       if(data.type==='CONFIG'){
         if(!WebSchedule.validConfig(data.payload))throw Error('INVALID_CONFIG');
+        const {config,last}=await chrome.storage.local.get(['config','last']);
+        // An explicit new schedule may retry a confirmed failure before any click.
+        // Sent and ambiguous outcomes remain blocked to prevent duplicates.
+        if(last?.state==='failed'&&noSendErrors.has(last.error)&&config?.owner===data.payload.owner&&(config.time!==data.payload.time||config.recipient!==data.payload.recipient))await chrome.storage.local.remove('last');
         await chrome.storage.local.set({config:data.payload});await chrome.storage.local.remove('snapshot');await arm();await requestSnapshot();return state();
       }
       if(data.type==='SNAPSHOT'){

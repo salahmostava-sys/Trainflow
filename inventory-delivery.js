@@ -1,8 +1,9 @@
 /* Admin settings for daily WhatsApp inventory delivery: local Chrome or Meta. */
 const InventoryDelivery=(()=>{
   const $=id=>document.getElementById(id),tr=(ar,en)=>currentLang==='ar'?ar:en;
-  let revision=0,loaded=null,busy=false,extension=null,snapshotBusy=false;
+  let revision=0,loaded=null,busy=false,extension=null,snapshotBusy=false,pendingConfig=null;
   const post=(type,payload)=>window.postMessage({channel:'IBTA_WEB_APP',type,payload},location.origin);
+  function configureDevice(config){return new Promise((resolve,reject)=>{const timer=setTimeout(()=>{pendingConfig=null;reject(Error('EXTENSION_SAVE_FAILED'));},5000);pendingConfig={config,resolve,reject,timer};post('CONFIG',config);});}
   const section=document.createElement('section');section.className='ops-card';section.id='inventory-auto-settings';
   section.innerHTML=`<h3 data-ar="الإرسال اليومي التلقائي على واتساب" data-en="Daily automatic WhatsApp message"></h3>
     <p class="ops-status" data-ar="تُرسل رسالة رصيد الأكواد إلى الرقم المحفوظ أعلاه. اختر وقتًا قبل 5 مساءً لإرسالها قبل تسجيل الخروج." data-en="Sends the inventory report to the number saved above. Choose a time before 5 PM to send before sign-out."></p>
@@ -12,6 +13,7 @@ const InventoryDelivery=(()=>{
       <label><span data-ar="الوقت بتوقيت السعودية" data-en="Time in Saudi Arabia"></span><input id="inventory-auto-time" type="time" value="16:59" required></label>
     </div>
     <p class="ops-status" id="inventory-auto-connection" role="status"></p>
+    <p class="ops-status" id="inventory-auto-diagnostics" role="status"></p>
     <fieldset id="inventory-auto-web"><legend data-ar="ربط واتساب ويب على هذا الجهاز" data-en="Connect WhatsApp Web on this device"></legend>
       <p class="ops-status" data-ar="ثبّت الإضافة مرة واحدة في Chrome المفتوح عليه واتساب ويب. لازم الجهاز وChrome وواتساب يفضلوا شغالين، وتسجيل الدخول للبرنامج يكون صالحًا قبل الموعد. فعّل الإرسال على جهاز واحد فقط." data-en="Install the extension in your WhatsApp Web Chrome profile. Keep the device, Chrome and WhatsApp running, and sign into IBTA before the send time. Enable sending on one device only."></p>
       <a id="inventory-auto-download" href="ibta-whatsapp-web.zip" download data-ar="تحميل إضافة Chrome" data-en="Download Chrome extension"></a>
@@ -35,6 +37,7 @@ const InventoryDelivery=(()=>{
   $('inventory-auto-download').href=$('inventory-delivery-script').dataset.extension;
   function translate(){section.querySelectorAll('[data-ar]').forEach(el=>el.textContent=tr(el.dataset.ar,el.dataset.en));if(loaded)paintStatus(loaded);}
   function errorText(error){
+    if((error?.message||error)==='EXTENSION_SAVE_FAILED')return tr('الإعدادات محفوظة في الموقع، لكن الإضافة لم تؤكد حفظ الموعد. أعد تحميل الإضافة والصفحة ثم احفظ مجددًا.','Site settings saved, but the extension did not confirm the schedule. Reload the extension and page, then save again.');
     const localErrors={EXTENSION_REQUIRED:['ثبّت إضافة Chrome ثم حدّث صفحة البرنامج قبل تفعيل الإرسال.','Install the Chrome extension and reload IBTA before enabling sending.'],FRESH_REPORT_REQUIRED:['تعذر تجهيز تقرير حديث. تأكد من تسجيل الدخول للبرنامج قبل الموعد.','A fresh report was unavailable. Sign into IBTA before the send time.'],WHATSAPP_NOT_READY:['واتساب غير جاهز. افتحه وتأكد من تسجيل الدخول.','WhatsApp is not ready. Open it and check that you are signed in.'],MESSAGE_MISMATCH:['الرسالة في واتساب لا تطابق التقرير؛ لم تُرسل.','The WhatsApp draft differs from the report; nothing was sent.'],SEND_UNCONFIRMED:['لم يمكن تأكيد الإرسال. راجع محادثة المستلم.','Could not confirm sending. Check the recipient chat.'],WHATSAPP_OPEN_FAILED:['تعذر فتح واتساب ويب.','Could not open WhatsApp Web.']};
     if(localErrors[error?.message||error])return tr(...localErrors[error?.message||error]);
     const values={WHATSAPP_NOT_CONNECTED:['أكمل ربط WhatsApp Business قبل تفعيل الإرسال.','Connect WhatsApp Business before enabling automatic sending.'],RECIPIENT_REQUIRED:['احفظ رقم المستلم في إعدادات الرسالة أعلاه أولًا.','Save the recipient number above first.'],INVALID_OPTIONS:['راجع الوقت وبيانات الخدمة المدخلة.','Check the time and service details.'],STOCK_INCOMPLETE:['أكمل أرصدة جميع الفئات في صفحة المخزون.','Set the supervisor balance for every inventory category.'],TEMPLATE_LANGUAGE_MISMATCH:['لغة القالب تختلف عن لغة رسالة المخزون.','The template language differs from the inventory message language.'],REPORT_TOO_LONG:['التقرير أكبر من حد قالب واتساب.','The report exceeds the WhatsApp template limit.'],PROVIDER_REJECTED:['رفضت خدمة واتساب الرسالة. راجع المفتاح ورقم الخدمة والقالب المعتمد.','WhatsApp rejected the message. Check the token, phone ID, and approved template.'],RESPONSE_UNAVAILABLE:['لم يصل تأكيد من الخدمة. راجع حساب واتساب قبل إعادة المحاولة.','No provider confirmation received. Check your WhatsApp account before retrying.']};
@@ -45,6 +48,14 @@ const InventoryDelivery=(()=>{
     $('inventory-auto-connection').textContent=web?(extension?.connected?(extension.enabled&&extension.owner===Cloud.userId()?tr('الإضافة متصلة والإرسال مفعّل على هذا الجهاز.','Extension connected; sending is enabled on this device.'):tr('الإضافة متصلة. احفظ الإعدادات لتفعيل الإرسال على هذا الجهاز.','Extension connected. Save settings to enable sending on this device.')):tr('ثبّت إضافة Chrome ثم حدّث الصفحة. الإرسال التلقائي لم يبدأ على هذا الجهاز.','Install the Chrome extension, then reload. Automatic sending has not started on this device.')):(data.connected?tr('بيانات الخدمة محفوظة. يلزم أن يكون القالب معتمدًا والمفتاح صالحًا.','Service details saved. The template must be approved and the token valid.'):tr('خدمة الإرسال غير مربوطة؛ الإرسال التلقائي لم يبدأ.','Sending service is not connected; automatic sending has not started.'));
     const last=web?extension?.last:data.last,states={preparing:['جارٍ فتح واتساب','Opening WhatsApp'],sending:['جارٍ الإرسال','Sending'],sent:['ظهرت الرسالة كصادرة في واتساب؛ راجع وصولها في المحادثة','Message shown as outgoing in WhatsApp; check delivery in the chat'],queued:['في انتظار رد خدمة واتساب','Waiting for WhatsApp response'],accepted:['قبلت خدمة واتساب الرسالة؛ وصولها للمستلم يُراجع من حساب الخدمة','WhatsApp accepted the message; check delivery in your provider account'],failed:['فشل الإرسال','Sending failed'],unknown:['حالة الإرسال غير مؤكدة','Send outcome unknown']};
     $('inventory-auto-last').textContent=last?new Date(last.at).toLocaleString(currentLang==='ar'?'ar-SA-u-ca-gregory':'en-GB',{timeZone:'Asia/Riyadh'})+' · '+tr(...(states[last.state]||states.unknown))+(last.error?' · '+errorText(last.error):''):tr('لا توجد رسائل مرسلة حتى الآن.','No messages have been sent yet.');
+    const diagnostic=$('inventory-auto-diagnostics');diagnostic.hidden=!web||!extension?.connected;
+    if(web&&extension?.connected){
+      const next=extension.nextSend?new Date(extension.nextSend).toLocaleString(currentLang==='ar'?'ar-SA-u-ca-gregory':'en-GB',{timeZone:'Asia/Riyadh'}):'';
+      diagnostic.textContent=!extension.version?tr('حدّث الإضافة إلى الإصدار 1.0.1 لإظهار موعد الإرسال وفحص الرسالة.','Update the extension to version 1.0.1 to show the next send time and report status.'):
+        (extension.enabled?tr('الرقم في الإضافة: ','Extension recipient: ')+extension.recipient+' · '+(next?tr('الموعد التالي: ','Next send: ')+next+tr(' بتوقيت السعودية. ',' Saudi time. '):tr('لا يوجد موعد مجدول. ','No send alarm scheduled. ')):tr('الإرسال متوقف على هذا الجهاز. ','Sending is off on this device. '))+
+        (extension.prepared?tr('تقرير حديث جاهز.','Fresh report ready.'):tr('لا يوجد تقرير حديث جاهز؛ اضغط تحديث حالة الإرسال وأبقِ البرنامج مفتوحًا قبل الموعد.','No fresh report ready; refresh send status and keep IBTA open before the time.'))+
+        (extension.blockedToday?tr(' تمت محاولة اليوم بالفعل؛ راجع الحالة أدناه. بعد فشل مؤكد بدون إرسال، اختر موعدًا جديدًا واحفظ.',' An attempt was already recorded today; check below. After a confirmed failure without sending, choose a new time and save.'):'');
+    }
   }
   function paint(data){loaded=data;$('inventory-auto-provider').value=data.provider||'meta';$('inventory-auto-enabled').checked=data.enabled;$('inventory-auto-time').value=data.time;$('inventory-auto-phone-id').value=data.phoneId;$('inventory-auto-template').value=data.template;$('inventory-auto-language').value=data.language;paintStatus(data);}
   function controls(disabled){section.querySelectorAll('input,select,button').forEach(el=>el.disabled=disabled);}
@@ -64,11 +75,11 @@ const InventoryDelivery=(()=>{
       const data=await Cloud.inventoryDelivery({provider,enabled:$('inventory-auto-enabled').checked,time:$('inventory-auto-time').value,
         phoneId:provider==='meta'?$('inventory-auto-phone-id').value.trim():loaded?.phoneId||'',template:provider==='meta'?$('inventory-auto-template').value.trim():loaded?.template||'',language:provider==='meta'?$('inventory-auto-language').value:loaded?.language||'ar',
         apiVersion:loaded?.apiVersion||'v24.0',token:provider==='meta'?access:''});
-      if(token===revision){paint(data);$('inventory-auto-status').textContent=data.enabled?tr('تم الحفظ. الإرسال يوميًا الساعة ','Saved. Sending daily at ')+data.time+tr(' بتوقيت السعودية.',' Saudi time.'):tr('تم الحفظ. الإرسال التلقائي متوقف.','Saved. Automatic sending is off.');post('CONFIG',{enabled:data.enabled&&provider==='web',time:data.time,recipient:Cloud.inventoryMessageSettings().number,owner:Cloud.userId()});if(provider==='web')void publishSnapshot();}
+      if(token===revision){paint(data);const config={enabled:data.enabled&&provider==='web',time:data.time,recipient:Cloud.inventoryMessageSettings().number,owner:Cloud.userId()};if(extension?.connected)await configureDevice(config);else post('CONFIG',config);if(token!==revision)return;$('inventory-auto-status').textContent=data.enabled?tr('تم الحفظ. الإرسال يوميًا الساعة ','Saved. Sending daily at ')+data.time+tr(' بتوقيت السعودية.',' Saudi time.'):tr('تم الحفظ. الإرسال التلقائي متوقف.','Saved. Automatic sending is off.');if(provider==='web')void publishSnapshot();}
     }catch(error){if(token===revision)$('inventory-auto-status').textContent=errorText(error);}
     finally{if(token===revision){$('inventory-auto-token').value='';busy=false;controls(false);}}
   };
-  $('inventory-auto-refresh').onclick=load;
+  $('inventory-auto-refresh').onclick=async()=>{await load();await publishSnapshot();post('PING');};
   $('inventory-auto-provider').onchange=()=>paintStatus(loaded||{});
   async function publishSnapshot(){
     if(snapshotBusy||!extension?.connected||!Cloud.inventoryDeliveryEligible?.())return;snapshotBusy=true;const owner=Cloud.userId();
@@ -84,7 +95,11 @@ const InventoryDelivery=(()=>{
   }
   window.addEventListener('message',event=>{
     if(event.source!==window||event.origin!==location.origin||event.data?.channel!=='IBTA_WEB_EXTENSION')return;
-    if(event.data.type==='STATE'){extension=event.data.payload?.connected?event.data.payload:null;if(loaded)paintStatus(loaded);if(event.data.reason==='PING'&&extension?.enabled&&extension.owner===Cloud.userId())void publishSnapshot();}
+    if(event.data.type==='STATE'){
+      extension=event.data.payload?.connected?event.data.payload:null;
+      if(event.data.reason==='CONFIG'&&pendingConfig){const pending=pendingConfig;pendingConfig=null;clearTimeout(pending.timer);const expected=pending.config;if(extension&&extension.owner===expected.owner&&extension.time===expected.time&&extension.enabled===expected.enabled&&(!extension.version||extension.recipient===expected.recipient))pending.resolve();else pending.reject(Error('EXTENSION_SAVE_FAILED'));}
+      if(loaded)paintStatus(loaded);if(event.data.reason==='PING'&&extension?.enabled&&extension.owner===Cloud.userId())void publishSnapshot();
+    }
     if(event.data.type==='DISCONNECTED'){extension=null;if(loaded)paintStatus(loaded);}
     if(event.data.type==='REQUEST_SNAPSHOT')void publishSnapshot();
   });
@@ -92,7 +107,7 @@ const InventoryDelivery=(()=>{
     const body=$('inventory-auto-language').value.startsWith('en')?'Daily inventory report\nDate: {{1}}\n\nCodes with me:\n{{2}}\n\nCodes with {{3}}:\n{{4}}\n\nTotal codes:\n{{5}}\nOverall total: {{6}}':'تقرير رصيد الأكواد اليومي\nالتاريخ: {{1}}\n\nالأكواد معايا:\n{{2}}\n\nالأكواد مع {{3}}:\n{{4}}\n\nإجمالي الأكواد:\n{{5}}\nالإجمالي الكلي: {{6}}';
     if(await copyText(body))$('inventory-auto-status').textContent=tr('تم نسخ نص القالب. أضفه في حساب Meta لاعتماده.','Template copied. Submit it for approval in your Meta account.');
   };
-  function reset(){revision++;busy=false;loaded=null;$('inventory-auto-token').value='';$('inventory-auto-enabled').checked=false;$('inventory-auto-phone-id').value='';$('inventory-auto-template').value='';$('inventory-auto-status').textContent='';$('inventory-auto-last').textContent='';controls(false);}
+  function reset(){revision++;busy=false;loaded=null;if(pendingConfig){clearTimeout(pendingConfig.timer);pendingConfig.reject(Error('AUTH_REQUIRED'));pendingConfig=null;}$('inventory-auto-token').value='';$('inventory-auto-enabled').checked=false;$('inventory-auto-phone-id').value='';$('inventory-auto-template').value='';$('inventory-auto-status').textContent='';$('inventory-auto-last').textContent='';$('inventory-auto-diagnostics').textContent='';controls(false);}
   translate();post('PING');
   return {load,translate,reset,ready(){post('PING');void publishSnapshot();}};
 })();
