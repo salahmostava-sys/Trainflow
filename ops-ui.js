@@ -170,11 +170,12 @@ function sortCategories(cats){
   });
 }
 
-function inventoryMessage(categories,stock){
+function inventoryMessage(categories,stock,source=null){
   categories=sortCategories(categories);
-  const settings=Cloud.inventoryMessageSettings(),dict=TRANSLATIONS[settings.language];
-  const label=category=>state.categoryLabels?.[category] || state.categoryLabels?.[category.replace(/-\d+$/,'')] || category.replace(/-\d+$/,'');
-  const mine=category=>(state.codesByCategory[category] || []).filter(code=>!state.usedCodes[code]).length;
+  const settings=source?.settings||Cloud.inventoryMessageSettings(),dict=TRANSLATIONS[settings.language];
+  const labels=source?.labels||state.categoryLabels;
+  const label=category=>labels?.[category] || labels?.[category.replace(/-\d+$/,'')] || category.replace(/-\d+$/,'');
+  const mine=category=>source?(source.available[category]||0):(state.codesByCategory[category] || []).filter(code=>!state.usedCodes[code]).length;
   const theirs=category=>Object.hasOwn(stock,category)?stock[category]:dict.inventoryNotSet;
   const name=settings.name || dict.inventorySupervisorFallback;
   const overall=categories.every(category=>Object.hasOwn(stock,category))

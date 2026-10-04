@@ -2,12 +2,18 @@
 
 Settings → Inventory contains an automatic sending switch and a Saudi time input.
 The default is 16:59, one minute before the existing 17:00 manual-login cutoff.
-The database scheduler works when browsers are closed or signed out. It snapshots
+Choose **WhatsApp Web — Chrome** for the local device integration described in
+[the Chrome setup guide](whatsapp-web.md). This is the default provider and needs
+the device awake, Chrome running, WhatsApp signed in and a valid IBTA session.
+
+The optional **WhatsApp Business API** provider described below uses the database
+scheduler and works when browsers are closed or signed out. It snapshots
 the current inventory once per Saudi calendar day and sends to the existing saved
 WhatsApp number. It does not wait for a browser session or delay sign-out.
 
-Automatic sending remains disabled until an administrator connects a Meta
-WhatsApp Business account. No messages or test messages were sent during setup.
+Automatic sending remains disabled until configured. The Meta scheduler does
+not dispatch when Web is selected. No messages or test messages were sent during
+setup.
 
 ## Connect the official sending service
 
@@ -41,7 +47,7 @@ WhatsApp Business account. No messages or test messages were sent during setup.
    message language.
 3. Save the recipient number and supervisor name in the existing message settings.
    Fill every supervisor category balance in Inventory.
-4. Enter Phone Number ID, approved template name, language, and access token in
+4. Choose **WhatsApp Business API**, then enter Phone Number ID, approved template name, language, and access token in
    Settings → Inventory. Choose a time, enable sending, and save.
 
 The token is stored encrypted in Supabase Vault. It is never returned to the

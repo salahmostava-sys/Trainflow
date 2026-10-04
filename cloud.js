@@ -433,6 +433,7 @@ const Cloud = (() => {
     if(retainedDraftUser&&typeof Trainees!=='undefined'){if(await Trainees.flush())retainedDraftUser='';}
     $('auth-box').hidden=true;$('app').hidden=false;$('cloud-tools').hidden=false;$('sign-out').hidden=false;
     setStatus('dbConnected');
+    if(typeof InventoryDelivery!=='undefined')InventoryDelivery.ready();
   }
   async function authenticate(signup){
     const email=$('auth-email').value.trim(),password=$('auth-password').value;
@@ -638,6 +639,14 @@ const Cloud = (() => {
   }
   return {boot,persist,copyCode,claimTraineeCode,editCode,decorate,refresh,translateUi,restoreData,exportData,importCodes,listMembers,updateMember,auditEvents,exportCodesCsv,changeSupervisorStock,saveInventoryMessageSettings,
     inventoryDelivery:async(options)=>{if(!ready||role!=='admin')throw Error('ADMIN_REQUIRED');const {data,error}=await client.rpc(options?'ibta_save_inventory_delivery':'ibta_inventory_delivery_status',options?{options}:{});if(error)throw error;return data;},
+    inventoryDeliveryEligible:()=>ready&&role==='admin'&&!checkDailySession(),
+    inventoryReportSnapshot:async()=>{
+      if(!ready||role!=='admin'||checkDailySession())throw Error('AUTH_REQUIRED');
+      const [settings,codes,balances]=await Promise.all([client.from('ibta_settings').select('payload').eq('id',1).single(),allRows(),client.from('ibta_supervisor_stock').select('category,remaining')]);
+      if(settings.error||balances.error)throw settings.error||balances.error;
+      const p=settings.data.payload,available={};for(const row of codes)if(!row.used_on)available[row.category]=(available[row.category]||0)+1;
+      return {categories:[...new Set([...(p.codeCategories||[]),...codes.map(r=>r.category)])],available,labels:p.categoryLabels||{},stock:Object.fromEntries(balances.data.map(r=>[r.category,r.remaining])),settings:{number:p.inventoryWhatsappNumber||'',name:p.inventorySupervisorName||'',language:p.inventoryMessageLanguage==='en'?'en':'ar'}};
+    },
     reportSession:async()=>{if(!ready)throw Error('AUTH_REQUIRED');const {data,error}=await client.auth.getSession();if(error||!data.session)throw Error('AUTH_REQUIRED');return {token:data.session.access_token,url:SUPABASE_URL,key:KEY};},
     readTrainees,saveTrainees,assignCodes,userId:()=>user?.id || '',codeSnapshot:()=>[...rows.values()].map(row=>({...row})),
     role:()=>role,email:()=>user?.email || '',existingCodes:()=>[...rows.keys()],stockSnapshot:()=>Object.fromEntries(stock),inventoryMessageSettings:()=>({number:config?.payload?.inventoryWhatsappNumber || '',name:config?.payload?.inventorySupervisorName || '',language:config?.payload?.inventoryMessageLanguage==='en'?'en':'ar'})};

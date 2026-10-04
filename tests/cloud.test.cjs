@@ -400,6 +400,7 @@ for(const key of usedKeys) assert(englishKeys.includes(key),`Missing translation
   assert.equal(await run("Cloud.claimTraineeCode('TRAINEE-CATEGORY','user-1')"),'TRAINEE-ALLOCATE');
   const allocation=db.codes.find(r=>r.code==='TRAINEE-ALLOCATE');assert.equal(allocation.owner_id,'user-1');assert.equal(allocation.used_by,'user-1');assert.ok(allocation.used_on);
   await assert.rejects(run("Cloud.claimTraineeCode('NONEXISTENT','user-1')"));
+  const inventorySnapshot=await run('Cloud.inventoryReportSnapshot()');assert.ok(inventorySnapshot.categories.length);assert.equal(inventorySnapshot.available['TRAINEE-CATEGORY']||0,0,'Claimed codes are excluded from the prepared report');assert.doesNotMatch(JSON.stringify(inventorySnapshot),/test-password|test-account|credentials|traineeSheets/,'No credentials or trainee data enters the Web report');
   let resets=0,flushes=0;
   ctx.Trainees={flush:async()=>{flushes++;return false;},hasDraft:()=>true,reset(){resets++;}};
   ctx.testExpiry=ctx.SessionPolicy.expiresAt(accessToken);

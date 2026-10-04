@@ -2,8 +2,10 @@
 const http=require('node:http'),fs=require('node:fs'),path=require('node:path');
 const mock=`const previewSheets=new Map();const previewCodes=[{code:'DEMO-PRIVATE-001',category:'Foundation',owner_id:'demo-user',version:1,used_on:null},{code:'DEMO-POOL-002',category:'Master',owner_id:null,version:1,used_on:null}];const Cloud={
   role:()=>window.previewRole||'admin',userId:()=> 'demo-admin',email:()=> 'admin@example.invalid',
-  stockSnapshot:()=>({}),inventoryMessageSettings:()=>({number:'',name:'',language:'ar'}),
-  async inventoryDelivery(options){if(this.role()!=='admin')throw Error('ADMIN_REQUIRED');if(window.previewDeliveryError)throw Error(window.previewDeliveryError);const old=window.previewDelivery||{enabled:false,time:'16:59',phoneId:'',template:'',language:'ar',apiVersion:'v24.0',connected:false,last:null};if(options){window.previewDeliveryCalls=(window.previewDeliveryCalls||[]).concat({...options,token:options.token?'[provided]':''});if(options.enabled&&!(old.connected||options.token&&options.phoneId&&options.template))throw Error('WHATSAPP_NOT_CONNECTED');window.previewDelivery={...old,...options,connected:!!(options.phoneId&&options.template&&(old.connected||options.token))};delete window.previewDelivery.token;}return window.previewDelivery||old;},
+  stockSnapshot:()=>({}),inventoryMessageSettings:()=>({number:window.previewRecipient||'',name:'',language:'ar'}),
+  inventoryDeliveryEligible:()=>!window.previewSignedOut,
+  inventoryReportSnapshot:async()=>({categories:['Foundation'],available:{Foundation:12},labels:{},stock:{Foundation:3},settings:{number:window.previewRecipient||'',name:'المشرف',language:'ar'}}),
+  async inventoryDelivery(options){if(this.role()!=='admin')throw Error('ADMIN_REQUIRED');if(window.previewDeliveryError)throw Error(window.previewDeliveryError);const old=window.previewDelivery||{provider:'web',enabled:false,time:'16:59',phoneId:'',template:'',language:'ar',apiVersion:'v24.0',connected:false,last:null};if(options){window.previewDeliveryCalls=(window.previewDeliveryCalls||[]).concat({...options,token:options.token?'[provided]':''});if(options.enabled&&options.provider==='meta'&&!(old.connected||options.token&&options.phoneId&&options.template))throw Error('WHATSAPP_NOT_CONNECTED');window.previewDelivery={...old,...options,connected:!!(options.phoneId&&options.template&&(old.connected||options.token))};delete window.previewDelivery.token;}return window.previewDelivery||old;},
   codeSnapshot:()=>previewCodes.map(row=>({...row})),
   refresh:async()=>true,
   listMembers:async()=>[{email:'user@example.invalid',user_id:'demo-user',active:true}],
@@ -42,6 +44,7 @@ const mock=`const previewSheets=new Map();const previewCodes=[{code:'DEMO-PRIVAT
 };`;
 http.createServer((req,res)=>{
   const pathname=new URL(req.url,'http://localhost').pathname;
+  if(pathname==='/ibta-whatsapp-web.zip'){res.setHeader('Content-Type','application/zip');return res.end(fs.readFileSync(path.join(__dirname,'../dist/ibta-whatsapp-web.zip')));}
   if(pathname==='/exceljs-4.4.0.min.js'){res.setHeader('Content-Type','text/javascript');return res.end(fs.readFileSync(require.resolve('exceljs/dist/exceljs.min.js')));}
   if(['/inventory-delivery.js','/trainees.js','/trainees-excel.js','/trainees-core.js','/trainees-xlsx.js','/trainees-files.js','/trainees-xlsx-worker.js','/trainees.css','/ops-ui.js','/trainee-reports.js','/session-policy.js'].includes(pathname)){
     res.setHeader('Content-Type',pathname.endsWith('.css')?'text/css':'text/javascript');

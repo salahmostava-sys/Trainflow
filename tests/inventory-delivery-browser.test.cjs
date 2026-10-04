@@ -7,6 +7,8 @@ const assert=require('node:assert/strict'),path=require('node:path'),{spawn}=req
     await page.locator('#account-menu-btn').click();await page.locator('#settings-btn').click();await page.locator('#settings-tab-inventory').click();
     await page.waitForFunction(()=>!document.getElementById('inventory-auto-save').disabled);
     assert.equal(await page.locator('#inventory-auto-time').inputValue(),'16:59');assert.equal(await page.locator('#inventory-auto-enabled').isChecked(),false);
+    assert.equal(await page.locator('#inventory-auto-provider').inputValue(),'web');
+    await page.locator('#inventory-auto-provider').selectOption('meta');
     assert.match(await page.locator('#inventory-auto-connection').textContent(),/غير مربوطة/);
     await page.locator('#inventory-auto-enabled').check();await page.locator('#inventory-auto-save').click();await page.waitForFunction(()=>document.getElementById('inventory-auto-status').textContent.includes('أكمل ربط'));
     await page.locator('#inventory-auto-phone-id').fill('123456789012');await page.locator('#inventory-auto-template').fill('ibta_inventory_daily');await page.locator('#inventory-auto-token').fill('test_token_for_local_preview_only');
@@ -18,8 +20,19 @@ const assert=require('node:assert/strict'),path=require('node:path'),{spawn}=req
     await page.evaluate(()=>{window.previewDelivery.last={at:'2026-10-04T13:50:00Z',state:'accepted',error:null};});await page.locator('#inventory-auto-refresh').click();await page.waitForFunction(()=>document.getElementById('inventory-auto-last').textContent.includes('قبلت خدمة'));
     await page.locator('#lang-btn').click();assert.match(await page.locator('#inventory-auto-last').textContent(),/check delivery/);assert.equal(await page.locator('#inventory-auto-save').textContent(),'Save sending settings');
     await page.locator('#inventory-auto-enabled').uncheck();await page.locator('#inventory-auto-save').click();await page.waitForFunction(()=>document.getElementById('inventory-auto-status').textContent.includes('off'));
-    await page.locator('#inventory-auto-token').fill('unsaved_private_token');await page.evaluate(()=>InventoryDelivery.reset());assert.equal(await page.locator('#inventory-auto-token').inputValue(),'');
+    await page.locator('#inventory-auto-provider').selectOption('web');await page.locator('#inventory-auto-enabled').check();await page.locator('#inventory-auto-save').click();await page.waitForFunction(()=>document.getElementById('inventory-auto-status').textContent.includes('Install the Chrome'));
+    await page.evaluate(()=>{
+      window.previewRecipient='966500000000';window.fixtureExtension={connected:true,enabled:false,owner:''};window.bridgeSnapshots=[];
+      window.addEventListener('message',event=>{if(event.data?.channel!=='IBTA_WEB_APP')return;const data=event.data;if(data.type==='CONFIG')window.fixtureExtension={connected:true,...data.payload};if(data.type==='SNAPSHOT')window.bridgeSnapshots.push(data.payload);window.postMessage({channel:'IBTA_WEB_EXTENSION',type:'STATE',payload:window.fixtureExtension},location.origin);});
+      window.postMessage({channel:'IBTA_WEB_EXTENSION',type:'STATE',payload:window.fixtureExtension},location.origin);
+    });
+    await page.waitForFunction(()=>document.getElementById('inventory-auto-connection').textContent.includes('Extension connected'));
+    await page.locator('#inventory-auto-time').fill('16:57');await page.locator('#inventory-auto-save').click();await page.waitForFunction(()=>window.bridgeSnapshots.length>0);
+    const report=await page.evaluate(()=>window.bridgeSnapshots.at(-1));assert.equal(report.config.owner,'demo-admin');assert.equal(report.config.time,'16:57');assert.equal(report.report.recipient,'966500000000');assert.match(report.report.message,/Foundation: 12/);assert.match(report.report.message,/Foundation: 15/);assert.doesNotMatch(JSON.stringify(report),/token|password|credential|trainee/i);
+    const before=await page.evaluate(()=>window.bridgeSnapshots.length);await page.evaluate(()=>{window.previewSignedOut=true;window.postMessage({channel:'IBTA_WEB_EXTENSION',type:'REQUEST_SNAPSHOT'},location.origin);});
+    await page.waitForTimeout(100);assert.equal(await page.evaluate(()=>window.bridgeSnapshots.length),before,'Signed-out sessions cannot prepare fresh messages');
+    await page.locator('#inventory-auto-provider').selectOption('meta');await page.locator('#inventory-auto-token').fill('unsaved_private_token');await page.evaluate(()=>InventoryDelivery.reset());assert.equal(await page.locator('#inventory-auto-token').inputValue(),'');await page.locator('#inventory-auto-provider').selectOption('web');
     await page.setViewportSize({width:390,height:844});await page.locator('#inventory-auto-settings').screenshot({path:path.join(__dirname,'../artifacts/inventory-auto-mobile.png')});
-    assert.deepEqual(errors,[]);console.log('PASS: daily Saudi-time settings, disconnected guard, token privacy, persistence, status, translation, disable and sign-out cleanup');
+    assert.deepEqual(errors,[]);console.log('PASS: Saudi-time settings, Web/Meta modes, installation guards, token privacy, inventory-only bridge, signed-out guards, status, translation and disable');
   }finally{await browser.close();server.kill();}
 })().catch(error=>{console.error(error);process.exitCode=1;});

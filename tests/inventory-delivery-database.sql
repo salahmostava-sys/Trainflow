@@ -40,5 +40,9 @@ begin
   if (select count(*) from net.http_request_queue)<>before_count+1 then raise exception 'DUE_REPORT_NOT_QUEUED'; end if;
   perform private.ibta_inventory_delivery_tick();
   if (select count(*) from net.http_request_queue)<>before_count+1 then raise exception 'DUPLICATE_SEND'; end if;
+  result:=public.ibta_save_inventory_delivery('{"provider":"web","enabled":true,"time":"00:00","phoneId":"","template":"","language":"ar","token":""}');
+  if result->>'provider'<>'web' then raise exception 'WEB_PROVIDER_NOT_SAVED'; end if;
+  perform private.ibta_inventory_delivery_tick();
+  if (select count(*) from net.http_request_queue)<>before_count+1 then raise exception 'WEB_MODE_CALLED_META'; end if;
 end $$;
 rollback;

@@ -119,8 +119,16 @@ Run `node tests/cloud.test.cjs` for frontend storage, import, inventory, and bac
 ## Daily WhatsApp inventory messages
 
 Settings → Inventory includes a daily automatic send switch and a configurable
-Saudi time (default 16:59, before the 17:00 sign-out). The database scheduler runs
-even with the app closed. Sending requires a connected WhatsApp Business account,
-an approved six-variable template, and a production token stored in Vault; it is
-disabled until configured. See [setup and delivery status](docs/whatsapp-inventory.md).
+Saudi time (default 16:59, before the 17:00 sign-out). The default provider uses
+WhatsApp Web in Chrome through the extension downloadable from these settings.
+Load `extension/whatsapp-web` through Chrome's Load unpacked control, reload IBTA,
+and save the enabled settings on one device only. The device must stay awake,
+Chrome and WhatsApp must stay running, and IBTA must be signed in before the
+prefetch time. Missing or stale reports are skipped. See [Chrome setup and
+delivery status](docs/whatsapp-web.md).
+
+The optional Meta provider runs from the database even with the app closed. It
+requires a WhatsApp Business account, an approved six-variable template and a
+production token stored in Vault. See [Meta setup](docs/whatsapp-inventory.md).
+Automatic sending is disabled until configured; setup tests send no messages.
 
