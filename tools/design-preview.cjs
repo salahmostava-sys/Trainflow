@@ -40,7 +40,7 @@ const mock=`const previewSheets=new Map();const previewCodes=[{code:'DEMO-PRIVAT
 };`;
 http.createServer((req,res)=>{
   const pathname=new URL(req.url,'http://localhost').pathname;
-  if(['/trainees.js','/trainees-core.js','/trainees.css','/ops-ui.js','/trainee-reports.js','/session-policy.js'].includes(pathname)){
+  if(['/trainees.js','/trainees-excel.js','/trainees-core.js','/trainees.css','/ops-ui.js','/trainee-reports.js','/session-policy.js'].includes(pathname)){
     res.setHeader('Content-Type',pathname.endsWith('.css')?'text/css':'text/javascript');
     return res.end(fs.readFileSync(path.join(__dirname,'..',pathname.slice(1))));
   }

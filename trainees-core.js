@@ -26,6 +26,13 @@
       if(!/^(0|[1-9]\d*):(\d+)$/.test(key)||Number(key.split(':')[0])>=MAX_ROWS||Number(key.split(':')[1])>=MAX_COLS||!style||typeof style!=='object')continue;
       const next={};for(const field of ['bg','color'])if(/^#[0-9a-f]{6}$/i.test(style[field]))next[field]=style[field];
       if(typeof style.bold==='boolean')next.bold=style.bold;
+      for(const field of ['italic','underline','strike','wrap','borderTop','borderBottom','borderLeft','borderRight'])if(typeof style[field]==='boolean')next[field]=style[field];
+      if(['Arial','Calibri','Tahoma','Segoe UI','Times New Roman','IBM Plex Sans Arabic'].includes(style.font))next.font=style.font;
+      if(['left','center','right'].includes(style.align))next.align=style.align;
+      if(['top','middle','bottom'].includes(style.valign))next.valign=style.valign;
+      if(['none','all','outline','top','bottom','left','right'].includes(style.border))next.border=style.border;
+      for(const [field,min,max]of [['indent',0,15],['rotation',-90,90],['height',20,400],['mergeCols',1,MAX_COLS],['mergeRows',1,MAX_ROWS]])if(Number.isInteger(style[field])&&style[field]>=min&&style[field]<=max)next[field]=style[field];
+      const [row,column]=key.split(':').map(Number);if(next.mergeCols)next.mergeCols=Math.min(next.mergeCols,MAX_COLS-column);if(next.mergeRows)next.mergeRows=Math.min(next.mergeRows,MAX_ROWS-row);
       if(Number.isInteger(style.size)&&style.size>=10&&style.size<=32)next.size=style.size;
       if(Object.keys(next).length)out.styles[key]=next;
     }
@@ -37,7 +44,7 @@
     const next=format(formatting),mapping=new Map();let at=0;
     rows.forEach((_,i)=>{if(!indices.has(i))mapping.set(i,at++);});next.styles={};
     const removed=[...indices].filter(i=>i<rows.length).length;
-    for(const [key,style]of Object.entries(formatting.styles)){const [r,c]=key.split(':').map(Number);const target=r>=rows.length?r-removed:mapping.get(r);if(target!==undefined)next.styles[target+':'+c]={...style};}
+    for(const [key,style]of Object.entries(formatting.styles)){const [r,c]=key.split(':').map(Number);const target=r>=rows.length?r-removed:mapping.get(r);if(target!==undefined){const v={...style};if(v.mergeRows)v.mergeRows=Math.max(1,v.mergeRows-[...indices].filter(i=>i>=r&&i<r+v.mergeRows).length);next.styles[target+':'+c]=v;}}
     return {cells:rows.filter((_,i)=>!indices.has(i)),format:next};
   }
   function normalize(rows){
@@ -146,10 +153,37 @@
     fmt.headers={};for(let c=BASE_WIDTH;c<width;c++){const target=map(c);if(target!==null)fmt.headers[target]=formatting.headers?.[c]||'Column '+(c+1);}
     if(insert)for(let c=start;c<start+count;c++)fmt.headers[c]='New column';
     fmt.hidden=(formatting.hidden||[]).map(map).filter(c=>c!==null);
-    fmt.styles={};for(const [key,style]of Object.entries(formatting.styles||{})){const [r,c]=key.split(':').map(Number),target=map(c);if(target!==null)fmt.styles[r+':'+target]={...style};}
+    fmt.styles={};for(const [key,style]of Object.entries(formatting.styles||{})){const [r,c]=key.split(':').map(Number),target=map(c);if(target!==null){const v={...style};if(v.mergeCols){if(insert&&c<start&&c+v.mergeCols>start)v.mergeCols+=count;else if(!insert)v.mergeCols=Math.max(1,v.mergeCols-Math.max(0,Math.min(c+v.mergeCols,start+count)-Math.max(c,start)));}fmt.styles[r+':'+target]=v;}}
     return {cells:normalize(cells),format:fmt};
   }
-  const api={BASE_WIDTH,WIDTH,MAX_ROWS,MAX_COLS,MAX_CELL,blank,normalize,parse,tsv,paste,result:normalizeResult,defaultFormat,format,idKey,duplicates,removeRows,deleteCells,courseKeycode,columns};
+  function pasteMapped(rows,values,rowIndex,targets){
+    if(rowIndex<0||rowIndex+values.length>MAX_ROWS||targets.some(c=>!Number.isInteger(c)||c<0||c>=MAX_COLS)||values.some(r=>r.length>targets.length))throw Error('PASTE_BOUNDS');
+    const width=Math.max(BASE_WIDTH,rows[0]?.length||0,...targets.map(c=>c+1)),next=rows.map(r=>[...r]);
+    for(let y=0;y<values.length;y++){while(next.length<=rowIndex+y)next.push(blank(width));for(let x=0;x<values[y].length;x++){while(next[rowIndex+y].length<=targets[x])next[rowIndex+y].push('');next[rowIndex+y][targets[x]]=values[y][x];}}
+    return normalize(next);
+  }
+  function address(value){const m=/^\$?([A-Z]+)\$?([1-9]\d*)$/i.exec(value);if(!m)return null;let c=0;for(const ch of m[1].toUpperCase())c=c*26+ch.charCodeAt(0)-64;const r=Number(m[2])-1;return r<MAX_ROWS&&c<=MAX_COLS?{r,c:c-1}:null;}
+  function letter(c){let text='';for(c++;c>0;c=Math.floor((c-1)/26))text=String.fromCharCode(65+(c-1)%26)+text;return text;}
+  function number(value){if(typeof value==='number')return value;if(typeof value!=='string'||!value.trim())return null;const text=value.trim().replace(/[٠-٩]/g,c=>c.charCodeAt(0)-1632).replace(/[۰-۹]/g,c=>c.charCodeAt(0)-1776).replace(/٬|,/g,'').replace(/٫/g,'.');return /^[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[-+]?\d+)?$/i.test(text)&&Number.isFinite(Number(text))?Number(text):null;}
+  function formulaValue(rows,r,c,cache=new Map(),visiting=new Set()){
+    const key=r+':'+c;if(cache.has(key))return cache.get(key);const raw=rows[r]?.[c]||'';if(!raw.startsWith('='))return raw;
+    if(visiting.has(key)||visiting.size>100)return '#CYCLE!';visiting.add(key);
+    let result;try{
+      const source=raw.slice(1).toUpperCase(),tokens=[];let at=0;
+      while(at<source.length){const m=/^\s*(\d+(?:\.\d*)?|\.\d+|\$?[A-Z]+\$?\d+|[A-Z]+|[+\-*/^():,])/.exec(source.slice(at));if(!m){if(!source.slice(at).trim())break;throw '#NAME?';}tokens.push(m[1]);at+=m[0].length;}
+      let p=0;const num=v=>{if(String(v).startsWith('#'))throw v;const n=number(v);if(n===null){if(v==='')return 0;throw '#VALUE!';}return n;};
+      const read=ref=>{const a=address(ref);if(!a)throw '#REF!';return formulaValue(rows,a.r,a.c,cache,visiting);};
+      function primary(){const t=tokens[p++];if(t==='+'||t==='-')return (t==='-'?-1:1)*num(primary());if(t==='('){const v=expression();if(tokens[p++]!==')')throw '#VALUE!';return v;}if(/^\d|^\./.test(t||''))return Number(t);if(address(t||''))return read(t);
+        if(['SUM','AVERAGE','COUNT','MIN','MAX'].includes(t)&&tokens[p++]==='('){const values=[];if(tokens[p]!==')')do{if(address(tokens[p]||'')&&tokens[p+1]===':'){const a=address(tokens[p]),b=address(tokens[p+2]||'');p+=3;if(!b)throw '#REF!';if((Math.abs(b.r-a.r)+1)*(Math.abs(b.c-a.c)+1)>MAX_ROWS)throw '#NUM!';for(let y=Math.min(a.r,b.r);y<=Math.max(a.r,b.r);y++)for(let x=Math.min(a.c,b.c);x<=Math.max(a.c,b.c);x++)values.push(formulaValue(rows,y,x,cache,visiting));}else values.push(expression());if(tokens[p]!==',')break;p++;}while(true);if(tokens[p++]!==')')throw '#VALUE!';if(values.some(v=>String(v).startsWith('#')))throw values.find(v=>String(v).startsWith('#'));const numbers=values.map(number).filter(v=>v!==null);if(t==='COUNT')return numbers.length;if(t==='SUM')return numbers.reduce((a,b)=>a+b,0);if(t==='AVERAGE'){if(!numbers.length)throw '#DIV/0!';return numbers.reduce((a,b)=>a+b,0)/numbers.length;}return numbers.length?(numbers.reduce((a,b)=>t==='MIN'?Math.min(a,b):Math.max(a,b))):0;}
+        throw '#NAME?';}
+      function power(){let v=primary();if(tokens[p]==='^'){p++;v=num(v)**num(power());}return v;}
+      function product(){let v=power();while(['*','/'].includes(tokens[p])){const op=tokens[p++],b=num(power());if(op==='/'&&b===0)throw '#DIV/0!';v=op==='*'?num(v)*b:num(v)/b;}return v;}
+      function expression(){let v=product();while(['+','-'].includes(tokens[p])){const op=tokens[p++],b=num(product());v=op==='+'?num(v)+b:num(v)-b;}return v;}
+      result=expression();if(p!==tokens.length)throw '#VALUE!';if(typeof result==='number'){if(!Number.isFinite(result))throw '#NUM!';result=String(Number(result.toPrecision(14)));}
+    }catch(error){result=typeof error==='string'&&error.startsWith('#')?error:'#VALUE!';}finally{visiting.delete(key);}cache.set(key,result);return result;
+  }
+  function shiftFormula(value,dr,dc){return value.startsWith('=')?value.replace(/(\$?)([A-Z]+)(\$?)([1-9]\d*)/gi,(all,ac,col,ar,row)=>{const a=address(col+row);if(!a)return '#REF!';const r=a.r+(ar?0:dr),c=a.c+(ac?0:dc);return r<0||r>=MAX_ROWS||c<0||c>=MAX_COLS?'#REF!':ac+letter(c)+ar+(r+1);}):value;}
+  const api={BASE_WIDTH,WIDTH,MAX_ROWS,MAX_COLS,MAX_CELL,blank,normalize,parse,tsv,paste,pasteMapped,result:normalizeResult,defaultFormat,format,idKey,duplicates,removeRows,deleteCells,courseKeycode,columns,address,letter,number,formulaValue,shiftFormula};
   if(typeof module!=='undefined'&&module.exports)module.exports=api;
   else root.TraineeData=api;
 })(globalThis);

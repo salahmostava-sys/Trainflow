@@ -125,10 +125,10 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),path
     assert.match(details,/محترف الأعمال المعتمد في المبيعات CBP-S/);
     assert.equal(await page.locator('#sheet-trainee-record .sheet-detail-category').textContent(),'فئة المراجعة','Shows the effective category, including overrides and display labels');
     assert.equal(await page.locator('#sheet-trainee-record .sheet-detail-category').evaluate(el=>el.parentElement.tagName),'DD','Category has its own field');
-    assert.equal(await page.locator('#sheet-trainee-record .sheet-detail-category-value').evaluate(el=>getComputedStyle(el).textAlign),'right');
+    assert.equal(await page.locator('#sheet-trainee-record .sheet-detail-category-value').evaluate(el=>getComputedStyle(el).textAlign),'left');
     for(const selector of ['.sheet-detail-keycode','.sheet-detail-category','button[aria-label="نسخ الاختبار"]','button[aria-label="نسخ Prometric Account"]']){
-      const edges=await page.locator('#sheet-trainee-record '+selector).evaluate(el=>({value:el.getBoundingClientRect().right,column:el.parentElement.getBoundingClientRect().right,align:getComputedStyle(el).textAlign}));
-      assert.equal(edges.align,'right');assert.ok(Math.abs(edges.value-edges.column)<1,'Detail values share a consistent right edge');
+      const edges=await page.locator('#sheet-trainee-record '+selector).evaluate(el=>({value:el.getBoundingClientRect().left,column:el.parentElement.getBoundingClientRect().left,align:getComputedStyle(el).textAlign}));
+      assert.equal(edges.align,'left');assert.ok(Math.abs(edges.value-edges.column)<1,'Detail values share a consistent left edge');
     }
     assert.equal(await page.locator('#sheet-trainee-record .sheet-detail-keycode').evaluate(el=>getComputedStyle(el,'::after').content),'none','Copy icon is removed while copying remains available');
     assert.match(details,/Prometric Accountdemo-prometric-account/);assert.match(details,/Prometric Passworddemo-prometric-password/);

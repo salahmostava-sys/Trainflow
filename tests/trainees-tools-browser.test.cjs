@@ -1,0 +1,42 @@
+const {chromium}=require('playwright');
+const assert=require('node:assert/strict');
+const path=require('node:path');
+const {spawn}=require('node:child_process');
+(async()=>{
+  const server=spawn(process.execPath,[path.join(__dirname,'../tools/design-preview.cjs')],{stdio:['ignore','pipe','inherit'],env:{...process.env,IBTA_PREVIEW_PORT:'4179'}});
+  await new Promise((resolve,reject)=>{server.stdout.once('data',resolve);server.once('error',reject);});
+  const browser=await chromium.launch({headless:true,channel:'msedge'});
+  try{
+    const page=await browser.newPage({viewport:{width:1800,height:1100}}),errors=[];let promptValue='48';
+    page.on('pageerror',e=>errors.push(e.message));page.on('dialog',d=>d.accept(d.type()==='prompt'?promptValue:undefined));
+    await page.goto('http://127.0.0.1:4179/');await page.locator('#trainees-tab').click();await page.waitForFunction(()=>document.getElementById('sheet-status').textContent==='تم الحفظ');
+    await page.evaluate(()=>Object.defineProperty(navigator,'clipboard',{configurable:true,value:{readText:async()=>window.testClipboard||'',writeText:async v=>{window.testClipboard=v;}}}));
+    const cell=(r,c)=>page.locator(`td[data-v="${r}"][data-col="${c}"]`);
+    const select=async(r,c,endR=r,endC=c)=>{await cell(r,c).click();if(r!==endR||c!==endC)await cell(endR,endC).click({modifiers:['Shift']});};
+    const menu=async(id,item)=>{await page.locator('#'+id+' > summary').click();await page.locator('#'+id+'-'+item).click();};
+    const paste=async(r,c,text)=>{await select(r,c);await cell(r,c).evaluate((el,text)=>{const dt=new DataTransfer();dt.setData('text/plain',text);el.dispatchEvent(new ClipboardEvent('paste',{clipboardData:dt,bubbles:true,cancelable:true}));},text);};
+    await select(0,13);await page.evaluate(()=>window.testClipboard='10\t20\n30\t40');await menu('sheet-paste-menu','values');await page.waitForFunction(()=>document.querySelector('td[data-v="1"][data-col="14"]').textContent==='40');
+    await select(0,13,1,14);await page.locator('#sheet-font-family').selectOption('Calibri');await page.locator('#sheet-italic').click();await page.locator('#sheet-underline').click();await menu('sheet-border-menu','outline');
+    const format=await cell(0,13).evaluate(el=>{const s=getComputedStyle(el);return {font:s.fontFamily,italic:s.fontStyle,underline:s.textDecorationLine,top:s.borderTopWidth,left:s.borderLeftWidth};});
+    assert.match(format.font,/Calibri/);assert.equal(format.italic,'italic');assert.match(format.underline,/underline/);assert.equal(format.top,'1px');assert.equal(format.left,'1px');
+    await select(0,13);await page.locator('#sheet-format-painter').click();await select(0,15);assert.equal(await cell(0,15).evaluate(el=>getComputedStyle(el).fontStyle),'italic');
+    await select(0,13,1,14);await menu('sheet-merge-menu','center');assert.equal(await cell(0,13).getAttribute('colspan'),'2');assert.equal(await cell(0,13).getAttribute('rowspan'),'2');assert.equal(await cell(1,13).count(),0);assert.equal(await cell(0,13).textContent(),'10');
+    await select(0,13);await menu('sheet-merge-menu','unmerge');assert.equal(await cell(1,13).count(),1);await page.locator('#sheet-undo').click();assert.equal(await cell(0,13).getAttribute('colspan'),'2');await page.locator('#sheet-undo').click();assert.equal(await cell(1,13).textContent(),'30');
+    await select(0,13,1,13);await menu('sheet-autosum-menu','SUM');assert.equal(await cell(2,13).textContent(),'40');assert.equal(await cell(2,13).getAttribute('data-formula'),'=SUM(N1:N2)');
+    await paste(0,13,'50');assert.equal(await cell(2,13).textContent(),'80','Formula recalculates after source data changes');
+    await paste(0,14,'=N1*2');await select(0,14,2,14);await menu('sheet-fill-menu','down');assert.equal(await cell(1,14).getAttribute('data-formula'),'=N2*2');assert.equal(await cell(2,14).textContent(),'160');
+    await paste(0,15,'2\n4');await select(0,15,4,15);await menu('sheet-fill-menu','series');assert.equal(await cell(4,15).textContent(),'10');
+    await select(0,14);await page.locator('#sheet-copy-selection').click();await select(0,17);await menu('sheet-paste-menu','values');await page.waitForFunction(()=>document.querySelector('td[data-v="0"][data-col="17"]').textContent==='100');assert.equal(await cell(0,17).getAttribute('data-formula'),null,'Paste values copies evaluated results');
+    await paste(0,16,'fruit-banana\nfruit-apple');await select(0,16);await menu('sheet-sort-menu','ascending');await page.locator('#sheet-search').fill('fruit-');assert.equal(await page.locator('#sheet-grid tbody td[data-col="16"]').first().textContent(),'fruit-apple');await page.locator('#sheet-clear-filters').click();
+    await select(0,13);await page.locator('#sheet-valign-top').click();assert.equal(await cell(0,13).evaluate(el=>getComputedStyle(el).verticalAlign),'top');await page.locator('#sheet-indent-more').click();assert.equal(await cell(0,13).evaluate(el=>getComputedStyle(el).textIndent),'8px');
+    await page.locator('#sheet-wrap').click();assert.equal(await cell(0,13).evaluate(el=>getComputedStyle(el).whiteSpace),'pre-wrap');await menu('sheet-orientation-menu','90');assert.equal(await cell(0,13).locator('span').evaluate(el=>getComputedStyle(el).writingMode),'vertical-rl');
+    await menu('sheet-cell-format-menu','row-height');assert.ok(await cell(0,13).evaluate(el=>el.getBoundingClientRect().height)>=48);
+    promptValue='180';await menu('sheet-cell-format-menu','column-width');assert.ok(await cell(0,13).evaluate(el=>el.getBoundingClientRect().width)>=180);
+    await select(0,16);await menu('sheet-cell-format-menu','hide');assert.equal(await cell(0,16).count(),0);await menu('sheet-cell-format-menu','show');assert.equal(await cell(0,16).count(),1);
+    await select(0,13);await menu('sheet-clear-menu','formats');assert.equal(await cell(0,13).evaluate(el=>getComputedStyle(el).fontStyle),'normal');assert.equal(await cell(0,13).textContent(),'50');
+    await page.locator('#sheet-save').click();await page.waitForFunction(()=>!Trainees.hasDraft());await page.locator('#sheet-reload').click();await page.waitForFunction(()=>document.getElementById('sheet-status').textContent==='تم الحفظ');assert.equal(await cell(2,13).textContent(),'80');
+    await select(0,13,1,14);await menu('sheet-merge-menu','cells');await page.locator('#sheet-save').click();await page.waitForFunction(()=>!Trainees.hasDraft());await page.locator('#sheet-reload').click();await page.waitForFunction(()=>document.getElementById('sheet-status').textContent==='تم الحفظ');assert.equal(await cell(0,13).getAttribute('colspan'),'2','Merges survive save and reload');
+    await menu('sheet-merge-menu','unmerge');
+    assert.deepEqual(errors,[]);console.log('PASS: ribbon paste/font/painter/borders/merge/undo/formulas/fill/sort/size/hide/clear and cloud reload');
+  }finally{await browser.close();server.kill();}
+})().catch(error=>{console.error(error);process.exitCode=1;});

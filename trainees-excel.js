@@ -1,0 +1,97 @@
+/* Excel-style actions over the private trainee data model and its undo history. */
+const TraineeExcel=(()=>{
+  'use strict';
+  function mount(h){
+    const {D,$,tr,node,button}=h,tools=$('sheet-workspace').querySelector('.sheet-format-tools');
+    let painter=null,copied=null;
+    const text=(el,ar,en)=>{el.dataset.excelAr=ar;el.dataset.excelEn=en;el.textContent=tr(ar,en);return el;};
+    const action=(id,ar,en,run)=>{const el=button('',()=>{h.commitEdit();if(!h.state().loaded)return;try{run();}catch(error){h.message(error.message||tr('تعذر تنفيذ العملية','Could not complete the action'),true);}});el.id=id;return text(el,ar,en);};
+    const group=(id,ar,en)=>{const box=node('div',undefined,{id,class:'sheet-excel-group'}),body=node('div',undefined,{class:'sheet-excel-actions'});box.append(body,text(node('small'),ar,en));tools.append(box);return body;};
+    const menu=(host,id,ar,en,items)=>{const details=node('details',undefined,{id,class:'sheet-excel-menu'}),list=node('div',undefined,{class:'sheet-excel-menu-items'});details.append(text(node('summary'),ar,en),list);for(const [key,a,e,run]of items)list.append(action(id+'-'+key,a,e,()=>{details.open=false;run();}));host.append(details);return details;};
+    const state=()=>h.state(),style=()=>{const s=state();return s.formatting.styles[s.view[s.cursor.r]+':'+s.cursor.c]||{};};
+    const rows=s=>s.view.slice(s.bounds[0],s.bounds[1]+1),columns=s=>s.cols.filter(c=>c>=s.bounds[2]&&c<=s.bounds[3]);
+    const mutate=(run)=>{const s=state(),cells=s.cells.map(r=>[...r]),fmt=D.format(s.formatting);run(cells,fmt,s);h.change(D.normalize(cells),true,fmt);};
+    const selected=(run)=>mutate((cells,fmt,s)=>{for(const r of rows(s))for(const c of columns(s))run(cells,fmt,r,c,s);});
+    const toggle=field=>h.formatSelection({[field]:!style()[field]});
+    const cloneStyles=()=>{const s=state();return rows(s).map(r=>columns(s).map(c=>({...s.formatting.styles[r+':'+c]})));};
+    const capture=()=>{const s=state();copied={values:rows(s).map(r=>columns(s).map(c=>s.cells[r]?.[c]||'')),display:rows(s).map(r=>columns(s).map(c=>String(D.formulaValue(s.cells,r,c)))),styles:cloneStyles()};};
+    const paste=async(mode='all')=>{
+      try{const raw=await navigator.clipboard.readText();if(!raw)return;let values=mode==='values'&&copied&&raw===D.tsv(copied.values)?copied.display:D.parse(raw);if(mode==='transpose')values=Array.from({length:Math.max(...values.map(r=>r.length))},(_,c)=>values.map(r=>r[c]||''));
+        const useStyles=mode==='all'&&copied&&raw===D.tsv(copied.values),s=state(),targets=s.cols.filter(c=>c>=s.bounds[2]);
+        if(s.filtered&&values.length>1){h.message(tr('امسح الفلاتر والفرز قبل لصق عدة صفوف.','Clear filters and sorting before pasting multiple rows.'),true);return;}
+        mutate((cells,fmt)=>{const start=s.view[s.bounds[0]]??cells.length;for(let y=0;y<values.length;y++)for(let x=0;x<values[y].length;x++){const c=targets[x]??s.cols.length+x-targets.length;if(c>=D.MAX_COLS)throw Error(tr('وصلت للحد الأقصى للأعمدة','Column limit reached'));while(cells.length<=start+y)cells.push(D.blank());while(cells[start+y].length<=c)cells[start+y].push('');cells[start+y][c]=values[y][x];if(useStyles){const v={...copied.styles[y]?.[x]};delete v.mergeRows;delete v.mergeCols;fmt.styles[(start+y)+':'+c]=v;}}});
+      }catch{h.message(tr('اسمح بالوصول للحافظة، أو استخدم Ctrl+V.','Allow clipboard access or press Ctrl+V.'),true);}
+    };
+    const clipboard=$('sheet-copy').closest('.sheet-ribbon-group').querySelector('.sheet-ribbon-actions');
+    clipboard.prepend(action('sheet-cut-selection','قص','Cut',()=>{capture();h.cutSelection();}),action('sheet-copy-selection','نسخ المحدد','Copy',()=>{capture();h.copySelection();}));
+    menu(clipboard,'sheet-paste-menu','لصق ▾','Paste ▾',[
+      ['all','لصق الكل','Paste all',()=>paste('all')],['values','لصق القيم فقط','Values only',()=>paste('values')],['transpose','تبديل الصفوف والأعمدة','Transpose',()=>paste('transpose')]
+    ]);
+    const painterButton=action('sheet-format-painter','نسخ التنسيق','Format Painter',()=>{painter={...style()};delete painter.mergeRows;delete painter.mergeCols;painterButton.setAttribute('aria-pressed','true');h.message(tr('حدد الخلايا التي تريد تطبيق التنسيق عليها.','Select the cells to apply this formatting.'));});clipboard.append(painterButton);
+    $('sheet-grid').addEventListener('copy',capture,{capture:true});$('sheet-grid').addEventListener('cut',capture,{capture:true});
+    $('sheet-grid').addEventListener('click',e=>{if(painter&&e.target.closest('td[data-col]')){const value=painter;painter=null;painterButton.setAttribute('aria-pressed','false');h.formatSelection(value);}});
+    document.addEventListener('keydown',e=>{if(e.key==='Escape'){painter=null;painterButton.setAttribute('aria-pressed','false');}});
+    const font=group('sheet-excel-font','الخط','Font'),fontName=node('select',undefined,{id:'sheet-font-family','aria-label':tr('نوع الخط','Font family')});
+    for(const name of ['Arial','Calibri','Tahoma','Segoe UI','Times New Roman','IBM Plex Sans Arabic'])fontName.append(node('option',name,{value:name}));fontName.onchange=()=>h.formatSelection({font:fontName.value});font.append(fontName);
+    for(const id of ['sheet-selection-size','sheet-font-minus','sheet-font-size','sheet-font-plus','sheet-bold','sheet-fill','sheet-text-color']){const el=$(id);font.append(el.closest('label')||el);}
+    $('sheet-font-minus').onclick=()=>h.formatSelection({size:Math.max(10,(style().size||state().formatting.fontSize)-1)});$('sheet-font-plus').onclick=()=>h.formatSelection({size:Math.min(32,(style().size||state().formatting.fontSize)+1)});
+    font.append(action('sheet-italic','I','I',()=>toggle('italic')),action('sheet-underline','U','U',()=>toggle('underline')),action('sheet-strike','شطب','Strike',()=>toggle('strike')));
+    const borders=type=>selected((cells,fmt,r,c,s)=>{const [r1,r2,c1,c2]=s.bounds,key=r+':'+c,old=fmt.styles[key]||{};fmt.styles[key]={...old,border:type,borderTop:null,borderBottom:null,borderLeft:null,borderRight:null};if(type==='outline')Object.assign(fmt.styles[key],{border:'none',borderTop:r===s.view[r1],borderBottom:r===s.view[r2],borderLeft:c===c1,borderRight:c===c2});});
+    menu(font,'sheet-border-menu','حدود ▾','Borders ▾',['all','outline','none','top','bottom','left','right'].map((v,i)=>[v,['كل الحدود','حدود خارجية','بدون حدود','علوي','سفلي','يسار','يمين'][i],['All borders','Outside borders','No borders','Top','Bottom','Left','Right'][i],()=>borders(v)]));
+    const align=group('sheet-excel-alignment','المحاذاة','Alignment');align.append($('sheet-align-right').parentElement,$('sheet-wrap'));
+    $('sheet-wrap').onclick=()=>h.formatSelection({wrap:!style().wrap});
+    for(const [value,ar,en]of [['top','أعلى','Top'],['middle','وسط','Middle'],['bottom','أسفل','Bottom']])align.append(action('sheet-valign-'+value,ar,en,()=>h.formatSelection({valign:value})));
+    menu(align,'sheet-orientation-menu','اتجاه النص ▾','Orientation ▾',[[0,'أفقي','Horizontal'],[45,'زاوية 45°','45°'],[-45,'زاوية −45°','−45°'],[90,'رأسي','Vertical'],[-90,'رأسي معكوس','Vertical reversed']].map(([v,a,e])=>[String(v),a,e,()=>h.formatSelection({rotation:v})]));
+    align.append(action('sheet-indent-less','تقليل المسافة','Decrease indent',()=>h.formatSelection({indent:Math.max(0,(style().indent||0)-1)})),action('sheet-indent-more','زيادة المسافة','Increase indent',()=>h.formatSelection({indent:Math.min(15,(style().indent||0)+1)})));
+    const merge=mode=>{
+      const s=state();if(s.filtered){h.message(tr('امسح الفلاتر والفرز قبل الدمج.','Clear filters and sorting before merging.'),true);return;}const [r1,r2,c1,c2]=s.bounds,a=s.view[r1],b=s.view[r2];
+      if(mode!=='unmerge'&&r1===r2&&c1===c2)return;
+      const occupied=rows(s).some(r=>columns(s).some(c=>(r!==a||c!==c1)&&s.cells[r]?.[c]));if(mode!=='unmerge'&&occupied&&!confirm(tr('الدمج يحتفظ بقيمة أول خلية فقط. متابعة؟ يمكنك التراجع.','Merge keeps only the first cell value. Continue? You can undo.')))return;
+      mutate((cells,fmt)=>{for(const [key,v]of Object.entries(fmt.styles)){const [r,c]=key.split(':').map(Number);if(r<=b&&(r+(v.mergeRows||1)-1)>=a&&c<=c2&&(c+(v.mergeCols||1)-1)>=c1){delete v.mergeRows;delete v.mergeCols;}}
+        if(mode==='unmerge')return;
+        for(const r of rows(s)){while(cells.length<=r)cells.push(D.blank());for(const c of columns(s)){if((mode==='across'?c!==c1:r!==a||c!==c1)){while(cells[r].length<=c)cells[r].push('');cells[r][c]='';}}}
+        const anchors=mode==='across'?rows(s):[a];for(const r of anchors){const key=r+':'+c1;fmt.styles[key]={...fmt.styles[key],mergeCols:c2-c1+1,mergeRows:mode==='across'?1:b-a+1,...(mode==='center'?{align:'center',valign:'middle'}:{})};}
+      });
+    };
+    menu(align,'sheet-merge-menu','دمج وتوسيط ▾','Merge & Center ▾',[
+      ['center','دمج وتوسيط','Merge & Center',()=>merge('center')],['across','دمج كل صف','Merge Across',()=>merge('across')],['cells','دمج الخلايا','Merge Cells',()=>merge('cells')],['unmerge','إلغاء الدمج','Unmerge',()=>merge('unmerge')]
+    ]);
+    const editing=group('sheet-excel-editing','التحرير','Editing');editing.append($('sheet-clear-format'));
+    const autoSum=fn=>{const s=state();if(s.filtered){h.message(tr('امسح الفلاتر والفرز قبل الحساب.','Clear filters and sorting before calculating.'),true);return;}let [r1,r2,c1,c2]=s.bounds;if(c1<=11&&c2>=11){h.message(tr('خانة النتيجة مخصصة لحالة الاختبار؛ اختر عمودًا رقميًا.','Result is an exam status field. Select a numeric column.'),true);return;}
+      if(r1===r2&&c1===c2){let start=r1-1;while(start>=0&&D.number(D.formulaValue(s.cells,s.view[start],c1))!==null)start--;if(start<r1-1){r2=r1-1;r1=start+1;}else{let left=c1-1;while(left>=0&&D.number(D.formulaValue(s.cells,s.view[r1],left))!==null)left--;if(left===c1-1){h.message(tr('حدد خلايا تحتوي أرقامًا أولًا.','Select numeric cells first.'),true);return;}const formula='='+fn+'('+D.letter(left+1)+(s.view[r1]+1)+':'+D.letter(c1-1)+(s.view[r1]+1)+')';mutate(cells=>{while(cells.length<=s.view[r1])cells.push(D.blank());while(cells[s.view[r1]].length<=c1)cells[s.view[r1]].push('');cells[s.view[r1]][c1]=formula;});return;}}
+      const target=s.view[r2]+1;if(c1<=11&&c2>=11){h.message(tr('خانة النتيجة مخصصة لحالة الاختبار؛ اختر عمودًا رقميًا.','Result is an exam status field. Select a numeric column.'),true);return;}
+      if(Array.from({length:c2-c1+1},(_,i)=>s.cells[target]?.[c1+i]).some(Boolean)&&!confirm(tr('استبدال الخلايا أسفل المحدد بنتائج الحساب؟','Replace cells below the selection with totals?')))return;
+      mutate(cells=>{while(cells.length<=target)cells.push(D.blank());for(let c=c1;c<=c2;c++){while(cells[target].length<=c)cells[target].push('');cells[target][c]='='+fn+'('+D.letter(c)+(s.view[r1]+1)+':'+D.letter(c)+(s.view[r2]+1)+')';}});h.focusCell(target,c1);
+    };
+    menu(editing,'sheet-autosum-menu','∑ جمع تلقائي ▾','∑ AutoSum ▾',['SUM','AVERAGE','COUNT','MIN','MAX'].map((fn,i)=>[fn,['جمع','متوسط','عدد الأرقام','أقل قيمة','أكبر قيمة'][i],['Sum','Average','Count Numbers','Min','Max'][i],()=>autoSum(fn)]));
+    const fill=direction=>selected((cells,fmt,r,c,s)=>{const [r1,r2,c1,c2]=s.bounds,sourceR=direction==='up'?s.view[r2]:s.view[r1],sourceC=direction==='left'?c2:c1,vertical=['up','down','series'].includes(direction),a=vertical?sourceR:r,b=vertical?c:sourceC;
+      let value=s.cells[a]?.[b]||'';if(direction==='series'){const first=D.number(value),second=D.number(s.cells[s.view[r1+1]]?.[c]);if(first!==null)value=String(first+(r-sourceR)*(second===null?1:second-first));}
+      else value=D.shiftFormula(value,r-a,c-b);while(cells.length<=r)cells.push(D.blank());while(cells[r].length<=c)cells[r].push('');cells[r][c]=value;const sourceStyle=s.formatting.styles[a+':'+b];if(sourceStyle){const next={...sourceStyle};delete next.mergeRows;delete next.mergeCols;fmt.styles[r+':'+c]=next;}
+    });
+    menu(editing,'sheet-fill-menu','تعبئة ▾','Fill ▾',[['down','لأسفل','Down'],['right','لليمين','Right'],['up','لأعلى','Up'],['left','لليسار','Left'],['series','سلسلة أرقام','Series']].map(([v,a,e])=>[v,a,e,()=>fill(v)]));
+    menu(editing,'sheet-clear-menu','مسح ▾','Clear ▾',[
+      ['all','مسح الكل','Clear all',()=>selected((cells,fmt,r,c)=>{if(cells[r])cells[r][c]='';delete fmt.styles[r+':'+c];})],['contents','مسح المحتويات','Clear contents',h.clearSelection],['formats','مسح التنسيق','Clear formats',()=>h.formatSelection(null)]
+    ]);
+    menu(editing,'sheet-sort-menu','فرز وتصفية ▾','Sort & Filter ▾',[
+      ['ascending','تصاعدي A → Z','Sort A → Z',()=>h.sort(state().cursor.c,1)],['descending','تنازلي Z → A','Sort Z → A',()=>h.sort(state().cursor.c,-1)],['clear','إلغاء الفرز','Clear sort',h.resetSort],['filter','تصفية','Filter',()=>{$('sheet-workspace').classList.add('sheet-show-tools');$('sheet-search').focus();}]
+    ]);
+    menu(editing,'sheet-find-select-menu','بحث وتحديد ▾','Find & Select ▾',[
+      ['find','بحث واستبدال','Find & Replace',h.openFindDialog],['all','تحديد الكل','Select all',()=>{const s=state();h.select({r:0,c:0},{r:Math.max(0,s.view.length-1),c:s.cols[s.cols.length-1]});}],['row','تحديد الصف','Select row',()=>{const s=state();h.select({r:s.cursor.r,c:0},{r:s.cursor.r,c:s.cols[s.cols.length-1]});}],['column','تحديد العمود','Select column',()=>{const s=state();h.select({r:0,c:s.cursor.c},{r:Math.max(0,s.view.length-1),c:s.cursor.c});}],['goto','انتقال إلى خلية','Go To',()=>{$('sheet-address').focus();$('sheet-address').select();}]
+    ]);
+    const cellsGroup=$('sheet-add-col').closest('.sheet-ribbon-group').querySelector('.sheet-ribbon-actions');
+    menu(cellsGroup,'sheet-insert-menu','إدراج ▾','Insert ▾',[
+      ['row-above','صف لأعلى','Row above',()=>h.insertRow('above')],['row-below','صف لأسفل','Row below',()=>h.insertRow('below')],['column-left','عمود لليسار','Column left',()=>h.editColumns('left')],['column-right','عمود لليمين','Column right',()=>h.editColumns('right')]
+    ]);
+    menu(cellsGroup,'sheet-delete-menu','حذف ▾','Delete ▾',[
+      ['row','حذف الصف','Delete row',h.deleteSelectedRows],['column','حذف العمود','Delete column',()=>h.editColumns('delete')],['cells-left','حذف الخلايا وإزاحة لليسار','Delete cells, shift left',()=>h.deleteSelectedCells('left')],['cells-right','حذف الخلايا وإزاحة لليمين','Delete cells, shift right',()=>h.deleteSelectedCells('right')]
+    ]);
+    const rowHeight=()=>{const n=Number(prompt(tr('ارتفاع الصف (20–400 بكسل):','Row height (20–400 px):'),String(style().height||28)));if(!Number.isInteger(n)||n<20||n>400)return;const s=state();mutate((cells,fmt)=>{for(const r of rows(s)){const c=s.cols[0];fmt.styles[r+':'+c]={...fmt.styles[r+':'+c],height:n};}});};
+    const columnWidth=auto=>{const s=state();let n=0;if(!auto){n=Number(prompt(tr('عرض العمود (40–800 بكسل):','Column width (40–800 px):'),'160'));if(!Number.isFinite(n)||n<40||n>800)return;}for(const c of columns(s)){const width=auto?Math.max(60,Math.min(800,s.cells.reduce((max,row)=>Math.max(max,String(row[c]||'').length),String(D.letter(c)).length)*7+24)):n;h.setColumnWidth(c,width);}h.saveColumnWidths();h.render();};
+    menu(cellsGroup,'sheet-cell-format-menu','تنسيق ▾','Format ▾',[
+      ['row-height','ارتفاع الصف','Row height',rowHeight],['column-width','عرض العمود','Column width',()=>columnWidth(false)],['autofit','ضبط عرض العمود تلقائيًا','AutoFit column width',()=>columnWidth(true)],['hide','إخفاء الأعمدة المحددة','Hide selected columns',()=>{const s=state(),fmt=D.format(s.formatting),hide=columns(s);if(hide.length===s.cols.length)return;fmt.hidden=[...new Set([...fmt.hidden,...hide])];h.change(s.cells,true,fmt);}],['show','إظهار جميع الأعمدة','Unhide all columns',()=>{const s=state(),fmt=D.format(s.formatting);fmt.hidden=[];h.change(s.cells,true,fmt);}]
+    ]);
+    document.addEventListener('pointerdown',e=>{for(const detail of document.querySelectorAll('.sheet-excel-menu[open]'))if(!detail.contains(e.target))detail.open=false;});
+    return {translate(){for(const el of document.querySelectorAll('[data-excel-ar]'))el.textContent=tr(el.dataset.excelAr,el.dataset.excelEn);},paint(s){fontName.value=s.font||'IBM Plex Sans Arabic';const size=s.size||state().formatting.fontSize;$('sheet-font-size').textContent=size+' px';$('sheet-font-minus').disabled=size<=10;$('sheet-font-plus').disabled=size>=32;$('sheet-wrap').setAttribute('aria-pressed',String(!!s.wrap));for(const field of ['italic','underline','strike'])$('sheet-'+field).setAttribute('aria-pressed',String(!!s[field]));for(const value of ['top','middle','bottom'])$('sheet-valign-'+value).setAttribute('aria-pressed',String((s.valign||'middle')===value));}};
+  }
+  return {mount};
+})();

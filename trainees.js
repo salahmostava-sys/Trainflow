@@ -15,6 +15,7 @@ const Trainees=(()=>{
   let dragging=false,dragMoved=false,rowDragging=false;
   let formatting=D.defaultFormat(),duplicateIds=new Map();
   let rowOffsets=[0],rowHeights=new Map(),drawnStart=-1,drawnEnd=-1,scrollFrame=0;
+  let excelTools=null,formulaCache=new Map();
   let excelView={wrap:false,freeze:false,zoom:100};
   try{const pref=JSON.parse(localStorage.getItem('ibta_sheet_view')||'{}');excelView={wrap:pref.wrap===true,freeze:pref.freeze===true,zoom:Number.isInteger(pref.zoom)&&pref.zoom>=50&&pref.zoom<=200?pref.zoom:100};}catch{}
   function setZoom(value){
@@ -55,27 +56,21 @@ const Trainees=(()=>{
   }
   let cellAlignments={};
   try{cellAlignments=JSON.parse(localStorage.getItem('ibta_trainee_alignments')||'{}')||{};}catch{}
-  function getCellAlign(idx,col){return cellAlignments[(owner||'default')+':'+idx+':'+col]||'';}
+  function getCellAlign(idx,col){return formatting.styles[idx+':'+col]?.align||cellAlignments[(owner||'default')+':'+idx+':'+col]||'';}
   function setCellAlign(idx,col,align){
     const key=(owner||'default')+':'+idx+':'+col;
     if(!align)delete cellAlignments[key];else cellAlignments[key]=align;
   }
   function saveAlignments(){try{localStorage.setItem('ibta_trainee_alignments',JSON.stringify(cellAlignments));}catch{}}
   function setSelectionAlignment(align){
-    if(!loaded||loading)return;commitEdit();const [r1,r2,c1,c2]=bounds();
-    history.push(snapshot());if(history.length>40)history.shift();future=[];
-    for(let r=r1;r<=r2;r++){
-      const idx=view[r];if(idx===undefined)continue;
-      for(const c of visibleCols().filter(c=>c>=c1&&c<=c2))setCellAlign(idx,c,align);
-    }
-    saveAlignments();render();
+    if(!loaded||loading)return;formatSelection({align});
   }
   function shiftStylesOnInsert(fmt,insertIdx){
     const next=D.format(fmt);next.styles={};
     for(const [key,style]of Object.entries(fmt.styles)){
       const [r,c]=key.split(':').map(Number);
       const target=r>=insertIdx?r+1:r;
-      if(target<D.MAX_ROWS)next.styles[target+':'+c]={...style};
+      if(target<D.MAX_ROWS){const value={...style};if(value.mergeRows&&r<insertIdx&&r+value.mergeRows>insertIdx)value.mergeRows++;next.styles[target+':'+c]=value;}
     }
     return next;
   }
@@ -140,13 +135,9 @@ const Trainees=(()=>{
     if(idx===undefined){idx=cells.length;r=Math.max(0,view.length);}
     const width=Math.max(...values.map(v=>v.length));
     const availCols=visibleCols().filter(col=>col>=c);
-    let next=cells,maxTargetCol=c;
-    for(let col=0;col<width;col++){
-      const targetCol=col<availCols.length?availCols[col]:(colCount()+(col-availCols.length));
-      if(targetCol>maxTargetCol)maxTargetCol=targetCol;
-      const column=values.map(row=>col<row.length?[row[col]]:['']);
-      next=D.paste(next,column,idx,targetCol);
-    }
+    const targets=Array.from({length:width},(_,col)=>col<availCols.length?availCols[col]:(colCount()+col-availCols.length)),maxTargetCol=Math.max(...targets);
+    const valuesWithBlanks=values.map(row=>Array.from({length:width},(_,col)=>row[col]||''));
+    const next=D.pasteMapped(cells,valuesWithBlanks,idx,targets);
     change(next);anchor={r,c};cursor={r:Math.max(0,r+values.length-1),c:maxTargetCol};paint();
     message(tr('تم اللصق بنجاح ('+values.length+' صف، '+width+' عمود)','Pasted successfully ('+values.length+' rows, '+width+' cols)'));
   }
@@ -390,7 +381,8 @@ const Trainees=(()=>{
     document.addEventListener('pointerup',onPointerUp);
   }
   const visibleCols=()=>labels.map((_,c)=>c).filter(c=>!formatting.hidden.includes(c));
-  const snapshot=()=>({cells:cells.map(r=>[...r]),format:D.format(formatting),alignments:{...cellAlignments}});
+  // Every data mutation creates a new matrix, so history can retain the old matrix safely.
+  const snapshot=()=>({cells,format:D.format(formatting),alignments:{...cellAlignments}});
   function node(tag,text,attrs={}){const el=document.createElement(tag);if(text!==undefined)el.textContent=text;for(const [key,value]of Object.entries(attrs))el.setAttribute(key,value);return el;}
   function button(text,fn,cls){const b=node('button',text,{type:'button'});if(cls)b.className=cls;b.addEventListener('click',fn);return b;}
   const message=(text,error=false)=>{if(!$('sheet-status'))return;$('sheet-status').textContent=text;$('sheet-status').dataset.error=String(error);};
@@ -530,6 +522,13 @@ const Trainees=(()=>{
     $('sheet-assign').onclick=assign;$('sheet-code-search').oninput=renderCodes;
     $('sheet-code-refresh').onclick=async()=>{if(await Cloud.refresh())renderCodes();};
     window.addEventListener('beforeunload',e=>{if(hasDraft()){e.preventDefault();e.returnValue='';}});
+    if(typeof TraineeExcel!=='undefined')excelTools=TraineeExcel.mount({D,$,tr,node,button,
+      state:()=>({cells,formatting,view,owner,loaded,bounds:bounds(),cursor:{...cursor},cols:visibleCols(),filtered:filtered()}),
+      commitEdit,change,formatSelection,focusCell,render,message,cutSelection,copySelection,pasteSelection,executePaste,
+      insertRow,editColumns,deleteSelectedRows,deleteSelectedCells,clearSelection,openFindDialog,
+      select:(a,b)=>{commitEdit();anchor=a;cursor=b;paint();},
+      sort:(column,direction)=>{commitEdit();sortCol=column;sortDir=direction;render();},
+      resetSort:()=>{sortCol=-1;render();},setColumnWidth,saveColumnWidths,resetColumnWidth});
     translate();
   }
   function toggleAddColumnMenu(force){
@@ -601,7 +600,7 @@ const Trainees=(()=>{
     const text={
       'sheet-title':['جدول المتدربين','Trainee sheet'],'sheet-subtitle':['جدول خاص بكل مستخدم · حفظ تلقائي','A private sheet for each user · Autosave'],
       'sheet-owner-label':['عرض بيانات المستخدم','View user'],'sheet-mode':['المتدربون','Trainees'],'sheet-codes-mode':['أكواد المستخدم','User codes'],
-      'sheet-local-note':['المحاذاة والتفاف النص وتثبيت الأعمدة وعرضها تفضيلات لهذا الجهاز.','Alignment, wrapping, frozen columns and widths are preferences for this device.'],'sheet-value-label':['قيمة','Value'],'sheet-add':['+ إضافة صف','+ Add row'],'sheet-wrap':['التفاف النص','Wrap text'],'sheet-freeze':['تثبيت أول عمود','Freeze first column'],
+      'sheet-local-note':['التنسيق يُحفظ مع الجدول؛ الزوم وتثبيت الأعمدة وعرضها تفضيلات لهذا الجهاز.','Formatting is saved with the sheet; zoom, frozen columns and widths are preferences for this device.'],'sheet-value-label':['قيمة','Value'],'sheet-add':['+ إضافة صف','+ Add row'],'sheet-wrap':['التفاف النص','Wrap text'],'sheet-freeze':['تثبيت أول عمود','Freeze first column'],
       'sheet-add-prefix':['إضافة','Add'],'sheet-add-suffix':['صف في الأسفل','more rows at bottom'],'sheet-add-bulk-btn':['+ إضافة','+ Add'],
       'sheet-delete':['حذف صف','Delete row'],'sheet-add-col':['+ إضافة عمود','+ Add column'],'sheet-delete-col':['حذف عمود','Delete column'],'sheet-undo':['تراجع','Undo'],'sheet-redo':['إعادة','Redo'],
       'sheet-copy':['نسخ الجدول','Copy sheet'],'sheet-save':['حفظ الآن','Save now'],'sheet-reload':['إعادة تحميل','Reload'],'sheet-clear-filters':['مسح الفلاتر','Clear filters'],
@@ -631,6 +630,7 @@ const Trainees=(()=>{
     $('sheet-align-left')&&($('sheet-align-left').title=tr('محاذاة لليسار','Align left'));
     $('sheet-copy').title=tr('نسخ كل الأعمدة بما فيها المخفية','Copy every column, including hidden columns');
     updateContextMenuTranslations();
+    excelTools?.translate();
     if(!editing)render();renderCodes();
   }
   async function open(){
@@ -672,7 +672,7 @@ const Trainees=(()=>{
     if(!filtered())for(let i=cells.length;i<Math.min(D.MAX_ROWS,Math.max(25,cells.length+5));i++)view.push(i);
   }
   function render(){
-    if(!initialized)return;closeTraineeDetails();hideDuplicateHint();clearTimeout(detailTimer);buildView();
+    if(!initialized)return;closeTraineeDetails();hideDuplicateHint();clearTimeout(detailTimer);formulaCache.clear();buildView();
     const cols=visibleCols();if(!cols.includes(cursor.c))cursor.c=cols[0];if(!cols.includes(anchor.c))anchor.c=cursor.c;
     $('panel-trainees').dir=formatting.direction;
     $('sheet-workspace').style.setProperty('--sheet-font-size',formatting.fontSize+'px');
@@ -726,13 +726,22 @@ const Trainees=(()=>{
     const hadFocus=grid.contains(document.activeElement);commitEdit();drawnStart=start;drawnEnd=end;const fragment=document.createDocumentFragment();
     const spacer=(height)=>{const row=node('tr',undefined,{class:'sheet-spacer','aria-hidden':'true'}),cell=node('td',undefined,{colspan:cols.length+1});row.style.setProperty('height',height+'px','important');cell.style.setProperty('height',height+'px','important');row.append(cell);return row;};
     const top=spacer(rowOffsets[start]),bottom=spacer(rowOffsets[view.length]-rowOffsets[end]);if(start)fragment.append(top);
+    const merges=filtered()?[]:Object.entries(formatting.styles).filter(([,s])=>(s.mergeCols||1)>1||(s.mergeRows||1)>1).map(([key,s])=>{const [r,c]=key.split(':').map(Number);return {r,c,endR:r+(s.mergeRows||1)-1,endC:c+(s.mergeCols||1)-1};});
     for(let v=start;v<end;v++){
       const idx=view[v],trEl=node('tr');const number=node('th',undefined,{class:'sheet-rownum',scope:'row','data-rowv':v});
       const rowBtn=button(String(idx+1),e=>{commitEdit();const maxC=colCount()-1;if(e.shiftKey){cursor={r:v,c:maxC};anchor.c=0;}else{anchor={r:v,c:0};cursor={r:v,c:maxC};}paint();});
       rowBtn.addEventListener('pointerdown',e=>{if(e.button!==0)return;e.preventDefault();e.stopPropagation();commitEdit();rowDragging=true;dragMoved=false;const maxC=colCount()-1;if(e.shiftKey){cursor={r:v,c:maxC};anchor.c=0;}else{anchor={r:v,c:0};cursor={r:v,c:maxC};}paint();});
       number.append(rowBtn);trEl.append(number);
       trEl.setAttribute('aria-rowindex',String(v+2));
-      cols.forEach(c=>{const td=node('td',undefined,{'data-v':v,'data-col':c,tabindex:'-1',role:'gridcell',dir:'auto','aria-label':tr(...labels[c])+' '+(idx+1)});decorateCell(td,idx,c);trEl.append(td);});fragment.append(trEl);
+      cols.forEach(c=>{
+        const merge=merges.find(m=>idx>=m.r&&idx<=m.endR&&c>=m.c&&c<=m.endC);
+        const firstMergeCol=merge&&cols.find(x=>x>=merge.c&&x<=merge.endC);
+        if(merge&&(c!==firstMergeCol||v!==Math.max(start,merge.r)))return;
+        const source=merge?merge.r:idx,column=merge?merge.c:c;
+        const td=node('td',undefined,{'data-v':merge?merge.r:v,'data-col':column,tabindex:'-1',role:'gridcell',dir:'auto','aria-label':tr(...labels[column])+' '+(source+1)});decorateCell(td,source,column);
+        if(merge){td.colSpan=cols.filter(x=>x>=merge.c&&x<=merge.endC).length;td.rowSpan=Math.min(end-1,merge.endR)-Math.max(start,merge.r)+1;td.classList.add('sheet-merged');const sum=cols.filter(x=>x>=merge.c&&x<=merge.endC).map(x=>'var(--col-w-'+x+','+(colWidths[x]||({1:190,2:220,3:220,4:105,5:105,6:200,7:220,8:140,9:150,10:110,11:85,12:120}[x]||160))+'px)');td.style.setProperty('--col-w','calc(('+sum.join(' + ')+') * var(--sheet-zoom,1))');}
+        trEl.append(td);
+      });fragment.append(trEl);
     }
     if(end<view.length)fragment.append(bottom);tbody.replaceChildren(fragment);applyExcelView();paint();
     const oldFirst=rowOffsets[first];tbody.querySelectorAll('th[data-rowv]').forEach(th=>rowHeights.set(view[+th.dataset.rowv],th.parentElement.getBoundingClientRect().height));rebuildRowOffsets();
@@ -745,6 +754,11 @@ const Trainees=(()=>{
     const value=cells[index]?.[column]||'',style=formatting.styles[index+':'+column]||{};
     td.replaceChildren();if(column>=baseLabels.length)td.style.setProperty('--col-w','calc(var(--col-w-'+column+',160px) * var(--sheet-zoom,1))');td.style.backgroundColor=style.bg||'';td.style.color=style.color||'';
     td.style.fontSize='calc('+(style.size||formatting.fontSize)+'px * var(--sheet-zoom,1))';td.style.fontWeight=style.bold?'700':'';
+    td.style.fontFamily=style.font?style.font+', sans-serif':'';td.style.fontStyle=style.italic?'italic':'';td.style.textDecoration=[style.underline?'underline':'',style.strike?'line-through':''].filter(Boolean).join(' ')||'';
+    td.style.verticalAlign=style.valign||'middle';td.style.whiteSpace=typeof style.wrap==='boolean'?(style.wrap?'pre-wrap':'nowrap'):'';td.style.textIndent=style.indent?style.indent*8+'px':'';
+    td.style.overflowWrap=style.wrap?'anywhere':'';
+    for(const side of ['Top','Bottom','Left','Right'])td.style['border'+side]=style['border'+side]===true?'1px solid #475569':style['border'+side]===false||style.border==='none'?'0':style.border==='all'||style.border==='outline'||style.border===side.toLowerCase()?'1px solid #475569':'';
+    for(const key of ['height','min-height']){if(style.height)td.style.setProperty(key,style.height*excelView.zoom/100+'px','important');else td.style.removeProperty(key);}
     const align=getCellAlign(index,column);
     if(align)td.style.textAlign=align;else td.style.removeProperty('text-align');
     td.classList.remove('sheet-result-pass','sheet-result-fail','sheet-result-absent','sheet-id-duplicate');td.removeAttribute('title');td.removeAttribute('aria-haspopup');
@@ -760,7 +774,9 @@ const Trainees=(()=>{
       td.addEventListener('click',()=>{try{select.showPicker?.();}catch{}});
       td.append(select);
     }else{
-      td.append(node('span',value,{class:'sheet-cell-value'}));
+      const span=node('span',value.startsWith('=')?D.formulaValue(cells,index,column,formulaCache):value,{class:'sheet-cell-value'});td.append(span);
+      if(value.startsWith('=')){td.dataset.formula=value;td.title=value;}else delete td.dataset.formula;
+      if(style.rotation){span.style.display='inline-block';if(Math.abs(style.rotation)===90){span.style.writingMode='vertical-rl';if(style.rotation===-90)span.style.transform='rotate(180deg)';}else{span.style.transform='rotate('+style.rotation+'deg)';td.style.setProperty('height','70px','important');}}
       if(column===4){const duplicates=duplicateIds.get(D.idKey(value));if(duplicates){td.classList.add('sheet-id-duplicate');td.append(node('span',tr('مكرر ×','Duplicate ×')+duplicates.length,{class:'sheet-duplicate-badge'}));td.setAttribute('aria-haspopup','dialog');}}
     }
   }
@@ -943,6 +959,7 @@ const Trainees=(()=>{
     $('sheet-align-right')?.setAttribute('aria-pressed',String(curAlign==='right'));
     $('sheet-align-center')?.setAttribute('aria-pressed',String(curAlign==='center'));
     $('sheet-align-left')?.setAttribute('aria-pressed',String(curAlign==='left'));
+    excelTools?.paint(style);
   }
   function selectCell(r,c,extend=false){commitEdit();cursor={r,c};if(!extend)anchor={r,c};paint();$('sheet-grid').querySelector(`td[data-v="${r}"][data-col="${c}"]`)?.focus();}
   function focusCell(r,c,extend=false){
@@ -973,7 +990,7 @@ const Trainees=(()=>{
     paint();
   }
   function change(next,redraw=true,nextFormat=formatting){
-    if(!loaded)return;history.push(snapshot());if(history.length>30)history.shift();future=[];cells=next;formatting=D.format(nextFormat);revision++;schedule();if(redraw)render();else{$('sheet-undo').disabled=false;$('sheet-redo').disabled=true;}
+    if(!loaded)return;history.push(snapshot());if(history.length>30)history.shift();future=[];cells=next;formatting=D.format(nextFormat);formulaCache.clear();revision++;schedule();if(redraw)render();else{$('sheet-undo').disabled=false;$('sheet-redo').disabled=true;}
   }
   function undo(redo){commitEdit();const from=redo?future:history,to=redo?history:future;if(!from.length)return;to.push(snapshot());const next=from.pop();cells=next.cells;formatting=D.format(next.format);cellAlignments={...next.alignments};saveAlignments();revision++;schedule();render();if(view.length)focusCell(cursor.r,cursor.c);}
   function schedule(){clearTimeout(timer);message(tr('تعديلات غير محفوظة…','Unsaved changes…'));const saveWhenIdle=()=>{if(editing?.el.dataset.composing==='true'){timer=setTimeout(saveWhenIdle,900);return;}flush(true);};timer=setTimeout(saveWhenIdle,900);}
@@ -1013,6 +1030,7 @@ const Trainees=(()=>{
   function deleteSelectedCells(direction){
     if(!loaded)return;commitEdit();
     const [r1,r2,c1,c2]=bounds(),indices=new Set(view.slice(r1,r2+1));
+    if(Object.entries(formatting.styles).some(([key,s])=>{if((s.mergeRows||1)===1&&(s.mergeCols||1)===1)return false;const [r,c]=key.split(':').map(Number);return c<=c2&&c+(s.mergeCols||1)-1>=c1&&[...indices].some(i=>i>=r&&i<r+(s.mergeRows||1));})){message(tr('ألغِ دمج الخلايا المحددة قبل إزاحة الخلايا.','Unmerge the selected cells before shifting cells.'),true);return;}
     if(!confirm(tr('حذف الخلايا المحددة وإزاحة باقي بيانات الصف؟ يشمل الأعمدة المخفية.','Delete selected cells and shift the remaining row data? Hidden columns are included.')))return;
     const logical=formatting.direction==='rtl'?(direction==='left'?'right':'left'):direction;
     const next=D.deleteCells(cells,formatting,indices,c1,c2,logical,colCount());
