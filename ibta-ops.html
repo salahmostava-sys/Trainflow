@@ -348,7 +348,7 @@
   .col-code{width:182px; flex:none;}         /* sized to fit the code text exactly */
   .col-date{width:150px; flex:none;}          /* date and copy time on one line */
   .col-notes{flex:1; min-width:70px;}        /* takes whatever space is left */
-  .col-actions{width:58px; flex:none; text-align:center;}  /* room for exactly 2 icon buttons */
+  .col-actions{width:96px; flex:none; text-align:center;}  /* room for two larger action buttons */
 
   .code-list{display:flex; flex-direction:column; min-width:480px;}
   .code-row{
@@ -417,6 +417,9 @@
   .icon-btn:hover{background:var(--blue-100); color:var(--blue-600); border-color:var(--blue-100);}
   .icon-btn.danger:hover{background:#FDEBEC; color:var(--danger); border-color:#F6C9CB;}
   .icon-btn svg,.kc-remove-cat-btn svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+  .code-sheet .code-row .col-actions{gap:6px;padding:3px 4px;}
+  .code-sheet .code-row .icon-btn{width:36px;height:36px;border-radius:7px;font-size:22px;}
+  .code-sheet .code-row .icon-btn svg{width:20px;height:20px;}
   #prometric-login-card{cursor:pointer;}
   #prometric-login-card:hover{border-color:var(--blue-600);}
   .delete-dialog{border:1px solid var(--border);border-radius:18px;padding:24px;width:min(390px,calc(100vw - 32px));box-shadow:0 20px 60px #10295735;background:var(--surface);color:var(--text);}
@@ -2243,6 +2246,7 @@ function renderCodeGrid(){
       const unmarkBtn = document.createElement('button');
       unmarkBtn.className = 'icon-btn';
       unmarkBtn.title = t('removeMark');
+      unmarkBtn.setAttribute('aria-label',t('removeMark'));
       unmarkBtn.textContent = '↺';
       unmarkBtn.addEventListener('click', async (e)=>{
         e.stopPropagation();

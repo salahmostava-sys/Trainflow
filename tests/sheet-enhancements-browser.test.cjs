@@ -60,7 +60,21 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),path
     await page.locator('#sheet-bold').focus();await arabicShortcut('KeyZ','ئ');assert.equal(await cell(0,2).textContent(),'Second','Undo also works when the toolbar has focus');
     assert.equal(await cell(0,2).evaluate(el=>el===document.activeElement),true,'Undo restores keyboard focus to the active cell');
     assert.equal(await page.locator('body').evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(255, 255, 255)');
-    for(const selector of ['.sheet-format-tools','.sheet-formula','.sheet-footer'])assert.equal(await page.locator(selector).evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(255, 255, 255)');
+    assert.equal(await page.locator('.sheet-formula').count(),0,'Separate formula bar is removed');
+    for(const selector of ['.sheet-format-tools','.sheet-footer'])assert.equal(await page.locator(selector).evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(255, 255, 255)');
+    await cell(0,2).click();await cell(0,3).click({modifiers:['Shift']});
+    for(const align of ['left','center','right']){
+      await page.locator('#sheet-align-'+align).click();
+      for(const c of [2,3])assert.equal(await cell(0,c).evaluate(el=>getComputedStyle(el).textAlign),align,'Alignment applies to the selected range');
+    }
+    await page.locator('#sheet-undo').click();assert.equal(await cell(0,2).evaluate(el=>getComputedStyle(el).textAlign),'center');
+    await page.locator('#sheet-redo').click();assert.equal(await cell(0,3).evaluate(el=>getComputedStyle(el).textAlign),'right');
+    await cell(0,11).click();
+    for(const align of ['left','right','center']){
+      await page.locator('#sheet-align-'+align).click();
+      assert.equal(await cell(0,11).locator('select').evaluate(el=>getComputedStyle(el).textAlign),align,'Result dropdown respects alignment');
+      assert.equal(await cell(0,11).locator('select').evaluate(el=>getComputedStyle(el).textAlignLast),align);
+    }
     await paste(0,13,'a\tb\tc\td');
     await page.locator('th[data-col="13"] button').click({button:'right'});await page.locator('[data-action="insert-column-left"]').click();
     assert.equal(await cell(0,14).textContent(),'a');assert.equal(await page.locator('#sheet-grid thead th[data-col]').count(),53);

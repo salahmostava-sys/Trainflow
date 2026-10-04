@@ -62,7 +62,8 @@ const Trainees=(()=>{
   }
   function saveAlignments(){try{localStorage.setItem('ibta_trainee_alignments',JSON.stringify(cellAlignments));}catch{}}
   function setSelectionAlignment(align){
-    commitEdit();const [r1,r2,c1,c2]=bounds();
+    if(!loaded||loading)return;commitEdit();const [r1,r2,c1,c2]=bounds();
+    history.push(snapshot());if(history.length>40)history.shift();future=[];
     for(let r=r1;r<=r2;r++){
       const idx=view[r];if(idx===undefined)continue;
       for(const c of visibleCols().filter(c=>c>=c1&&c<=c2))setCellAlign(idx,c,align);
@@ -424,7 +425,6 @@ const Trainees=(()=>{
           <button type="button" id="sheet-clear-format"></button><button type="button" id="sheet-wrap" aria-pressed="false">التفاف النص / Wrap text</button><button type="button" id="sheet-freeze" aria-pressed="false">تثبيت أول عمود / Freeze first column</button><label><span id="sheet-direction-label"></span><select id="sheet-direction"><option value="rtl">يمين ← يسار</option><option value="ltr">Left → Right</option></select></label>
         </div>
         <div class="sheet-filters"><input id="sheet-search" type="search"><input id="sheet-org" type="search"><input id="sheet-date" type="search"><select id="sheet-result"></select><label class="sheet-duplicates-filter"><input type="checkbox" id="sheet-duplicates-only"><span id="sheet-duplicates-label"></span></label><button type="button" id="sheet-clear-filters"></button></div>
-        <div class="sheet-formula"><input id="sheet-address" value="A1" aria-label="عنوان الخلية / Cell address" title="D150" autocomplete="off" spellcheck="false" dir="ltr"></div>
         <div class="sheet-scroll"><table class="sheet-grid" id="sheet-grid" role="grid" aria-label="Trainees"><thead></thead><tbody></tbody></table></div>
         <div class="sheet-add-rows-bar">
           <span id="sheet-add-prefix"></span>
@@ -451,6 +451,7 @@ const Trainees=(()=>{
     $('sheet-workspace').querySelector('.sheet-footer').append(zoomTools);
     $('sheet-zoom-out').onclick=()=>setZoom(excelView.zoom-10);$('sheet-zoom-in').onclick=()=>setZoom(excelView.zoom+10);
     $('sheet-zoom-slider').oninput=()=>setZoom($('sheet-zoom-slider').value);$('sheet-zoom-reset').onclick=()=>setZoom(100);
+    toolbar.querySelector('.sheet-essential-tools .sheet-ribbon-actions').append(node('input',undefined,{id:'sheet-address',value:'A1','aria-label':'عنوان الخلية / Cell address',title:'D150',autocomplete:'off',spellcheck:'false',dir:'ltr'}));
     $('sheet-address').addEventListener('keydown',e=>{
       if(e.key==='Escape'){e.preventDefault();$('sheet-address').blur();paint();return;}
       if(e.key!=='Enter')return;e.preventDefault();if(!loaded)return;
@@ -729,7 +730,7 @@ const Trainees=(()=>{
     td.classList.remove('sheet-result-pass','sheet-result-fail','sheet-result-absent','sheet-id-duplicate');td.removeAttribute('title');td.removeAttribute('aria-haspopup');
     if(column===11){
       const select=node('select',undefined,{'aria-label':tr('النتيجة للصف ','Result for row ')+(index+1),class:'sheet-result-select',dir:'rtl'});
-      if(align)select.style.textAlign=align;
+      if(align){select.style.setProperty('text-align',align,'important');select.style.setProperty('text-align-last',align,'important');}
       ['', 'ناجح','راسب','لم يدخل',...(!['','ناجح','راسب','لم يدخل'].includes(value)?[value]:[])].forEach(v=>select.append(node('option',v||'—',{value:v})));
       select.value=value;
       if(value==='ناجح'||value==='راسب'||value==='لم يدخل')td.classList.add(value==='ناجح'?'sheet-result-pass':value==='راسب'?'sheet-result-fail':'sheet-result-absent');
