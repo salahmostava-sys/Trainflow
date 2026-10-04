@@ -23,7 +23,12 @@ const TraineeExcel=(()=>{
       try{const raw=await navigator.clipboard.readText();if(!raw)return;let values=mode==='values'&&copied&&raw===D.tsv(copied.values)?copied.display:D.parse(raw);if(mode==='transpose')values=Array.from({length:Math.max(...values.map(r=>r.length))},(_,c)=>values.map(r=>r[c]||''));
         const useStyles=mode==='all'&&copied&&raw===D.tsv(copied.values),s=state(),targets=s.cols.filter(c=>c>=s.bounds[2]);
         if(s.filtered&&values.length>1){h.message(tr('امسح الفلاتر والفرز قبل لصق عدة صفوف.','Clear filters and sorting before pasting multiple rows.'),true);return;}
-        mutate((cells,fmt,_,rowAt)=>{const start=s.view[s.bounds[0]]??cells.length;for(let y=0;y<values.length;y++)for(let x=0;x<values[y].length;x++){const c=targets[x]??s.cols.length+x-targets.length;if(c>=D.MAX_COLS)throw Error(tr('وصلت للحد الأقصى للأعمدة','Column limit reached'));const row=rowAt(start+y);while(row.length<=c)row.push('');row[c]=values[y][x];if(useStyles){const v={...copied.styles[y]?.[x]};delete v.mergeRows;delete v.mergeCols;fmt.styles[(start+y)+':'+c]=v;}}});
+        mutate((cells,fmt,_,rowAt)=>{const start=s.view[s.bounds[0]]??cells.length;for(let y=0;y<values.length;y++)for(let x=0;x<values[y].length;x++){const c=targets[x]??s.cols.length+x-targets.length;if(c>=D.MAX_COLS)throw Error(tr('وصلت للحد الأقصى للأعمدة','Column limit reached'));const row=rowAt(start+y);while(row.length<=c)row.push('');row[c]=values[y][x];if(useStyles){
+          const key=(start+y)+':'+c,previous=fmt.styles[key]||{},v={...copied.styles[y]?.[x]};delete v.mergeRows;delete v.mergeCols;
+          // Pasting content and formatting keeps the destination's existing borders.
+          for(const field of ['border','borderTop','borderBottom','borderLeft','borderRight']){delete v[field];if(Object.hasOwn(previous,field))v[field]=previous[field];}
+          fmt.styles[key]=v;
+        }}});
       }catch{h.message(tr('اسمح بالوصول للحافظة، أو استخدم Ctrl+V.','Allow clipboard access or press Ctrl+V.'),true);}
     };
     const clipboard=$('sheet-copy').closest('.sheet-ribbon-group').querySelector('.sheet-ribbon-actions');

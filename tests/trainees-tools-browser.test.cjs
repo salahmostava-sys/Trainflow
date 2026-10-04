@@ -43,6 +43,18 @@ const {spawn}=require('node:child_process');
     await menu('sheet-merge-menu','unmerge');
     assert.equal(await page.locator('#sheet-xlsx-import,#sheet-xlsx-export').count(),2,'Table Excel exchange has direct buttons');
     const previousColumns=await page.locator('thead th[data-col]').count();promptValue='Extra field';await page.locator('#sheet-add-col').click();assert.equal(await page.locator('thead th[data-col]').count(),previousColumns+1,'Add column directly creates a custom column');assert.match(await page.locator(`thead th[data-col="${previousColumns}"]`).textContent(),/Extra field/);await page.locator('#sheet-undo').click();assert.equal(await page.locator('thead th[data-col]').count(),previousColumns);
-    assert.deepEqual(errors,[]);console.log('PASS: visible ribbon paste/font/painter/borders/merge/undo/formulas/sort/size/hide and cloud reload');
+    // Paste all must keep the destination grid/outline borders, even when the
+    // copied range explicitly has no borders. Other source formatting still copies.
+    const borderSnapshot=async(r,c)=>cell(r,c).evaluate(el=>{const style=getComputedStyle(el);return ['Top','Bottom','Left','Right'].map(side=>[style['border'+side+'Width'],style['border'+side+'Style'],style['border'+side+'Color']]);});
+    await select(0,20,1,21);await menu('sheet-border-menu','outline');
+    const before=await Promise.all([borderSnapshot(0,20),borderSnapshot(0,21),borderSnapshot(1,20),borderSnapshot(1,21)]);
+    await paste(0,16,'Copy1\tCopy2\nCopy3\tCopy4');await select(0,16,1,17);await menu('sheet-border-menu','none');await page.locator('#sheet-italic').click();await page.locator('#sheet-copy-selection').click();
+    await select(0,20);await menu('sheet-paste-menu','all');await page.waitForFunction(()=>document.querySelector('td[data-v="0"][data-col="20"]').textContent==='Copy1');
+    assert.deepEqual(await Promise.all([borderSnapshot(0,20),borderSnapshot(0,21),borderSnapshot(1,20),borderSnapshot(1,21)]),before,'Paste all retains every destination border edge');assert.equal(await cell(0,20).evaluate(el=>getComputedStyle(el).fontStyle),'italic','Other copied formatting still applies');
+    const plainBefore=await borderSnapshot(0,22);await select(0,22);await menu('sheet-paste-menu','all');await page.waitForFunction(()=>document.querySelector('td[data-v="0"][data-col="22"]').textContent==='Copy1');assert.deepEqual(await borderSnapshot(0,22),plainBefore,'Copied no-border formatting cannot remove the default grid');
+    await paste(0,20,'مراجعة\tبيانات\nصف ثان\t123');assert.deepEqual(await Promise.all([borderSnapshot(0,20),borderSnapshot(0,21),borderSnapshot(1,20),borderSnapshot(1,21)]),before,'Keyboard paste keeps the outlined range');
+    await page.locator('#sheet-undo').click();assert.equal(await cell(0,20).textContent(),'Copy1');assert.deepEqual(await borderSnapshot(0,20),before[0]);await page.locator('#sheet-redo').click();assert.equal(await cell(0,20).textContent(),'مراجعة');
+    await page.locator('#sheet-save').click();await page.waitForFunction(()=>!Trainees.hasDraft());await page.locator('#sheet-reload').click();await page.waitForFunction(()=>document.getElementById('sheet-status').textContent==='تم الحفظ');assert.deepEqual(await Promise.all([borderSnapshot(0,20),borderSnapshot(0,21),borderSnapshot(1,20),borderSnapshot(1,21)]),before,'Fixed destination borders survive save and reload');
+    assert.deepEqual(errors,[]);console.log('PASS: visible ribbon paste/font/painter/borders/merge/undo/formulas/sort/size/hide and cloud reload; paste keeps destination borders');
   }finally{await browser.close();server.kill();}
 })().catch(error=>{console.error(error);process.exitCode=1;});
