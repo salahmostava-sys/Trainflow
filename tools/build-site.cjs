@@ -6,7 +6,7 @@ const root = path.resolve(__dirname, '..');
 const output = path.join(root, 'dist');
 fs.mkdirSync(output, { recursive: true });
 let html=fs.readFileSync(path.join(root,'ibta-ops.html'),'utf8');
-const files=['cloud.js','ops-ui.js','trainees.js','trainees-excel.js','trainees-core.js','trainees-xlsx.js','trainees-files.js','trainees.css','trainee-reports.js','session-policy.js'];
+const files=['cloud.js','ops-ui.js','inventory-delivery.js','trainees.js','trainees-excel.js','trainees-core.js','trainees-xlsx.js','trainees-files.js','trainees.css','trainee-reports.js','session-policy.js'];
 const vendor=fs.readFileSync(require.resolve('exceljs/dist/exceljs.min.js'));
 fs.writeFileSync(path.join(output,'exceljs-4.4.0.min.js'),vendor);
 fs.copyFileSync(require.resolve('exceljs/LICENSE'),path.join(output,'exceljs-LICENSE.txt'));

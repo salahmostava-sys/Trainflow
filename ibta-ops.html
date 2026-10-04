@@ -105,6 +105,10 @@
   .inventory-intro{font-size:14px;color:var(--muted);line-height:1.7;margin:0 0 16px;}
   #panel-inventory .ops-card{margin-top:0;max-width:760px;}
   .inventory-message{white-space:pre-line;line-height:1.85;font-size:14px;margin:14px 0;padding:16px 18px;border:1px solid var(--border);border-radius:12px;background:var(--surface-2);overflow-wrap:anywhere;}
+  #inventory-auto-settings fieldset{min-width:0;border:1px solid var(--border);border-radius:12px;padding:14px;margin:14px 0;}
+  #inventory-auto-settings legend{padding:0 6px;font-weight:700;font-size:14px;}
+  #inventory-auto-settings .inventory-auto-toggle{display:flex;flex-direction:row;align-items:center;gap:12px;justify-content:flex-start;}
+  #inventory-auto-enabled{width:18px;height:18px;min-width:18px;min-height:18px;padding:0;flex:0 0 18px;accent-color:var(--blue);}
   .inventory-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
   .inventory-actions a{display:inline-flex;align-items:center;justify-content:center;min-height:36px;padding:8px 13px;border-radius:8px;background:var(--blue);color:white;text-decoration:none;font-weight:700;font-size:13px;}
   .inventory-actions a[aria-disabled="true"]{opacity:.5;pointer-events:none;}
@@ -1423,6 +1427,7 @@ function applyLanguage(){
   document.getElementById('auth-password').placeholder = t('authPasswordPlaceholder');
   Cloud.translateUi();
   if(typeof Trainees!=='undefined')Trainees.translate();
+  if(typeof InventoryDelivery!=='undefined')InventoryDelivery.translate();
   renderKeycodes();
   renderCodeTabs();
   renderCodeGrid();
@@ -1456,6 +1461,7 @@ function activateSettingsTab(id){
     button.tabIndex=active?0:-1;
     document.getElementById('settings-pane-'+tabId).hidden=!active;
   });
+  if(id==='inventory'&&typeof InventoryDelivery!=='undefined')void InventoryDelivery.load();
 }
 SETTINGS_TAB_IDS.forEach(id=>{
   const button=document.getElementById('settings-tab-'+id);
@@ -2374,6 +2380,7 @@ applyLanguage();
 Cloud.boot();
 </script>
 <script src="ops-ui.js"></script>
+<script src="inventory-delivery.js"></script>
 <script src="trainees-core.js"></script>
 <script src="trainees-xlsx.js"></script>
 <script id="sheet-files-script" src="trainees-files.js" data-worker="trainees-xlsx-worker.js"></script>

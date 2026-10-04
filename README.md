@@ -116,3 +116,11 @@ Install development dependencies with `pnpm install --frozen-lockfile` (Node.js 
 
 Run `node tests/cloud.test.cjs` for frontend storage, import, inventory, and backup-restore regression checks. `database-tests.sql` checks RLS, claims, stale updates, role restrictions, inventory allocation, import, restore, and audit inside a transaction that rolls back all fixtures. Apply `migrations/20260929_ops_hardening.sql`, `migrations/20260929_settings_shape.sql`, `migrations/20260930_supervisor_stock.sql`, `migrations/20260930_supervisor_stock_policy.sql`, and `migrations/20260930_code_copy_time.sql` before deploying this frontend; all have been applied to the current project. `database.sql` records the original schema already applied to this project; it is not an idempotent setup script and should not be rerun on the provisioned database. New code claims store a server timestamp and display its time in the Codes date column in Riyadh time. Older claims continue to show their date only because their exact time was never recorded.
 
+## Daily WhatsApp inventory messages
+
+Settings → Inventory includes a daily automatic send switch and a configurable
+Saudi time (default 16:59, before the 17:00 sign-out). The database scheduler runs
+even with the app closed. Sending requires a connected WhatsApp Business account,
+an approved six-variable template, and a production token stored in Vault; it is
+disabled until configured. See [setup and delivery status](docs/whatsapp-inventory.md).
+

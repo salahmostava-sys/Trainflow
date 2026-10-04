@@ -16,6 +16,7 @@ const Cloud = (() => {
   const dailyMessage=()=>currentLang==='ar'?'انتهت الجلسة الساعة 5 مساءً بتوقيت السعودية. سجّل الدخول من جديد.':'Your session ended at 5 PM Saudi time. Please sign in again.';
   async function endDailySession(){
     if(endingSession)return;endingSession=true;clearTimeout(sessionTimer);
+    if(typeof InventoryDelivery!=='undefined')InventoryDelivery.reset();
     $('app').hidden=true;$('cloud-tools').hidden=true;
     if(typeof Trainees!=='undefined')Trainees.suspend?.();
     const priorUser=user?.id;
@@ -417,7 +418,7 @@ const Cloud = (() => {
     finally{lock(false);}
   }
   async function enter(session){
-    if(!session){ready=false;$('app').hidden=true;$('cloud-tools').hidden=true;$('sign-out').hidden=true;$('auth-box').hidden=false;return;}
+    if(!session){ready=false;if(typeof InventoryDelivery!=='undefined')InventoryDelivery.reset();$('app').hidden=true;$('cloud-tools').hidden=true;$('sign-out').hidden=true;$('auth-box').hidden=false;return;}
     user=session.user;
     if(retainedDraftUser&&retainedDraftUser!==user.id){await client.auth.signOut({scope:'local'});throw Error(currentLang==='ar'?'ادخل بالحساب السابق لحفظ تعديلات الجدول أولًا.':'Sign in with the previous account to save your sheet edits first.');}
     sessionDeadline=SessionPolicy.expiresAt(session.access_token||'');
@@ -603,7 +604,7 @@ const Cloud = (() => {
         location.reload();
       });
       client.auth.onAuthStateChange((event,session)=>{
-        if(event==='SIGNED_OUT'){ready=false;clearTimeout(sessionTimer);if(typeof Trainees!=='undefined'&&!retainedDraftUser)Trainees.reset();$('app').hidden=true;$('cloud-tools').hidden=true;$('sign-out').hidden=true;$('auth-box').hidden=false;}
+        if(event==='SIGNED_OUT'){ready=false;clearTimeout(sessionTimer);if(typeof InventoryDelivery!=='undefined')InventoryDelivery.reset();if(typeof Trainees!=='undefined'&&!retainedDraftUser)Trainees.reset();$('app').hidden=true;$('cloud-tools').hidden=true;$('sign-out').hidden=true;$('auth-box').hidden=false;}
         if(event==='USER_UPDATED' && session?.user){user=session.user;translateUi();}
       });
       const {data,error}=await client.auth.getSession();if(error)throw error;
@@ -636,6 +637,7 @@ const Cloud = (() => {
     await load();
   }
   return {boot,persist,copyCode,claimTraineeCode,editCode,decorate,refresh,translateUi,restoreData,exportData,importCodes,listMembers,updateMember,auditEvents,exportCodesCsv,changeSupervisorStock,saveInventoryMessageSettings,
+    inventoryDelivery:async(options)=>{if(!ready||role!=='admin')throw Error('ADMIN_REQUIRED');const {data,error}=await client.rpc(options?'ibta_save_inventory_delivery':'ibta_inventory_delivery_status',options?{options}:{});if(error)throw error;return data;},
     reportSession:async()=>{if(!ready)throw Error('AUTH_REQUIRED');const {data,error}=await client.auth.getSession();if(error||!data.session)throw Error('AUTH_REQUIRED');return {token:data.session.access_token,url:SUPABASE_URL,key:KEY};},
     readTrainees,saveTrainees,assignCodes,userId:()=>user?.id || '',codeSnapshot:()=>[...rows.values()].map(row=>({...row})),
     role:()=>role,email:()=>user?.email || '',existingCodes:()=>[...rows.keys()],stockSnapshot:()=>Object.fromEntries(stock),inventoryMessageSettings:()=>({number:config?.payload?.inventoryWhatsappNumber || '',name:config?.payload?.inventorySupervisorName || '',language:config?.payload?.inventoryMessageLanguage==='en'?'en':'ar'})};
