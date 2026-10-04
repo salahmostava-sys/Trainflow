@@ -52,6 +52,15 @@ login, changed draft, blocked dialog or unrecognized UI yields failure or an
 unknown outcome rather than a blind send. WhatsApp UI changes may require an
 extension update.
 
+If the popup shows the installed version but IBTA says the extension is not
+connected after an extension Reload, reload the **IBTA page too**, or use Open
+program and settings from the popup to open a fresh tab in that Chrome profile.
+Existing content-script contexts are invalidated by extension reloads. Sign in
+if needed, then save sending settings again to enable this device. The shared
+automatic-sending checkbox alone does not enable a newly installed local device.
+Check for “sending is enabled on this device”, “Fresh report ready” and a next
+alarm dated today when testing. Choose a time at least three minutes ahead.
+
 The extension popup refreshes the report and can stop sending on this device.
 Stopping locally does not disable the shared setting; save the setting again
 to re-enable this device. Disable and save in IBTA to turn off the shared
@@ -102,3 +111,12 @@ fresh isolated profile and checks the popup/worker connection and Stop, plus
 missing/invalid reply paths. The site build checks every extension script's
 syntax before producing the ZIP. These checks do not enable delivery or send
 external messages.
+
+`tests/whatsapp-web-flow-browser.test.cjs` exercises the actual installed MV3
+bridge, app configuration acknowledgment, snapshot, Chrome alarm, created tab,
+sender approval and outgoing confirmation together using synthetic pages and a
+fresh profile. Both live hostnames resolve to loopback and HTTP requests are
+fulfilled locally or blocked. The browser-created WhatsApp tab is navigated to
+its exact prepared URL after test routing attaches. No WhatsApp session, real
+recipient or operational records are used. The test also reloads the extension,
+verifies that the old page disconnects, and verifies recovery after page reload.
