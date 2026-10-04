@@ -8,10 +8,25 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),path
     require('./sheet-toolbar-helper.cjs')(page);
     page.on('pageerror',e=>errors.push(e.message));await page.goto('http://127.0.0.1:4181/');await page.locator('#trainees-tab').click();
     await page.waitForFunction(()=>document.getElementById('sheet-status').textContent==='تم الحفظ');
-    await page.evaluate(()=>{const old=previewSheets.get('demo-admin')||{version:0};previewSheets.set('demo-admin',{...old,cells:Array.from({length:3068},(_,i)=>Array.from({length:500},(_,c)=>c===2?'Trainee '+i:c===499?'Last '+i:'')),format:{direction:'ltr',headers:{499:'Last column'},styles:{'0:250':{mergeCols:4,mergeRows:2},'10:499':{height:60,wrap:true}}}});});
+    await page.evaluate(()=>{const old=previewSheets.get('demo-admin')||{version:0};previewSheets.set('demo-admin',{...old,cells:Array.from({length:3068},(_,i)=>Array.from({length:500},(_,c)=>c===2?'Trainee '+i:c===7?(i%2?'Certified Business Professional in Leadership and Management CBP-L':'محترف الأعمال المعتمد في القيادة الإدارية CBP-L'):c===499?'Last '+i:'')),format:{direction:'ltr',headers:{499:'Last column'},styles:{'0:250':{mergeCols:4,mergeRows:2},'10:499':{height:60,wrap:true}}}});});
     await page.locator('#sheet-reload').click();await page.waitForFunction(()=>document.getElementById('sheet-status').textContent==='تم الحفظ');
     const mounted=()=>page.locator('#sheet-grid td[data-col]').count();assert.ok(await mounted()<2000,'Visible rows and columns bound DOM size even for 1.5 million data cells');
     const go=async(address)=>{await page.locator('#sheet-address').fill(address);await page.locator('#sheet-address').press('Enter');};
+    for(const direction of ['ltr','rtl']){
+      await page.locator('#sheet-direction').selectOption(direction);await page.locator('thead th[data-col="7"] button').click();
+      for(const align of ['left','right','center']){
+        await page.locator('#sheet-align-'+align).click();
+        for(const r of [0,1]){
+          const edges=await page.locator(`td[data-v="${r}"][data-col="7"]`).evaluate(el=>{const range=document.createRange();range.selectNodeContents(el.querySelector('.sheet-cell-value'));const text=range.getBoundingClientRect(),cell=el.getBoundingClientRect();return {align:getComputedStyle(el).textAlign,left:text.left-cell.left,right:cell.right-text.right,center:(text.left+text.right-cell.left-cell.right)/2,selected:el.classList.contains('sheet-selected')};});
+          assert.equal(edges.align,align);assert.equal(edges.selected,true,'Column selection survives toolbar actions');
+          assert.ok(Math.abs(align==='left'?edges.left-6:align==='right'?edges.right-7:edges.center)<2,'Long Arabic and English exam names visibly follow '+align+' alignment in '+direction+': '+JSON.stringify(edges));
+        }
+        await page.locator('#sheet-save').click();await page.waitForFunction(()=>!Trainees.hasDraft());
+        assert.equal(await page.evaluate(()=>previewSheets.get('demo-admin').format.styles['3067:7'].align),align,'The last data row receives whole-column alignment');
+        assert.equal(await page.evaluate(()=>previewSheets.get('demo-admin').format.styles['4067:7'].align),align,'Empty input rows receive whole-column alignment');
+      }
+    }
+    await page.locator('#sheet-direction').selectOption('ltr');await page.locator('#sheet-undo').click();await page.locator('#sheet-redo').click();
     const aligned=async()=>{const delta=await page.locator('td.sheet-current').evaluate(td=>{const th=document.querySelector('thead th[data-col="'+td.dataset.col+'"]');return Math.abs(td.getBoundingClientRect().left-th.getBoundingClientRect().left);});assert.ok(delta<2,'Column spacers retain header/cell alignment');};
     await go('SF3068');assert.equal(await page.locator('td.sheet-current').textContent(),'Last 3067');await aligned();assert.ok(await mounted()<2000);
     await page.keyboard.press('F2');await page.keyboard.press('Control+a');await page.keyboard.insertText('Changed last');

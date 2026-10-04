@@ -810,6 +810,9 @@ const Trainees=(()=>{
       td.append(select);
     }else{
       const span=node('span',value.startsWith('=')?D.formulaValue(cells,index,column,formulaCache):value,{class:'sheet-cell-value'});td.append(span);
+      // Table text alignment falls back to the text direction when a nowrap line overflows.
+      // Physical flex alignment keeps long exam names aligned to the requested cell edge.
+      if(align&&!style.rotation&&!(typeof style.wrap==='boolean'?style.wrap:excelView.wrap)){span.style.display='flex';span.style.justifyContent=align;}
       if(value.startsWith('=')){td.dataset.formula=value;td.title=value;}else delete td.dataset.formula;
       if(style.rotation){span.style.display='inline-block';if(Math.abs(style.rotation)===90){span.style.writingMode='vertical-rl';if(style.rotation===-90)span.style.transform='rotate(180deg)';}else{span.style.transform='rotate('+style.rotation+'deg)';td.style.setProperty('height','70px','important');}}
       if(column===4){const duplicates=duplicateIds.get(D.idKey(value));if(duplicates){td.classList.add('sheet-id-duplicate');td.append(node('span',tr('مكرر ×','Duplicate ×')+duplicates.length,{class:'sheet-duplicate-badge'}));td.setAttribute('aria-haspopup','dialog');}}
