@@ -62,7 +62,6 @@ if(window.history)window.history.scrollRestoration='manual';
   }
   .brand h1{font-size:19.5px; margin:0; font-weight:700; letter-spacing:-.2px;}
 
-  .header-actions{display:flex; align-items:center; gap:8px; flex:none; margin-inline-start:auto;}
   .icon-pill-btn{
     height:38px; padding:0 12px; border-radius:10px; border:1px solid var(--border); background:var(--surface);
     color:var(--muted); font-size:14.5px; font-weight:700; font-family:inherit; cursor:pointer;
@@ -92,7 +91,7 @@ if(window.history)window.history.scrollRestoration='manual';
   html[data-sidebar-size="compact"] #app.sheet-wide{padding-right:104px;}
   html[data-sidebar="closed"] #app.wrap{padding-right:16px;}
   html[data-sidebar="closed"] #app.sheet-wide{padding-right:20px;}
-  #workspace-sidebar{position:fixed;right:16px;left:auto;top:16px;bottom:16px;width:224px;padding:16px 12px;background:linear-gradient(180deg,#f2f7ff,#fff 55%);border:1px solid var(--border);border-radius:18px;box-shadow:var(--shadow);z-index:42;overflow-y:auto;}
+  #workspace-sidebar{position:fixed;right:16px;left:auto;top:16px;bottom:16px;width:224px;padding:16px 12px;background:linear-gradient(180deg,#f2f7ff,#fff 55%);border:1px solid var(--border);border-radius:18px;box-shadow:var(--shadow);z-index:42;overflow-y:auto;display:flex;flex-direction:column;}
   html[data-sidebar="closed"] #workspace-sidebar{display:none;}
   .sidebar-heading{display:flex;align-items:center;gap:9px;padding:0 2px 20px;margin-bottom:12px;border-bottom:1px solid var(--border);}
   .sidebar-heading .brand-mark{width:32px;height:32px;font-size:14px;border-radius:10px;}
@@ -106,7 +105,7 @@ if(window.history)window.history.scrollRestoration='manual';
   html[data-sidebar-size="compact"] .sidebar-heading strong,html[data-sidebar-size="compact"] nav.tabs button>span{display:none;}
   html[data-sidebar-size="compact"] #sidebar-compact svg{transform:rotate(180deg);}
   html[data-sidebar-size="compact"] nav.tabs button{justify-content:center;padding:13px 0;gap:0;}
-  nav.tabs{display:flex;flex-direction:column;gap:6px;margin:0;}
+  nav.tabs{display:flex;flex-direction:column;gap:6px;margin:0;flex:1;}
   nav.tabs button{display:flex;align-items:center;gap:12px;width:100%;padding:13px 12px;border:0;border-radius:10px;background:transparent;color:var(--muted);font:inherit;font-size:14px;font-weight:600;text-align:start;cursor:pointer;transition:background .15s,color .15s;}
   nav.tabs button svg{width:20px;height:20px;flex:none;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;}
   nav.tabs button:hover{background:var(--blue-50);color:var(--blue-600);}
@@ -114,6 +113,10 @@ if(window.history)window.history.scrollRestoration='manual';
   nav.tabs button:focus-visible,#sidebar-toggle:focus-visible,#sidebar-compact:focus-visible{outline:3px solid var(--blue-100);outline-offset:2px;}
   #sidebar-toggle svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;}
   .sidebar-backdrop{position:fixed;inset:0;border:0;background:#0f1b2e45;z-index:41;cursor:pointer;}
+  .sidebar-footer{display:flex;align-items:center;gap:8px;padding:12px 4px 4px;margin-top:12px;border-top:1px solid var(--border);}
+  .sidebar-footer .account-popover{inset-block-start:auto;inset-block-end:calc(100% + 9px);inset-inline-end:0;}
+  html[data-sidebar-size="compact"] .sidebar-footer{flex-direction:column;gap:6px;}
+  html[data-sidebar-size="compact"] .sidebar-footer #lang-btn{width:40px;padding:0;}
   @media(max-width:760px){#app.wrap{padding-right:16px;}html[data-sidebar-size="compact"] #app.wrap{padding-right:108px;}html[data-sidebar="closed"] #app.wrap{padding-right:16px;}#workspace-sidebar{width:min(270px,calc(100vw - 36px));right:12px;top:12px;bottom:12px;}}
 
   section.panel{display:none;}
@@ -1021,17 +1024,7 @@ if(window.history)window.history.scrollRestoration='manual';
         <h1 data-i18n="appTitle">TrainFlow</h1>
       </div>
     </div>
-    <div class="header-actions">
-      <button class="icon-pill-btn" id="lang-btn">AR</button>
-      <div class="account-menu" id="account-menu">
-        <button class="icon-pill-btn account-trigger" id="account-menu-btn" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="account-menu-popover"><span class="account-avatar" id="account-avatar" aria-hidden="true">TF</span></button>
-        <div class="account-popover" id="account-menu-popover" hidden>
-          <div class="account-summary"><strong id="account-menu-name" data-i18n="currentAccount">الحساب الحالي</strong><span id="account-menu-email" dir="ltr"></span></div>
-          <button class="account-option" id="settings-btn" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"/><path d="M19.4 15a1.8 1.8 0 0 0 .36 1.98l.07.07-1.78 1.78-.07-.07A1.8 1.8 0 0 0 16 18.4a1.8 1.8 0 0 0-1 1.66V20h-2v-.06a1.8 1.8 0 0 0-1-1.66 1.8 1.8 0 0 0-1.98.36l-.07.07-1.78-1.78.07-.07A1.8 1.8 0 0 0 8.6 15a1.8 1.8 0 0 0-1.66-1H7v-2h-.06A1.8 1.8 0 0 0 8.6 11a1.8 1.8 0 0 0-.36-1.98l-.07-.07 1.78-1.78.07.07A1.8 1.8 0 0 0 12 7.6a1.8 1.8 0 0 0 1-1.66V6h2v.06a1.8 1.8 0 0 0 1 1.66 1.8 1.8 0 0 0 1.98-.36l.07-.07 1.78 1.78-.07.07A1.8 1.8 0 0 0 19.4 11a1.8 1.8 0 0 0 1.66 1H21v2h.06A1.8 1.8 0 0 0 19.4 15Z"/></svg><span data-i18n="settingsTitle">الإعدادات</span></button>
-          <button class="account-option" id="sign-out" type="button" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4M14 7l5 5-5 5M9 12h10"/></svg><span data-i18n="signOut">تسجيل الخروج</span></button>
-        </div>
-      </div>
-    </div>
+
   </header>
 
   <button class="sidebar-backdrop" id="sidebar-backdrop" type="button" aria-label="إغلاق القائمة الجانبية" hidden></button>
@@ -1045,6 +1038,17 @@ if(window.history)window.history.scrollRestoration='manual';
     <button data-tab="inventory"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 7 9-4 9 4v10l-9 4-9-4Zm0 0 9 4 9-4m-9 4v10M7 5l9 4"/></svg><span data-i18n="tabInventory">Inventory</span></button>
     <button data-tab="settings"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v3m0 12v3M3 12h3m12 0h3M5.6 5.6l2.1 2.1m8.6 8.6 2.1 2.1M5.6 18.4l2.1-2.1m8.6-8.6 2.1-2.1"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg><span data-i18n="settingsTitle">الإعدادات</span></button>
   </nav>
+  <div class="sidebar-footer">
+    <div class="account-menu" id="account-menu">
+      <button class="icon-pill-btn account-trigger" id="account-menu-btn" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="account-menu-popover"><span class="account-avatar" id="account-avatar" aria-hidden="true">TF</span></button>
+      <div class="account-popover" id="account-menu-popover" hidden>
+        <div class="account-summary"><strong id="account-menu-name" data-i18n="currentAccount">الحساب الحالي</strong><span id="account-menu-email" dir="ltr"></span></div>
+        <button class="account-option" id="settings-btn" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"/><path d="M19.4 15a1.8 1.8 0 0 0 .36 1.98l.07.07-1.78 1.78-.07-.07A1.8 1.8 0 0 0 16 18.4a1.8 1.8 0 0 0-1 1.66V20h-2v-.06a1.8 1.8 0 0 0-1-1.66 1.8 1.8 0 0 0-1.98.36l-.07.07-1.78-1.78.07-.07A1.8 1.8 0 0 0 8.6 15a1.8 1.8 0 0 0-1.66-1H7v-2h-.06A1.8 1.8 0 0 0 8.6 11a1.8 1.8 0 0 0-.36-1.98l-.07-.07 1.78-1.78.07.07A1.8 1.8 0 0 0 12 7.6a1.8 1.8 0 0 0 1-1.66V6h2v.06a1.8 1.8 0 0 0 1 1.66 1.8 1.8 0 0 0 1.98-.36l.07-.07 1.78 1.78-.07.07A1.8 1.8 0 0 0 19.4 11a1.8 1.8 0 0 0 1.66 1H21v2h.06A1.8 1.8 0 0 0 19.4 15Z"/></svg><span data-i18n="settingsTitle">الإعدادات</span></button>
+        <button class="account-option" id="sign-out" type="button" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4M14 7l5 5-5 5M9 12h10"/></svg><span data-i18n="signOut">تسجيل الخروج</span></button>
+      </div>
+    </div>
+    <button class="icon-pill-btn" id="lang-btn">AR</button>
+  </div>
   </aside>
   </div>
 
