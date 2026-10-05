@@ -28,7 +28,7 @@ const TraineeExcel=(()=>{
       return box;
     };
     window.addEventListener('resize',closeMenus);document.addEventListener('scroll',e=>{if(!e.target.closest?.('.sheet-command-popover'))for(const item of dropdowns)if(item.list.matches(':popover-open'))item.place();},true);
-    const menu=(host,id,ar,en,items)=>{const controls=items.map(([key,a,e,run])=>action(id+'-'+key,a,e,run));if(id!=='sheet-paste-menu')return dropdown(host,id,ar.replace(' ▾',''),en.replace(' ▾',''),controls);const box=node('div',undefined,{id,class:'sheet-command-set'}),list=node('div',undefined,{class:'sheet-command-actions'});box.append(text(node('small'),ar.replace(' ▾',''),en.replace(' ▾','')),list);list.append(...controls);host.append(box);return box;};
+    const menu=(host,id,ar,en,items)=>dropdown(host,id,ar.replace(' ▾',''),en.replace(' ▾',''),items.map(([key,a,e,run])=>action(id+'-'+key,a,e,run)));
     const state=()=>h.state(),style=()=>{const s=state();return s.formatting.styles[s.view[s.cursor.r]+':'+s.cursor.c]||{};};
     const rows=s=>s.view.slice(s.bounds[0],s.bounds[1]+1),columns=s=>s.cols.filter(c=>c>=s.bounds[2]&&c<=s.bounds[3]);
     const mutate=(run)=>{
@@ -53,11 +53,11 @@ const TraineeExcel=(()=>{
       }catch{h.message(tr('اسمح بالوصول للحافظة، أو استخدم Ctrl+V.','Allow clipboard access or press Ctrl+V.'),true);}
     };
     const clipboard=$('sheet-copy').closest('.sheet-ribbon-group').querySelector('.sheet-ribbon-actions');
-    clipboard.prepend(action('sheet-cut-selection','قص','Cut',()=>{capture();h.cutSelection();}),action('sheet-copy-selection','نسخ المحدد','Copy selection',()=>{capture();h.copySelection();}));
-    menu(clipboard,'sheet-paste-menu','لصق ▾','Paste ▾',[
-      ['all','لصق الكل','Paste all',()=>paste('all')],['values','لصق القيم فقط','Values only',()=>paste('values')],['transpose','تبديل الصفوف والأعمدة','Transpose',()=>paste('transpose')]
+    const painterButton=action('sheet-format-painter','نسخ التنسيق','Format Painter',()=>{painter={...style()};delete painter.mergeRows;delete painter.mergeCols;painterButton.setAttribute('aria-pressed','true');h.message(tr('حدد الخلايا التي تريد تطبيق التنسيق عليها.','Select the cells to apply this formatting.'));});
+    dropdown(clipboard,'sheet-clipboard-menu','الحافظة','Clipboard',[
+      action('sheet-cut-selection','قص','Cut',()=>{capture();h.cutSelection();}),action('sheet-copy-selection','نسخ المحدد','Copy selection',()=>{capture();h.copySelection();}),$('sheet-copy'),
+      action('sheet-paste-menu-all','لصق الكل','Paste all',()=>paste('all')),action('sheet-paste-menu-values','لصق القيم فقط','Values only',()=>paste('values')),action('sheet-paste-menu-transpose','تبديل الصفوف والأعمدة','Transpose',()=>paste('transpose')),painterButton
     ]);
-    const painterButton=action('sheet-format-painter','نسخ التنسيق','Format Painter',()=>{painter={...style()};delete painter.mergeRows;delete painter.mergeCols;painterButton.setAttribute('aria-pressed','true');h.message(tr('حدد الخلايا التي تريد تطبيق التنسيق عليها.','Select the cells to apply this formatting.'));});clipboard.insertBefore(painterButton,$('sheet-paste-menu'));
     $('sheet-grid').addEventListener('copy',capture,{capture:true});$('sheet-grid').addEventListener('cut',capture,{capture:true});
     $('sheet-grid').addEventListener('click',e=>{if(painter&&e.target.closest('td[data-col]')){const value=painter;painter=null;painterButton.setAttribute('aria-pressed','false');h.formatSelection(value);}});
     document.addEventListener('keydown',e=>{if(e.key==='Escape'){painter=null;painterButton.setAttribute('aria-pressed','false');}});

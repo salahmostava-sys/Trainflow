@@ -12,7 +12,8 @@ const {spawn}=require('node:child_process');
     page.on('pageerror',e=>errors.push(e.message));page.on('dialog',d=>d.accept(d.type()==='prompt'?promptValue:undefined));
     await page.goto('http://127.0.0.1:4179/');await page.locator('#trainees-tab').click();await page.waitForFunction(()=>document.getElementById('sheet-status').textContent==='تم الحفظ');
     assert.ok(await page.locator('.sheet-clean-toolbar').evaluate(el=>el.getBoundingClientRect().height)<230,'Visible ribbon stays compact');
-    assert.equal(await page.locator('.sheet-clean-toolbar .sheet-command-dropdown').count(),6,'Six requested command groups each have one dropdown');
+    assert.equal(await page.locator('.sheet-clean-toolbar .sheet-command-dropdown').count(),7,'Each requested command group has one dropdown, including Clipboard');
+    assert.equal(await page.locator('#sheet-clipboard-menu-items [role="menuitem"]').count(),7,'All seven clipboard commands share the one dropdown');
     assert.equal(await page.locator('.sheet-command-popover:popover-open').count(),0,'Dropdown actions start hidden');
     assert.equal(await page.locator('#sheet-font-family').isVisible(),true);
     assert.equal(await page.locator('#sheet-autosum-menu,#sheet-fill-menu,#sheet-clear-menu,#sheet-clear-format,#sheet-insert-menu,#sheet-delete-menu,#sheet-data-tools').count(),0,'Removed and duplicate commands are absent');
@@ -56,7 +57,7 @@ const {spawn}=require('node:child_process');
     await paste(0,20,'مراجعة\tبيانات\nصف ثان\t123');assert.deepEqual(await Promise.all([borderSnapshot(0,20),borderSnapshot(0,21),borderSnapshot(1,20),borderSnapshot(1,21)]),before,'Keyboard paste keeps the outlined range');
     await page.locator('#sheet-undo').click();assert.equal(await cell(0,20).textContent(),'Copy1');assert.deepEqual(await borderSnapshot(0,20),before[0]);await page.locator('#sheet-redo').click();assert.equal(await cell(0,20).textContent(),'مراجعة');
     await page.locator('#sheet-save').click();await page.waitForFunction(()=>!Trainees.hasDraft());await page.locator('#sheet-reload').click();await page.waitForFunction(()=>document.getElementById('sheet-status').textContent==='تم الحفظ');assert.deepEqual(await Promise.all([borderSnapshot(0,20),borderSnapshot(0,21),borderSnapshot(1,20),borderSnapshot(1,21)]),before,'Fixed destination borders survive save and reload');
-    const dropdownIds=['sheet-rows-columns-menu','sheet-cell-format-menu','sheet-merge-menu','sheet-border-menu','sheet-orientation-menu','sheet-sort-menu'];
+    const dropdownIds=['sheet-clipboard-menu','sheet-rows-columns-menu','sheet-cell-format-menu','sheet-merge-menu','sheet-border-menu','sheet-orientation-menu','sheet-sort-menu'];
     for(const id of dropdownIds){await page.locator('#'+id+'-trigger').click();assert.equal(await page.locator('.sheet-command-popover:popover-open').count(),1);assert.equal(await page.locator('#'+id+'-trigger').getAttribute('aria-expanded'),'true');await page.keyboard.press('Escape');assert.equal(await page.locator('.sheet-command-popover:popover-open').count(),0);}
     await page.locator('#sheet-ribbon-tab-cells').click();await page.locator('#sheet-rows-columns-menu-trigger').focus();await page.keyboard.press('ArrowDown');assert.equal(await page.evaluate(()=>document.activeElement.id),'sheet-add');assert.equal(await page.locator('#sheet-delete-col').isDisabled(),true);await page.keyboard.press('End');assert.equal(await page.evaluate(()=>document.activeElement.id),'sheet-add-col','Keyboard skips protected column deletion');await page.keyboard.press('Escape');
     await page.locator('#sheet-border-menu-trigger').click();await page.locator('#sheet-orientation-menu-trigger').click();assert.equal(await page.locator('.sheet-command-popover:popover-open').count(),1,'Opening another group closes the first');await page.locator('#sheet-ribbon-tab-home').click();assert.equal(await page.locator('.sheet-command-popover:popover-open').count(),0,'Changing tabs closes menus');
@@ -68,6 +69,6 @@ const {spawn}=require('node:child_process');
     }
     await page.locator('#sheet-sort-menu-trigger').click();await page.screenshot({path:path.join(__dirname,'../artifacts/sheet-dropdowns-mobile.png')});await page.locator('#sheet-status').click();assert.equal(await page.locator('.sheet-command-popover:popover-open').count(),0,'Outside click closes the menu');
     await page.locator('#sheet-sort-menu-trigger').click();await page.evaluate(()=>Trainees.suspend());assert.equal(await page.locator('.sheet-command-popover:popover-open').count(),0,'Sign-out cleanup closes menu actions');
-    assert.deepEqual(errors,[]);console.log('PASS: six dropdown groups, keyboard/outside/tab cleanup, mobile RTL/LTR bounds, existing paste/font/painter/borders/merge/undo/formulas/sort/size/hide and cloud reload');
+    assert.deepEqual(errors,[]);console.log('PASS: seven dropdown groups including Clipboard, keyboard/outside/tab cleanup, mobile RTL/LTR bounds, existing paste/font/painter/borders/merge/undo/formulas/sort/size/hide and cloud reload');
   }finally{await browser.close();server.kill();}
 })().catch(error=>{console.error(error);process.exitCode=1;});
