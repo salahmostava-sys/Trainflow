@@ -2,12 +2,15 @@
 const Cloud = (() => {
   const SUPABASE_URL = 'https://xaeffreqwtozsgqajzpc.supabase.co';
   const KEY = 'sb_publishable_TB0SB3SNFP1ygpRvMoeSGg_s8o0mHeO';
-  function serverFetch(input,init){
+  async function serverFetch(input,init){
     const url=new URL(typeof input==='string'?input:input.url);
     if(url.origin===SUPABASE_URL&&url.pathname.startsWith('/rest/v1/')){
       const target='/api/data/'+url.pathname.slice('/rest/v1/'.length)+url.search;
-      if(typeof input==='string')return fetch(target,init);
-      return fetch(new Request(new URL(target,location.origin),input),init);
+      try{
+        const req=typeof input==='string'?target:new Request(new URL(target,location.origin),input);
+        const res=await fetch(req,init);
+        if(res.status!==404&&res.status!==405&&res.status!==502&&res.status!==503)return res;
+      }catch{}
     }
     return fetch(input,init);
   }

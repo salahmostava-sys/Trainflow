@@ -13,7 +13,8 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=r
     await page.route('**/workspace/cloud.js*',route=>route.fulfill({contentType:'text/javascript',body:mock}));
     await page.route('https://cdn.jsdelivr.net/**',route=>route.fulfill({contentType:'text/javascript',body:'window.supabase={};'}));
     await page.goto('http://localhost:'+port);await reference.goto('http://127.0.0.1:'+previewPort);
-    for(const target of [page,reference]){await target.locator('#app').waitFor({state:'visible'});await target.locator('#trainees-tab').click();await target.waitForFunction(()=>document.getElementById('sheet-status').textContent==='تم الحفظ');await target.evaluate(()=>document.fonts.ready);}
+    for(const target of [page,reference]){try{await target.locator('#app').waitFor({state:'visible'});}catch(error){console.error({url:target.url(),errors,authMessage:await target.locator('#auth-message').textContent()});throw error;}await target.locator('#trainees-tab').click();await target.waitForFunction(()=>document.getElementById('sheet-status').textContent==='تم الحفظ');await target.evaluate(()=>document.fonts.ready);}
+    await page.waitForURL('**/trainees');
     assert.equal(await page.locator('iframe').count(),0,'Original UI runs directly in the TypeScript/React page, preserving extension access');
     assert.equal(await page.locator('nav.tabs button').count(),5);assert.equal(await page.locator('aside').count(),await reference.locator('aside').count(),'Only the original sheet allocation panel remains');
     const geometry=target=>target.evaluate(()=>['nav.tabs','#sheet-workspace','#sheet-grid','#sheet-search'].map(selector=>{const el=document.querySelector(selector),rect=el.getBoundingClientRect();return {selector,x:Math.round(rect.x),y:Math.round(rect.y),width:Math.round(rect.width),font:getComputedStyle(el).fontFamily};}));
@@ -25,10 +26,31 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=r
     await page.locator('#sheet-xlsx-import').click();assert.equal(await page.locator('#sheet-xlsx-mode option').count(),3);await page.keyboard.press('Escape');
     assert.equal(await page.locator('#prometric-registration-script').getAttribute('data-extension')?.then(value=>value.startsWith('/workspace/trainflow-prometric.zip')),true);
     await page.screenshot({path:path.join(root,'artifacts/next-classic-trainees.png')});
+    const scriptCount=await page.locator('body > script[src*="/workspace/"]').count();
+    await page.evaluate(()=>{window.originalSheetNode=document.getElementById('panel-trainees');});
+    for(const [panel,route] of [['prometric','prometric'],['codes','vouchers'],['inventory','inventory'],['keycodes','keycodes']]){
+      await page.locator('nav.tabs button[data-tab="'+panel+'"]').click();await page.waitForURL('**/'+route);
+      assert.equal(await page.locator('#panel-'+panel).evaluate(el=>el.classList.contains('active')),true);
+    }
+    await page.goBack();await page.waitForURL('**/inventory');await page.waitForFunction(()=>document.getElementById('panel-inventory').classList.contains('active'));
+    await page.goForward();await page.waitForURL('**/keycodes');await page.waitForFunction(()=>document.getElementById('panel-keycodes').classList.contains('active'));
+    await page.locator('#account-menu-btn').click();await page.locator('#settings-btn').click();await page.waitForURL('**/settings');
+    await page.locator('#settings-tab-reports').click();await page.waitForURL('**/settings?tab=reports');
+    await page.goBack();await page.waitForURL('**/settings');await page.waitForFunction(()=>document.getElementById('settings-pane-profile').hidden===false);
+    await page.goForward();await page.waitForURL('**/settings?tab=reports');await page.waitForFunction(()=>document.getElementById('settings-pane-reports').hidden===false);
+    assert.equal(await page.evaluate(()=>window.originalSheetNode===document.getElementById('panel-trainees')),true,'Tab navigation preserves the original sheet DOM');
+    assert.equal(await page.locator('td[data-v="0"][data-col="0"]').textContent(),'EXISTING-VOUCHER','Navigating other pages preserves loaded trainee records');
+    await page.reload();await page.locator('#app').waitFor({state:'visible'});assert.equal(await page.locator('#settings-pane-reports').isVisible(),true,'Settings URL restores its selected section on refresh');
+    await page.goto('http://localhost:'+port+'/inventory');await page.locator('#app').waitFor({state:'visible'});assert.equal(await page.locator('#panel-inventory').evaluate(el=>el.classList.contains('active')),true,'Explicit URL overrides a conflicting saved page');
+    await page.locator('#trainees-tab').click();await page.waitForURL('**/trainees');await page.waitForFunction(()=>document.getElementById('sheet-status').textContent==='تم الحفظ');
+    await page.evaluate(()=>{window.originalSheetNode=document.getElementById('panel-trainees');});
+    await page.locator('nav.tabs button[data-tab="prometric"]').click();await page.waitForURL('**/prometric');await page.goBack();await page.waitForURL('**/trainees');await page.waitForFunction(()=>document.getElementById('panel-trainees').classList.contains('active'));
+    assert.equal(await page.evaluate(()=>window.originalSheetNode===document.getElementById('panel-trainees')),true,'Next navigation keeps the existing sheet DOM mounted');
+    assert.equal(await page.locator('body > script[src*="/workspace/"]').count(),scriptCount,'Navigation does not boot the original scripts twice');
     await page.locator('#lang-btn').click();assert.equal(await page.locator('#html-root').getAttribute('lang'),'en');
     await page.reload();await page.locator('#app').waitFor({state:'visible'});await page.waitForFunction(()=>document.getElementById('sheet-status')?.textContent==='Saved');assert.equal(await page.locator('#html-root').getAttribute('lang'),'en','Refresh preserves the same language and selected sheet panel');
     const health=await page.request.get('http://localhost:'+port+'/api/health');assert.equal((await health.json()).runtime,'nextjs');const privateResponse=await page.request.get('http://localhost:'+port+'/api/data/ibta_codes');assert.equal(privateResponse.status(),401,'Next API keeps unauthenticated requests out of the existing database');
     const downloads=['trainflow-prometric.zip','exceljs-4.4.0.min.js','trainees-xlsx-worker.js','google-reports.gs'];for(const file of downloads)assert.equal((await page.request.get('http://localhost:'+port+'/workspace/'+file)).status(),200,'Published original asset: '+file);
-    assert.deepEqual(errors,[]);console.log('PASS: production Next.js with exact classic DOM/layout, sheet records/details/import, persisted language/panel, packaged assets and existing API protection');
+    assert.deepEqual(errors,[]);console.log('PASS: production Next.js with classic layout, page/settings URLs, Back/Forward, direct links, refresh, mounted sheet, language, assets and API protection');
   }finally{await browser?.close();for(const server of servers)server.kill();}
 })().catch(error=>{console.error(error);process.exitCode=1;});

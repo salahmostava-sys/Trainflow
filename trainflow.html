@@ -1963,9 +1963,9 @@ function workspaceView(){try{return JSON.parse(localStorage.getItem('ibta_worksp
 function rememberWorkspaceView(change){if(!Cloud.userId())return;try{localStorage.setItem('ibta_workspace_view:'+Cloud.userId(),JSON.stringify({...workspaceView(),...change}));}catch{}}
 async function restoreWorkspaceView(){
   if(document.readyState==='loading')await new Promise(resolve=>document.addEventListener('DOMContentLoaded',resolve,{once:true}));
-  const view=workspaceView();if(!['keycodes','prometric','codes','inventory','trainees','settings'].includes(view.panel))return;
+  const saved=workspaceView(),view={panel:'keycodes',...saved,...(window.TRAINFLOW_ROUTE_VIEW?.()||{})};if(!['keycodes','prometric','codes','inventory','trainees','settings'].includes(view.panel))return;
   await showPanel(view.panel);if(view.panel==='settings')activateSettingsTab(view.settingsTab||'profile');
-  if(Number.isFinite(view.pageTop)&&view.pageTop>=0)window.scrollTo(0,Math.min(view.pageTop,10000000));
+  if(saved.panel===view.panel&&Number.isFinite(view.pageTop)&&view.pageTop>=0)window.scrollTo(0,Math.min(view.pageTop,10000000));
 }
 function saveWorkspaceScroll(){const app=document.getElementById('app');if(!app.hidden&&!app.classList.contains('workspace-restoring'))rememberWorkspaceView({pageTop:window.scrollY});}
 let workspaceScrollTimer;
@@ -1997,6 +1997,7 @@ function activateSettingsTab(id){
     document.getElementById('settings-pane-'+tabId).hidden=!active;
   });
   rememberWorkspaceView({settingsTab:id});
+  window.TRAINFLOW_PANEL_CHANGED?.();
   if(id==='profile')updateSettingsProfileHero();
 }
 SETTINGS_TAB_IDS.forEach(id=>{
@@ -2043,9 +2044,12 @@ function showPanel(id){
   document.getElementById('panel-'+id).classList.add('active');
   document.querySelector('nav.tabs button[data-tab="'+id+'"]')?.classList.add('active');
   rememberWorkspaceView({panel:id});
+  window.TRAINFLOW_PANEL_CHANGED?.();
   if(id==='codes'){codeTimelineReset=true;positionCodeTimeline();}
   if(id==='trainees' && typeof Trainees!=='undefined')return Trainees.open();
 }
+window.TRAINFLOW_SHOW_PANEL=showPanel;
+window.TRAINFLOW_ACTIVATE_SETTINGS_TAB=activateSettingsTab;
 document.querySelectorAll('nav.tabs button').forEach(btn=>{
   btn.addEventListener('click', async ()=>{
     showPanel(btn.dataset.tab);

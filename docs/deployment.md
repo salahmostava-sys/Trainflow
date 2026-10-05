@@ -6,6 +6,8 @@ Vercel uses `framework: nextjs`, `pnpm install --frozen-lockfile`, `npm run buil
 
 Run `pnpm dev` for Next.js development, or `pnpm build` followed by `pnpm start` for production review. After building, run `pnpm test:next` to check the original layout, trainee data operations, file assets, refresh preferences and API protection using synthetic records. The API route forwards to `server/worker.mjs`; database ownership and permissions continue to be enforced by the existing project and policies.
 
+The Next workspace uses `/keycodes`, `/prometric`, `/vouchers`, `/inventory`, `/trainees` and `/settings` URLs. Settings sections use `?tab=reports` (or the selected section). The TypeScript navigation bridge preserves the mounted sheet while updating Next history; direct URLs take priority over saved page preferences, and browser Back/Forward restores the matching panel.
+
 `pnpm build:cloudflare` retains the original static Pages build described below. Changing the web framework does not create a new Supabase project or replace the existing records.
 
 ## Local workspace
