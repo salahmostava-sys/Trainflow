@@ -8,6 +8,14 @@ const tables=new Set(['ibta_codes','ibta_settings','ibta_supervisor_stock','ibta
 const adminRpc=new Set(['ibta_restore_backup','ibta_import_codes','ibta_change_supervisor_stock','ibta_assign_codes','ibta_inventory_delivery_status','ibta_save_inventory_delivery']);
 const userRpc=new Set(['ibta_apply_changes','ibta_claim_code','ibta_save_trainee_sheet_formatted']);
 const json=(status,message)=>Response.json({message},{status,headers:{'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
+// Vercel adds catch-all routing parameters to Edge request URLs. They are not
+// PostgREST filters: forwarding path=ibta_members causes PGRST100 on sign-in.
+export function handleNextApi(request,env={},fetcher){
+  const url=new URL(request.url);
+  url.searchParams.delete('path');
+  url.searchParams.delete('nxtPpath');
+  return handleApi(new Request(url,request),env,fetcher);
+}
 export async function handleApi(request,env={},fetcher=(...args)=>globalThis.fetch(...args)){
   const url=new URL(request.url),path=url.pathname.slice('/api/data/'.length);
   const isRpc=path.startsWith('rpc/'),name=isRpc?path.slice(4):path;

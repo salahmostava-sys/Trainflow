@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {handleApi} from '../server/worker.mjs';
+import {handleApi,handleNextApi} from '../server/worker.mjs';
 let role='operator',active=true,calls=[];
 const token=timestamp=>'header.'+Buffer.from(JSON.stringify({amr:[{method:'password',timestamp}]})).toString('base64url')+'.signature';
 const bearer='Bearer '+token(Math.floor(Date.now()/1000));
@@ -52,3 +52,31 @@ for(const stale of [token(Math.floor(Date.now()/1000)-86400),'invalid.jwt']){
   assert.equal(calls.length-before,1,'Expired sessions cannot read membership or operational data');
 }
 console.log('PASS: daily session expiry blocks reads on the server');
+// Reproduce the deployed Vercel URL, not just the clean local Next URL.
+role='admin';
+const nextUpstream=async(url,options)=>{
+  const target=new URL(url);
+  if(target.pathname==='/rest/v1/ibta_members'&&target.searchParams.get('select')==='role,active,user_id'){
+    assert.equal(target.searchParams.has('path'),false);
+    assert.equal(target.searchParams.has('nxtPpath'),false);
+    assert.equal(target.searchParams.get('user_id'),'eq.user');
+    assert.equal(options.headers.get('Authorization'),bearer);
+    return Response.json([{role,active,user_id:'user'}]);
+  }
+  return upstream(url,options);
+};
+response=await handleNextApi(request('ibta_members?select=role%2Cactive%2Cuser_id&user_id=eq.user&path=ibta_members&nxtPpath=ibta_members'),{},nextUpstream);
+assert.equal(response.status,200);
+assert.deepEqual(await response.json(),[{role:'admin',active:true,user_id:'user'}]);
+await handleNextApi(request('ibta_codes?select=code&category=eq.Foundation%2B100&order=code.asc&offset=1000&limit=1000&path=ibta_codes'),{},upstream);
+const forwarded=new URL(calls.at(-1).url);
+assert.equal(forwarded.searchParams.has('path'),false);
+assert.equal(forwarded.searchParams.get('category'),'eq.Foundation+100');
+assert.equal(forwarded.searchParams.get('offset'),'1000');
+assert.equal(forwarded.searchParams.get('order'),'code.asc');
+await handleNextApi(request('rpc/ibta_restore_backup?path=rpc%2Fibta_restore_backup',post),{},upstream);
+assert.equal(calls.at(-1).options.method,'POST');
+assert.deepEqual(JSON.parse(calls.at(-1).options.body),JSON.parse(post.body));
+assert.equal((await handleNextApi(new Request('https://site.invalid/api/data/ibta_members?path=ibta_members'),{},upstream)).status,401);
+assert.equal((await handleNextApi(request('ibta_members?path=ibta_members',{headers:{Authorization:bearer,Origin:'https://evil.invalid'}}),{},upstream)).status,403);
+console.log('PASS: Vercel routing parameters cannot become database filters; JWT, origin, real filters, pagination and POST body are preserved');
