@@ -25,7 +25,7 @@ module.exports = {
       },
       fontFamily: {
         sans: ['Inter', 'sans-serif'],
-        arabic: ['IBM Plex Sans Arabic', 'sans-serif'],
+        arabic: ['Cairo', 'IBM Plex Sans Arabic', 'sans-serif'],
       },
     },
   },
