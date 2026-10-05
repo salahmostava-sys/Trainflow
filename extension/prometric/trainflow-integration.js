@@ -56,12 +56,17 @@ const IbtaRegistration=(()=>{
   async function recordResult(msg,state,status){
     const current=state.queue?.[state.queueIndex];if(!current?._ibta)return;
     const {ibtaRun:run}=await chrome.storage.local.get('ibtaRun');if(!run||run.id!==current._ibta.run)return;
-    const item=run.items.find(i=>i.id===current._ibta.item);if(!item||['done','saved'].includes(item.status))return;
+    const item=run.items.find(i=>i.id===current._ibta.item);if(!item||['done','saved','reviewed','cancelled'].includes(item.status))return;
     if(status==='done'&&current._ibtaSubmitted&&str(msg.finalUsername,300)&&str(msg.password,300)&&msg.step==='dashboard'){
       item.status='done';item.username=msg.finalUsername;item.password=msg.password;
     }else{item.status='failed';item.error=status==='done'?'UNCONFIRMED':String(msg.reason||'REGISTRATION_FAILED').slice(0,400);}
     await chrome.storage.local.set({ibtaRun:run});await notify(run);
   }
+  async function cancelPendingRun(){
+    const {ibtaRun:run}=await chrome.storage.local.get('ibtaRun');if(!run)return;
+    for(const item of run.items)if(item.status==='pending'){item.status='cancelled';item.error='STOPPED';}
+    await chrome.storage.local.set({ibtaRun:run});await notify(run);
+  }
   async function reserved(){const {ibtaRun:run}=await chrome.storage.local.get('ibtaRun');return !!run?.items.some(i=>['pending','done'].includes(i.status));}
-  return {enqueue,trustedStep,submitted:(msg,sender)=>queue(()=>markSubmitted(msg,sender)),record:(msg,state,status)=>queue(()=>recordResult(msg,state,status)),reserved};
+  return {enqueue,trustedStep,submitted:(msg,sender)=>queue(()=>markSubmitted(msg,sender)),record:(msg,state,status)=>queue(()=>recordResult(msg,state,status)),cancelPending:()=>queue(cancelPendingRun),reserved};
 })();

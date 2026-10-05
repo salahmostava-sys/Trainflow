@@ -337,9 +337,9 @@ async function handleStepDone(msg, state) {
     await chrome.storage.local.set({ queue, queueIndex: queueIndex + 1 });
     accepted = true;
   }
-  if (!accepted && queue) {
+  if (!accepted) {
     await addRunLog(`Ignored stale done message: ${entry.name || entry.finalUsername || 'Unknown item'}`, 'warn');
-    return;
+    throw Error('OUTDATED_RESULT');
   }
 
   await IbtaRegistration.record(msg,state,'done');
@@ -402,9 +402,9 @@ async function handleStepFailed(msg, state) {
     await chrome.storage.local.set({ queue, queueIndex: queueIndex + 1 });
     accepted = true;
   }
-  if (!accepted && queue) {
+  if (!accepted) {
     await addRunLog(`Ignored stale failed message: ${entry.name || 'Unknown item'} - ${entry.reason}`, 'warn');
-    return;
+    throw Error('OUTDATED_RESULT');
   }
   await IbtaRegistration.record(msg,state,'failed');
   await saveToHistory(entry);
@@ -512,13 +512,16 @@ async function handleRetryFailed() {
 }
 
 async function handleClearSession() {
+  await handleStopQueue();
   await closeRegistrationWindow();
+  await IbtaRegistration.cancelPending();
   await chrome.storage.local.remove(['queue', 'queueIndex', 'currentItem', 'isRunning', 'singleRunning', 'currentTabId', 'copiedCreds', 'savedCreds', 'currentProcessingId', 'activeQueueId', 'lastDedupeSkipped', 'regWindowId', 'batchSource']);
   await chrome.storage.local.set({ runLogs: [] });
   await updateBadge();
 }
 
-async function handleMessage(msg) {
+async function handleMessage(msg, sender) {
+  if (['stepDone','stepFailed'].includes(msg.action) && !await IbtaRegistration.trustedStep(msg, sender)) throw Error('FORBIDDEN');
   if (['startSingle','startQueue','retryFailed'].includes(msg.action) && await IbtaRegistration.reserved()) throw Error('IBTA_JOB_PENDING');
   const state = await getState();
   const handlers = {
@@ -575,10 +578,13 @@ chrome.contextMenus.onClicked.addListener(async (info) => {
       await openNextTab();
     }
   } else if (info.menuItemId === "stop_clear") {
-    await closeRegistrationWindow();
-    await chrome.storage.local.set({ isRunning: false, singleRunning: false, queue: [], queueIndex: 0, runLogs: [] });
-    await chrome.storage.local.remove(['currentItem', 'currentTabId', 'copiedCreds', 'savedCreds', 'currentProcessingId', 'activeQueueId', 'lastDedupeSkipped', 'regWindowId']);
-    await updateBadge();
+    await new Promise((resolve, reject) => {
+      backgroundMsgQueue.push({
+        msg: { action: 'clearSession' },
+        sendResponse: response => response.ok ? resolve() : reject(Error(response.error))
+      });
+      processBackgroundQueue();
+    });
   }
 });
 

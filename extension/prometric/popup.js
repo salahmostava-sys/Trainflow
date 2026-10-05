@@ -372,7 +372,7 @@ async function sendMsg(payload) {
   }
 }
 
-async function confirmReplaceRunning() {
+async function confirmReplaceRunning(feedback) {
   const { isRunning, singleRunning, queue = [] } = await chrome.storage.local.get(['isRunning', 'singleRunning', 'queue']);
   if (!isRunning && !singleRunning) return true;
   const isBatch = isRunning && queue.length > 1;
@@ -380,8 +380,17 @@ async function confirmReplaceRunning() {
     ? `A batch is already running with ${queue.length} queued item(s). Stop it and start a new one?`
     : 'A single registration is already running. Stop it and start a new one?';
   if (!confirm(msg)) return false;
-  await sendMsg({ action: 'clearSession' });
-  return true;
+  return sendCommand({ action: 'clearSession' }, feedback);
+}
+
+async function sendCommand(payload, feedback) {
+  const response = await sendMsg(payload);
+  if (response?.ok === true) return true;
+  const message = response?.error === 'IBTA_JOB_PENDING'
+    ? 'Save or review the pending TrainFlow results before starting another registration.'
+    : 'Operation failed: ' + (response?.error || 'Extension did not respond.');
+  showMessage(feedback, 'err', message);
+  return false;
 }
 
 function wipeSinglePane() {
@@ -524,7 +533,7 @@ function wipeSheetPane() {
 
 async function clearCurrentSession() {
   if (!confirm('Clear the current session only? History and settings will be kept.')) return;
-  await sendMsg({ action: 'clearSession' });
+  if (!await sendCommand({ action: 'clearSession' }, document.getElementById('bMsg'))) return;
   wipeSinglePane();
   wipeExcelPane();
   wipeSheetPane();
@@ -721,8 +730,8 @@ document.getElementById('importSettingsFile')?.addEventListener('change', (e) =>
 
 document.getElementById('clearAllData')?.addEventListener('click', async () => {
   if (!confirm('Warning Are you sure? This will delete History and Active Queues, but KEEP your Settings.')) return;
-  const toClear = ['history', 'queue', 'queueIndex', 'currentItem', 'isRunning', 'singleRunning', 'savedCreds', 'copiedCreds', 'currentTabId', 'currentProcessingId', 'activeQueueId', 'lastDedupeSkipped', 'runLogs'];
-  await chrome.storage.local.remove(toClear);
+  if (!await sendCommand({ action: 'clearSession' }, backupMsgEl)) return;
+  await chrome.storage.local.remove('history');
   location.reload();
 });
 
@@ -776,7 +785,7 @@ sStart.addEventListener('click', async () => {
   const pattern = patternInput ? patternInput.value : '{F}@{f}#$1970';
   const c = generateCredentials(sName.value, pattern);
   if (!c) return;
-  if (!(await confirmReplaceRunning())) return;
+  if (!(await confirmReplaceRunning(sMsg))) return;
   if (savedCredsPanel) savedCredsPanel.style.display = 'none';
   await chrome.storage.local.remove(['savedCreds']);
   // Do NOT pre-save savedCreds here — the panel should only appear once
@@ -784,7 +793,7 @@ sStart.addEventListener('click', async () => {
   // via stepDone, which is the only moment we want the panel to show.
   const { defAddress, defCity, defState, defPostal, defCountry } = await chrome.storage.local.get(['defAddress', 'defCity', 'defState', 'defPostal', 'defCountry']);
 
-  await sendMsg({
+  if (!await sendCommand({
     action: 'startSingle',
     source: 'single',
     item: {
@@ -796,7 +805,7 @@ sStart.addEventListener('click', async () => {
       postalCode: defPostal || '00000',
       country: defCountry || 'Saudi Arabia'
     }
-  });
+  }, sMsg)) return;
 
   sMsg.className = 'msg ok';
   sMsg.textContent = 'OK Opened! Filling in progress...';
@@ -1022,8 +1031,8 @@ function downloadRowsAsCSV(rows, filename) {
 }
 
 document.getElementById('clearQueue')?.addEventListener('click', async () => {
+  if (!await sendCommand({ action: 'clearSession' }, document.getElementById('bMsg'))) return;
   wipeExcelPane();
-  await chrome.storage.local.remove(['queue', 'queueIndex', 'currentItem', 'currentProcessingId', 'activeQueueId', 'batchSource']);
   setBatchControlsState('idle');
 });
 
@@ -1079,7 +1088,7 @@ async function checkHistoryDuplicates(items) {
 }
 
 bStart.addEventListener('click', async () => {
-  if (!(await confirmReplaceRunning())) return;
+  if (!(await confirmReplaceRunning(bMsg))) return;
   const stats = validateBatchItems(batchItems);
   renderValidation(batchValidation, batchValidationBody, batchValidationStatus, stats);
   if (stats.hasBlockingIssues) {
@@ -1098,7 +1107,7 @@ bStart.addEventListener('click', async () => {
     postalCode:     defPostal  || '00000',
     country:        defCountry || 'Saudi Arabia'
   }));
-  await sendMsg({ action: 'startQueue', items, source: 'excel' });
+  if (!await sendCommand({ action: 'startQueue', items, source: 'excel' }, bMsg)) return;
   batchBanner.classList.add('show');
 
   setBatchControlsState('running');
@@ -1112,27 +1121,27 @@ bStart.addEventListener('click', async () => {
 
 pauseBatchBtn?.addEventListener('click', async () => {
   // pauseQueue: only sets isRunning=false, queue is preserved for resume.
-  await sendMsg({ action: 'pauseQueue' });
+  if (!await sendCommand({ action: 'pauseQueue' }, bMsg)) return;
   setBatchControlsState('paused');
   showMessage(bMsg, 'ok', 'Batch paused. Click Resume to continue.');
 });
 
 resumeBatchBtn?.addEventListener('click', async () => {
-  await sendMsg({ action: 'resumeQueue' });
+  if (!await sendCommand({ action: 'resumeQueue' }, bMsg)) return;
   setBatchControlsState('running');
   showMessage(bMsg, 'ok', 'Resuming batch registration.');
 });
 
 cancelBatchBtn?.addEventListener('click', async () => {
-  await sendMsg({ action: 'clearSession' });
+  if (!await sendCommand({ action: 'clearSession' }, bMsg)) return;
   setBatchControlsState('idle');
   if (sStart) sStart.style.display = 'block';
   showMessage(bMsg, 'err', 'Execution stopped and queue cleared.');
 });
 
 retryFailedBtn?.addEventListener('click', async () => {
-  if (!(await confirmReplaceRunning())) return;
-  await sendMsg({ action: 'retryFailed' });
+  if (!(await confirmReplaceRunning(bMsg))) return;
+  if (!await sendCommand({ action: 'retryFailed' }, bMsg)) return;
   showMessage(bMsg, 'ok', 'Retrying failed registrations.');
 });
 
@@ -1141,9 +1150,9 @@ document.getElementById('clearCurrentSessionSettings')?.addEventListener('click'
 document.getElementById('sheetClearSession')?.addEventListener('click', clearCurrentSession);
 
 document.getElementById('sheetRetryFailed')?.addEventListener('click', async () => {
-  if (!(await confirmReplaceRunning())) return;
-  await sendMsg({ action: 'retryFailed' });
   const sheetMsg = document.getElementById('sheetMsg');
+  if (!(await confirmReplaceRunning(sheetMsg))) return;
+  if (!await sendCommand({ action: 'retryFailed' }, sheetMsg)) return;
   if (sheetMsg) showMessage(sheetMsg, 'ok', 'Retrying failed registrations.');
 });
 
@@ -2189,7 +2198,7 @@ document.getElementById('sheetSelectAll')?.addEventListener('change', (e) => {
 
 
 async function processSheetStart() {
-  if (!(await confirmReplaceRunning())) return;
+  if (!(await confirmReplaceRunning(document.getElementById('sheetMsg')))) return;
   const nIdx = parseInt(document.getElementById('sheetNameCol').value);
   const eIdx = parseInt(document.getElementById('sheetEmailCol').value);
   const daySel = document.getElementById('sheetDayCol');
@@ -2239,7 +2248,7 @@ async function processSheetStart() {
     country:        defCountry || 'Saudi Arabia'
   }));
 
-  await sendMsg({ action: 'startQueue', items, source: 'sheet' });
+  if (!await sendCommand({ action: 'startQueue', items, source: 'sheet' }, document.getElementById('sheetMsg'))) return;
   if (batchBanner) batchBanner.classList.add('show');
 
   setBatchControlsState('running');

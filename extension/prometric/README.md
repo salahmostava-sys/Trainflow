@@ -1,4 +1,4 @@
-# Prometric Auto Register — TrainFlow 4.1.1
+# Prometric Auto Register — TrainFlow 4.1.2
 
 Integrated from the user's Prometric Auto Register 4.0 source (Salah Mostafa,
 ISC license). Its original popup, registration steps, generation pattern,
@@ -20,6 +20,14 @@ results reconnect to the same tab's session. If that tab was closed, open the sa
 user's sheet, choose Prometric registration and Recover results from a closed tab.
 Recovery is blocked while the original tab remains open. If saving fails, the extension keeps
 the confirmed credentials until TrainFlow acknowledges a successful sheet save.
+Clearing a session or queue cancels its pending TrainFlow rows and closes the
+registration tab. Confirmed results remain recoverable until saved or manually
+reviewed; save or review them before starting another batch. Late results from
+the cleared registration tab are rejected. Clearing history keeps these unsaved
+TrainFlow results as well as the extension settings.
+Popup controls report a failed extension command instead of claiming it started,
+paused or cleared a registration. Unsaved TrainFlow results must be saved or
+reviewed before the popup can start another registration.
 Review results manually when a row changed, was removed, has duplicate identity
 data or already contains different credentials. TrainFlow never overwrites existing
 Username/Password automatically. For changed/duplicate rows, copy the credentials

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Prometric Auto Register — TrainFlow",
-  "version": "4.1.1",
+  "version": "4.1.2",
   "description": "Prometric registration linked to your TrainFlow trainee sheet",
   "permissions": [
     "tabs",
