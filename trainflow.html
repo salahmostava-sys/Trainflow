@@ -53,6 +53,8 @@ if(window.history)window.history.scrollRestoration='manual';
 
   header.top{display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; gap:10px;}
   .brand{display:flex; align-items:center; gap:11px; min-width:0;}
+  html:not([data-sidebar="closed"]) header.top .brand{display:none;}
+  header.top .brand-mark, header.top .brand>div{display:none;}
   .brand-mark{
     width:40px; height:40px; border-radius:12px; background:linear-gradient(135deg, var(--blue), var(--blue-600));
     display:flex; align-items:center; justify-content:center; font-weight:700; color:#fff; font-size:17px; flex:none;
@@ -60,7 +62,7 @@ if(window.history)window.history.scrollRestoration='manual';
   }
   .brand h1{font-size:19.5px; margin:0; font-weight:700; letter-spacing:-.2px;}
 
-  .header-actions{display:flex; align-items:center; gap:8px; flex:none;}
+  .header-actions{display:flex; align-items:center; gap:8px; flex:none; margin-inline-start:auto;}
   .icon-pill-btn{
     height:38px; padding:0 12px; border-radius:10px; border:1px solid var(--border); background:var(--surface);
     color:var(--muted); font-size:14.5px; font-weight:700; font-family:inherit; cursor:pointer;
@@ -84,9 +86,12 @@ if(window.history)window.history.scrollRestoration='manual';
   .account-option svg{width:17px;height:17px;flex:none;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
 
   #app.wrap{max-width:1600px;padding-left:16px;padding-right:264px;}
+  #app.sheet-wide{max-width:none;width:100%;margin:0;box-sizing:border-box;padding-left:20px;padding-right:260px;}
   #app:not(.sheet-wide)>section.panel{max-width:920px;margin-inline:auto;}
   html[data-sidebar-size="compact"] #app.wrap{padding-right:112px;}
+  html[data-sidebar-size="compact"] #app.sheet-wide{padding-right:104px;}
   html[data-sidebar="closed"] #app.wrap{padding-right:16px;}
+  html[data-sidebar="closed"] #app.sheet-wide{padding-right:20px;}
   #workspace-sidebar{position:fixed;right:16px;left:auto;top:16px;bottom:16px;width:224px;padding:16px 12px;background:linear-gradient(180deg,#f2f7ff,#fff 55%);border:1px solid var(--border);border-radius:18px;box-shadow:var(--shadow);z-index:42;overflow-y:auto;}
   html[data-sidebar="closed"] #workspace-sidebar{display:none;}
   .sidebar-heading{display:flex;align-items:center;gap:9px;padding:0 2px 20px;margin-bottom:12px;border-bottom:1px solid var(--border);}
@@ -106,7 +111,7 @@ if(window.history)window.history.scrollRestoration='manual';
   nav.tabs button svg{width:20px;height:20px;flex:none;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;}
   nav.tabs button:hover{background:var(--blue-50);color:var(--blue-600);}
   nav.tabs button.active{background:var(--blue);color:#fff;box-shadow:0 3px 10px rgba(0,112,243,.2);}
-  nav.tabs button:focus-visible,#sidebar-toggle:focus-visible,#sidebar-close:focus-visible,#sidebar-compact:focus-visible{outline:3px solid var(--blue-100);outline-offset:2px;}
+  nav.tabs button:focus-visible,#sidebar-toggle:focus-visible,#sidebar-compact:focus-visible{outline:3px solid var(--blue-100);outline-offset:2px;}
   #sidebar-toggle svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;}
   .sidebar-backdrop{position:fixed;inset:0;border:0;background:#0f1b2e45;z-index:41;cursor:pointer;}
   @media(max-width:760px){#app.wrap{padding-right:16px;}html[data-sidebar-size="compact"] #app.wrap{padding-right:108px;}html[data-sidebar="closed"] #app.wrap{padding-right:16px;}#workspace-sidebar{width:min(270px,calc(100vw - 36px));right:12px;top:12px;bottom:12px;}}
@@ -1006,7 +1011,7 @@ if(window.history)window.history.scrollRestoration='manual';
     </main>
   </div>
 </section>
-<div class="wrap" id="app" hidden>
+<div class="wrap sheet-wide" id="app" hidden>
   <div class="app-sticky-bar">
   <header class="top">
     <div class="brand">
@@ -1031,20 +1036,20 @@ if(window.history)window.history.scrollRestoration='manual';
 
   <button class="sidebar-backdrop" id="sidebar-backdrop" type="button" aria-label="إغلاق القائمة الجانبية" hidden></button>
   <aside id="workspace-sidebar" aria-label="الصفحات">
-    <div class="sidebar-heading"><span class="brand-mark" aria-hidden="true">TF</span><strong>TrainFlow</strong><div class="sidebar-controls"><button class="icon-pill-btn square" id="sidebar-compact" type="button" aria-controls="workspace-sidebar" aria-expanded="true" aria-label="تصغير القائمة الجانبية"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button><button class="icon-pill-btn square" id="sidebar-close" type="button" aria-label="إغلاق القائمة الجانبية">×</button></div></div>
+    <div class="sidebar-heading"><span class="brand-mark" aria-hidden="true">TF</span><strong>TrainFlow</strong><div class="sidebar-controls"><button class="icon-pill-btn square" id="sidebar-compact" type="button" aria-controls="workspace-sidebar" aria-expanded="true" aria-label="تصغير القائمة الجانبية"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button></div></div>
   <nav class="tabs" aria-label="الصفحات">
-    <button data-tab="keycodes" class="active" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="8" r="4"/><path d="m11 11 9 9m-4-4 3-3m-6 0 3-3"/></svg><span data-i18n="tabKeycodes">Keycodes</span></button>
+    <button data-tab="trainees" id="trainees-tab" class="active" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3 20v-2a6 6 0 0 1 12 0v2m2-15a3 3 0 0 1 0 6m1 3a5 5 0 0 1 3 4v2"/></svg><span id="sidebar-trainees-label">المتدربون</span></button>
+    <button data-tab="keycodes"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="8" r="4"/><path d="m11 11 9 9m-4-4 3-3m-6 0 3-3"/></svg><span data-i18n="tabKeycodes">Keycodes</span></button>
     <button data-tab="prometric"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8m-4-4v4m-5-10 3 3 7-7"/></svg><span data-i18n="tabPrometric">Prometric</span></button>
     <button data-tab="codes"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h18v4a2 2 0 0 0 0 4v3H3v-3a2 2 0 0 0 0-4Z"/><path d="M15 7v2m0 3v2m0 2v2"/></svg><span data-i18n="tabCodes">VOUCHERS</span></button>
     <button data-tab="inventory"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 7 9-4 9 4v10l-9 4-9-4Zm0 0 9 4 9-4m-9 4v10M7 5l9 4"/></svg><span data-i18n="tabInventory">Inventory</span></button>
-    <button data-tab="trainees" id="trainees-tab"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3 20v-2a6 6 0 0 1 12 0v2m2-15a3 3 0 0 1 0 6m1 3a5 5 0 0 1 3 4v2"/></svg><span id="sidebar-trainees-label">المتدربون</span></button>
     <button data-tab="settings"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v3m0 12v3M3 12h3m12 0h3M5.6 5.6l2.1 2.1m8.6 8.6 2.1 2.1M5.6 18.4l2.1-2.1m8.6-8.6 2.1-2.1"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg><span data-i18n="settingsTitle">الإعدادات</span></button>
   </nav>
   </aside>
   </div>
 
   <!-- TAB 1: KEYCODES -->
-  <section class="panel active" id="panel-keycodes"></section>
+  <section class="panel" id="panel-keycodes"></section>
 
   <!-- TAB 2: PROMETRIC -->
   <section class="panel" id="panel-prometric">
@@ -1130,7 +1135,7 @@ if(window.history)window.history.scrollRestoration='manual';
     </div>
   </section>
 
-  <section class="panel" id="panel-trainees"></section>
+  <section class="panel active" id="panel-trainees"></section>
 
   <!-- SETTINGS (opened from the account menu) -->
   <section class="panel" id="panel-settings">
@@ -1988,138 +1993,274 @@ function toggleLanguage(){
 document.getElementById('lang-btn').addEventListener('click',toggleLanguage);
 document.getElementById('auth-lang-btn').addEventListener('click',toggleLanguage);
 
-// ---------- TABS ----------
-function setSidebarOpen(open,persist=false){
-  window.IBTA_SIDEBAR_OPEN=Boolean(open);
-  document.getElementById('html-root').dataset.sidebar=open?'open':'closed';
-  if(persist)try{localStorage.setItem('trainflow_sidebar_open',open?'1':'0');}catch{}
+// =============================================
+// SIDEBAR — open / closed / compact state
+// =============================================
+
+function setSidebarOpen(open, persist = false) {
+  window.IBTA_SIDEBAR_OPEN = Boolean(open);
+  document.getElementById('html-root').dataset.sidebar = open ? 'open' : 'closed';
+  if (persist) {
+    try { localStorage.setItem('trainflow_sidebar_open', open ? '1' : '0'); } catch {}
+  }
   updateSidebar();
 }
-function updateSidebar(){
-  const open=Boolean(window.IBTA_SIDEBAR_OPEN),compact=Boolean(window.IBTA_SIDEBAR_COMPACT),toggle=document.getElementById('sidebar-toggle'),sidebar=document.getElementById('workspace-sidebar'),sizeButton=document.getElementById('sidebar-compact');
-  toggle.setAttribute('aria-expanded',String(open));
-  toggle.title=t(open?'sidebarClose':'sidebarOpen');toggle.setAttribute('aria-label',toggle.title);
-  sidebar.inert=!open;sidebar.setAttribute('aria-label',t('sidebarPages'));
-  document.querySelector('nav.tabs').setAttribute('aria-label',t('sidebarPages'));
-  document.querySelectorAll('nav.tabs button[data-tab]').forEach(button=>{const label=button.querySelector('span')?.textContent||'';button.title=label;button.setAttribute('aria-label',label);});
-  sizeButton.title=t(compact?'sidebarExpand':'sidebarShrink');sizeButton.setAttribute('aria-label',sizeButton.title);sizeButton.setAttribute('aria-expanded',String(!compact));
-  for(const id of ['sidebar-close','sidebar-backdrop'])document.getElementById(id).setAttribute('aria-label',t('sidebarClose'));
-  document.getElementById('sidebar-backdrop').hidden=!open||compact||!window.matchMedia?.('(max-width:760px)')?.matches;
+
+function updateSidebar() {
+  const open       = Boolean(window.IBTA_SIDEBAR_OPEN);
+  const compact    = Boolean(window.IBTA_SIDEBAR_COMPACT);
+  const toggle     = document.getElementById('sidebar-toggle');
+  const sidebar    = document.getElementById('workspace-sidebar');
+  const sizeButton = document.getElementById('sidebar-compact');
+  const backdrop   = document.getElementById('sidebar-backdrop');
+
+  // Toggle button
+  toggle.setAttribute('aria-expanded', String(open));
+  toggle.title = t(open ? 'sidebarClose' : 'sidebarOpen');
+  toggle.setAttribute('aria-label', toggle.title);
+
+  // Sidebar panel
+  sidebar.inert = !open;
+  sidebar.setAttribute('aria-label', t('sidebarPages'));
+
+  // Tab labels
+  document.querySelector('nav.tabs').setAttribute('aria-label', t('sidebarPages'));
+  document.querySelectorAll('nav.tabs button[data-tab]').forEach(button => {
+    const label = button.querySelector('span')?.textContent || '';
+    button.title = label;
+    button.setAttribute('aria-label', label);
+  });
+
+  // Compact / expand size button
+  sizeButton.title = t(compact ? 'sidebarExpand' : 'sidebarShrink');
+  sizeButton.setAttribute('aria-label', sizeButton.title);
+  sizeButton.setAttribute('aria-expanded', String(!compact));
+
+  // Mobile backdrop
+  if (backdrop) {
+    backdrop.setAttribute('aria-label', t('sidebarClose'));
+    backdrop.hidden = !open || compact || !window.matchMedia?.('(max-width:760px)')?.matches;
+  }
 }
-document.getElementById('sidebar-compact').addEventListener('click',()=>{
-  window.IBTA_SIDEBAR_COMPACT=!window.IBTA_SIDEBAR_COMPACT;
-  document.getElementById('html-root').dataset.sidebarSize=window.IBTA_SIDEBAR_COMPACT?'compact':'expanded';
-  try{localStorage.setItem('trainflow_sidebar_compact',window.IBTA_SIDEBAR_COMPACT?'1':'0');}catch{}
+
+// Compact toggle
+document.getElementById('sidebar-compact').addEventListener('click', () => {
+  window.IBTA_SIDEBAR_COMPACT = !window.IBTA_SIDEBAR_COMPACT;
+  document.getElementById('html-root').dataset.sidebarSize = window.IBTA_SIDEBAR_COMPACT ? 'compact' : 'expanded';
+  try { localStorage.setItem('trainflow_sidebar_compact', window.IBTA_SIDEBAR_COMPACT ? '1' : '0'); } catch {}
   updateSidebar();
 });
-document.getElementById('sidebar-toggle').addEventListener('click',()=>setSidebarOpen(!window.IBTA_SIDEBAR_OPEN,true));
-for(const id of ['sidebar-close','sidebar-backdrop'])document.getElementById(id).addEventListener('click',()=>{setSidebarOpen(false,true);document.getElementById('sidebar-toggle').focus();});
-window.addEventListener('resize',updateSidebar);
-document.addEventListener('keydown',e=>{if(e.key==='Escape'&&window.IBTA_SIDEBAR_OPEN&&!document.querySelector('dialog[open]')){setSidebarOpen(false,true);document.getElementById('sidebar-toggle').focus();}});
+
+// Open / close via toggle button
+document.getElementById('sidebar-toggle').addEventListener('click', () => {
+  setSidebarOpen(!window.IBTA_SIDEBAR_OPEN, true);
+});
+
+// Close via mobile backdrop tap
+document.getElementById('sidebar-backdrop')?.addEventListener('click', () => {
+  setSidebarOpen(false, true);
+  document.getElementById('sidebar-toggle')?.focus();
+});
+
+// Re-evaluate backdrop visibility on resize
+window.addEventListener('resize', updateSidebar);
+
+// Close sidebar with Escape key (unless a dialog is open)
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && window.IBTA_SIDEBAR_OPEN && !document.querySelector('dialog[open]')) {
+    setSidebarOpen(false, true);
+    document.getElementById('sidebar-toggle').focus();
+  }
+});
+
 updateSidebar();
-const SETTINGS_TAB_IDS=['profile','data','prometric','inventory','extensions','reports','sync'];
-function workspaceView(){try{return JSON.parse(localStorage.getItem('ibta_workspace_view:'+Cloud.userId())||'{}')||{};}catch{return {};}}
-function rememberWorkspaceView(change){if(!Cloud.userId())return;try{localStorage.setItem('ibta_workspace_view:'+Cloud.userId(),JSON.stringify({...workspaceView(),...change}));}catch{}}
-async function restoreWorkspaceView(){
-  if(document.readyState==='loading')await new Promise(resolve=>document.addEventListener('DOMContentLoaded',resolve,{once:true}));
-  const saved=workspaceView(),view={panel:'keycodes',...saved,...(window.TRAINFLOW_ROUTE_VIEW?.()||{})};if(!['keycodes','prometric','codes','inventory','trainees','settings'].includes(view.panel))return;
-  await showPanel(view.panel);if(view.panel==='settings')activateSettingsTab(view.settingsTab||'profile');
-  if(saved.panel===view.panel&&Number.isFinite(view.pageTop)&&view.pageTop>=0)window.scrollTo(0,Math.min(view.pageTop,10000000));
+
+// =============================================
+// WORKSPACE VIEW — persist & restore panel
+// =============================================
+
+const SETTINGS_TAB_IDS = ['profile', 'data', 'prometric', 'inventory', 'extensions', 'reports', 'sync'];
+
+function workspaceView() {
+  try {
+    return JSON.parse(localStorage.getItem('ibta_workspace_view:' + Cloud.userId()) || '{}') || {};
+  } catch { return {}; }
 }
-function saveWorkspaceScroll(){const app=document.getElementById('app');if(!app.hidden&&!app.classList.contains('workspace-restoring'))rememberWorkspaceView({pageTop:window.scrollY});}
+
+function rememberWorkspaceView(change) {
+  if (!Cloud.userId()) return;
+  try {
+    localStorage.setItem(
+      'ibta_workspace_view:' + Cloud.userId(),
+      JSON.stringify({ ...workspaceView(), ...change })
+    );
+  } catch {}
+}
+
+async function restoreWorkspaceView() {
+  if (document.readyState === 'loading') {
+    await new Promise(resolve => document.addEventListener('DOMContentLoaded', resolve, { once: true }));
+  }
+  const saved   = workspaceView();
+  const view    = { panel: 'trainees', ...saved, ...(window.TRAINFLOW_ROUTE_VIEW?.() || {}) };
+  const valid   = ['keycodes', 'prometric', 'codes', 'inventory', 'trainees', 'settings'];
+  if (!valid.includes(view.panel)) return;
+
+  await showPanel(view.panel);
+  if (view.panel === 'settings') activateSettingsTab(view.settingsTab || 'profile');
+  if (saved.panel === view.panel && Number.isFinite(view.pageTop) && view.pageTop >= 0) {
+    window.scrollTo(0, Math.min(view.pageTop, 10000000));
+  }
+}
+
+function saveWorkspaceScroll() {
+  const app = document.getElementById('app');
+  if (!app.hidden && !app.classList.contains('workspace-restoring')) {
+    rememberWorkspaceView({ pageTop: window.scrollY });
+  }
+}
+
 let workspaceScrollTimer;
-window.addEventListener('scroll',()=>{clearTimeout(workspaceScrollTimer);workspaceScrollTimer=setTimeout(saveWorkspaceScroll,200);},{passive:true});
-window.addEventListener('beforeunload',saveWorkspaceScroll);window.addEventListener('pagehide',saveWorkspaceScroll);
-function updateSettingsProfileHero(){
-  const avatar=document.getElementById('settings-hero-avatar');
-  const nameEl=document.getElementById('settings-hero-name');
-  const emailEl=document.getElementById('settings-hero-email');
-  const roleEl=document.getElementById('settings-hero-role');
-  if(!avatar||!nameEl||!emailEl||!roleEl)return;
-  const accAvatar=document.getElementById('account-avatar')?.textContent || 'TF';
-  const accName=document.getElementById('account-menu-name')?.textContent || '';
-  const accEmail=document.getElementById('account-menu-email')?.textContent || '';
-  avatar.textContent=accAvatar;
-  nameEl.textContent=accName || (typeof t==='function'?t('currentAccount'):'الحساب الحالي');
-  emailEl.textContent=accEmail;
-  const role=typeof Cloud!=='undefined'&&Cloud.role?Cloud.role():'admin';
-  const roleKey=role==='admin'?'roleAdmin':role==='operator'?'roleOperator':'roleCopyOnly';
-  roleEl.textContent=(typeof t==='function'?t(roleKey):'')||role;
+window.addEventListener('scroll', () => {
+  clearTimeout(workspaceScrollTimer);
+  workspaceScrollTimer = setTimeout(saveWorkspaceScroll, 200);
+}, { passive: true });
+window.addEventListener('beforeunload', saveWorkspaceScroll);
+window.addEventListener('pagehide',     saveWorkspaceScroll);
+
+// =============================================
+// SETTINGS PANEL — profile hero & tab routing
+// =============================================
+
+function updateSettingsProfileHero() {
+  const avatar  = document.getElementById('settings-hero-avatar');
+  const nameEl  = document.getElementById('settings-hero-name');
+  const emailEl = document.getElementById('settings-hero-email');
+  const roleEl  = document.getElementById('settings-hero-role');
+  if (!avatar || !nameEl || !emailEl || !roleEl) return;
+
+  avatar.textContent  = document.getElementById('account-avatar')?.textContent || 'TF';
+  nameEl.textContent  = document.getElementById('account-menu-name')?.textContent  || (typeof t === 'function' ? t('currentAccount') : 'الحساب الحالي');
+  emailEl.textContent = document.getElementById('account-menu-email')?.textContent || '';
+
+  const role    = typeof Cloud !== 'undefined' && Cloud.role ? Cloud.role() : 'admin';
+  const roleKey = role === 'admin' ? 'roleAdmin' : role === 'operator' ? 'roleOperator' : 'roleCopyOnly';
+  roleEl.textContent = (typeof t === 'function' ? t(roleKey) : '') || role;
 }
-function activateSettingsTab(id){
-  if(!SETTINGS_TAB_IDS.includes(id) || document.getElementById('settings-tab-'+id).hidden)id='profile';
-  SETTINGS_TAB_IDS.forEach(tabId=>{
-    const button=document.getElementById('settings-tab-'+tabId);
-    const active=tabId===id;
-    button.setAttribute('aria-selected',String(active));
-    button.tabIndex=active?0:-1;
-    document.getElementById('settings-pane-'+tabId).hidden=!active;
+
+function activateSettingsTab(id) {
+  if (!SETTINGS_TAB_IDS.includes(id) || document.getElementById('settings-tab-' + id).hidden) {
+    id = 'profile';
+  }
+  SETTINGS_TAB_IDS.forEach(tabId => {
+    const button = document.getElementById('settings-tab-' + tabId);
+    const active = tabId === id;
+    button.setAttribute('aria-selected', String(active));
+    button.tabIndex = active ? 0 : -1;
+    document.getElementById('settings-pane-' + tabId).hidden = !active;
   });
-  rememberWorkspaceView({settingsTab:id});
+  rememberWorkspaceView({ settingsTab: id });
   window.TRAINFLOW_PANEL_CHANGED?.();
-  if(id==='profile')updateSettingsProfileHero();
+  if (id === 'profile') updateSettingsProfileHero();
 }
-SETTINGS_TAB_IDS.forEach(id=>{
-  const button=document.getElementById('settings-tab-'+id);
-  button.addEventListener('click',()=>activateSettingsTab(id));
-  button.addEventListener('keydown',e=>{
-    if(e.key!=='ArrowRight' && e.key!=='ArrowLeft')return;
+
+SETTINGS_TAB_IDS.forEach(id => {
+  const button = document.getElementById('settings-tab-' + id);
+  button.addEventListener('click', () => activateSettingsTab(id));
+  button.addEventListener('keydown', e => {
+    if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
     e.preventDefault();
-    const visible=SETTINGS_TAB_IDS.filter(tabId=>!document.getElementById('settings-tab-'+tabId).hidden);
-    const direction=e.key==='ArrowRight'?1:-1;
-    const next=visible[(visible.indexOf(id)+direction+visible.length)%visible.length];
+    const visible   = SETTINGS_TAB_IDS.filter(tabId => !document.getElementById('settings-tab-' + tabId).hidden);
+    const direction = e.key === 'ArrowRight' ? 1 : -1;
+    const next      = visible[(visible.indexOf(id) + direction + visible.length) % visible.length];
     activateSettingsTab(next);
-    document.getElementById('settings-tab-'+next).focus();
+    document.getElementById('settings-tab-' + next).focus();
   });
 });
-function closeAccountMenu(){
-  document.getElementById('account-menu-popover').hidden=true;
-  document.getElementById('account-menu-btn').setAttribute('aria-expanded','false');
+
+// =============================================
+// ACCOUNT MENU
+// =============================================
+
+function closeAccountMenu() {
+  document.getElementById('account-menu-popover').hidden = true;
+  document.getElementById('account-menu-btn').setAttribute('aria-expanded', 'false');
 }
-document.getElementById('account-menu-btn').addEventListener('click',()=>{
-  const menu=document.getElementById('account-menu-popover');
-  const opening=menu.hidden;
-  menu.hidden=!opening;
-  document.getElementById('account-menu-btn').setAttribute('aria-expanded',String(opening));
+
+document.getElementById('account-menu-btn').addEventListener('click', () => {
+  const menu    = document.getElementById('account-menu-popover');
+  const opening = menu.hidden;
+  menu.hidden   = !opening;
+  document.getElementById('account-menu-btn').setAttribute('aria-expanded', String(opening));
 });
-document.addEventListener('click',e=>{
-  if(!document.getElementById('account-menu').contains(e.target)) closeAccountMenu();
+
+// Close menu when clicking outside
+document.addEventListener('click', e => {
+  if (!document.getElementById('account-menu').contains(e.target)) closeAccountMenu();
 });
-document.addEventListener('keydown',e=>{
-  if(e.key==='Escape'&&!document.getElementById('account-menu-popover').hidden){
+
+// Close menu with Escape
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && !document.getElementById('account-menu-popover').hidden) {
     closeAccountMenu();
     document.getElementById('account-menu-btn').focus();
   }
 });
-function showPanel(id){
-  if(!['keycodes','prometric','codes','inventory','trainees','settings'].includes(id))return;
-  if(typeof Trainees!=='undefined')Trainees.savePosition();
+
+// =============================================
+// PANEL SWITCHING
+// =============================================
+
+function showPanel(id) {
+  const validPanels = ['keycodes', 'prometric', 'codes', 'inventory', 'trainees', 'settings'];
+  if (!validPanels.includes(id)) return;
+
+  if (typeof Trainees !== 'undefined') Trainees.savePosition();
   closeAccountMenu();
-  document.getElementById('app').classList.toggle('sheet-wide',id==='trainees');
-  if(id === 'keycodes') renderKeycodes();
-  document.querySelectorAll('nav.tabs button').forEach(b=>{b.classList.remove('active');b.removeAttribute('aria-current');});
-  document.querySelectorAll('section.panel').forEach(p=>p.classList.remove('active'));
-  document.getElementById('account-menu-btn').classList.toggle('active',id==='settings');
-  document.getElementById('panel-'+id).classList.add('active');
-  document.querySelector('nav.tabs button[data-tab="'+id+'"]')?.classList.add('active');
-  document.querySelector('nav.tabs button[data-tab="'+id+'"]')?.setAttribute('aria-current','page');
-  rememberWorkspaceView({panel:id});
+
+  // Full-width mode only for trainees panel
+  document.getElementById('app').classList.toggle('sheet-wide', id === 'trainees');
+
+  // Render panel-specific content if needed
+  if (id === 'keycodes') renderKeycodes();
+
+  // Deactivate all sidebar tabs and panels
+  document.querySelectorAll('nav.tabs button').forEach(b => {
+    b.classList.remove('active');
+    b.removeAttribute('aria-current');
+  });
+  document.querySelectorAll('section.panel').forEach(p => p.classList.remove('active'));
+
+  // Activate the requested panel and its tab
+  document.getElementById('account-menu-btn').classList.toggle('active', id === 'settings');
+  document.getElementById('panel-' + id).classList.add('active');
+  document.querySelector('nav.tabs button[data-tab="' + id + '"]')?.classList.add('active');
+  document.querySelector('nav.tabs button[data-tab="' + id + '"]')?.setAttribute('aria-current', 'page');
+
+  rememberWorkspaceView({ panel: id });
   window.TRAINFLOW_PANEL_CHANGED?.();
-  if(id==='codes'){codeTimelineReset=true;positionCodeTimeline();}
-  if(id==='trainees' && typeof Trainees!=='undefined')return Trainees.open();
+
+  // Panel-specific side effects
+  if (id === 'codes') { codeTimelineReset = true; positionCodeTimeline(); }
+  if (id === 'trainees' && typeof Trainees !== 'undefined') return Trainees.open();
 }
-window.TRAINFLOW_SHOW_PANEL=showPanel;
-window.TRAINFLOW_ACTIVATE_SETTINGS_TAB=activateSettingsTab;
-document.querySelectorAll('nav.tabs button').forEach(btn=>{
-  btn.addEventListener('click', async ()=>{
+
+window.TRAINFLOW_SHOW_PANEL             = showPanel;
+window.TRAINFLOW_ACTIVATE_SETTINGS_TAB  = activateSettingsTab;
+
+// Sidebar nav tab clicks
+document.querySelectorAll('nav.tabs button').forEach(btn => {
+  btn.addEventListener('click', async () => {
     showPanel(btn.dataset.tab);
-    if(btn.dataset.tab==='settings')activateSettingsTab('profile');
-    if(window.matchMedia?.('(max-width:760px)')?.matches&&!window.IBTA_SIDEBAR_COMPACT)setSidebarOpen(false);
+    if (btn.dataset.tab === 'settings') activateSettingsTab('profile');
+    if (window.matchMedia?.('(max-width:760px)')?.matches && !window.IBTA_SIDEBAR_COMPACT) setSidebarOpen(false);
     btn.classList.add('active');
-    if(btn.dataset.tab==='codes' || btn.dataset.tab==='inventory')await Cloud.refresh();
+    if (btn.dataset.tab === 'codes' || btn.dataset.tab === 'inventory') await Cloud.refresh();
   });
 });
-document.getElementById('settings-btn').addEventListener('click', async ()=>{
+
+// Settings shortcut button (account menu area)
+document.getElementById('settings-btn').addEventListener('click', async () => {
   showPanel('settings');
   activateSettingsTab('profile');
 });
