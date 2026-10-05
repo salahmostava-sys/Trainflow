@@ -586,7 +586,8 @@ const Trainees=(()=>{
     window.addEventListener('pagehide',savePosition);
     document.addEventListener('visibilitychange',()=>{if(document.hidden)savePosition();});
     if(typeof TraineeExcel!=='undefined')excelTools=TraineeExcel.mount({D,$,tr,node,button,
-      state:()=>({cells,formatting,view,owner,loaded,expandedView,labels:allLabels(),bounds:bounds(),cursor:{...cursor},cols:visibleCols(),filtered:filtered()}),
+      state:()=>({cells,formatting,view,owner,loaded:loaded&&!loading,expandedView,labels:allLabels(),importLabels:baseLabels,bounds:bounds(),cursor:{...cursor},cols:visibleCols(),filtered:filtered()}),
+      replaceSheet:(next,fmt)=>{change(next,false,fmt);const prefix=(owner||'default')+':';for(const key of Object.keys(cellAlignments))if(key.startsWith(prefix))delete cellAlignments[key];saveAlignments();clearFilters();render();focusCell(0,0);},
       commitEdit,change,formatSelection,focusCell,render,message,cutSelection,copySelection,pasteSelection,executePaste,
       insertRow,addColumn,editColumns,deleteSelectedRows,deleteSelectedCells,clearSelection,openFindDialog,
       select:(a,b)=>{commitEdit();anchor=a;cursor=b;paint();},
@@ -905,9 +906,9 @@ const Trainees=(()=>{
     badge.dataset.result=value==='ناجح'?'pass':value==='راسب'?'fail':value==='لم يدخل'?'absent':'';return badge;
   }
   let traineeHoverTimer;
-  function copyDetailValue(value,label,extraClass='',direction='auto'){
+  function copyDetailValue(value,label,extraClass='',direction='auto',displayValue=value){
     if(!value)return node('span','—');
-    const control=button(value,async()=>{if(await copyText(value))showToast(tr('تم النسخ','Copied'));else showToast(tr('تعذر النسخ. حاول مرة أخرى.','Could not copy. Please retry.'));},'sheet-detail-copy-value '+extraClass);
+    const control=button(displayValue,async()=>{if(await copyText(value))showToast(tr('تم النسخ','Copied'));else showToast(tr('تعذر النسخ. حاول مرة أخرى.','Could not copy. Please retry.'));},'sheet-detail-copy-value '+extraClass);
     control.dir=direction;control.title=tr('اضغط لنسخ ','Click to copy ')+label;control.setAttribute('aria-label',tr('نسخ ','Copy ')+label);
     return control;
   }
@@ -951,14 +952,15 @@ const Trainees=(()=>{
       const row=cells[index];if(!row?.[3])return;activeIndex=index;activeEpoch=epoch;
       hideDuplicateHint();dialog.dir=currentLang==='ar'?'rtl':'ltr';
       $('sheet-trainee-title').textContent=tr('بيانات المتدرب — ','Trainee details — ')+row[3];
-      const dl=node('dl'),login=node('dd',undefined,{dir:'ltr'});login.append(PROMETRIC_LOGIN_URL?copyDetailValue(PROMETRIC_LOGIN_URL,'Prometric login link','','ltr'):node('span',tr('غير محدد','Not configured')));
+      const dl=node('dl'),login=node('dd',undefined,{dir:'ltr'}),loginDisplay=PROMETRIC_LOGIN_URL.replace(/(\/Login).+$/i,'$1…');login.append(PROMETRIC_LOGIN_URL?copyDetailValue(PROMETRIC_LOGIN_URL,'Prometric login link','sheet-detail-login','ltr',loginDisplay):node('span',tr('غير محدد','Not configured')));
       dl.append(node('dt','Prometric login link',{dir:'ltr'}),login);appendDetailKeycode(dl,D.courseKeycode(row[7],DEFAULT_KEYCODES));appendPrometricDetails(dl);appendDetailField(dl,row,labels[0],0);
+      const codeValue=dl.lastElementChild;
       labels.forEach((pair,c)=>{if(c===0||c>=baseLabels.length&&!row[c]&&!formatting.headers[c])return;appendDetailField(dl,row,pair,c,false);});
       $('sheet-trainee-record').replaceChildren(dl);
       if(prometricTools&&!row[9]?.trim()&&!row[10]?.trim())$('sheet-trainee-record').append(button(tr('إنشاء حساب Prometric','Create Prometric account'),()=>{closeTraineeDetails();prometricTools.open([index]);},'sheet-primary sheet-create-prometric'));
       const refreshRecord=()=>{if(dialog.open&&activeIndex===index&&activeEpoch===epoch)show(index);};
       const exam=D.courseKeycode(row[7],DEFAULT_KEYCODES),category=exam&&(state.keycodeOverrides?.[exam.code]||exam.category),codeCategory=category&&getLinkedCodesCat(category);
-      const action=button(tr('جلب كود الاختبار ونسخه','Get and copy exam code'),async()=>{
+      const action=button('Get',async()=>{
         if(action.disabled)return;action.disabled=true;const token=epoch,selectedOwner=owner;
         try{
           if(!await flush())throw Error(tr('احفظ تعديلات الجدول أولًا.','Save sheet changes first.'));
@@ -973,9 +975,10 @@ const Trainees=(()=>{
           if(!await copyText(code))throw Error(tr('تم حفظ الكود. اضغط على قيمة الكود لنسخه.','Code saved. Click the code value to copy it.'));
           refreshRecord();showToast(tr('تم حجز الكود وحفظه ونسخه','Code reserved, saved and copied'));
         }catch(error){if(token===epoch&&owner===selectedOwner&&cells[index]?.[0]?.trim())refreshRecord();showToast(error.message||tr('تعذر جلب الكود','Could not get code'));}finally{action.disabled=!codeCategory;}
-      },'sheet-primary sheet-get-exam-code');
+      },'sheet-get-exam-code');
+      action.dir='ltr';action.setAttribute('aria-label',tr('جلب كود الاختبار','Get exam code'));
       action.disabled=!codeCategory;action.title=codeCategory?displayCatName(category):tr('لا توجد فئة اختبار مطابقة','No matching exam category');
-      if(!row[0]?.trim())$('sheet-trainee-record').append(action);if(!dialog.open)dialog.show();
+      if(!row[0]?.trim())codeValue.replaceChildren(action);if(!dialog.open)dialog.show();
     };
     const grid=$('sheet-grid');
     grid.addEventListener('dblclick',e=>{const td=e.target.closest('td[data-col="3"]');if(td){commitEdit();show(view[+td.dataset.v]);}});

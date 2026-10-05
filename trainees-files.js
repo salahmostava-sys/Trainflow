@@ -13,21 +13,24 @@ const TraineeFiles=(()=>{
     const dialog=node('dialog',undefined,{id:'sheet-xlsx-dialog',class:'sheet-file-dialog','aria-labelledby':'sheet-xlsx-title'});
     const closeButton=text(button('',()=>dialog.close()),'إغلاق','Close'),title=node('h3',undefined,{id:'sheet-xlsx-title'}),header=node('div',undefined,{class:'sheet-file-header'});header.append(title,closeButton);
     const fileLabel=node('label'),fileCaption=node('span'),file=node('input',undefined,{id:'sheet-xlsx-file',type:'file',accept:'.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});fileLabel.append(fileCaption,file);
+    const modeLabel=node('label'),modeCaption=node('span'),importMode=node('select',undefined,{id:'sheet-xlsx-mode'}),modeHint=node('p',undefined,{id:'sheet-xlsx-mode-hint',class:'sheet-local-note'});modeLabel.append(modeCaption,importMode);importMode.setAttribute('aria-describedby',modeHint.id);
     const sheetLabel=node('label'),sheetCaption=node('span'),sheetSelect=node('select',undefined,{id:'sheet-xlsx-sheet'});sheetLabel.append(sheetCaption,sheetSelect);sheetLabel.hidden=true;
     const headersLabel=node('label',undefined,{class:'sheet-file-checkbox'}),headers=node('input',undefined,{id:'sheet-xlsx-headers',type:'checkbox'}),headersCaption=node('span');headersLabel.append(headers,headersCaption);headersLabel.hidden=true;
     const status=node('p',undefined,{id:'sheet-xlsx-status',role:'status','aria-live':'polite'}),grid=node('div',undefined,{id:'sheet-xlsx-preview',class:'sheet-file-preview'});
     const apply=node('button',undefined,{id:'sheet-xlsx-apply',type:'button',class:'sheet-primary'});apply.disabled=true;
-    dialog.append(header,fileLabel,sheetLabel,headersLabel,status,grid,apply);document.body.append(dialog);
-    function translate(){title.textContent=tr('استيراد بيانات الجدول من Excel','Import table data from Excel');fileCaption.textContent=tr('ملف Excel بصيغة XLSX','Excel file (.xlsx)');sheetCaption.textContent=tr('ورقة البيانات','Worksheet');headersCaption.textContent=tr('الصف الأول يحتوي على عناوين الأعمدة','First row contains column headers');apply.textContent=tr('إضافة الصفوف إلى نهاية الجدول','Append rows to the table');}
+    dialog.append(header,modeLabel,modeHint,fileLabel,sheetLabel,headersLabel,status,grid,apply);document.body.append(dialog);
+    function translate(){title.textContent=tr('استيراد بيانات الجدول من Excel','Import table data from Excel');fileCaption.textContent=tr('ملف Excel بصيغة XLSX','Excel file (.xlsx)');sheetCaption.textContent=tr('ورقة البيانات','Worksheet');headersCaption.textContent=tr('الصف الأول يحتوي على عناوين الأعمدة','First row contains column headers');modeCaption.textContent=tr('طريقة الاستيراد','Import method');const selected=importMode.value;importMode.replaceChildren(node('option',tr('اختر طريقة الاستيراد','Choose import method'),{value:''}),node('option',tr('الإضافة إلى الشيت الحالي','Append to current sheet'),{value:'append'}),node('option',tr('بدء شيت جديد ببيانات الملف','Start a new sheet with this file'),{value:'new'}));importMode.value=selected;updateMode();if(preview)renderPreview();}
+    function updateMode(){const fresh=importMode.value==='new';modeHint.textContent=fresh?tr('سيستبدل محتوى الشيت الحالي وتنسيقه ببيانات الملف. يمكنك استرجاع القديم باستخدام Ctrl+Z.','This replaces the current sheet content and formatting with the file data. Restore the previous sheet with Ctrl+Z.'):importMode.value==='append'?tr('ستضاف بيانات الملف بعد آخر صف به بيانات، مع الاحتفاظ بالشيت الحالي.','File rows will be added after the last populated row, keeping the current sheet.'):tr('اختر الإضافة للشيت الحالي أو البدء من جديد. لن تتغير البيانات أثناء المعاينة.','Choose append or start fresh. Previewing does not change your data.');apply.textContent=fresh?tr('بدء الشيت ببيانات الملف','Start sheet with file data'):tr('إضافة الصفوف إلى نهاية الجدول','Append rows to the table');}
+    function prepareImport(s){const fresh=importMode.value==='new';return TraineeXlsx.prepare(preview.rows,headers.checked,fresh?s.importLabels:s.labels,fresh?{}:s.formatting.headers);}
     function renderPreview(){
       apply.disabled=true;grid.replaceChildren();if(!preview)return;
       try{
-        const s=h.state(),prepared=TraineeXlsx.prepare(preview.rows,headers.checked,s.labels,s.formatting.headers);
+        const s=h.state(),prepared=prepareImport(s);
         if(!prepared.rows.length){status.textContent=tr('ورقة البيانات فارغة.','This worksheet is empty.');return;}
-        status.textContent=preview.name+' · '+prepared.rows.length+tr(' صف · ',' rows · ')+preview.width+tr(' عمود. ستضاف بعد آخر صف به بيانات.',' columns. These rows will be appended after the last populated row.');
+        status.textContent=preview.name+' · '+prepared.rows.length+tr(' صف · ',' rows · ')+preview.width+tr(' عمود.',' columns.');
         const table=node('table'),thead=node('thead'),headRow=node('tr'),tbody=node('tbody');
         for(let c=0;c<Math.min(12,prepared.width);c++)headRow.append(node('th',headers.checked?preview.rows[0][c]:tr(...(s.labels[c]||[D.letter(c),D.letter(c)]))));thead.append(headRow);
-        for(const row of prepared.rows.slice(0,5)){const line=node('tr');for(let c=0;c<Math.min(12,prepared.width);c++)line.append(node('td',(row[c]||'').slice(0,120)));tbody.append(line);}table.append(thead,tbody);grid.append(table);apply.disabled=false;
+        for(const row of prepared.rows.slice(0,5)){const line=node('tr');for(let c=0;c<Math.min(12,prepared.width);c++)line.append(node('td',(row[c]||'').slice(0,120)));tbody.append(line);}table.append(thead,tbody);grid.append(table);apply.disabled=!importMode.value;
       }catch(error){status.textContent=errorText(error);}
     }
     function showResult(result){preview=result;sheetSelect.replaceChildren(...result.sheets.map((name,i)=>node('option',name,{value:i})));sheetSelect.value=String(result.index||0);sheetLabel.hidden=result.sheets.length<2;headersLabel.hidden=false;headers.checked=TraineeXlsx.detectHeaders(result.rows,h.state().labels);renderPreview();}
@@ -42,13 +45,14 @@ const TraineeFiles=(()=>{
     };
     sheetSelect.onchange=async()=>{const token=++generation,index=Number(sheetSelect.value);apply.disabled=true;status.textContent=tr('جارٍ قراءة الورقة…','Reading worksheet…');try{const result=await request(importWorker,'select',{index});if(token===generation&&dialog.open)showResult({...result,index});}catch(error){if(token===generation)status.textContent=errorText(error);}};
     headers.onchange=renderPreview;
+    importMode.onchange=()=>{updateMode();renderPreview();};
     apply.onclick=()=>{
       if(apply.disabled||!preview)return;const s=h.state();if(!s.loaded||s.owner!==selectedOwner){dialog.close();return;}
       try{
-        const prepared=TraineeXlsx.prepare(preview.rows,headers.checked,s.labels,s.formatting.headers);let start=s.cells.length;while(start&&!s.cells[start-1].some(Boolean))start--;
+        const prepared=prepareImport(s),fresh=importMode.value==='new';let start=fresh?0:s.cells.length;while(start&&!s.cells[start-1].some(Boolean))start--;
         if(start+prepared.rows.length>D.MAX_ROWS)throw Error('SHEET_LIMIT');
-        const fmt=D.format(s.formatting);Object.assign(fmt.headers,prepared.headers);h.change(D.pasteMapped(s.cells,prepared.rows,start,prepared.targets),true,fmt);
-        dialog.close();h.message(tr('تمت إضافة ','Added ')+prepared.rows.length+tr(' صفًا. يمكنك التراجع باستخدام Ctrl+Z.',' rows. You can undo with Ctrl+Z.'));
+        const fmt=fresh?D.defaultFormat():D.format(s.formatting);Object.assign(fmt.headers,prepared.headers);const next=D.pasteMapped(fresh?[]:s.cells,prepared.rows,start,prepared.targets);if(fresh)h.replaceSheet(next,fmt);else h.change(next,true,fmt);
+        dialog.close();h.message((fresh?tr('تم بدء الشيت بـ','Sheet started with '):tr('تمت إضافة ','Added '))+prepared.rows.length+tr(' صفًا. يمكنك التراجع باستخدام Ctrl+Z.',' rows. You can undo with Ctrl+Z.'));
       }catch(error){status.textContent=errorText(error);}
     };
     dialog.addEventListener('close',()=>{generation++;stop(importWorker);importWorker=null;preview=null;file.value='';grid.replaceChildren();status.textContent='';sheetSelect.replaceChildren();apply.disabled=true;});
@@ -61,7 +65,7 @@ const TraineeFiles=(()=>{
         const url=URL.createObjectURL(new Blob([result.buffer],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'})),a=node('a',undefined,{href:url,download:'trainees.xlsx'});a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);h.message(tr('تم تصدير بيانات الجدول إلى Excel.','Table data exported to Excel.'));
       }catch(error){if(error.message!=='CANCELLED'&&h.state().owner===owner)h.message(errorText(error),true);}finally{stop(exportWorker);exportWorker=null;exportButton.disabled=false;}
     });
-    const importButton=action('sheet-xlsx-import','استيراد Excel','Import Excel',()=>{selectedOwner=h.state().owner;status.textContent=tr('اختر ملفًا لمعاينته. البيانات الحالية ستظل كما هي.','Choose a file to preview. Existing records will be kept.');sheetLabel.hidden=headersLabel.hidden=true;dialog.showModal();});
+    const importButton=action('sheet-xlsx-import','استيراد Excel','Import Excel',()=>{selectedOwner=h.state().owner;importMode.value='';updateMode();apply.disabled=true;status.textContent=tr('اختر ملفًا لمعاينته.','Choose a file to preview.');sheetLabel.hidden=headersLabel.hidden=true;dialog.showModal();});
     host.prepend(exportButton,importButton);translate();
     return {translate,close(){generation++;dialog.close();stop(importWorker);stop(exportWorker);importWorker=exportWorker=null;preview=null;grid.replaceChildren();status.textContent='';}};
   }

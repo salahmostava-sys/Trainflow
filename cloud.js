@@ -25,7 +25,7 @@ const Cloud = (() => {
         await Trainees.flush();
         if(Trainees.hasDraft())retainedDraftUser=priorUser;
       }
-      ready=false;pendingChain=null;
+      ready=false;
       await client.auth.signOut({scope:'local'});
     }finally{
       ready=false;$('app').hidden=true;$('cloud-tools').hidden=true;$('sign-out').hidden=true;$('auth-box').hidden=false;
@@ -99,7 +99,6 @@ const Cloud = (() => {
     if(user){
       const email=user.email || '';
       const name=accountName();
-      $('signed-in').textContent=(name?name+' · ':'')+email+' · '+(role==='admin'?t('adminRole'):role==='copy_only'?t('roleCopyOnly'):t('userRole'));
       $('account-menu-name').textContent=name || t('currentAccount');
       $('account-menu-email').textContent=email;
       $('account-avatar').textContent=(name || email).trim().charAt(0).toUpperCase() || 'TF';
@@ -157,7 +156,7 @@ const Cloud = (() => {
     try{prefs=JSON.parse(localStorage.getItem('ibta_ui_preferences') || '{}') || {};}catch{}
     state={usedCodes:{},codeUseTimes:{},codesByCategory:{},codeNotes:{},categoryLabels:clone(p.categoryLabels || {}),keycodeOverrides:clone(p.keycodeOverrides || {}),
       keycodeOrder:clone(p.keycodeOrder || {}),categoryOrder:sortCategories(p.categoryOrder),dateColors:clone(p.dateColors || {}),
-      settings:{autoChain:!!prefs.autoChain},lowStockThreshold:Number.isInteger(p.lowStockThreshold)?p.lowStockThreshold:10,uiLang:prefs.uiLang==='en'?'en':'ar'};
+      settings:{},lowStockThreshold:Number.isInteger(p.lowStockThreshold)?p.lowStockThreshold:10,uiLang:prefs.uiLang==='en'?'en':'ar'};
     for(const cat of sortCategories(p.codeCategories || [])) state.codesByCategory[cat]=[];
     for(const r of rows.values()){
       (state.codesByCategory[r.category] ||= []).push(r.code);
@@ -182,7 +181,6 @@ const Cloud = (() => {
     $('profile-name').value=accountName();
     $('profile-email').value=user?.email || '';
     currentLang=state.uiLang;
-    autoChainToggle.checked=state.settings.autoChain;
     if(!Object.hasOwn(state.codesByCategory,activeCategory)) activeCategory=Object.keys(state.codesByCategory)[0];
     selectedCodes.clear();
     applyLanguage();
@@ -232,7 +230,7 @@ const Cloud = (() => {
     if(busy) return false;
     const changes=[],seen=new Set();
     try{
-      localStorage.setItem('ibta_ui_preferences',JSON.stringify({uiLang:state.uiLang,autoChain:state.settings.autoChain}));
+      localStorage.setItem('ibta_ui_preferences',JSON.stringify({uiLang:state.uiLang}));
       for(const [category,codes] of Object.entries(state.codesByCategory)) for(const code of codes){
         if(seen.has(code)) throw Error('IBTA_DUPLICATE_CODE:'+code);
         seen.add(code);
@@ -592,7 +590,6 @@ const Cloud = (() => {
       client=window.supabase.createClient(SUPABASE_URL,KEY,{global:{fetch:serverFetch},auth:{storage:sessionStorage,persistSession:true,detectSessionInUrl:false}});
       $('auth-form').addEventListener('submit',e=>{e.preventDefault();authenticate(false);});
       $('sign-up').addEventListener('click',()=>authenticate(true));
-      $('refresh-data').addEventListener('click',refresh);
       $('import-legacy').addEventListener('click',importLegacy);
       $('export-data').addEventListener('click',exportData);
       $('export-codes-csv').addEventListener('click',exportCodesCsv);
@@ -603,7 +600,7 @@ const Cloud = (() => {
       $('profile-password-form').addEventListener('submit',saveProfilePassword);
       $('sign-out').addEventListener('click',async()=>{
         if(typeof Trainees!=='undefined' && !await Trainees.flush())return;
-        ready=false;pendingChain=null;await client.auth.signOut({scope:'local'});
+        ready=false;await client.auth.signOut({scope:'local'});
         location.reload();
       });
       client.auth.onAuthStateChange((event,session)=>{

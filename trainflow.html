@@ -111,7 +111,7 @@ if(window.history)window.history.scrollRestoration='manual';
   .ops-list-row select{min-width:135px;}
   .inventory-intro{font-size:14px;color:var(--muted);line-height:1.7;margin:0 0 16px;}
   #panel-inventory .ops-card{margin-top:0;max-width:760px;}
-  .inventory-message{white-space:pre-line;line-height:1.85;font-size:14px;margin:14px 0;padding:16px 18px;border:1px solid var(--border);border-radius:12px;background:var(--surface-2);overflow-wrap:anywhere;}
+  .inventory-message{white-space:pre-line;line-height:1.85;font-size:14px;margin:14px 0;padding:16px 18px;border:1px solid var(--border);border-radius:12px;background:rgba(37,99,235,.08);overflow-wrap:anywhere;}
   #inventory-auto-settings fieldset{min-width:0;border:1px solid var(--border);border-radius:12px;padding:14px;margin:14px 0;}
   #inventory-auto-settings legend{padding:0 6px;font-weight:700;font-size:14px;}
   #inventory-auto-settings .inventory-auto-toggle{display:flex;flex-direction:row;align-items:center;gap:12px;justify-content:flex-start;}
@@ -511,6 +511,14 @@ if(window.history)window.history.scrollRestoration='manual';
   .cloud-admin[open] summary::before{transform:rotate(180deg);}
   .cloud-admin-content{padding-top:14px;}
   .cloud-admin-actions{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 16px;}
+  .backup-tools{margin:0 0 16px;}
+  #cloud-tools>div>.cloud-admin{margin-top:0;border-top:0;}
+  #cloud-tools>.cloud-popover{padding:0;border:0;background:transparent;box-shadow:none;}
+  .cloud-backup-controls{display:flex;align-items:end;flex-wrap:nowrap;gap:8px;overflow-x:auto;padding-bottom:2px;}
+  .cloud-backup-controls>button{flex-shrink:0;white-space:nowrap;min-height:40px;}
+  .cloud-backup-controls>label{flex:1;min-width:260px;}
+  .cloud-popover .cloud-backup-controls input{width:100%;min-height:40px;margin:0;}
+  #restore-preview:empty{display:none;}
   .cloud-admin label{display:block;font-size:12px;font-weight:700;color:var(--muted);}
   .cloud-popover input{display:block;width:100%;margin:7px 0 10px;padding:9px 11px;border:1px solid var(--border);border-radius:var(--radius-sm);font:inherit;font-size:13px;direction:ltr;}
   .cloud-popover input:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-50);}
@@ -738,7 +746,6 @@ if(window.history)window.history.scrollRestoration='manual';
       <button type="button" role="tab" id="settings-tab-inventory" aria-controls="settings-pane-inventory" aria-selected="false" tabindex="-1" data-i18n="settingsTabInventory" hidden>Inventory</button>
       <button type="button" role="tab" id="settings-tab-extensions" aria-controls="settings-pane-extensions" aria-selected="false" tabindex="-1" data-i18n="settingsTabExtensions">Extensions</button>
       <button type="button" role="tab" id="settings-tab-reports" aria-controls="settings-pane-reports" aria-selected="false" tabindex="-1" data-i18n="settingsTabReports">Google reports</button>
-      <button type="button" role="tab" id="settings-tab-preferences" aria-controls="settings-pane-preferences" aria-selected="false" tabindex="-1" data-i18n="settingsTabPreferences">Preferences</button>
       <button type="button" role="tab" id="settings-tab-sync" aria-controls="settings-pane-sync" aria-selected="false" tabindex="-1" data-i18n="settingsTabSync">Team and sync</button>
     </div>
     <div class="settings-pane" id="settings-pane-profile" role="tabpanel" aria-labelledby="settings-tab-profile">
@@ -871,42 +878,26 @@ if(window.history)window.history.scrollRestoration='manual';
 
     <div class="settings-pane sheet-report-settings" id="settings-pane-reports" role="tabpanel" aria-labelledby="settings-tab-reports" hidden></div>
 
-    <div class="settings-pane" id="settings-pane-preferences" role="tabpanel" aria-labelledby="settings-tab-preferences" hidden>
-    <div class="cred-card" style="cursor:default;">
-      <div class="cred-label" style="margin-bottom:2px;" data-i18n="autoChainTitle">Auto Chain Copy</div>
-      <div class="settings-desc" data-i18n="autoChainDesc">
-        When enabled: copying a Keycode, then copying anything from Prometric, will automatically copy the first available code from the linked codes category — no need to tap it yourself.
-      </div>
-      <label class="switch-row">
-        <span class="switch">
-          <input type="checkbox" id="autochain-toggle">
-          <span class="switch-track"></span>
-        </span>
-        <span class="switch-label" data-i18n="autoChainSwitch">Enable auto copy (Keycode → Prometric → Code)</span>
-      </label>
-    </div>
-    </div>
     <div class="settings-pane" id="settings-pane-sync" role="tabpanel" aria-labelledby="settings-tab-sync" hidden>
     <section id="cloud-tools" class="cloud-controls" hidden>
       <div class="cloud-popover">
-        <div class="cloud-identity-text"><strong data-i18n="currentAccount">الحساب الحالي</strong><span id="signed-in"></span></div>
-        <p id="cloud-status" class="cloud-status" role="status" aria-live="polite"></p>
-        <div class="cloud-actions">
-          <button id="refresh-data" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M5.7 9A7 7 0 0 1 18 7l2 5M4 12l2 5a7 7 0 0 0 12.3-2"/></svg><span data-i18n="refresh">تحديث</span></button>
-        </div>
+        <p id="cloud-status" hidden></p>
         <details id="admin-tools" class="cloud-admin"><summary><span data-i18n="manageDataUsers">إدارة البيانات والمستخدمين</span></summary>
           <div class="cloud-admin-content">
-            <div class="cloud-admin-actions"><button id="import-legacy" type="button" data-i18n="importLegacy">استيراد بيانات المتصفح القديمة</button><button id="export-data" type="button" data-i18n="exportBackup">تنزيل نسخة احتياطية</button></div>
+            <div class="ops-card backup-tools">
+              <h3 data-i18n="restoreTitle">Restore a backup</h3>
+              <div class="cloud-backup-controls">
+                <button id="import-legacy" type="button" data-i18n="importLegacy">استيراد بيانات المتصفح القديمة</button>
+                <button id="export-data" type="button" data-i18n="exportBackup">تنزيل نسخة احتياطية</button>
+                <label><span data-i18n="restoreFile">Choose a TrainFlow backup JSON file</span><input id="restore-file" type="file" accept=".json,application/json"></label>
+                <button id="restore-button" type="button" disabled data-i18n="restoreButton">Restore data</button>
+              </div>
+              <p id="restore-preview" class="ops-status" role="status" aria-live="polite"></p>
+            </div>
             <label for="member-email" data-i18n="newMemberEmail">بريد مستخدم جديد</label><input id="member-email" type="email" placeholder="user@example.com">
             <label for="member-role" data-i18n="memberRole">Role</label><select id="member-role"><option value="copy_only" data-i18n="roleCopyOnly">Copy codes only</option><option value="operator" data-i18n="roleOperator" selected>Operator</option><option value="admin" data-i18n="roleAdmin">Administrator</option></select>
             <button id="add-member" type="button" data-i18n="addMember">اعتماد المستخدم</button>
             <div id="member-list" class="ops-list"></div>
-            <div class="ops-card">
-              <h3 data-i18n="restoreTitle">Restore a backup</h3>
-              <label><span data-i18n="restoreFile">Choose a TrainFlow backup JSON file</span><input id="restore-file" type="file" accept=".json,application/json"></label>
-              <p id="restore-preview" class="ops-status" role="status" aria-live="polite"></p>
-              <button id="restore-button" type="button" disabled data-i18n="restoreButton">Restore data</button>
-            </div>
             <details class="ops-card" id="audit-details"><summary data-i18n="activityTitle">Recent activity</summary><div id="audit-list" class="ops-list"></div></details>
           </div>
         </details>
@@ -992,10 +983,6 @@ const TRANSLATIONS = {
     resetMarksTitle:"Usage marks",resetMarksHint:"This clears every used mark and its date. Download a backup first if you may need to restore them.",resetLink:"Reset all copy marks",
     confirmReset:"Reset all copy marks and dates? (The codes themselves will remain)",
     resetDone:"Reset done",
-    autoChainTitle:"Auto Chain Copy",
-    autoChainDesc:"When enabled: copying a Keycode, then copying anything from Prometric, will automatically copy the first available code from the linked codes category — no need to tap it yourself.",
-    autoChainSwitch:"Enable auto copy (Keycode → Prometric → Code)",
-    autoEnabled:"Auto copy enabled", autoDisabled:"Auto copy disabled",
     notePlaceholder:"Note...",
     copiedGeneric:"Copied",
     moveUp:"Move up", moveDown:"Move down",
@@ -1098,10 +1085,6 @@ const TRANSLATIONS = {
     resetMarksTitle:"علامات الاستخدام",resetMarksHint:"هذا الإجراء يمسح كل علامات الاستخدام وتواريخها. نزّل نسخة احتياطية أولًا إذا قد تحتاج لاسترجاعها.",resetLink:"تصفير كل علامات النسخ",
     confirmReset:"تصفير كل علامات النسخ والتواريخ؟ (الأكواد نفسها هتفضل موجودة)",
     resetDone:"تم التصفير",
-    autoChainTitle:"النسخ التلقائي المتسلسل",
-    autoChainDesc:"عند تفعيل الخيار: نسخ مفتاح الكود ثم نسخ أي بيانات من بروميترك ينسخ تلقائيًا أول كود متاح من الفئة المرتبطة.",
-    autoChainSwitch:"تفعيل النسخ التلقائي (مفتاح الكود ← بروميترك ← الكود)",
-    autoEnabled:"تم تفعيل النسخ التلقائي", autoDisabled:"تم إيقاف النسخ التلقائي",
     notePlaceholder:"اكتب ملاحظة...",
     copiedGeneric:"تم النسخ",
     moveUp:"تحريك لأعلى", moveDown:"تحريك لأسفل",
@@ -1190,7 +1173,7 @@ function displayCatName(cat){
 let DEFAULT_KEYCODES = [];
 let PROMETRIC_ACCOUNT = '', PROMETRIC_PASSWORD = '', ZOOM_URL = '', PROMETRIC_LOGIN_URL = '';
 async function saveState(){ return Cloud.persist(); }
-let state = {usedCodes:{},codesByCategory:{},categoryLabels:{},keycodeOverrides:{},dateColors:{},settings:{autoChain:false},codeNotes:{},uiLang:currentLang,categoryOrder:[],keycodeOrder:{}};
+let state = {usedCodes:{},codesByCategory:{},categoryLabels:{},keycodeOverrides:{},dateColors:{},settings:{},codeNotes:{},uiLang:currentLang,categoryOrder:[],keycodeOrder:{}};
 function getLinkedCodesCat(cat){
   return CATEGORY_LINK[cat] || cat;
 }
@@ -1282,7 +1265,6 @@ state.categoryOrder.forEach(c=>{
 });
 if(!state.keycodeOrder) state.keycodeOrder = {};
 currentLang = state.uiLang;
-let pendingChain = null;
 let selectedCodes = new Set();
 let draggedKcCode = null;
 let draggedKcCat = null;
@@ -1497,7 +1479,7 @@ document.getElementById('lang-btn').addEventListener('click',toggleLanguage);
 document.getElementById('auth-lang-btn').addEventListener('click',toggleLanguage);
 
 // ---------- TABS ----------
-const SETTINGS_TAB_IDS=['profile','data','prometric','inventory','extensions','reports','preferences','sync'];
+const SETTINGS_TAB_IDS=['profile','data','prometric','inventory','extensions','reports','sync'];
 function workspaceView(){try{return JSON.parse(localStorage.getItem('ibta_workspace_view:'+Cloud.userId())||'{}')||{};}catch{return {};}}
 function rememberWorkspaceView(change){if(!Cloud.userId())return;try{localStorage.setItem('ibta_workspace_view:'+Cloud.userId(),JSON.stringify({...workspaceView(),...change}));}catch{}}
 async function restoreWorkspaceView(){
@@ -1590,12 +1572,6 @@ async function goToCodesCategory(codesCat){
   renderCodeTabs();
   renderCodeGrid();
   await Cloud.refresh();
-}
-
-async function autoCopyNextCode(linkedCat){
-  const nextCode = (state.codesByCategory[linkedCat] || []).find(c=>!state.usedCodes[c]);
-  if(!nextCode){ showToast(t('noCodesAvailable')(displayCatName(linkedCat))); return; }
-  await Cloud.copyCode(nextCode);
 }
 
 function buildAddCategoryBox(){
@@ -2010,9 +1986,6 @@ function renderKeycodes(){
         row.classList.add('copied');
         showToast(t('copiedColon')(item.code));
         setTimeout(()=>row.classList.remove('copied'), 900);
-        if(state.settings.autoChain){
-          pendingChain = { linkedCat: getLinkedCodesCat(cat) };
-        }
       });
 
       scroll.appendChild(row);
@@ -2034,11 +2007,6 @@ async function handlePrometricCopy(inputId, labelKey){
   if(!value){ showToast(t('enterCredential')); return; }
   if(!await copyText(value)) return;
   showToast(t(labelKey));
-  if(state.settings.autoChain && pendingChain){
-    const linkedCat = pendingChain.linkedCat;
-    pendingChain = null;
-    setTimeout(()=> autoCopyNextCode(linkedCat), 550);
-  }
 }
 document.getElementById('cred-account').addEventListener('click', async ()=>{
   handlePrometricCopy('cred-account-val', 'accountCopied');
@@ -2420,16 +2388,6 @@ document.getElementById('reset-btn').addEventListener('click', async ()=>{
 });
 
 
-
-// ---------- SETTINGS ----------
-const autoChainToggle = document.getElementById('autochain-toggle');
-autoChainToggle.checked = !!state.settings.autoChain;
-autoChainToggle.addEventListener('change', async (e)=>{
-  state.settings.autoChain = e.target.checked;
-  pendingChain = null;
-  if(!await saveState()) return;
-  showToast(e.target.checked ? t('autoEnabled') : t('autoDisabled'));
-});
 
 // ---------- init ----------
 const [initialDay,initialMonth,initialYear]=todayStr().split('/');

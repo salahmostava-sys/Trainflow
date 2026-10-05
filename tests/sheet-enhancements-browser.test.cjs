@@ -134,7 +134,7 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),path
     assert.equal(await page.locator('td.sheet-selected').count(),2*await page.locator('#sheet-grid tbody th[data-rowv]').count(),'Shift selects adjacent entire columns');
     assert.equal(await cell(0,51).textContent(),'EXTRA-AZ','Header clicks do not reorder data');
     assert.deepEqual(errors,[]);await page.locator('#sheet-clear-filters').click();
-    await page.evaluate(()=>{DEFAULT_KEYCODES=[{title:'Sales',lang:'Arabic',code:'LIVE-SALES-AR',category:'Foundation'},{title:'Sales',lang:'English',code:'LIVE-SALES-EN',category:'Foundation'}];state.keycodeOverrides['LIVE-SALES-AR']='Review-category';(state.categoryLabels||={})['Review-category']='فئة المراجعة';PROMETRIC_ACCOUNT='demo-prometric-account';PROMETRIC_PASSWORD='demo-prometric-password';});
+    await page.evaluate(()=>{DEFAULT_KEYCODES=[{title:'Sales',lang:'Arabic',code:'LIVE-SALES-AR',category:'Foundation'},{title:'Sales',lang:'English',code:'LIVE-SALES-EN',category:'Foundation'}];state.keycodeOverrides['LIVE-SALES-AR']='Review-category';(state.categoryLabels||={})['Review-category']='فئة المراجعة';PROMETRIC_ACCOUNT='demo-prometric-account';PROMETRIC_PASSWORD='demo-prometric-password';PROMETRIC_LOGIN_URL='https://tcnet1.prometric.com/Login.aspx?ClientNameSingleSite=demo';});
     await paste(0,0,['CODE','hidden@example.invalid','متدرب','Trainee','123','050','Org','محترف الأعمال المعتمد في المبيعات CBP-S','04/10/2026','trainee-user','demo-password','ناجح','AD'].join('\t'));
     await page.locator('#sheet-save').click();await page.waitForFunction(()=>!Trainees.hasDraft());
     await page.locator('#sheet-columns-title').click();await page.locator('[data-column-toggle="1"]').uncheck();await page.locator('#sheet-columns-close').click();
@@ -167,6 +167,8 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),path
     assert.equal(await cell(0,7).textContent(),'محترف الأعمال المعتمد في المبيعات CBP-S','Source course name remains intact');
     assert.equal(await page.locator('#sheet-trainee-dialog input,#sheet-trainee-dialog [contenteditable]').count(),0,'Details are read only');
     await page.evaluate(()=>{Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async value=>{window.detailCopied=value;}}});});
+    assert.ok(await page.locator('#sheet-trainee-dialog').evaluate(el=>el.getBoundingClientRect().width<=602),'Details use a narrower single-column dialog');
+    const login=page.locator('#sheet-trainee-record .sheet-detail-login');assert.match(await login.textContent(),/\/Login…$/);assert.doesNotMatch(await login.textContent(),/ClientNameSingleSite/);await login.click();assert.equal(await page.evaluate(()=>window.detailCopied),await page.evaluate(()=>PROMETRIC_LOGIN_URL),'Shortened login link still copies the entire URL');
     for(const [selector,value]of [['.sheet-detail-keycode','LIVE-SALES-AR'],['.sheet-detail-category','فئة المراجعة'],['button[aria-label="نسخ Prometric Account"]','demo-prometric-account'],['button[aria-label="نسخ Prometric Password"]','demo-prometric-password'],['button[aria-label="نسخ الجوال"]','050']]){
       await page.locator('#sheet-trainee-record '+selector).click();assert.equal(await page.evaluate(()=>window.detailCopied),value,'One click copies the exact value');
       assert.equal(await page.locator('#sheet-trainee-dialog').isVisible(),true,'Copying keeps the details open');
@@ -183,6 +185,7 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),path
     await page.evaluate(()=>document.getElementById('sheet-grid').parentElement.scrollTop=0);await cell(0,3).waitFor({state:'visible'});await cell(0,3).dblclick();
     await page.keyboard.press('Escape');await cell(0,0).click();await page.keyboard.press('Delete');await cell(0,3).dblclick();
     await page.setViewportSize({width:1366,height:768});assert.equal(await page.locator('#sheet-trainee-dialog').evaluate(el=>el.scrollHeight<=el.clientHeight+1),true,'Empty Code field and allocation action fit without scrolling');assert.equal(await page.locator('.sheet-get-exam-code').isVisible(),true);await page.setViewportSize({width:1500,height:1000});
+    assert.equal(await page.locator('.sheet-get-exam-code').textContent(),'Get');assert.deepEqual(await page.locator('.sheet-get-exam-code').evaluate(el=>({parent:el.parentElement.tagName,label:el.parentElement.previousElementSibling.textContent})),{parent:'DD',label:'الكود'},'Get appears inside the Code field');assert.equal(await page.locator('#sheet-trainee-record>.sheet-get-exam-code').count(),0);await page.screenshot({path:path.join(__dirname,'../artifacts/trainee-inline-get.png')});
     await page.evaluate(()=>{
       window.claimCount=0;Cloud.claimTraineeCode=async(category,targetOwner)=>{if(category!=='Review-category'||targetOwner!=='demo-admin')throw Error('Wrong category or owner');window.claimCount++;previewCodes.push({code:'ALLOCATED-DEMO',category,owner_id:targetOwner,used_on:'04/10/2026',version:2});Trainees.translate();window.previewSaveError='NETWORK';return 'ALLOCATED-DEMO';};
     });

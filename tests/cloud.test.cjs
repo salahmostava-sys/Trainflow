@@ -123,10 +123,11 @@ assert(html.indexOf('id="settings-pane-inventory"')<html.indexOf('id="inventory-
 assert(html.indexOf('id="inventory-admin"')<html.indexOf('id="inventory-whatsapp-settings"'));
 assert.match(html,/<details class="report-card" id="daily-used-details">/);
 assert.match(html,/#daily-used-results\{display:grid;grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/);
-for(const tab of ['profile','data','prometric','inventory','preferences','sync']){
+for(const tab of ['profile','data','prometric','inventory','extensions','reports','sync']){
   assert(html.includes(`id="settings-tab-${tab}"`));
   assert(html.includes(`id="settings-pane-${tab}"`));
 }
+assert(!html.includes('id="autochain-toggle"'));assert(!html.includes('id="settings-tab-preferences"'));assert(!html.includes('id="signed-in"'));assert(!html.includes('id="refresh-data"'));
 assert(!html.includes('id="copy-prometric-link"'));
 for(const [,script] of html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g))vm.runInContext(script,ctx);
 vm.runInContext(fs.readFileSync(path.join(__dirname,'../ops-ui.js'),'utf8'),ctx);
@@ -212,7 +213,7 @@ for(const key of usedKeys) assert(englishKeys.includes(key),`Missing translation
   els['daily-used-details'].listeners.toggle();
   assert.equal(els['daily-used-panel'].hidden,false);
   run('toggleLanguage()');
-  assert.equal(els['signed-in'].textContent,'test@example.invalid · Admin');
+  assert.equal(els['account-menu-email'].textContent,'test@example.invalid');
   assert.equal(els['cloud-status'].textContent,'Saved to the database');
   assert.equal(els['auth-password'].placeholder,'Enter your password');
   assert.equal(JSON.parse(storage.get('ibta_ui_preferences')).uiLang,'en');

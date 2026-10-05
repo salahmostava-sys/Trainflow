@@ -90,6 +90,7 @@ const TraineeExcel=(()=>{
     for(const child of [...toolbar.children])if(child.classList.contains('sheet-ribbon-group'))child.remove();
     tools.remove();toolbar.classList.add('sheet-clean-toolbar');
     const files=TraineeFiles.mount({...h,host:essential,text,action});
+    essential.prepend(ribbonToggle);
     return {syncRibbon,closeFiles(){closeMenus();columnsDialog.close();files.close();},translate(){closeMenus();files.translate();syncRibbon();for(const el of document.querySelectorAll('[data-excel-ar]'))el.textContent=tr(el.dataset.excelAr,el.dataset.excelEn);},paint(s){fontName.value=s.font||'IBM Plex Sans Arabic';const size=s.size||state().formatting.fontSize;$('sheet-font-size').textContent=size+' px';$('sheet-font-minus').disabled=size<=10;$('sheet-font-plus').disabled=size>=32;for(const field of ['italic','underline','strike'])$('sheet-'+field).setAttribute('aria-pressed',String(!!s[field]));}};
   }
   return {mount};
