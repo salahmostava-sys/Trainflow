@@ -6,8 +6,10 @@ module.exports=function useSheetDropdowns(page){
     if(chain.has(key))return (...args)=>wrap(value.apply(target,args));
     if(!actions.has(key))return value.bind(target);
     return async(...args)=>{
-      const panel=await target.evaluate(el=>el.closest('.sheet-ribbon-panel')?.id);
+      const menu=await target.evaluate(el=>el.closest('.sheet-command-popover')?.dataset.trigger);
+      const panel=await target.evaluate(el=>{const trigger=el.closest('.sheet-command-popover')?.dataset.trigger;return (trigger?document.getElementById(trigger):el).closest('.sheet-ribbon-panel')?.id;});
       if(panel&&await locate('#'+panel).evaluate(el=>el.hidden)){const tab=await locate('#'+panel).getAttribute('aria-labelledby');await locate('#'+tab).click();}
+      if(menu&&await target.evaluate(el=>!el.closest('.sheet-command-popover').matches(':popover-open')))await locate('#'+menu).click();
       return value.apply(target,args);
     };
   }});

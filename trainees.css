@@ -225,6 +225,13 @@
 #sheet-workspace .sheet-command-set>small{font-size:10px;color:#64748b;text-align:start}
 #sheet-workspace #sheet-paste-menu>small,#sheet-workspace #sheet-merge-menu>small,#sheet-workspace #sheet-find-select-menu>small{display:none}
 #sheet-workspace .sheet-command-actions{display:flex;gap:5px;flex-wrap:wrap}
+.sheet-command-dropdown{display:inline-flex;align-items:center}
+.sheet-command-popover{position:fixed;inset:auto;margin:0;padding:6px;width:220px;max-width:calc(100vw - 16px);max-height:calc(100dvh - 16px);box-sizing:border-box;overflow:auto;border:1px solid #d7dfe8;border-radius:9px;background:#fff;color:#16324f;box-shadow:0 8px 28px #10295726;font-family:var(--ui-font)}
+.sheet-command-popover:popover-open{display:flex;flex-direction:column;gap:3px}
+.sheet-command-popover button{display:block;width:100%;text-align:start;border:0;border-radius:5px;background:#fff;color:#16324f;padding:9px 11px;min-height:36px;font:inherit;font-size:13px;cursor:pointer;white-space:normal}
+.sheet-command-popover button:hover,.sheet-command-popover button:focus-visible{background:#eff6ff;color:#1d4ed8;outline:2px solid #93b4eb;outline-offset:-2px}
+.sheet-command-popover button:disabled{opacity:.45;cursor:default;outline:none;background:#fff;color:#64748b}
+#sheet-workspace .sheet-command-dropdown button[aria-expanded=true]{background:#eff6ff;border-color:#93b4eb;color:#1d4ed8}
 #sheet-workspace .sheet-align-group button{min-height:26px;padding:4px 8px}
 .sheet-file-dialog{border:1px solid #d7dfe8;border-radius:12px;background:#fff;color:#16324f;padding:20px;width:min(800px,calc(100vw - 32px));max-height:85vh;box-sizing:border-box;overflow:auto;font-family:var(--ui-font);box-shadow:0 20px 70px #10295740}
 .sheet-file-dialog::backdrop{background:#10295765}
