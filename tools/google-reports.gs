@@ -25,14 +25,17 @@ function doPost(e) {
     if(p.kind==='success')attempts=attempts.filter(r=>r[11]==='ناجح');
     lock.waitLock(30000);
     var book=SpreadsheetApp.openById(approved),tabName=props.getProperty(p.kind==='operations'?'OPERATIONS_TAB':'SUCCESS_TAB'),tab=tabName?book.getSheetByName(tabName):book.getSheets()[0];
-    if(!tab)throw Error('تبويب التقرير غير موجود');
+    if(!tab)throw Error('تبويب التقرير غير موجود: '+tabName+'؛ راجع اسم التبويب في '+(p.kind==='operations'?'OPERATIONS_TAB':'SUCCESS_TAB'));
     var header=Number(props.getProperty('HEADER_ROW')||1),last=tab.getLastRow(),width=tab.getLastColumn();
+    if(!Number.isInteger(header)||header<1||header>tab.getMaxRows())throw Error('HEADER_ROW يجب أن يكون رقم صف العناوين داخل التقرير');
+    var location='التبويب «'+tab.getName()+'»، الصف '+header;
+    if(width<1)throw Error('التقرير فارغ في '+location+'؛ أضف عناوين التقرير أو حدد التبويب الصحيح');
     var headings=tab.getRange(header,1,1,width).getDisplayValues()[0];
-    var voucher=headings.findIndex(h=>normalize(h)==='VOUCHER');
-    if(voucher<0)throw Error('لم أجد عمود VOUCHER في صف العناوين');
+    var voucher=headings.findIndex(h=>headerKey(h)==='voucher');
+    if(voucher<0)throw Error('لم أجد عمود VOUCHER في '+location+'؛ تأكد من HEADER_ROW و'+(p.kind==='operations'?'OPERATIONS_TAB':'SUCCESS_TAB')+' (بدون اسم تبويب يُستخدم أول تبويب في الملف)');
     var existing=new Set(last>header?tab.getRange(header+1,voucher+1,last-header,1).getDisplayValues().flat().map(normalize):[]);
     var fresh=attempts.filter(r=>!existing.has(normalize(r[0])));
-    function headerKey(h){return String(h).replace(/[\s\u200e\u200f\u061c_]/g,'').toLowerCase();}
+    function headerKey(h){return String(h).replace(/[\s\u200b-\u200f\u061c\ufeff_]/g,'').toLowerCase();}
     var mapping={'voucher':0,'الإيميل':1,'الايميل':1,'البريدالإلكتروني':1,'الاسمباللغةالعربية':2,'الاسمبالعربي':2,'الاسمباللغةالإنجليزية':3,'الاسمباللغةالانجليزية':3,'الاسمبالإنجليزي':3,'رقمالهوية/الإقامة':4,'رقمالهوية/الاقامة':4,'رقمالهوية':4,'رقمالهاتف':5,'رقمالجوال':5,'الجوال':5,'الجهة':6,'الإختبار':7,'الاختبار':7,'الحالة':11};
     var required=p.kind==='success'?[0,2,11]:[0,1,2,3,4,5,6,7,11];
     var mapped=headings.map(h=>mapping[headerKey(h)]);
