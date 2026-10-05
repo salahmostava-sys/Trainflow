@@ -1,8 +1,14 @@
 <!DOCTYPE html>
-<html lang="en" dir="ltr" id="html-root">
+<html lang="ar" dir="rtl" id="html-root">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>
+window.IBTA_START_LANGUAGE='ar';
+try{window.IBTA_START_LANGUAGE=JSON.parse(localStorage.getItem('ibta_ui_preferences')||'{}')?.uiLang==='en'?'en':'ar';}catch{}
+const initialRoot=document.getElementById('html-root');initialRoot.lang=window.IBTA_START_LANGUAGE;initialRoot.dir=window.IBTA_START_LANGUAGE==='ar'?'rtl':'ltr';
+if(window.history)window.history.scrollRestoration='manual';
+</script>
 <link rel="stylesheet" href="trainees.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -34,6 +40,7 @@
     font-family:var(--ui-font);
     min-height:100vh;
   }
+  #app.workspace-restoring{visibility:hidden}
   button,input,select,textarea{font-family:inherit;}
   .wrap{max-width:920px; margin:0 auto; padding:24px 16px 70px;}
   .app-sticky-bar{position:sticky; top:0; z-index:30; background:var(--bg); margin-top:-24px; padding-top:24px; padding-bottom:1px;}
@@ -506,7 +513,7 @@
   #auth-message{font-size:14px;line-height:1.6;}
   @media(max-width:600px){.cloud-popover{padding:17px;}}
   #auth-box{font-family:var(--ui-font);min-height:100svh;padding:36px 24px;display:flex;align-items:center;justify-content:center;background:#fff;}
-  #startup-screen{min-height:100svh;display:grid;place-content:center;gap:16px;text-align:center;background:#fff;color:var(--text);font-family:var(--ui-font)}
+  #startup-screen{position:fixed;inset:0;z-index:200;min-height:100svh;display:grid;place-content:center;gap:16px;text-align:center;background:#fff;color:var(--text);font-family:var(--ui-font)}
   .startup-spinner{width:30px;height:30px;margin:auto;border:3px solid #fff;border-top-color:var(--blue);border-radius:50%;animation:startup-spin .8s linear infinite}
   @keyframes startup-spin{to{transform:rotate(360deg)}}
   @media(prefers-reduced-motion:reduce){.startup-spinner{animation:none}}
@@ -560,7 +567,8 @@
 </style>
 </head>
 <body>
-<section id="startup-screen" role="status" aria-live="polite" aria-busy="true"><span class="startup-spinner" aria-hidden="true"></span><span id="startup-message">جارٍ تحميل مساحة العمل…</span></section>
+<section id="startup-screen" role="status" aria-live="polite" aria-busy="true"><span class="startup-spinner" aria-hidden="true"></span><span id="startup-message"></span></section>
+<script>document.getElementById('startup-message').textContent=window.IBTA_START_LANGUAGE==='ar'?'جارٍ تحميل مساحة العمل…':'Loading workspace…';</script>
 <noscript>يلزم تفعيل JavaScript لفتح البرنامج.</noscript>
 <section id="auth-box" dir="rtl" lang="ar" hidden>
   <div class="auth-shell">
@@ -621,7 +629,7 @@
   <nav class="tabs">
     <button data-tab="keycodes" class="active" data-i18n="tabKeycodes">Keycodes</button>
     <button data-tab="prometric" data-i18n="tabPrometric">Prometric</button>
-    <button data-tab="codes" data-i18n="tabCodes">Codes</button>
+    <button data-tab="codes" data-i18n="tabCodes">VOUCHERS</button>
     <button data-tab="inventory" data-i18n="tabInventory">Inventory</button>
     <button data-tab="trainees" id="trainees-tab">المتدربون</button>
   </nav>
@@ -680,7 +688,7 @@
     </div>
 
     <div class="code-sheet compact">
-      <div class="code-sheet-scroll" id="code-sheet-viewport" tabindex="0" role="region" aria-label="Codes">
+      <div class="code-sheet-scroll" id="code-sheet-viewport" tabindex="0" role="region" aria-label="VOUCHERS">
         <div class="code-sheet-head">
           <div class="col-check"><input type="checkbox" id="select-all-codes"></div>
           <div class="col-n">#</div>
@@ -907,7 +915,7 @@ const TRANSLATIONS = {
     copyBtn:"Copy", copyFailed:"Copy failed. Please try again.", enterCredential:"Enter the value first.",
     sessionCredentials:"The Prometric credentials are prefilled for this session.",
     appTitle:"IBTA Tools",
-    tabKeycodes:"Keycodes", tabPrometric:"Prometric", tabCodes:"Codes", tabInventory:"Inventory",
+    tabKeycodes:"Keycodes", tabPrometric:"Prometric", tabCodes:"VOUCHERS", tabInventory:"Inventory",
     codeDensityCompact:"Compact view", codeDensityComfortable:"Comfortable view", codeExpandHeight:"Expand height", codeNormalHeight:"Normal height", codeScrollToTop:"Show from start (#1)", codeScrollToToday:"Go to today's codes",
     inventoryIntro:"Codes with you are unused codes in the system. Supervisor balances decrease automatically when new codes are added.",
     inventoryWithYou:"With you", inventoryWithSupervisor:"With supervisor", inventoryNotSet:"Not set",
@@ -959,7 +967,7 @@ const TRANSLATIONS = {
     confirmDeleteCode:code=>"Delete code \""+code+"\"? This cannot be undone.",
     recoveredCodes:n=>n+" code(s) recovered from an earlier version of this tool",
     addCategory:"+ Add category",
-    categoryNameHint:"Give it a short, clear name — it'll also become a matching tab on the Codes page.",
+    categoryNameHint:"Give it a short, clear name — it'll also become a matching tab on the VOUCHERS page.",
     categoryNamePlaceholder:"Category name",
     categoryCodesHint:"Optional: paste codes for this category now, one per line (you can always add more later).",
     categoryExists:"That category already exists",
@@ -1011,7 +1019,7 @@ const TRANSLATIONS = {
     copyBtn:"نسخ", copyFailed:"تعذر النسخ. حاول مرة أخرى.", enterCredential:"أدخل القيمة أولًا.",
     sessionCredentials:"بيانات دخول Prometric موجودة مسبقًا لهذه الجلسة.",
     appTitle:"أدوات IBTA",
-    tabKeycodes:"مفاتيح الأكواد", tabPrometric:"بروميترك", tabCodes:"الأكواد", tabInventory:"المخزون",
+    tabKeycodes:"مفاتيح الأكواد", tabPrometric:"بروميترك", tabCodes:"VOUCHERS", tabInventory:"المخزون",
     codeDensityCompact:"عرض مدمج", codeDensityComfortable:"عرض مريح", codeExpandHeight:"توسيع الارتفاع", codeNormalHeight:"الارتفاع العادي", codeScrollToTop:"عرض من البداية (#1)", codeScrollToToday:"الذهاب لأكواد اليوم",
     inventoryIntro:"اللي معاك هو الأكواد غير المستخدمة في النظام. رصيد المشرف ينقص تلقائيًا عند إضافة أكواد جديدة.",
     inventoryWithYou:"معايا",inventoryWithSupervisor:"مع المشرف",inventoryNotSet:"لم يُحدد",
@@ -1063,7 +1071,7 @@ const TRANSLATIONS = {
     confirmDeleteCode:code=>"حذف الكود \""+code+"\"؟ الإجراء ده مش هينفع يتراجع فيه.",
     recoveredCodes:n=>"تم استرجاع "+n+" كود من نسخة سابقة من الأداة",
     addCategory:"+ إضافة فئة",
-    categoryNameHint:"اكتب اسم قصير وواضح — هيظهر كمان تاب جديد في صفحة الأكواد.",
+    categoryNameHint:"اكتب اسم قصير وواضح — هيظهر كمان تاب جديد في صفحة VOUCHERS.",
     categoryNamePlaceholder:"اسم الفئة",
     categoryCodesHint:"اختياري: الصق أكواد للفئة دي دلوقتي، كل كود في سطر (تقدر تضيف المزيد بعدين برضه).",
     categoryExists:"الفئة دي موجودة بالفعل",
@@ -1112,7 +1120,7 @@ const TRANSLATIONS = {
     languageNames:{Arabic:"العربية",English:"الإنجليزية",العربية:"العربية",الإنجليزية:"الإنجليزية"},
   }
 };
-let currentLang = 'en';
+let currentLang = window.IBTA_START_LANGUAGE || 'ar';
 function t(key){ return TRANSLATIONS[currentLang][key]; }
 
 // ---------- DATA ----------
@@ -1145,7 +1153,7 @@ function displayCatName(cat){
 let DEFAULT_KEYCODES = [];
 let PROMETRIC_ACCOUNT = '', PROMETRIC_PASSWORD = '', ZOOM_URL = '', PROMETRIC_LOGIN_URL = '';
 async function saveState(){ return Cloud.persist(); }
-let state = {usedCodes:{},codesByCategory:{},categoryLabels:{},keycodeOverrides:{},dateColors:{},settings:{autoChain:false},codeNotes:{},uiLang:'en',categoryOrder:[],keycodeOrder:{}};
+let state = {usedCodes:{},codesByCategory:{},categoryLabels:{},keycodeOverrides:{},dateColors:{},settings:{autoChain:false},codeNotes:{},uiLang:currentLang,categoryOrder:[],keycodeOrder:{}};
 function getLinkedCodesCat(cat){
   return CATEGORY_LINK[cat] || cat;
 }
@@ -1452,6 +1460,18 @@ document.getElementById('auth-lang-btn').addEventListener('click',toggleLanguage
 
 // ---------- TABS ----------
 const SETTINGS_TAB_IDS=['profile','data','prometric','inventory','preferences','sync'];
+function workspaceView(){try{return JSON.parse(localStorage.getItem('ibta_workspace_view:'+Cloud.userId())||'{}')||{};}catch{return {};}}
+function rememberWorkspaceView(change){if(!Cloud.userId())return;try{localStorage.setItem('ibta_workspace_view:'+Cloud.userId(),JSON.stringify({...workspaceView(),...change}));}catch{}}
+async function restoreWorkspaceView(){
+  if(document.readyState==='loading')await new Promise(resolve=>document.addEventListener('DOMContentLoaded',resolve,{once:true}));
+  const view=workspaceView();if(!['keycodes','prometric','codes','inventory','trainees','settings'].includes(view.panel))return;
+  await showPanel(view.panel);if(view.panel==='settings')activateSettingsTab(view.settingsTab||'profile');
+  if(Number.isFinite(view.pageTop)&&view.pageTop>=0)window.scrollTo(0,Math.min(view.pageTop,10000000));
+}
+function saveWorkspaceScroll(){const app=document.getElementById('app');if(!app.hidden&&!app.classList.contains('workspace-restoring'))rememberWorkspaceView({pageTop:window.scrollY});}
+let workspaceScrollTimer;
+window.addEventListener('scroll',()=>{clearTimeout(workspaceScrollTimer);workspaceScrollTimer=setTimeout(saveWorkspaceScroll,200);},{passive:true});
+window.addEventListener('beforeunload',saveWorkspaceScroll);window.addEventListener('pagehide',saveWorkspaceScroll);
 function activateSettingsTab(id){
   if(!SETTINGS_TAB_IDS.includes(id) || document.getElementById('settings-tab-'+id).hidden)id='profile';
   SETTINGS_TAB_IDS.forEach(tabId=>{
@@ -1461,6 +1481,7 @@ function activateSettingsTab(id){
     button.tabIndex=active?0:-1;
     document.getElementById('settings-pane-'+tabId).hidden=!active;
   });
+  rememberWorkspaceView({settingsTab:id});
   if(id==='inventory'&&typeof InventoryDelivery!=='undefined')void InventoryDelivery.load();
 }
 SETTINGS_TAB_IDS.forEach(id=>{
@@ -1496,6 +1517,8 @@ document.addEventListener('keydown',e=>{
   }
 });
 function showPanel(id){
+  if(!['keycodes','prometric','codes','inventory','trainees','settings'].includes(id))return;
+  if(typeof Trainees!=='undefined')Trainees.savePosition();
   closeAccountMenu();
   document.getElementById('app').classList.toggle('sheet-wide',id==='trainees');
   if(id === 'keycodes') renderKeycodes();
@@ -1503,8 +1526,10 @@ function showPanel(id){
   document.querySelectorAll('section.panel').forEach(p=>p.classList.remove('active'));
   document.getElementById('account-menu-btn').classList.toggle('active',id==='settings');
   document.getElementById('panel-'+id).classList.add('active');
+  document.querySelector('nav.tabs button[data-tab="'+id+'"]')?.classList.add('active');
+  rememberWorkspaceView({panel:id});
   if(id==='codes'){codeTimelineReset=true;positionCodeTimeline();}
-  if(id==='trainees' && typeof Trainees!=='undefined')Trainees.open();
+  if(id==='trainees' && typeof Trainees!=='undefined')return Trainees.open();
 }
 document.querySelectorAll('nav.tabs button').forEach(btn=>{
   btn.addEventListener('click', async ()=>{

@@ -19,6 +19,28 @@ const Trainees=(()=>{
   let excelTools=null,prometricTools=null,formulaCache=new Map();
   const searchRows=new WeakMap();
   let lastDataRow=-1;
+  let positionTimer,restoringPosition=false;
+  const positionKey=()=> 'ibta_trainee_position:'+Cloud.userId()+':'+owner;
+  function savePosition(){
+    clearTimeout(positionTimer);if(!initialized||!loaded||loading||restoringPosition||!owner||!view.length)return;
+    const scroll=$('sheet-grid').parentElement;if(!$('panel-trainees').classList.contains('active')||!scroll.clientHeight)return;const first=rowAtOffset(scroll.scrollTop);
+    try{localStorage.setItem(positionKey(),JSON.stringify({row:view[cursor.r]??0,column:cursor.c,firstRow:view[first]??0,offset:Math.max(0,scroll.scrollTop-rowOffsets[first]),left:scroll.scrollLeft}));}catch{}
+  }
+  function schedulePosition(){if(loaded&&!loading&&!restoringPosition){clearTimeout(positionTimer);positionTimer=setTimeout(savePosition,200);}}
+  function restorePosition(){
+    let saved;try{saved=JSON.parse(localStorage.getItem(positionKey())||'null');}catch{}if(!saved||!view.length)return;
+    const valid=value=>Number.isInteger(value)&&value>=0&&value<D.MAX_ROWS;
+    if(!valid(saved.row)||!valid(saved.firstRow)||!Number.isInteger(saved.column)||saved.column<0||saved.column>=D.MAX_COLS)return;
+    restoringPosition=true;
+    try{
+      const r=view.indexOf(Math.min(saved.row,totalInputRows()-1)),first=view.indexOf(Math.min(saved.firstRow,totalInputRows()-1)),cols=visibleCols();
+      anchor=cursor={r:Math.max(0,r),c:cols.includes(saved.column)?saved.column:cols[0]};
+      const scroll=$('sheet-grid').parentElement;
+      scroll.scrollTop=(rowOffsets[Math.max(0,first)]||0)+(Number.isFinite(saved.offset)?Math.max(0,Math.min(saved.offset,400)):0);
+      scroll.scrollLeft=Number.isFinite(saved.left)?saved.left:0;drawRows(true);
+      $('sheet-grid').querySelector(`td[data-v="${cursor.r}"][data-col="${cursor.c}"]`)?.focus({preventScroll:true});
+    }finally{restoringPosition=false;}
+  }
   function updateLastDataRow(){lastDataRow=cells.length-1;while(lastDataRow>=0&&!cells[lastDataRow].some(Boolean))lastDataRow--;}
   const totalInputRows=()=>Math.min(D.MAX_ROWS,Math.max(cells.length,lastDataRow+1001));
   let excelView={wrap:false,freeze:false,zoom:100};
@@ -26,8 +48,8 @@ const Trainees=(()=>{
   try{const pref=JSON.parse(localStorage.getItem('ibta_sheet_view')||'{}');excelView={wrap:pref.wrap===true,freeze:pref.freeze===true,zoom:Number.isInteger(pref.zoom)&&pref.zoom>=50&&pref.zoom<=200?pref.zoom:100};}catch{}
   function setZoom(value){
     if(expandedView)previousViewZoom=null;
-    const previous=excelView.zoom,scroll=$('sheet-grid').parentElement;
-    excelView.zoom=Math.max(50,Math.min(200,Math.round(Number(value)/10)*10||100));
+    const previous=excelView.zoom,scroll=$('sheet-grid').parentElement,numeric=Number(value);
+    excelView.zoom=Math.max(50,Math.min(200,Math.round(Number.isFinite(numeric)?numeric:previous)));
     applyExcelView();scroll.scrollLeft*=excelView.zoom/previous;scroll.scrollTop*=excelView.zoom/previous;resetRowHeights();rebuildRowOffsets();drawRows(true);
     saveExcelView();
   }
@@ -45,7 +67,7 @@ const Trainees=(()=>{
   function applyExcelView(){
     const grid=$('sheet-grid');if(!grid)return;
     grid.style.setProperty('--sheet-zoom',String(excelView.zoom/100));
-    $('sheet-zoom-slider').value=String(excelView.zoom);$('sheet-zoom-reset').textContent=excelView.zoom+'%';
+    $('sheet-zoom-slider').value=String(excelView.zoom);if(document.activeElement!==$('sheet-zoom-reset'))$('sheet-zoom-reset').value=excelView.zoom+'%';
     $('sheet-zoom-out').disabled=excelView.zoom<=50;$('sheet-zoom-in').disabled=excelView.zoom>=200;
     grid.classList.toggle('sheet-wrap-text',excelView.wrap);
     grid.classList.toggle('sheet-freeze-column',excelView.freeze);
@@ -457,13 +479,20 @@ const Trainees=(()=>{
     const more=button(tr('التنسيق وأدوات إضافية','Formatting & more tools'),()=>{const expanded=$('sheet-workspace').classList.toggle('sheet-show-tools');more.setAttribute('aria-expanded',String(expanded));});more.id='sheet-more-tools';more.className='sheet-mobile-toggle';more.setAttribute('aria-expanded','false');toolbar.before(more);
     for(const key of ['wrap','freeze'])$('sheet-'+key).onclick=()=>{commitEdit();excelView[key]=!excelView[key];saveExcelView();applyExcelView();resetRowHeights();rebuildRowOffsets();drawRows(true);};
     const zoomTools=node('div',undefined,{class:'sheet-zoom-tools',dir:'ltr'});
-    zoomTools.innerHTML='<span id="sheet-zoom-label"></span><button type="button" id="sheet-zoom-out">−</button><input type="range" id="sheet-zoom-slider" min="50" max="200" step="10" value="100"><button type="button" id="sheet-zoom-in">+</button><button type="button" id="sheet-zoom-reset">100%</button>';
+    zoomTools.innerHTML='<span id="sheet-zoom-label"></span><button type="button" id="sheet-zoom-out">−</button><input type="range" id="sheet-zoom-slider" min="50" max="200" step="1" value="100"><button type="button" id="sheet-zoom-in">+</button><input type="text" inputmode="numeric" autocomplete="off" spellcheck="false" id="sheet-zoom-reset" value="100%">';
     $('sheet-workspace').querySelector('.sheet-footer').append(zoomTools);
     const expandedButton=button('',()=>setExpandedView(true));expandedButton.id='sheet-expanded';expandedButton.setAttribute('aria-pressed','false');zoomTools.prepend(expandedButton);
     const expandedBar=node('div',undefined,{class:'sheet-expanded-bar'}),exit=button('',()=>setExpandedView(false)),expandedTools=button('',()=>{const show=$('sheet-workspace').classList.toggle('sheet-expanded-tools');expandedTools.setAttribute('aria-pressed',String(show));queueDraw(true);});exit.id='sheet-expanded-close';expandedTools.id='sheet-expanded-tools';expandedTools.setAttribute('aria-pressed','false');expandedBar.append(exit,expandedTools,node('output',undefined,{id:'sheet-visible-rows',role:'status'}));$('sheet-workspace').prepend(expandedBar);
     $('sheet-zoom-out').onclick=()=>setZoom(excelView.zoom-10);$('sheet-zoom-in').onclick=()=>setZoom(excelView.zoom+10);
-    $('sheet-zoom-slider').oninput=()=>setZoom($('sheet-zoom-slider').value);$('sheet-zoom-reset').onclick=()=>setZoom(100);
-    toolbar.querySelector('.sheet-essential-tools .sheet-ribbon-actions').append(node('input',undefined,{id:'sheet-address',value:'A1','aria-label':'عنوان الخلية / Cell address',title:'D150',autocomplete:'off',spellcheck:'false',dir:'ltr'}));
+    $('sheet-zoom-slider').oninput=()=>setZoom($('sheet-zoom-slider').value);
+    const zoomInput=$('sheet-zoom-reset'),commitZoom=()=>{
+      const value=zoomInput.value.trim().replace(/[٠-٩]/g,d=>String(d.charCodeAt(0)-1632)).replace(/[۰-۹]/g,d=>String(d.charCodeAt(0)-1776)).replace(/[%٪]$/,'').trim();
+      if(/^\d+(?:\.\d+)?$/.test(value)&&Number.isFinite(Number(value)))setZoom(Number(value));
+      zoomInput.value=excelView.zoom+'%';
+    };
+    zoomInput.onfocus=()=>zoomInput.select();zoomInput.onblur=commitZoom;
+    zoomInput.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();commitZoom();zoomInput.blur();}else if(e.key==='Escape'){e.preventDefault();e.stopPropagation();zoomInput.value=excelView.zoom+'%';zoomInput.blur();}};
+    const search=$('sheet-search'),searchGroup=node('div',undefined,{class:'sheet-search-group'});search.replaceWith(searchGroup);searchGroup.append(search,node('input',undefined,{id:'sheet-address',value:'A1','aria-label':'عنوان الخلية / Cell address',title:'D150',autocomplete:'off',spellcheck:'false',dir:'ltr'}));
     $('sheet-address').addEventListener('keydown',e=>{
       if(e.key==='Escape'){e.preventDefault();$('sheet-address').blur();paint();return;}
       if(e.key!=='Enter')return;e.preventDefault();if(!loaded)return;
@@ -502,7 +531,7 @@ const Trainees=(()=>{
     $('sheet-duplicates-only').onchange=()=>{commitEdit();anchor=cursor={r:0,c:0};render();};
     $('sheet-clear-filters').onclick=()=>{commitEdit();clearFilters();render();};
     const grid=$('sheet-grid');
-    grid.parentElement.addEventListener('scroll',()=>queueDraw(),{passive:true});
+    grid.parentElement.addEventListener('scroll',()=>{queueDraw();schedulePosition();},{passive:true});
     new ResizeObserver(()=>{
       if(expandedView&&previousViewZoom!==null&&!editing&&!$('sheet-workspace').classList.contains('sheet-expanded-tools')){
         const zoom=expandedZoom();if(zoom!==excelView.zoom){
@@ -551,7 +580,9 @@ const Trainees=(()=>{
     $('sheet-owned').onclick=()=>{codeMode='owned';renderCodes();};$('sheet-pool').onclick=()=>{codeMode='pool';renderCodes();};
     $('sheet-assign').onclick=assign;$('sheet-code-search').oninput=renderCodes;
     $('sheet-code-refresh').onclick=async()=>{if(await Cloud.refresh())renderCodes();};
-    window.addEventListener('beforeunload',e=>{if(hasDraft()){e.preventDefault();e.returnValue='';}});
+    window.addEventListener('beforeunload',e=>{savePosition();if(hasDraft()){e.preventDefault();e.returnValue='';}});
+    window.addEventListener('pagehide',savePosition);
+    document.addEventListener('visibilitychange',()=>{if(document.hidden)savePosition();});
     if(typeof TraineeExcel!=='undefined')excelTools=TraineeExcel.mount({D,$,tr,node,button,
       state:()=>({cells,formatting,view,owner,loaded,labels:allLabels(),bounds:bounds(),cursor:{...cursor},cols:visibleCols(),filtered:filtered()}),
       commitEdit,change,formatSelection,focusCell,render,message,cutSelection,copySelection,pasteSelection,executePaste,
@@ -632,7 +663,7 @@ const Trainees=(()=>{
     $('trainees-tab').textContent=tr('المتدربون','Trainees');if(!initialized)return;
     if($('sheet-more-tools'))$('sheet-more-tools').textContent=tr('التنسيق وأدوات إضافية','Formatting & more tools');
     $('sheet-zoom-label').textContent=tr('زوم الجدول','Table zoom');
-    for(const [id,ar,en]of [['sheet-zoom-out','تصغير الجدول','Zoom out'],['sheet-zoom-in','تكبير الجدول','Zoom in'],['sheet-zoom-slider','نسبة زوم الجدول','Table zoom percentage'],['sheet-zoom-reset','إرجاع الزوم إلى 100%','Reset zoom to 100%']]){$(id).setAttribute('aria-label',tr(ar,en));$(id).title=tr(ar,en);}
+    for(const [id,ar,en]of [['sheet-zoom-out','تصغير الجدول','Zoom out'],['sheet-zoom-in','تكبير الجدول','Zoom in'],['sheet-zoom-slider','نسبة زوم الجدول','Table zoom percentage'],['sheet-zoom-reset','اكتب نسبة الزوم من 50 إلى 200','Enter zoom percentage from 50 to 200']]){$(id).setAttribute('aria-label',tr(ar,en));$(id).title=tr(ar,en);}
     document.querySelectorAll('.sheet-ribbon-group small[data-ar]').forEach(el=>el.textContent=tr(el.dataset.ar,el.dataset.en));
     if(typeof TraineeReports!=='undefined')TraineeReports.translate();
     const text={
@@ -681,12 +712,14 @@ const Trainees=(()=>{
     else members=[];
     const selector=$('sheet-owner');selector.replaceChildren();selector.append(node('option',tr('جدولي','My sheet')+' — '+Cloud.email(),{value:Cloud.userId()}));
     members.filter(m=>m.user_id&&m.user_id!==Cloud.userId()).forEach(m=>selector.append(node('option',m.email+(m.active?'':tr(' (غير نشط)',' (inactive)')),{value:m.user_id})));
-    if(!owner||!loaded)await switchOwner(owner||Cloud.userId());else selector.value=owner;
+    let nextOwner=owner||Cloud.userId();if(!owner&&admin&&typeof workspaceView==='function'){const savedOwner=workspaceView().sheetOwner;if([...selector.options].some(option=>option.value===savedOwner))nextOwner=savedOwner;}
+    if(!owner||!loaded)await switchOwner(nextOwner);else selector.value=owner;
     renderCodes();
     prometricTools?.poll();
   }
   async function switchOwner(next,discard=false){
     if(loading)return false;
+    savePosition();
     prometricTools?.reset();
     excelTools?.closeFiles();
     closeDuplicateDetails();
@@ -696,7 +729,7 @@ const Trainees=(()=>{
     try{
       const data=await Cloud.readTrainees(next);if(token!==epoch)return false;
       const normalized=D.normalize(data.cells);owner=next;cells=normalized;formatting=D.format(data.format);version=Number(data.version);revision=savedRevision=0;history=[];future=[];loaded=true;
-      clearFilters();anchor=cursor={r:0,c:0};$('sheet-owner').value=owner;render();renderCodes();message(tr('تم الحفظ','Saved'));return true;
+      clearFilters();anchor=cursor={r:0,c:0};$('sheet-owner').value=owner;render();restorePosition();renderCodes();if(typeof rememberWorkspaceView==='function')rememberWorkspaceView({sheetOwner:owner});message(tr('تم الحفظ','Saved'));return true;
     }catch(error){if(token===epoch)message(errorMessage(error),true);return false;}
     finally{if(token===epoch){loading=false;$('sheet-owner').disabled=false;$('sheet-workspace').inert=!loaded;}}
   }
@@ -720,7 +753,7 @@ const Trainees=(()=>{
     updateLastDataRow();if(!filtered())for(let i=cells.length;i<totalInputRows();i++)view.push(i);
   }
   function render(){
-    if(!initialized)return;closeTraineeDetails();hideDuplicateHint();clearTimeout(detailTimer);formulaCache.clear();buildView();
+    if(!initialized)return;hideDuplicateHint();clearTimeout(detailTimer);formulaCache.clear();buildView();
     const scroll=$('sheet-grid').parentElement,scrollTop=scroll.scrollTop,scrollLeft=scroll.scrollLeft;
     const cols=visibleCols();if(!cols.includes(cursor.c))cursor.c=cols[0];if(!cols.includes(anchor.c))anchor.c=cursor.c;
     $('panel-trainees').dir=formatting.direction;
@@ -901,14 +934,15 @@ const Trainees=(()=>{
   }
   function closeTraineeDetails(){clearTimeout(traineeHoverTimer);const dialog=$('sheet-trainee-dialog');if(dialog?.open)dialog.close();}
   function initTraineeDetails(){
+    let activeIndex=null,activeEpoch=null;
     const dialog=node('dialog',undefined,{id:'sheet-trainee-dialog',class:'sheet-duplicate-dialog sheet-trainee-dialog','aria-labelledby':'sheet-trainee-title'});
     const head=node('div',undefined,{class:'sheet-detail-header'}),close=button('×',closeTraineeDetails,'sheet-detail-close');
     close.setAttribute('aria-label',tr('إغلاق','Close'));head.append(node('h2','',{id:'sheet-trainee-title'}),close);
     dialog.append(head,node('div',undefined,{id:'sheet-trainee-record',class:'sheet-detail-record'}));document.body.append(dialog);
-    dialog.addEventListener('close',()=>{$('sheet-trainee-record').replaceChildren();$('sheet-trainee-title').textContent='';});
-    const show=td=>{
-      if(!td?.isConnected||editing||dragging)return;
-      const index=view[+td.dataset.v],row=cells[index];if(!row?.[3])return;
+    dialog.addEventListener('close',()=>{if(dialog.open)return;activeIndex=activeEpoch=null;$('sheet-trainee-record').replaceChildren();$('sheet-trainee-title').textContent='';});
+    const show=index=>{
+      if(!loaded||editing||dragging)return;
+      const row=cells[index];if(!row?.[3])return;activeIndex=index;activeEpoch=epoch;
       hideDuplicateHint();dialog.dir=currentLang==='ar'?'rtl':'ltr';
       $('sheet-trainee-title').textContent=tr('بيانات المتدرب — ','Trainee details — ')+row[3];
       const dl=node('dl'),login=node('dd',undefined,{dir:'ltr'});login.append(PROMETRIC_LOGIN_URL?copyDetailValue(PROMETRIC_LOGIN_URL,'Prometric login link','','ltr'):node('span',tr('غير محدد','Not configured')));
@@ -916,7 +950,7 @@ const Trainees=(()=>{
       labels.forEach((pair,c)=>{if(c===0||c>=baseLabels.length&&!row[c]&&!formatting.headers[c])return;appendDetailField(dl,row,pair,c,false);});
       $('sheet-trainee-record').replaceChildren(dl);
       if(prometricTools&&!row[9]?.trim()&&!row[10]?.trim())$('sheet-trainee-record').append(button(tr('إنشاء حساب Prometric','Create Prometric account'),()=>{closeTraineeDetails();prometricTools.open([index]);},'sheet-primary sheet-create-prometric'));
-      const refreshRecord=()=>show($('sheet-grid').querySelector(`td[data-v="${view.indexOf(index)}"][data-col="3"]`)||td);
+      const refreshRecord=()=>{if(dialog.open&&activeIndex===index&&activeEpoch===epoch)show(index);};
       const exam=D.courseKeycode(row[7],DEFAULT_KEYCODES),category=exam&&(state.keycodeOverrides?.[exam.code]||exam.category),codeCategory=category&&getLinkedCodesCat(category);
       const action=button(tr('جلب كود الاختبار ونسخه','Get and copy exam code'),async()=>{
         if(action.disabled)return;action.disabled=true;const token=epoch,selectedOwner=owner;
@@ -938,7 +972,7 @@ const Trainees=(()=>{
       if(!row[0]?.trim())$('sheet-trainee-record').append(action);if(!dialog.open)dialog.show();
     };
     const grid=$('sheet-grid');
-    grid.addEventListener('dblclick',e=>{const td=e.target.closest('td[data-col="3"]');if(td){commitEdit();show(td);}});
+    grid.addEventListener('dblclick',e=>{const td=e.target.closest('td[data-col="3"]');if(td){commitEdit();show(view[+td.dataset.v]);}});
     document.addEventListener('pointerdown',e=>{clearTimeout(traineeHoverTimer);if(dialog.open&&!dialog.contains(e.target))closeTraineeDetails();});
     document.addEventListener('keydown',e=>{if(e.key==='Escape')closeTraineeDetails();});
   }
@@ -1046,7 +1080,7 @@ const Trainees=(()=>{
     $('sheet-align-left')?.setAttribute('aria-pressed',String(curAlign==='left'));
     excelTools?.paint(style);
   }
-  function selectCell(r,c,extend=false){commitEdit();cursor={r,c};if(!extend)anchor={r,c};paint();$('sheet-grid').querySelector(`td[data-v="${r}"][data-col="${c}"]`)?.focus();}
+  function selectCell(r,c,extend=false){commitEdit();cursor={r,c};if(!extend)anchor={r,c};paint();schedulePosition();$('sheet-grid').querySelector(`td[data-v="${r}"][data-col="${c}"]`)?.focus();}
   function focusCell(r,c,extend=false){
     r=Math.max(0,Math.min(view.length-1,r));c=Math.max(0,Math.min(colCount()-1,c));if(!visibleCols().includes(c))c=visibleCols()[0];
     const grid=$('sheet-grid'),scroll=grid.parentElement;
@@ -1057,6 +1091,7 @@ const Trainees=(()=>{
     if(!loaded||loading)return;commitEdit();const r=+td.dataset.v,c=+td.dataset.col;cursor=anchor={r,c};paint();
     if(c===11){td.querySelector('select')?.focus();return;}
     editing={el:td,index:view[r],column:c,old:cells[view[r]]?.[c]||''};td.contentEditable='true';td.spellcheck=false;
+    schedulePosition();
     td.textContent=initial!==undefined?initial:editing.old;td.focus();
     td.oninput=()=>schedule();
     td.oncompositionstart=()=>{td.dataset.composing='true';clearTimeout(timer);};
@@ -1230,6 +1265,6 @@ const Trainees=(()=>{
   }
   function reset(){prometricTools?.reset();setExpandedView(false);excelTools?.closeFiles();closeDuplicateDetails();closeContextMenu();$('sheet-find-dialog')?.close();clearTimeout(timer);epoch++;owner='';cells=[];formatting=D.defaultFormat();loaded=false;loading=false;editing=null;history=[];future=[];revision=savedRevision=0;if(initialized){render();$('sheet-owner').replaceChildren();$('sheet-code-list').replaceChildren();$('sheet-workspace').inert=true;}}
   function suspend(){prometricTools?.reset();setExpandedView(false);excelTools?.closeFiles();closeDuplicateDetails();closeContextMenu();$('sheet-find-dialog')?.close();clearTimeout(timer);}
-  return {open,translate,hasDraft,flush,reset,suspend};
+  return {open,translate,hasDraft,flush,reset,suspend,savePosition};
 })();
 Trainees.translate();

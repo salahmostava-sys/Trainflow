@@ -38,19 +38,26 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),path
     const headerFont=await page.locator('th[data-col="0"]').evaluate(el=>getComputedStyle(el).fontSize);
     const cellFont=await cell(0,0).evaluate(el=>parseFloat(getComputedStyle(el).fontSize));
     const footerFont=await page.locator('.sheet-footer').evaluate(el=>getComputedStyle(el).fontSize);
-    await page.locator('#sheet-zoom-in').click();assert.equal(await page.locator('#sheet-zoom-reset').textContent(),'110%');
+    await page.locator('#sheet-zoom-in').click();assert.equal(await page.locator('#sheet-zoom-reset').inputValue(),'110%');
     await page.locator('#sheet-zoom-slider').evaluate(el=>{el.value='150';el.dispatchEvent(new Event('input',{bubbles:true}));});
     assert.ok(Math.abs(await cell(0,0).evaluate(el=>el.getBoundingClientRect().width)-normalWidth*1.5)<2,'Zoom scales cell dimensions');
     assert.equal(await cell(0,0).evaluate(el=>parseFloat(getComputedStyle(el).fontSize)),cellFont*1.5);
     assert.equal(await page.locator('th[data-col="0"]').evaluate(el=>getComputedStyle(el).fontSize),headerFont,'Header text keeps its normal size');
     assert.equal(await page.locator('.sheet-footer').evaluate(el=>getComputedStyle(el).fontSize),footerFont,'Controls remain their normal size');
     await page.reload();await page.locator('#trainees-tab').click();await page.waitForFunction(()=>document.getElementById('sheet-status').textContent==='تم الحفظ');
-    assert.equal(await page.locator('#sheet-zoom-reset').textContent(),'150%','Zoom preference survives reload');
+    assert.equal(await page.locator('#sheet-zoom-reset').inputValue(),'150%','Zoom preference survives reload');
     for(const [value,disabled]of [['200','sheet-zoom-in'],['50','sheet-zoom-out']]){
       await page.locator('#sheet-zoom-slider').evaluate((el,value)=>{el.value=value;el.dispatchEvent(new Event('input',{bubbles:true}));},value);
       assert.equal(await page.locator('#'+disabled).isDisabled(),true);
     }
-    await page.locator('#sheet-zoom-reset').click();assert.equal(await page.locator('#sheet-zoom-reset').textContent(),'100%');
+    const zoomInput=page.locator('#sheet-zoom-reset');
+    await zoomInput.fill('85');await zoomInput.press('Enter');assert.equal(await zoomInput.inputValue(),'85%');assert.equal(await page.locator('#sheet-grid').evaluate(el=>el.style.getPropertyValue('--sheet-zoom')),'0.85','Typed zoom keeps exact percentage');
+    await zoomInput.fill('٧٥٪');await page.locator('#sheet-search').focus();assert.equal(await zoomInput.inputValue(),'75%','Arabic digits and percentage apply on blur');
+    await zoomInput.fill('bad');await zoomInput.press('Enter');assert.equal(await zoomInput.inputValue(),'75%','Invalid input preserves zoom');
+    await zoomInput.fill('90');await zoomInput.press('Escape');assert.equal(await zoomInput.inputValue(),'75%','Escape cancels typing');
+    await zoomInput.fill('250');await zoomInput.press('Enter');assert.equal(await zoomInput.inputValue(),'200%','Typed zoom respects upper limit');
+    await zoomInput.fill('0');await zoomInput.press('Enter');assert.equal(await zoomInput.inputValue(),'50%','Typed zoom respects lower limit');
+    await zoomInput.fill('100');await zoomInput.press('Enter');assert.equal(await zoomInput.inputValue(),'100%');
     const arabicShortcut=async(code,key,shift=false)=>page.evaluate(({code,key,shift})=>document.activeElement.dispatchEvent(new KeyboardEvent('keydown',{code,key,ctrlKey:true,shiftKey:shift,bubbles:true,cancelable:true})),{code,key,shift});
     await paste(0,2,'First');await paste(0,2,'Second');
     await arabicShortcut('KeyZ','ئ');assert.equal(await cell(0,2).textContent(),'First','Ctrl+Z works with Arabic keyboard layout');
@@ -141,13 +148,25 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),path
     await page.evaluate(()=>{Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async value=>{window.detailCopied=value;}}});});
     for(const [selector,value]of [['.sheet-detail-keycode','LIVE-SALES-AR'],['.sheet-detail-category','فئة المراجعة'],['button[aria-label="نسخ Prometric Account"]','demo-prometric-account'],['button[aria-label="نسخ Prometric Password"]','demo-prometric-password'],['button[aria-label="نسخ الجوال"]','050']]){
       await page.locator('#sheet-trainee-record '+selector).click();assert.equal(await page.evaluate(()=>window.detailCopied),value,'One click copies the exact value');
+      assert.equal(await page.locator('#sheet-trainee-dialog').isVisible(),true,'Copying keeps the details open');
     }
+    await page.evaluate(()=>{document.getElementById('sheet-trainee-dialog').scrollTop=90;document.getElementById('sheet-grid').parentElement.scrollTop=2000;});
+    await page.waitForFunction(()=>!document.querySelector('td[data-v="0"][data-col="3"]'));
+    const detailScroll=await page.locator('#sheet-trainee-dialog').evaluate(el=>el.scrollTop);
+    await page.evaluate(()=>Trainees.translate());
+    assert.equal(await page.locator('#sheet-trainee-dialog').isVisible(),true,'Background sheet rendering and row recycling keep details open');
+    assert.equal(await page.locator('#sheet-trainee-record').textContent(),details,'The same trainee remains displayed after sheet rendering');
+    assert.equal(await page.locator('#sheet-trainee-dialog').evaluate(el=>el.scrollTop),detailScroll,'Background rendering preserves detail scroll');
+    await page.setViewportSize({width:1400,height:900});assert.equal(await page.locator('#sheet-trainee-dialog').isVisible(),true,'Resizing keeps the details open');
+    await page.mouse.click(10,10);await page.locator('#sheet-trainee-dialog').waitFor({state:'hidden'});
+    await page.evaluate(()=>document.getElementById('sheet-grid').parentElement.scrollTop=0);await cell(0,3).waitFor({state:'visible'});await cell(0,3).dblclick();
     await page.keyboard.press('Escape');await cell(0,0).click();await page.keyboard.press('Delete');await cell(0,3).dblclick();
     await page.evaluate(()=>{
       window.claimCount=0;Cloud.claimTraineeCode=async(category,targetOwner)=>{if(category!=='Review-category'||targetOwner!=='demo-admin')throw Error('Wrong category or owner');window.claimCount++;previewCodes.push({code:'ALLOCATED-DEMO',category,owner_id:targetOwner,used_on:'04/10/2026',version:2});Trainees.translate();window.previewSaveError='NETWORK';return 'ALLOCATED-DEMO';};
     });
     await page.locator('.sheet-get-exam-code').click();await page.waitForFunction(()=>window.claimCount===1&&Trainees.hasDraft());
     assert.equal(await cell(0,0).textContent(),'ALLOCATED-DEMO','Claim is written to the current trainee');
+    assert.equal(await page.locator('#sheet-trainee-dialog').isVisible(),true,'Code reservation and failed saving keep details open');
     assert.equal(await page.locator('.sheet-get-exam-code').count(),0,'Allocation disappears as soon as the row has a code');
     await page.evaluate(()=>window.previewSaveError='');await page.keyboard.press('Escape');await page.locator('#sheet-save').click();await page.waitForFunction(()=>!Trainees.hasDraft());
     assert.equal(await page.evaluate(()=>window.claimCount),1,'Retry after a sheet save failure does not reserve another code');

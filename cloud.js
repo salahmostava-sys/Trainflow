@@ -431,7 +431,9 @@ const Cloud = (() => {
     await load();ready=true;
     clearTimeout(sessionTimer);sessionTimer=setTimeout(()=>{void endDailySession().catch(()=>{});},Math.max(0,sessionDeadline-Date.now()));
     if(retainedDraftUser&&typeof Trainees!=='undefined'){if(await Trainees.flush())retainedDraftUser='';}
+    $('app').classList.add('workspace-restoring');
     $('auth-box').hidden=true;$('app').hidden=false;$('cloud-tools').hidden=false;$('sign-out').hidden=false;
+    try{if(typeof restoreWorkspaceView==='function')await restoreWorkspaceView();}finally{$('app').classList.remove('workspace-restoring');}
     setStatus('dbConnected');
     if(typeof InventoryDelivery!=='undefined')InventoryDelivery.ready();
   }
