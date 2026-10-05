@@ -36,7 +36,9 @@ const TraineeReports=(()=>{
   function mount(host,source,save){
     setupSettings();const panel=document.createElement('section');panel.dir='rtl';panel.className='sheet-tools sheet-report-panel';
     panel.innerHTML='<div class="sheet-report-actions"><strong></strong><button type="button" data-action="date"></button><button type="button" data-action="preview"></button><button type="button" data-action="operations"></button><button type="button" data-action="success"></button><button type="button" data-action="settings"></button></div><span class="sheet-report-state"></span><div popover="auto" class="sheet-report-date-picker"><label><span></span><input type="date" data-field="date"></label><button type="button" data-action="apply-date"></button></div><p role="status" aria-live="polite"></p>';
-    host.prepend(panel);panels.add(panel);const field=name=>panel.querySelector('[data-field="'+name+'"]')||document.getElementById('settings-report-'+name),status=panel.querySelector('p');
+    host.prepend(panel);panels.add(panel);const actions=panel.querySelector('.sheet-report-actions'),toolbar=host.querySelector('.sheet-ribbon-top .sheet-ribbon-actions'),traineeActions=['sheet-certificate-open','sheet-prometric-open'].map(id=>document.getElementById(id)).filter(Boolean);
+    panel.syncExpanded=active=>{const target=active?toolbar:actions;if(target)traineeActions.forEach(button=>target.append(button));};panel.syncExpanded(host.classList.contains('sheet-expanded-view'));
+    const field=name=>panel.querySelector('[data-field="'+name+'"]')||document.getElementById('settings-report-'+name),status=panel.querySelector('p');
     const title=panel.querySelector('strong');title.dataset.ar='تقارير جوجل اليومية';title.dataset.en='Daily Google reports';
     let busy=false;const ready=panel.querySelector('.sheet-report-state'),dateButton=panel.querySelector('[data-action="date"]'),picker=panel.querySelector('[popover]');dateButton.popoverTargetElement=picker;field('date').onchange=()=>{panel.updateReady();picker.hidePopover();};panel.querySelector('[data-action="apply-date"]').onclick=()=>picker.hidePopover();panel.querySelector('[data-action="settings"]').onclick=openSettings;
     panel.updateReady=()=>{const prefs=preferences(),bridge=bridgeUrl(prefs.bridge);let count=0;for(const kind of ['operations','success']){const enabled=bridge&&sheetUrl(prefs[kind]);panel.querySelector('[data-action="'+kind+'"]').disabled=busy||!enabled;if(enabled)count++;}dateButton.textContent=tr('تاريخ التقرير: ','Report date: ')+field('date').value.split('-').reverse().join('/');ready.textContent=count===2?tr('جاهز للرفع','Ready to upload'):count===1?tr('تقرير واحد جاهز','One report ready'):tr('غير مربوط — افتح إعدادات التقارير','Not connected — open Report settings');};
@@ -67,5 +69,5 @@ const TraineeReports=(()=>{
       }catch(error){tab.close();status.textContent=error.message||tr('تعذر تجهيز التقرير.','Could not prepare the report.');}finally{busy=false;panel.updateReady();}
     });
   }
-  setupSettings();return {mount,day,translate};
+  setupSettings();return {mount,day,translate,syncExpanded(active){panels.forEach(panel=>panel.syncExpanded?.(active));}};
 })();

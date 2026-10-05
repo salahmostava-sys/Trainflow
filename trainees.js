@@ -60,6 +60,7 @@ const Trainees=(()=>{
     expandedView=active;$('sheet-workspace').classList.toggle('sheet-expanded-view',active);document.body.classList.toggle('sheet-expanded-open',active);
     $('sheet-expanded').setAttribute('aria-pressed',String(active));$('sheet-workspace').classList.remove('sheet-expanded-tools');$('sheet-expanded-tools').setAttribute('aria-pressed','false');
     excelTools?.syncRibbon();
+    if(typeof TraineeReports!=='undefined')TraineeReports.syncExpanded?.(active);
     if(active){previousViewZoom=excelView.zoom;excelView.zoom=expandedZoom();}else{excelView.zoom=previousViewZoom??excelView.zoom;previousViewZoom=null;}
     applyExcelView();resetRowHeights();rebuildRowOffsets();const top=rowOffsets[first]+offset*excelView.zoom/oldZoom;scroll.scrollTop=top;scroll.scrollLeft=left*excelView.zoom/oldZoom;drawRows(true);
     const measuredTop=rowOffsets[first]+offset*excelView.zoom/oldZoom;if(Math.abs(scroll.scrollTop-measuredTop)>1){scroll.scrollTop=measuredTop;drawRows(true);}

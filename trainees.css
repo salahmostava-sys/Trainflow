@@ -134,7 +134,10 @@
 #sheet-workspace .sheet-format-tools button[aria-pressed=true]{background:#dbeafe;color:#1d4ed8;border-color:#2563eb}
 .sheet-mobile-toggle{display:none}
 .sheet-report-panel{display:flex!important;flex-wrap:wrap;align-items:center;gap:8px;padding:10px 12px}
-.sheet-report-actions{display:flex;flex-wrap:wrap;align-items:center;gap:7px}
+.sheet-report-actions{display:flex;flex:1 1 100%;min-width:0;flex-wrap:nowrap;align-items:center;gap:6px;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:thin;padding-bottom:3px}
+.sheet-report-actions>*{flex-shrink:0;white-space:nowrap}
+#sheet-workspace .sheet-report-actions>button{font-size:12px;padding:7px 10px;min-height:34px}
+#sheet-workspace>.sheet-tools.sheet-report-panel{padding:8px 12px;gap:5px;align-items:center}
 .sheet-report-actions strong{font-size:13px;margin-inline-end:6px}
 .sheet-report-panel>p{flex-basis:100%;margin:0;font-size:12px;white-space:pre-line}
 .sheet-report-panel>p:empty{display:none}
