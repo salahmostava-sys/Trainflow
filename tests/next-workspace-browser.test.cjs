@@ -1,0 +1,34 @@
+const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),{spawn}=require('node:child_process');
+(async()=>{
+  const root=path.resolve(__dirname,'..'),port=4210,previewPort=4211;
+  const nextBin=require.resolve('next/dist/bin/next'),servers=[];let browser;
+  const launch=(args,env={})=>{const process=spawn(require('node:process').execPath,args,{cwd:root,env:{...require('node:process').env,...env},stdio:['ignore','pipe','inherit']});servers.push(process);return process;};
+  try{
+    const next=launch([nextBin,'start','-p',String(port)]);
+    await new Promise((resolve,reject)=>{next.stdout.on('data',data=>{if(data.toString().includes('Ready'))resolve();});next.once('error',reject);next.once('exit',code=>reject(Error('Next exited '+code)));});
+    const preview=launch(['tools/design-preview.cjs'],{IBTA_PREVIEW_PORT:String(previewPort)});await new Promise(resolve=>preview.stdout.once('data',resolve));
+    browser=await chromium.launch({headless:true,channel:'msedge'});const page=await browser.newPage({viewport:{width:1366,height:900}}),reference=await browser.newPage({viewport:{width:1366,height:900}}),errors=[];
+    page.on('pageerror',error=>errors.push(error.message));
+    const source=fs.readFileSync(path.join(root,'tools/design-preview.cjs'),'utf8'),mock=vm.runInNewContext(source.match(/const mock=(`[^]*?`);/)[1]);
+    await page.route('**/workspace/cloud.js*',route=>route.fulfill({contentType:'text/javascript',body:mock}));
+    await page.route('https://cdn.jsdelivr.net/**',route=>route.fulfill({contentType:'text/javascript',body:'window.supabase={};'}));
+    await page.goto('http://localhost:'+port);await reference.goto('http://127.0.0.1:'+previewPort);
+    for(const target of [page,reference]){await target.locator('#app').waitFor({state:'visible'});await target.locator('#trainees-tab').click();await target.waitForFunction(()=>document.getElementById('sheet-status').textContent==='تم الحفظ');await target.evaluate(()=>document.fonts.ready);}
+    assert.equal(await page.locator('iframe').count(),0,'Original UI runs directly in the TypeScript/React page, preserving extension access');
+    assert.equal(await page.locator('nav.tabs button').count(),5);assert.equal(await page.locator('aside').count(),await reference.locator('aside').count(),'Only the original sheet allocation panel remains');
+    const geometry=target=>target.evaluate(()=>['nav.tabs','#sheet-workspace','#sheet-grid','#sheet-search'].map(selector=>{const el=document.querySelector(selector),rect=el.getBoundingClientRect();return {selector,x:Math.round(rect.x),y:Math.round(rect.y),width:Math.round(rect.width),font:getComputedStyle(el).fontFamily};}));
+    assert.deepEqual(await geometry(page),await geometry(reference),'Layout geometry and fonts match the original UI');
+    await page.evaluate(()=>{const row=Array(13).fill('');row[0]='EXISTING-VOUCHER';row[1]='existing@example.invalid';row[3]='EXISTING TRAINEE';row[7]='CBP-L';previewSheets.set('demo-admin',{cells:[row],version:0});});
+    await page.locator('#sheet-reload').click();await page.waitForFunction(()=>document.getElementById('sheet-status').textContent==='تم الحفظ');
+    assert.equal(await page.locator('td[data-v="0"][data-col="0"]').textContent(),'EXISTING-VOUCHER');
+    await page.locator('td[data-v="0"][data-col="3"]').dblclick();await page.locator('#sheet-trainee-dialog').waitFor({state:'visible'});assert.match(await page.locator('#sheet-trainee-record').textContent(),/EXISTING TRAINEE/);await page.locator('#sheet-trainee-dialog .sheet-detail-close').click();
+    await page.locator('#sheet-xlsx-import').click();assert.equal(await page.locator('#sheet-xlsx-mode option').count(),3);await page.keyboard.press('Escape');
+    assert.equal(await page.locator('#prometric-registration-script').getAttribute('data-extension')?.then(value=>value.startsWith('/workspace/trainflow-prometric.zip')),true);
+    await page.screenshot({path:path.join(root,'artifacts/next-classic-trainees.png')});
+    await page.locator('#lang-btn').click();assert.equal(await page.locator('#html-root').getAttribute('lang'),'en');
+    await page.reload();await page.locator('#app').waitFor({state:'visible'});await page.waitForFunction(()=>document.getElementById('sheet-status')?.textContent==='Saved');assert.equal(await page.locator('#html-root').getAttribute('lang'),'en','Refresh preserves the same language and selected sheet panel');
+    const health=await page.request.get('http://localhost:'+port+'/api/health');assert.equal((await health.json()).runtime,'nextjs');const privateResponse=await page.request.get('http://localhost:'+port+'/api/data/ibta_codes');assert.equal(privateResponse.status(),401,'Next API keeps unauthenticated requests out of the existing database');
+    const downloads=['trainflow-prometric.zip','exceljs-4.4.0.min.js','trainees-xlsx-worker.js','google-reports.gs'];for(const file of downloads)assert.equal((await page.request.get('http://localhost:'+port+'/workspace/'+file)).status(),200,'Published original asset: '+file);
+    assert.deepEqual(errors,[]);console.log('PASS: production Next.js with exact classic DOM/layout, sheet records/details/import, persisted language/panel, packaged assets and existing API protection');
+  }finally{await browser?.close();for(const server of servers)server.kill();}
+})().catch(error=>{console.error(error);process.exitCode=1;});

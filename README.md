@@ -4,6 +4,14 @@
 
 TrainFlow connects trainee records, exam vouchers, supervisor stock, Prometric registration and team reporting in one Arabic/English workspace.
 
+## Next.js with the original interface
+
+The application keeps Next.js and TypeScript while displaying the original TrainFlow interface: the top tabs, Excel-style trainee sheet, dialogs, formatting controls and existing settings. `app/layout.tsx` mounts `components/ClassicWorkspace.tsx` directly in the page, without an iframe or a redesigned sidebar. The original command modules remain responsible for their existing document IDs, extension messages and sheet operations.
+
+`pnpm build` first packages the existing interface and its assets into `public/workspace`, generates a TypeScript interface manifest, then builds Next.js with type checking. `pnpm dev` performs the same preparation before starting development. `pnpm test:next` verifies the production Next.js interface against the original preview; run it after building.
+
+The existing Supabase project, `ibta_*` tables, account permissions and versioned trainee sheets stay in use. The TypeScript `/api/data/[...path]` route calls the original validated API handler with the user's JWT. This interface change performs no database migration or record conversion. Vercel uses the Next.js configuration in `vercel.json`; the existing Cloudflare build remains available through `pnpm build:cloudflare`.
+
 [Open TrainFlow](https://ibta-ops.pages.dev/) · [Architecture](ARCHITECTURE.md) · [Documentation](docs/README.md) · [Deployment](docs/deployment.md)
 
 ## What the system does

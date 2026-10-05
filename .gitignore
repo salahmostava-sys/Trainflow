@@ -1,4 +1,10 @@
 dist/
+dist-vercel/
+public/workspace/
+generated/
+.next/
+next-env.d.ts
+*.tsbuildinfo
 node_modules/
 .env
 .env.*

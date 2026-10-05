@@ -1,5 +1,13 @@
 # TrainFlow deployment and maintenance
 
+## Next.js deployment with the classic UI
+
+Vercel uses `framework: nextjs`, `pnpm install --frozen-lockfile`, `npm run build`, and `.next` output. The build generates the classic UI and its versioned assets before compiling the TypeScript/React entry point. Generated `public/workspace` assets and `generated/classic-ui.ts` are excluded from Git and regenerated for every build.
+
+Run `pnpm dev` for Next.js development, or `pnpm build` followed by `pnpm start` for production review. After building, run `pnpm test:next` to check the original layout, trainee data operations, file assets, refresh preferences and API protection using synthetic records. The API route forwards to `server/worker.mjs`; database ownership and permissions continue to be enforced by the existing project and policies.
+
+`pnpm build:cloudflare` retains the original static Pages build described below. Changing the web framework does not create a new Supabase project or replace the existing records.
+
 ## Local workspace
 
 Use Node.js 20 or newer and pnpm. The local entry file is `trainflow.html`.
