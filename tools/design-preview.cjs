@@ -53,6 +53,7 @@ http.createServer((req,res)=>{
     res.setHeader('Content-Type',pathname.endsWith('.css')?'text/css':'text/javascript');
     return res.end(fs.readFileSync(path.join(__dirname,'..',pathname.slice(1))));
   }
+  if(pathname==='/google-reports.gs'){res.setHeader('Content-Type','text/plain; charset=utf-8');return res.end(fs.readFileSync(path.join(__dirname,'../tools/google-reports.gs')));}
   if(pathname!=='/'){res.writeHead(404);return res.end();}
   let html=fs.readFileSync(path.join(__dirname,'../trainflow.html'),'utf8');
   html=html.replace(/<script src="https:\/\/cdn.jsdelivr.net[^>]+><\/script>/,'').replace('<script src="cloud.js"></script>','<script>'+mock+'</script>');

@@ -15,6 +15,9 @@ let worker=fs.readFileSync(path.join(root,'trainees-xlsx-worker.js'),'utf8');
 for(const file of ['trainees-xlsx.js','exceljs-4.4.0.min.js']){const data=file.startsWith('exceljs')?vendor:fs.readFileSync(path.join(root,file));worker=worker.replaceAll("'"+file+"'","'"+file+'?v='+createHash('sha256').update(data).digest('hex').slice(0,12)+"'");}
 fs.writeFileSync(path.join(output,'trainees-xlsx-worker.js'),worker);
 html=html.replaceAll('"trainees-xlsx-worker.js"','"trainees-xlsx-worker.js?v='+createHash('sha256').update(worker).digest('hex').slice(0,12)+'"');
+const connector=fs.readFileSync(path.join(root,'tools/google-reports.gs'));
+fs.writeFileSync(path.join(output,'google-reports.gs'),connector);
+html=html.replaceAll('"google-reports.gs"','"google-reports.gs?v='+createHash('sha256').update(connector).digest('hex').slice(0,12)+'"');
 for(const file of files){
   const hash=createHash('sha256').update(fs.readFileSync(path.join(root,file))).digest('hex').slice(0,12);
   html=html.replaceAll('"'+file+'"','"'+file+'?v='+hash+'"');fs.copyFileSync(path.join(root,file),path.join(output,file));

@@ -732,6 +732,8 @@ if(window.history)window.history.scrollRestoration='manual';
       <button type="button" role="tab" id="settings-tab-data" aria-controls="settings-pane-data" aria-selected="false" tabindex="-1" data-i18n="settingsTabData" hidden>System data</button>
       <button type="button" role="tab" id="settings-tab-prometric" aria-controls="settings-pane-prometric" aria-selected="false" tabindex="-1" data-i18n="settingsTabPrometric" hidden>Prometric</button>
       <button type="button" role="tab" id="settings-tab-inventory" aria-controls="settings-pane-inventory" aria-selected="false" tabindex="-1" data-i18n="settingsTabInventory" hidden>Inventory</button>
+      <button type="button" role="tab" id="settings-tab-extensions" aria-controls="settings-pane-extensions" aria-selected="false" tabindex="-1" data-i18n="settingsTabExtensions">Extensions</button>
+      <button type="button" role="tab" id="settings-tab-reports" aria-controls="settings-pane-reports" aria-selected="false" tabindex="-1" data-i18n="settingsTabReports">Google reports</button>
       <button type="button" role="tab" id="settings-tab-preferences" aria-controls="settings-pane-preferences" aria-selected="false" tabindex="-1" data-i18n="settingsTabPreferences">Preferences</button>
       <button type="button" role="tab" id="settings-tab-sync" aria-controls="settings-pane-sync" aria-selected="false" tabindex="-1" data-i18n="settingsTabSync">Team and sync</button>
     </div>
@@ -838,6 +840,33 @@ if(window.history)window.history.scrollRestoration='manual';
     </section>
     </div>
 
+    <div class="settings-pane" id="settings-pane-extensions" role="tabpanel" aria-labelledby="settings-tab-extensions" hidden>
+      <p class="settings-desc" data-i18n="extensionsIntro">Download the Chrome extensions here, then install them once in the same Chrome profile you use for this program.</p>
+      <div class="settings-extensions-grid">
+        <section class="ops-card">
+          <h3 data-i18n="extensionPrometricTitle">Prometric registration</h3>
+          <p class="ops-status" data-i18n="extensionPrometricDesc">Create trainee accounts through Prometric and return their usernames and passwords to the trainee sheet.</p>
+          <a class="settings-extension-download" id="settings-download-prometric" href="trainflow-prometric.zip" download="" data-i18n="extensionPrometricDownload">Download Prometric extension</a>
+        </section>
+        <section class="ops-card">
+          <h3 data-i18n="extensionWhatsAppTitle">WhatsApp inventory message</h3>
+          <p class="ops-status" data-i18n="extensionWhatsAppDesc">Send the inventory message at your chosen time through WhatsApp Web. Keep this device and Chrome running at the sending time.</p>
+          <a class="settings-extension-download" id="settings-download-whatsapp" href="trainflow-whatsapp-web.zip" download="" data-i18n="extensionWhatsAppDownload">Download WhatsApp extension</a>
+        </section>
+      </div>
+      <section class="ops-card settings-extension-install">
+        <h3 data-i18n="extensionsInstallTitle">Install in Google Chrome</h3>
+        <ol>
+          <li data-i18n="extensionsInstallExtract">Extract the downloaded ZIP into a permanent folder.</li>
+          <li><span data-i18n="extensionsInstallOpen">Open this address in Chrome:</span> <code dir="ltr">chrome://extensions</code></li>
+          <li data-i18n="extensionsInstallDeveloper">Enable Developer mode, click Load unpacked, and select the extracted folder.</li>
+          <li data-i18n="extensionsInstallReload">Reload this program and Prometric or WhatsApp Web in the same Chrome profile. Disable any older copy of the extension.</li>
+        </ol>
+      </section>
+    </div>
+
+    <div class="settings-pane sheet-report-settings" id="settings-pane-reports" role="tabpanel" aria-labelledby="settings-tab-reports" hidden></div>
+
     <div class="settings-pane" id="settings-pane-preferences" role="tabpanel" aria-labelledby="settings-tab-preferences" hidden>
     <div class="cred-card" style="cursor:default;">
       <div class="cred-label" style="margin-bottom:2px;" data-i18n="autoChainTitle">Auto Chain Copy</div>
@@ -925,6 +954,8 @@ const TRANSLATIONS = {
     inventoryMessageHint:"Set the starting balance for every category to send accurate counts.",inventoryPhoneMissing:"Add a WhatsApp number in Settings to open the prepared message.",
     inventoryOpenWhatsApp:"Open WhatsApp to send",inventoryCopyMessage:"Copy message",inventoryWhatsAppSettings:"Inventory message settings",inventoryNumberHint:"Enter the number with country code, digits only, for example 9665XXXXXXXX.",inventoryPhone:"WhatsApp number",inventoryPhoneInvalid:"Enter 8–15 digits, including the country code.",inventorySupervisorName:"Supervisor name",inventorySupervisorNameInvalid:"Enter a supervisor name of up to 100 characters.",inventoryMessageLanguage:"Message language",inventoryArabic:"Arabic",inventoryEnglish:"English",
     inventoryStockNotSet:"Set the supervisor's starting balance for this category first.",inventoryStockInsufficient:"The supervisor does not have enough codes in this category.",inventoryInvalidChange:"Enter a valid non-negative number of codes.",inventorySaved:"Supervisor stock updated.",inventoryMessageCopied:"Inventory message copied.",
+    settingsTabExtensions:"Extensions", extensionsIntro:"Download the Chrome extensions here, then install them once in the same Chrome profile you use for this program.", extensionPrometricTitle:"Prometric registration", extensionPrometricDesc:"Create trainee accounts through Prometric and return their usernames and passwords to the trainee sheet.", extensionPrometricDownload:"Download Prometric extension", extensionWhatsAppTitle:"WhatsApp inventory message", extensionWhatsAppDesc:"Send the inventory message at your chosen time through WhatsApp Web. Keep this device and Chrome running at the sending time.", extensionWhatsAppDownload:"Download WhatsApp extension", extensionsInstallTitle:"Install in Google Chrome", extensionsInstallExtract:"Extract the downloaded ZIP into a permanent folder.", extensionsInstallOpen:"Open this address in Chrome:", extensionsInstallDeveloper:"Enable Developer mode, click Load unpacked, and select the extracted folder.", extensionsInstallReload:"Reload this program and Prometric or WhatsApp Web in the same Chrome profile. Disable any older copy of the extension.",
+    settingsTabReports:"Google reports",
     settingsTitle:"Settings", settingsTabProfile:"My account", settingsTabData:"System data", settingsTabPrometric:"Prometric", settingsTabInventory:"Inventory", settingsTabPreferences:"Preferences", settingsTabSync:"Team and sync",
     profileTitle:"My account", profileDesc:"Change your name, sign-in email, or password.", profileName:"Name", profileLoginEmail:"Username (sign-in email)", saveName:"Save name", changeEmail:"Change email", emailConfirmHint:"Confirm the new address from the verification email before using it to sign in.", currentPassword:"Current password", newPassword:"New password", confirmNewPassword:"Confirm new password", changePassword:"Change password", profileNameSaved:"Name saved", profileEmailSent:"Check your new email to confirm the change. Your current sign-in stays active until then.", profilePasswordSaved:"Password changed", profilePasswordMismatch:"The new passwords do not match.", profilePasswordShort:"Use a password with at least 8 characters.", profileSameEmail:"Enter a different email address.", profileInvalidEmail:"Enter a valid email address.",
     examTitleCol:"Exam Title", langCol:"Language", keycodeCol:"Keycode", moveCategoryCol:"Move Category",
@@ -1029,6 +1060,8 @@ const TRANSLATIONS = {
     inventoryMessageHint:"حدد الرصيد المبدئي لكل فئة حتى تكون الأعداد في الرسالة دقيقة.",inventoryPhoneMissing:"أضف رقم الواتساب في الإعدادات لفتح الرسالة الجاهزة.",
     inventoryOpenWhatsApp:"فتح واتساب لإرسال الرسالة",inventoryCopyMessage:"نسخ الرسالة",inventoryWhatsAppSettings:"إعدادات رسالة المخزون",inventoryNumberHint:"اكتب الرقم بمفتاح الدولة وأرقام فقط، مثل 9665XXXXXXXX.",inventoryPhone:"رقم واتساب",inventoryPhoneInvalid:"اكتب من 8 إلى 15 رقمًا، بما فيها مفتاح الدولة.",inventorySupervisorName:"اسم المشرف",inventorySupervisorNameInvalid:"اكتب اسم مشرف لا يزيد عن 100 حرف.",inventoryMessageLanguage:"لغة الرسالة",inventoryArabic:"العربية",inventoryEnglish:"الإنجليزية",
     inventoryStockNotSet:"حدد أولًا الرصيد المبدئي عند المشرف لهذه الفئة.",inventoryStockInsufficient:"رصيد المشرف في هذه الفئة لا يكفي.",inventoryInvalidChange:"أدخل عددًا صحيحًا غير سالب للأكواد.",inventorySaved:"تم تحديث رصيد المشرف.",inventoryMessageCopied:"تم نسخ رسالة المخزون.",
+    settingsTabExtensions:"الإضافات", extensionsIntro:"حمّل إضافات Chrome من هنا، ثم ثبّتها مرة واحدة في نفس ملف Chrome الذي تستخدم عليه البرنامج.", extensionPrometricTitle:"تسجيل Prometric", extensionPrometricDesc:"إنشاء حسابات المتدربين على Prometric وإرجاع اليوزر والباسورد إلى شيت المتدربين.", extensionPrometricDownload:"تحميل إضافة Prometric", extensionWhatsAppTitle:"رسالة مخزون WhatsApp", extensionWhatsAppDesc:"إرسال رسالة المخزون في الوقت المحدد من خلال WhatsApp Web. اترك الجهاز وChrome شغالين وقت الإرسال.", extensionWhatsAppDownload:"تحميل إضافة WhatsApp", extensionsInstallTitle:"التثبيت في Google Chrome", extensionsInstallExtract:"فك ملف ZIP الذي حمّلته في مجلد ثابت.", extensionsInstallOpen:"افتح العنوان التالي في Chrome:", extensionsInstallDeveloper:"فعّل Developer mode، واضغط Load unpacked، ثم اختر المجلد بعد فك الضغط.", extensionsInstallReload:"أعد تحميل البرنامج وPrometric أو WhatsApp Web في نفس ملف Chrome. عطّل أي نسخة قديمة من الإضافة.",
+    settingsTabReports:"تقارير جوجل",
     settingsTitle:"الإعدادات", settingsTabProfile:"حسابي", settingsTabData:"بيانات النظام", settingsTabPrometric:"بروميترك", settingsTabInventory:"المخزون", settingsTabPreferences:"التفضيلات", settingsTabSync:"الفريق والتحديث",
     profileTitle:"حسابي", profileDesc:"غيّر اسمك أو بريد الدخول أو كلمة المرور.", profileName:"الاسم", profileLoginEmail:"اسم المستخدم (بريد الدخول)", saveName:"حفظ الاسم", changeEmail:"تغيير البريد", emailConfirmHint:"أكد البريد الجديد من رسالة التحقق قبل استخدامه للدخول.", currentPassword:"كلمة المرور الحالية", newPassword:"كلمة المرور الجديدة", confirmNewPassword:"تأكيد كلمة المرور الجديدة", changePassword:"تغيير كلمة المرور", profileNameSaved:"تم حفظ الاسم", profileEmailSent:"افتح بريدك الجديد وأكد التغيير. سيبقى دخولك الحالي فعالًا حتى التأكيد.", profilePasswordSaved:"تم تغيير كلمة المرور", profilePasswordMismatch:"كلمتا المرور الجديدتان غير متطابقتين.", profilePasswordShort:"استخدم كلمة مرور لا تقل عن 8 أحرف.", profileSameEmail:"أدخل بريدًا مختلفًا.", profileInvalidEmail:"أدخل بريدًا إلكترونيًا صحيحًا.",
     examTitleCol:"اسم الامتحان", langCol:"اللغة", keycodeCol:"مفتاح الكود", moveCategoryCol:"نقل الفئة",
@@ -1436,6 +1469,7 @@ function applyLanguage(){
   Cloud.translateUi();
   if(typeof Trainees!=='undefined')Trainees.translate();
   if(typeof InventoryDelivery!=='undefined')InventoryDelivery.translate();
+  if(typeof TraineeReports!=='undefined')TraineeReports.translate();
   renderKeycodes();
   renderCodeTabs();
   renderCodeGrid();
@@ -1459,7 +1493,7 @@ document.getElementById('lang-btn').addEventListener('click',toggleLanguage);
 document.getElementById('auth-lang-btn').addEventListener('click',toggleLanguage);
 
 // ---------- TABS ----------
-const SETTINGS_TAB_IDS=['profile','data','prometric','inventory','preferences','sync'];
+const SETTINGS_TAB_IDS=['profile','data','prometric','inventory','extensions','reports','preferences','sync'];
 function workspaceView(){try{return JSON.parse(localStorage.getItem('ibta_workspace_view:'+Cloud.userId())||'{}')||{};}catch{return {};}}
 function rememberWorkspaceView(change){if(!Cloud.userId())return;try{localStorage.setItem('ibta_workspace_view:'+Cloud.userId(),JSON.stringify({...workspaceView(),...change}));}catch{}}
 async function restoreWorkspaceView(){
@@ -2414,6 +2448,6 @@ Cloud.boot();
 <script src="trainees-excel.js"></script>
 <script src="certificate-name.js"></script>
 <script src="trainees.js"></script>
-<script src="trainee-reports.js"></script>
+<script id="trainee-reports-script" src="trainee-reports.js" data-connector="google-reports.gs"></script>
 </body>
 </html>

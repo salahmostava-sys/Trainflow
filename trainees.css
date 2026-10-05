@@ -133,11 +133,24 @@
 #sheet-workspace .sheet-scroll[dir=rtl] .sheet-grid.sheet-freeze-column .sheet-frozen-cell{left:auto;right:46px}
 #sheet-workspace .sheet-format-tools button[aria-pressed=true]{background:#dbeafe;color:#1d4ed8;border-color:#2563eb}
 .sheet-mobile-toggle{display:none}
-.sheet-report-panel summary{display:flex;justify-content:space-between;gap:12px;cursor:pointer;font-weight:700}
+.sheet-report-panel{display:flex!important;flex-wrap:wrap;align-items:center;gap:8px;padding:10px 12px}
+.sheet-report-actions{display:flex;flex-wrap:wrap;align-items:center;gap:7px}
+.sheet-report-actions strong{font-size:13px;margin-inline-end:6px}
+.sheet-report-panel>p{flex-basis:100%;margin:0;font-size:12px;white-space:pre-line}
+.sheet-report-panel>p:empty{display:none}
+.sheet-report-date-picker{border:1px solid #cbd5e1;border-radius:10px;padding:16px;max-width:calc(100vw - 40px);background:#fff;color:#16324f;box-shadow:0 12px 40px #10295730}
+.sheet-report-date-picker button{margin-top:10px}
+.sheet-report-settings form{display:grid;gap:14px}
+.sheet-report-settings input,.sheet-report-settings textarea{width:100%;min-width:0;box-sizing:border-box}
+.sheet-report-settings textarea{padding:10px;border:1px solid var(--border);border-radius:8px;font:12px/1.8 monospace;resize:vertical;margin:10px 0}
+.sheet-report-guide summary{cursor:pointer;font-weight:700}
+.sheet-report-guide li{margin:16px 0;line-height:1.8;overflow-wrap:anywhere}
+.sheet-report-guide button{margin:4px}
+.sheet-report-headings{font-size:12px;color:var(--muted);border:1px solid var(--border);border-radius:7px;padding:8px}
+.sheet-report-settings [hidden]{display:none!important}
 .sheet-report-panel .sheet-report-state{font-size:12px;font-weight:500;color:#475569}
 #sheet-workspace .sheet-report-panel label{display:grid;gap:5px;min-width:180px}
 #sheet-workspace .sheet-report-panel input{padding:8px;border:1px solid #cbd5e1;border-radius:4px;width:100%;min-width:0}
-#sheet-workspace .sheet-report-panel[open]{display:grid;gap:12px}
 #sheet-workspace .sheet-help,#sheet-workspace .sheet-footer p{font-size:12px;color:#475569}
 @media(max-width:700px){
   #sheet-workspace .sheet-mobile-toggle{display:block;width:100%;min-height:40px;text-align:start;padding:8px 12px;border:0;border-bottom:1px solid #cbd5e1;background:#ffffff;color:#1d4ed8;font-weight:600}
@@ -267,6 +280,14 @@
 .sheet-certificate-fields input:not([readonly]){border-color:#107c41}
 .sheet-certificate-fields button{align-self:end;margin:12px 0}
 #sheet-certificate-status{font-size:13px;overflow-wrap:anywhere}
+.settings-extensions-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.settings-extensions-grid .ops-card{margin-top:0;display:flex;flex-direction:column;align-items:flex-start}
+.settings-extensions-grid .ops-status{line-height:1.7;flex:1}
+.settings-extension-download{display:inline-block;padding:10px 16px;background:var(--blue);color:#fff;border-radius:8px;text-decoration:none;font-weight:700;font-size:14px}
+.settings-extension-download:hover{background:var(--blue-600)}
+.settings-extension-download:focus-visible{outline:3px solid var(--blue-100);outline-offset:3px}
+.settings-extension-install li{margin:10px 0;line-height:1.7}
+@media(max-width:600px){.settings-extensions-grid{grid-template-columns:minmax(0,1fr)}}
 @media(max-width:600px){.sheet-certificate-fields{grid-template-columns:minmax(0,1fr)}}
 .sheet-file-dialog h3{margin:0;font-size:18px}
 .sheet-file-dialog button{font:inherit;border:1px solid #d7dfe8;border-radius:6px;padding:7px 12px;cursor:pointer;background:#fff;color:#16324f}
