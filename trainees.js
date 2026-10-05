@@ -59,6 +59,7 @@ const Trainees=(()=>{
     if(!initialized||expandedView===active)return;commitEdit();const grid=$('sheet-grid'),scroll=grid.parentElement,first=rowAtOffset(scroll.scrollTop),offset=scroll.scrollTop-rowOffsets[first],oldZoom=excelView.zoom,left=scroll.scrollLeft;
     expandedView=active;$('sheet-workspace').classList.toggle('sheet-expanded-view',active);document.body.classList.toggle('sheet-expanded-open',active);
     $('sheet-expanded').setAttribute('aria-pressed',String(active));$('sheet-workspace').classList.remove('sheet-expanded-tools');$('sheet-expanded-tools').setAttribute('aria-pressed','false');
+    excelTools?.syncRibbon();
     if(active){previousViewZoom=excelView.zoom;excelView.zoom=expandedZoom();}else{excelView.zoom=previousViewZoom??excelView.zoom;previousViewZoom=null;}
     applyExcelView();resetRowHeights();rebuildRowOffsets();const top=rowOffsets[first]+offset*excelView.zoom/oldZoom;scroll.scrollTop=top;scroll.scrollLeft=left*excelView.zoom/oldZoom;drawRows(true);
     const measuredTop=rowOffsets[first]+offset*excelView.zoom/oldZoom;if(Math.abs(scroll.scrollTop-measuredTop)>1){scroll.scrollTop=measuredTop;drawRows(true);}
@@ -482,7 +483,7 @@ const Trainees=(()=>{
     zoomTools.innerHTML='<span id="sheet-zoom-label"></span><button type="button" id="sheet-zoom-out">−</button><input type="range" id="sheet-zoom-slider" min="50" max="200" step="1" value="100"><button type="button" id="sheet-zoom-in">+</button><input type="text" inputmode="numeric" autocomplete="off" spellcheck="false" id="sheet-zoom-reset" value="100%">';
     $('sheet-workspace').querySelector('.sheet-footer').append(zoomTools);
     const expandedButton=button('',()=>setExpandedView(true));expandedButton.id='sheet-expanded';expandedButton.setAttribute('aria-pressed','false');zoomTools.prepend(expandedButton);
-    const expandedBar=node('div',undefined,{class:'sheet-expanded-bar'}),exit=button('',()=>setExpandedView(false)),expandedTools=button('',()=>{const show=$('sheet-workspace').classList.toggle('sheet-expanded-tools');expandedTools.setAttribute('aria-pressed',String(show));queueDraw(true);});exit.id='sheet-expanded-close';expandedTools.id='sheet-expanded-tools';expandedTools.setAttribute('aria-pressed','false');expandedBar.append(exit,expandedTools,node('output',undefined,{id:'sheet-visible-rows',role:'status'}));$('sheet-workspace').prepend(expandedBar);
+    const expandedBar=node('div',undefined,{class:'sheet-expanded-bar'}),exit=button('',()=>setExpandedView(false)),expandedTools=button('',()=>{const show=$('sheet-workspace').classList.toggle('sheet-expanded-tools');expandedTools.setAttribute('aria-pressed',String(show));excelTools?.syncRibbon();queueDraw(true);});exit.id='sheet-expanded-close';expandedTools.id='sheet-expanded-tools';expandedTools.setAttribute('aria-pressed','false');expandedBar.append(exit,expandedTools,node('output',undefined,{id:'sheet-visible-rows',role:'status'}));$('sheet-workspace').prepend(expandedBar);
     $('sheet-zoom-out').onclick=()=>setZoom(excelView.zoom-10);$('sheet-zoom-in').onclick=()=>setZoom(excelView.zoom+10);
     $('sheet-zoom-slider').oninput=()=>setZoom($('sheet-zoom-slider').value);
     const zoomInput=$('sheet-zoom-reset'),commitZoom=()=>{
@@ -584,7 +585,7 @@ const Trainees=(()=>{
     window.addEventListener('pagehide',savePosition);
     document.addEventListener('visibilitychange',()=>{if(document.hidden)savePosition();});
     if(typeof TraineeExcel!=='undefined')excelTools=TraineeExcel.mount({D,$,tr,node,button,
-      state:()=>({cells,formatting,view,owner,loaded,labels:allLabels(),bounds:bounds(),cursor:{...cursor},cols:visibleCols(),filtered:filtered()}),
+      state:()=>({cells,formatting,view,owner,loaded,expandedView,labels:allLabels(),bounds:bounds(),cursor:{...cursor},cols:visibleCols(),filtered:filtered()}),
       commitEdit,change,formatSelection,focusCell,render,message,cutSelection,copySelection,pasteSelection,executePaste,
       insertRow,addColumn,editColumns,deleteSelectedRows,deleteSelectedCells,clearSelection,openFindDialog,
       select:(a,b)=>{commitEdit();anchor=a;cursor=b;paint();},
@@ -698,7 +699,7 @@ const Trainees=(()=>{
     $('sheet-align-right')&&($('sheet-align-right').title=tr('محاذاة لليمين','Align right'));
     $('sheet-align-center')&&($('sheet-align-center').title=tr('توسيط','Align center'));
     $('sheet-align-left')&&($('sheet-align-left').title=tr('محاذاة لليسار','Align left'));
-    $('sheet-copy').title=tr('نسخ كل الأعمدة بما فيها المخفية','Copy every column, including hidden columns');
+    if($('sheet-copy'))$('sheet-copy').title=tr('نسخ كل الأعمدة بما فيها المخفية','Copy every column, including hidden columns');
     updateContextMenuTranslations();
     excelTools?.translate();
     prometricTools?.translate();

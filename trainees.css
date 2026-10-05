@@ -224,10 +224,13 @@
 #sheet-workspace>.sheet-clean-toolbar{display:block;padding:0;background:#fff}
 #sheet-workspace .sheet-scroll{overflow-anchor:none}
 .sheet-ribbon-top{display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid #e2e8f0;flex-wrap:wrap}
+#sheet-workspace #sheet-ribbon-toggle{white-space:nowrap;color:var(--blue);margin-inline-start:auto}
 #sheet-workspace .sheet-ribbon-top .sheet-status{padding:0 4px;font-size:12px}
 .sheet-ribbon-panel{display:flex;flex-direction:column;padding:8px 12px;gap:10px}
 .sheet-ribbon-command-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding-bottom:8px;border-bottom:1px solid #e2e8f0}
-.sheet-ribbon-format-row{display:grid;grid-template-columns:1.1fr 1.15fr 1fr;align-items:stretch;gap:12px}
+.sheet-ribbon-format-row{display:grid;grid-template-columns:1.3fr .5fr 1fr;align-items:stretch;gap:12px}
+#sheet-workspace #sheet-prometric-open{background:#107c41;border-color:#107c41;color:#fff}
+#sheet-workspace #sheet-prometric-open:hover{background:#0b6334;border-color:#0b6334}
 #sheet-workspace .sheet-clean-toolbar .sheet-ribbon-panel .sheet-ribbon-group{display:flex!important;padding:0 12px 0 0;border-inline-end:1px solid #e2e8f0;min-width:0;max-width:none;gap:8px;justify-content:space-between}
 #sheet-workspace .sheet-ribbon-panel .sheet-ribbon-group:last-child{border:0}
 #sheet-workspace .sheet-ribbon-panel .sheet-ribbon-group>small{text-align:start;font-size:11px;color:#64748b}
@@ -290,6 +293,7 @@ body.sheet-expanded-open{overflow:hidden}
 #sheet-workspace.sheet-expanded-view:not(.sheet-expanded-tools) .sheet-ribbon-panel{display:none!important}
 #sheet-workspace.sheet-expanded-view>.sheet-clean-toolbar,#sheet-workspace.sheet-expanded-view>.sheet-footer{flex-shrink:0}
 #sheet-workspace.sheet-expanded-view .sheet-ribbon-top{padding:4px 10px;flex-wrap:nowrap;min-height:30px}
+#sheet-workspace.sheet-expanded-view #sheet-ribbon-toggle{display:none}
 #sheet-workspace.sheet-expanded-view .sheet-ribbon-top .sheet-ribbon-actions{flex-wrap:nowrap;overflow-x:auto;min-width:0}
 #sheet-workspace.sheet-expanded-view .sheet-grid thead th{height:28px;font-size:11px}
 #sheet-workspace.sheet-expanded-view>.sheet-footer{padding:4px 10px;flex-wrap:nowrap;gap:8px}
