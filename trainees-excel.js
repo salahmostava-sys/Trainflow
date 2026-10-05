@@ -109,21 +109,12 @@ const TraineeExcel=(()=>{
     const addColumn=$('sheet-add-col'),addWrap=addColumn.parentElement;addWrap.replaceWith(addColumn);addColumn.onclick=h.addColumn;
     dropdown(cellsGroup,'sheet-rows-columns-menu','الصفوف والأعمدة','Rows & columns',['sheet-add','sheet-delete','sheet-add-col','sheet-delete-col'].map($));
     $('sheet-more-tools').remove();
-    const top=node('div',undefined,{class:'sheet-ribbon-top'}),tabs=node('div',undefined,{class:'sheet-ribbon-tabs',role:'tablist','aria-label':tr('أدوات الجدول','Sheet tools')});
-    top.append(essential,$('sheet-status'));toolbar.prepend(top,tabs);
-    const panels=[];
-    for(const [id,ar,en,groups]of [
-      ['home','الرئيسية','Home',[clipboard.parentElement,font.parentElement,align.parentElement]],
-      ['cells','الخلايا والتنسيق','Cells & layout',[cellsGroup.parentElement,merging.parentElement,layout.parentElement]],
-      ['view','العرض والتحديد','View & selection',[editing.parentElement,viewBody.parentElement]]
-    ]){
-      const tab=text(node('button',undefined,{id:'sheet-ribbon-tab-'+id,type:'button',role:'tab','aria-controls':'sheet-ribbon-panel-'+id}),ar,en),panel=node('div',undefined,{id:'sheet-ribbon-panel-'+id,class:'sheet-ribbon-panel',role:'tabpanel','aria-labelledby':tab.id});
-      panel.append(...groups);panels.push({tab,panel});tabs.append(tab);toolbar.append(panel);
-      tab.onclick=()=>{closeMenus();for(const item of panels){const active=item.tab===tab;item.panel.hidden=!active;item.tab.setAttribute('aria-selected',String(active));item.tab.tabIndex=active?0:-1;}};
-      tab.addEventListener('keydown',e=>{if(!['ArrowLeft','ArrowRight'].includes(e.key))return;e.preventDefault();const next=panels[(panels.findIndex(item=>item.tab===tab)+(e.key==='ArrowRight'?1:-1)+panels.length)%panels.length].tab;next.click();next.focus();});
-    }
+    const top=node('div',undefined,{class:'sheet-ribbon-top'}),panel=node('div',undefined,{id:'sheet-ribbon-panel-all',class:'sheet-ribbon-panel sheet-unified-ribbon',role:'region','aria-label':'أدوات الجدول / Sheet tools'}),commands=node('div',undefined,{class:'sheet-ribbon-command-row'}),formats=node('div',undefined,{class:'sheet-ribbon-format-row'});
+    top.append(essential,$('sheet-status'));toolbar.prepend(top);
+    for(const id of ['sheet-clipboard-menu','sheet-rows-columns-menu','sheet-cell-format-menu','sheet-merge-menu','sheet-border-menu','sheet-orientation-menu','sheet-sort-menu'])commands.append($(id));
+    formats.append(font.parentElement,align.parentElement,viewBody.parentElement);panel.append(commands,formats);toolbar.append(panel);
     for(const child of [...toolbar.children])if(child.classList.contains('sheet-ribbon-group'))child.remove();
-    tools.remove();toolbar.classList.add('sheet-clean-toolbar');panels[0].tab.click();
+    tools.remove();toolbar.classList.add('sheet-clean-toolbar');
     const files=TraineeFiles.mount({...h,host:essential,text,action});
     return {closeFiles(){closeMenus();columnsDialog.close();files.close();},translate(){closeMenus();files.translate();for(const el of document.querySelectorAll('[data-excel-ar]'))el.textContent=tr(el.dataset.excelAr,el.dataset.excelEn);},paint(s){fontName.value=s.font||'IBM Plex Sans Arabic';const size=s.size||state().formatting.fontSize;$('sheet-font-size').textContent=size+' px';$('sheet-font-minus').disabled=size<=10;$('sheet-font-plus').disabled=size>=32;$('sheet-wrap').setAttribute('aria-pressed',String(!!s.wrap));for(const field of ['italic','underline','strike'])$('sheet-'+field).setAttribute('aria-pressed',String(!!s[field]));for(const value of ['top','middle','bottom'])$('sheet-valign-'+value).setAttribute('aria-pressed',String((s.valign||'middle')===value));}};
   }

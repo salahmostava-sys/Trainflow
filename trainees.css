@@ -198,16 +198,15 @@
 #sheet-workspace .sheet-grid td.sheet-focus-axis:not(.sheet-current)::after{content:'';position:absolute;inset:0;background:rgba(37,99,235,.055);pointer-events:none}
 #sheet-workspace .sheet-grid th.sheet-rownum.sheet-focus-row-header{background:#eef4ff!important;color:#1d4ed8;box-shadow:inset 3px 0 #2563eb}
 @media(max-width:700px){.sheet-local-note{font-size:12px}}
-/* Visible tools in three compact ribbon tabs; panels scroll on narrow screens. */
+/* All commands share one compact ribbon; formatting scrolls on narrow screens. */
 #sheet-workspace>.sheet-clean-toolbar{display:block;padding:0;background:#fff}
 #sheet-workspace .sheet-scroll{overflow-anchor:none}
 .sheet-ribbon-top{display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid #e2e8f0;flex-wrap:wrap}
 #sheet-workspace .sheet-ribbon-top .sheet-status{padding:0 4px;font-size:12px}
-.sheet-ribbon-tabs{display:flex;gap:4px;padding:0 12px;border-bottom:1px solid #dbe3eb;background:#fff}
-#sheet-workspace .sheet-ribbon-tabs button{border:0;border-radius:0;padding:9px 14px;font-size:12px;font-weight:600;color:#64748b;background:#fff;border-bottom:3px solid transparent}
-#sheet-workspace .sheet-ribbon-tabs button[aria-selected=true]{color:#1d4ed8;border-bottom-color:#2563eb;background:#f8fbff}
-.sheet-ribbon-panel{display:flex;align-items:stretch;overflow-x:auto;overscroll-behavior-x:contain;padding:8px 12px;gap:12px;scrollbar-width:thin}
-#sheet-workspace .sheet-clean-toolbar .sheet-ribbon-panel .sheet-ribbon-group{display:flex!important;padding:0 12px 0 0;border-inline-end:1px solid #e2e8f0;flex:1 0 200px;max-width:450px;gap:8px;justify-content:space-between}
+.sheet-ribbon-panel{display:flex;flex-direction:column;padding:8px 12px;gap:10px}
+.sheet-ribbon-command-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding-bottom:8px;border-bottom:1px solid #e2e8f0}
+.sheet-ribbon-format-row{display:grid;grid-template-columns:1.1fr 1.15fr 1fr;align-items:stretch;gap:12px}
+#sheet-workspace .sheet-clean-toolbar .sheet-ribbon-panel .sheet-ribbon-group{display:flex!important;padding:0 12px 0 0;border-inline-end:1px solid #e2e8f0;min-width:0;max-width:none;gap:8px;justify-content:space-between}
 #sheet-workspace .sheet-ribbon-panel .sheet-ribbon-group:last-child{border:0}
 #sheet-workspace .sheet-ribbon-panel .sheet-ribbon-group>small{text-align:start;font-size:11px;color:#64748b}
 #sheet-workspace .sheet-clean-toolbar .sheet-ribbon-actions{gap:5px;align-items:center;align-content:flex-start}
@@ -264,7 +263,7 @@ body.sheet-expanded-open{overflow:hidden}
 #sheet-visible-rows{margin-inline-start:auto;white-space:nowrap}
 #sheet-workspace.sheet-expanded-view>.sheet-scroll{flex:1;min-height:0;max-height:none}
 #sheet-workspace.sheet-expanded-view>.sheet-report-panel,#sheet-workspace.sheet-expanded-view>.sheet-add-rows-bar,#sheet-workspace.sheet-expanded-view>.sheet-mobile-toggle,#sheet-workspace.sheet-expanded-view>.sheet-filters,#sheet-workspace.sheet-expanded-view .sheet-footer p,#sheet-workspace.sheet-expanded-view #sheet-expanded{display:none!important}
-#sheet-workspace.sheet-expanded-view:not(.sheet-expanded-tools) .sheet-ribbon-tabs,#sheet-workspace.sheet-expanded-view:not(.sheet-expanded-tools) .sheet-ribbon-panel{display:none!important}
+#sheet-workspace.sheet-expanded-view:not(.sheet-expanded-tools) .sheet-ribbon-panel{display:none!important}
 #sheet-workspace.sheet-expanded-view>.sheet-clean-toolbar,#sheet-workspace.sheet-expanded-view>.sheet-footer{flex-shrink:0}
 #sheet-workspace.sheet-expanded-view .sheet-ribbon-top{padding:4px 10px;flex-wrap:nowrap;min-height:30px}
 #sheet-workspace.sheet-expanded-view .sheet-ribbon-top .sheet-ribbon-actions{flex-wrap:nowrap;overflow-x:auto;min-width:0}
@@ -278,9 +277,9 @@ body.sheet-expanded-open{overflow:hidden}
 @media(max-width:700px){
   #sheet-workspace .sheet-ribbon-top{padding:8px}
   #sheet-workspace .sheet-ribbon-top .sheet-ribbon-actions{flex-wrap:nowrap;max-width:100%;overflow-x:auto;padding-bottom:4px}
-  #sheet-workspace .sheet-clean-toolbar .sheet-ribbon-panel .sheet-ribbon-group{flex:0 0 265px;min-width:265px}
-  #sheet-workspace .sheet-ribbon-tabs{padding:0 8px;justify-content:space-between}
-  #sheet-workspace .sheet-ribbon-tabs button{padding:8px;font-size:11px}
+  .sheet-ribbon-panel{padding:8px}
+  .sheet-ribbon-format-row{display:flex;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:thin;padding-bottom:4px}
+  #sheet-workspace .sheet-clean-toolbar .sheet-ribbon-panel .sheet-ribbon-group{flex:0 0 280px;min-width:280px}
   #sheet-workspace .sheet-filters{display:flex!important}
   .sheet-file-dialog{padding:14px}
 }

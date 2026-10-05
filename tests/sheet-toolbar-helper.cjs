@@ -1,4 +1,4 @@
-// Operation regressions select the visible ribbon tab containing a control.
+// Operation regressions open the command dropdown containing a control.
 module.exports=function useSheetDropdowns(page){
   const locate=page.locator.bind(page),actions=new Set(['click','dblclick','focus','hover','fill','check','uncheck','selectOption']),chain=new Set(['locator','first','last','nth','filter']);
   const wrap=locator=>new Proxy(locator,{get(target,key){
@@ -7,8 +7,6 @@ module.exports=function useSheetDropdowns(page){
     if(!actions.has(key))return value.bind(target);
     return async(...args)=>{
       const menu=await target.evaluate(el=>el.closest('.sheet-command-popover')?.dataset.trigger);
-      const panel=await target.evaluate(el=>{const trigger=el.closest('.sheet-command-popover')?.dataset.trigger;return (trigger?document.getElementById(trigger):el).closest('.sheet-ribbon-panel')?.id;});
-      if(panel&&await locate('#'+panel).evaluate(el=>el.hidden)){const tab=await locate('#'+panel).getAttribute('aria-labelledby');await locate('#'+tab).click();}
       if(menu&&await target.evaluate(el=>!el.closest('.sheet-command-popover').matches(':popover-open')))await locate('#'+menu).click();
       return value.apply(target,args);
     };
