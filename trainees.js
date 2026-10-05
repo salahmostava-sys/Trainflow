@@ -446,7 +446,7 @@ const Trainees=(()=>{
     if(initialized)return;initialized=true;
     setTimeout(()=>TraineeReports.mount($('sheet-workspace'),()=>({owner,rows:cells}),async()=>{commitEdit();return await flush();}),0);
     $('panel-trainees').innerHTML=`
-      <div class="sheet-heading"><div><h2 id="sheet-title"></h2><p id="sheet-subtitle"></p></div><label class="sheet-owner" id="sheet-owner-wrap" hidden><span id="sheet-owner-label"></span><select id="sheet-owner"></select></label></div>
+      <div class="sheet-heading"><div><h2 id="sheet-title"></h2><p id="sheet-subtitle"></p></div></div>
       <div id="sheet-workspace" class="sheet-card">
         <div class="sheet-tools"><button type="button" id="sheet-add" class="sheet-primary"></button><button type="button" id="sheet-delete"></button><div class="sheet-add-col-wrap"><button type="button" id="sheet-add-col" class="sheet-primary"></button><div id="sheet-add-col-popover" class="sheet-add-col-popover" hidden></div></div><button type="button" id="sheet-find-btn"></button><button type="button" id="sheet-undo"></button><button type="button" id="sheet-redo"></button><button type="button" id="sheet-copy"></button><button type="button" id="sheet-save"></button><button type="button" id="sheet-reload"></button><span class="sheet-status" id="sheet-status" role="status" aria-live="polite"></span></div>
         <div class="sheet-format-tools">
@@ -718,14 +718,11 @@ const Trainees=(()=>{
   }
   async function open(){
     init();if(loading)return;
-    const admin=Cloud.role()==='admin';$('sheet-owner-wrap').hidden=!admin;$('sheet-code-admin').hidden=!admin;
+    const admin=Cloud.role()==='admin';$('sheet-code-admin').hidden=!admin;
     if(!Cloud.userId())return;
     if(admin){try{members=await Cloud.listMembers();}catch(error){message(errorMessage(error),true);return;}}
     else members=[];
-    const selector=$('sheet-owner');selector.replaceChildren();selector.append(node('option',tr('جدولي','My sheet')+' — '+Cloud.email(),{value:Cloud.userId()}));
-    members.filter(m=>m.user_id&&m.user_id!==Cloud.userId()).forEach(m=>selector.append(node('option',m.email+(m.active?'':tr(' (غير نشط)',' (inactive)')),{value:m.user_id})));
-    let nextOwner=owner||Cloud.userId();if(!owner&&admin&&typeof workspaceView==='function'){const savedOwner=workspaceView().sheetOwner;if([...selector.options].some(option=>option.value===savedOwner))nextOwner=savedOwner;}
-    if(!owner||!loaded)await switchOwner(nextOwner);else selector.value=owner;
+    if(!owner||!loaded)await switchOwner(Cloud.userId());
     renderCodes();
     prometricTools?.poll();
   }
@@ -737,14 +734,14 @@ const Trainees=(()=>{
     excelTools?.closeFiles();
     closeDuplicateDetails();
     commitEdit();if(!discard&&!await flush())return false;
-    const token=++epoch;loading=true;$('sheet-owner').disabled=true;$('sheet-workspace').inert=true;
+    const token=++epoch;loading=true;$('sheet-workspace').inert=true;
     message(tr('جارٍ تحميل الجدول…','Loading sheet…'));
     try{
       const data=await Cloud.readTrainees(next);if(token!==epoch)return false;
       const normalized=D.normalize(data.cells);owner=next;cells=normalized;formatting=D.format(data.format);version=Number(data.version);revision=savedRevision=0;history=[];future=[];loaded=true;
-      clearFilters();anchor=cursor={r:0,c:0};$('sheet-owner').value=owner;render();restorePosition();renderCodes();if(typeof rememberWorkspaceView==='function')rememberWorkspaceView({sheetOwner:owner});message(tr('تم الحفظ','Saved'));return true;
+      clearFilters();anchor=cursor={r:0,c:0};owner=next;render();restorePosition();renderCodes();if(typeof rememberWorkspaceView==='function')rememberWorkspaceView({sheetOwner:owner});message(tr('تم الحفظ','Saved'));return true;
     }catch(error){if(token===epoch)message(errorMessage(error),true);return false;}
-    finally{if(token===epoch){loading=false;$('sheet-owner').disabled=false;$('sheet-workspace').inert=!loaded;}}
+    finally{if(token===epoch){loading=false;$('sheet-workspace').inert=!loaded;}}
   }
   async function reload(){
     commitEdit();if(saving)await saving;
