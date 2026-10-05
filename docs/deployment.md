@@ -8,7 +8,7 @@ Run `pnpm dev` for Next.js development, or `pnpm build` followed by `pnpm start`
 
 The Next workspace uses `/keycodes`, `/prometric`, `/vouchers`, `/inventory`, `/trainees` and `/settings` URLs. Settings sections use `?tab=reports` (or the selected section). The TypeScript navigation bridge preserves the mounted sheet while updating Next history; direct URLs take priority over saved page preferences, and browser Back/Forward restores the matching panel.
 
-The sidebar can be opened or closed with the header menu button; its preference is stored for this browser. On mobile it opens over the page and dismisses after choosing a destination. Selecting sheet cells and pressing Ctrl/Cmd+C (or Copy in the context menu) writes plain text and an HTML table to the system clipboard for pasting into other applications.
+The sidebar stays on the right in both languages. Its arrow button switches between full labels and an icons-only rail, with page names available as tooltips; the header menu button still opens or closes it. Visibility and compact preferences are saved separately for this browser. On mobile the full sidebar dismisses after choosing a destination, while the icon rail stays available. Selecting sheet cells and pressing Ctrl/Cmd+C (or Copy in the context menu) writes plain text and an HTML table to the system clipboard for pasting into other applications.
 
 `pnpm build:cloudflare` retains the original static Pages build described below. Changing the web framework does not create a new Supabase project or replace the existing records.
 
