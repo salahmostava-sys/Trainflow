@@ -193,6 +193,78 @@ if(window.history)window.history.scrollRestoration='manual';
   .settings-extension-install ol{margin:14px 0 0;padding-inline-start:22px;display:grid;gap:10px;font-size:14px;line-height:1.6;color:var(--text);}
   .settings-extension-install code{background:var(--blue-50);color:var(--blue-600);padding:3px 8px;border-radius:6px;font-family:monospace;font-size:13px;border:1px solid var(--blue-100);}
 
+  /* Universal Settings Form Controls System */
+  .settings-card label,
+  .settings-pane label,
+  .settings-card .ops-row label,
+  .settings-pane .ops-row label{
+    display:flex!important;
+    flex-direction:column!important;
+    gap:7px!important;
+    font-size:13.5px;
+    font-weight:600;
+    color:var(--text);
+    min-width:0;
+  }
+  .settings-card label > span,
+  .settings-pane label > span{
+    font-size:13px;
+    font-weight:600;
+    color:#334155;
+    letter-spacing:-0.1px;
+  }
+  .settings-card input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+  .settings-card select,
+  .settings-pane input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+  .settings-pane select{
+    width:100%!important;
+    min-height:44px!important;
+    padding:10px 14px!important;
+    border:1.5px solid #CBD5E1!important;
+    border-radius:10px!important;
+    background:#FFFFFF!important;
+    color:var(--text)!important;
+    font:inherit!important;
+    font-size:14px!important;
+    font-weight:500;
+    box-shadow:0 1px 2px rgba(15,23,42,0.05);
+    box-sizing:border-box!important;
+    transition:border-color 0.18s, box-shadow 0.18s, background 0.18s;
+  }
+  .settings-card input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):hover,
+  .settings-card select:hover,
+  .settings-pane input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):hover,
+  .settings-pane select:hover{
+    border-color:#94A3B8!important;
+    box-shadow:0 2px 6px rgba(15,23,42,0.06);
+  }
+  .settings-card input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):focus,
+  .settings-card select:focus,
+  .settings-pane input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):focus,
+  .settings-pane select:focus{
+    outline:none!important;
+    border-color:var(--blue)!important;
+    box-shadow:0 0 0 3.5px rgba(0,112,243,0.15),0 1px 3px rgba(15,23,42,0.08)!important;
+    background:#FFFFFF!important;
+  }
+  .settings-card select,
+  .settings-pane select{
+    appearance:none!important;
+    -webkit-appearance:none!important;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23475569' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")!important;
+    background-repeat:no-repeat!important;
+    background-position:calc(100% - 14px) center!important;
+    background-size:16px 16px!important;
+    padding-right:38px!important;
+    cursor:pointer;
+  }
+  [dir="rtl"] .settings-card select,
+  [dir="rtl"] .settings-pane select{
+    background-position:14px center!important;
+    padding-right:14px!important;
+    padding-left:38px!important;
+  }
+
   @media(max-width:768px){
     .settings-grid-2col,.settings-extensions-grid,.inventory-stock-edit-grid{grid-template-columns:1fr!important;}
     .settings-header-banner{flex-direction:column;align-items:flex-start;padding:16px 18px;}
@@ -224,16 +296,99 @@ if(window.history)window.history.scrollRestoration='manual';
   .inventory-actions a{display:inline-flex;align-items:center;justify-content:center;min-height:36px;padding:8px 13px;border-radius:8px;background:var(--blue);color:white;text-decoration:none;font-weight:700;font-size:13px;}
   .inventory-actions a[aria-disabled="true"]{opacity:.5;pointer-events:none;}
   .inventory-actions button{min-height:36px;}
-  .inventory-stock-list{display:grid;gap:0;margin:14px 0;border:1px solid var(--border);border-radius:10px;overflow:hidden;}
-  .inventory-stock-row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 12px;font-size:13px;border-bottom:1px solid var(--border);}
+
+  /* Inventory Supervisor Balances & Actions */
+  .inventory-control-bar{
+    display:flex;align-items:flex-end;justify-content:space-between;gap:16px;
+    background:#F8FAFC;border:1px solid #E2E8F0;border-radius:12px;padding:16px 18px;margin:18px 0 16px;flex-wrap:wrap;
+  }
+  .inventory-category-field{flex:0 1 300px;min-width:240px;}
+  #inventory-current-balance{
+    margin:0!important;display:inline-flex;align-items:center;gap:8px;padding:10px 18px;
+    background:#FFFFFF;border:1.5px solid #BFDBFE;border-radius:10px;font-size:14px;font-weight:700;
+    color:#1D4ED8;box-shadow:0 1px 3px rgba(37,99,235,0.08);
+  }
+  @media(max-width:640px){
+    .inventory-control-bar{flex-direction:column;align-items:stretch;}
+    .inventory-category-field{flex:1 1 auto;}
+  }
+  .inventory-stock-list{
+    display:grid;gap:0;margin:16px 0;border:1px solid #E2E8F0;border-radius:12px;overflow:hidden;background:#FFFFFF;box-shadow:0 1px 3px rgba(15,23,42,0.03);
+  }
+  .inventory-stock-row{
+    display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 18px;font-size:13.5px;font-weight:600;border-bottom:1px solid #F1F5F9;transition:background 0.15s ease;
+  }
+  .inventory-stock-row:nth-child(even){background:#F8FAFC;}
+  .inventory-stock-row:hover{background:#EFF6FF;}
   .inventory-stock-row:last-child{border-bottom:0;}
-  .inventory-stock-row strong{font-family:var(--mono);font-size:14px;color:var(--blue-600);}
-  .inventory-stock-edit-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:14px;}
-  .inventory-stock-action{border:1px solid var(--border);border-radius:10px;padding:14px;background:var(--surface-2);display:grid;align-content:start;gap:9px;}
-  .inventory-stock-action p{margin:0;}
-  .inventory-stock-action label{min-width:0;}
-  .inventory-stock-action button{justify-self:start;}
-  @media(max-width:680px){.inventory-stock-edit-grid{grid-template-columns:1fr;}.inventory-stock-action button{width:100%;}}
+  .inventory-stock-row strong{
+    display:inline-flex;align-items:center;justify-content:center;min-width:36px;padding:3px 10px;border-radius:999px;background:#EFF6FF;border:1px solid #BFDBFE;font-family:var(--mono);font-size:13.5px;font-weight:700;color:var(--blue-600);
+  }
+  .inventory-stock-edit-grid{
+    display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:16px;
+  }
+  .inventory-stock-action{
+    border:1.5px solid #E2E8F0;border-radius:14px;padding:20px;background:linear-gradient(180deg,#FFFFFF 0%,#F8FAFC 100%);
+    box-shadow:0 1px 3px rgba(15,23,42,0.04),0 6px 16px -4px rgba(15,23,42,0.04);
+    display:flex;flex-direction:column;gap:12px;transition:all 0.2s cubic-bezier(0.16,1,0.3,1);position:relative;overflow:hidden;
+  }
+  .inventory-stock-action::before{
+    content:'';position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,var(--blue),var(--blue-600));opacity:0.85;
+  }
+  .inventory-stock-action.action-add::before{
+    background:linear-gradient(90deg,#10B981,#059669);
+  }
+  .inventory-stock-action:hover{
+    border-color:#CBD5E1;box-shadow:0 4px 20px rgba(15,23,42,0.08);transform:translateY(-2px);
+  }
+  .inventory-stock-action label{
+    display:flex!important;flex-direction:column!important;gap:8px!important;min-width:0;
+  }
+  .inventory-stock-action label > span{
+    font-size:14px!important;font-weight:700!important;color:#0F172A!important;
+  }
+  .inventory-stock-action input{
+    width:100%!important;min-height:46px!important;padding:10px 14px!important;border:1.5px solid #CBD5E1!important;border-radius:10px!important;
+    background:#FFFFFF!important;font-size:16px!important;font-weight:700!important;color:#0F172A!important;box-sizing:border-box!important;
+  }
+  .inventory-stock-action input:focus{
+    border-color:var(--blue)!important;box-shadow:0 0 0 3.5px rgba(0,112,243,0.15)!important;
+  }
+  .inventory-stock-action.action-add input:focus{
+    border-color:#10B981!important;box-shadow:0 0 0 3.5px rgba(16,185,129,0.18)!important;
+  }
+  .inventory-stock-action p.ops-status{
+    margin:0;font-size:13px;line-height:1.5;color:#64748B;flex:1;
+  }
+  .inventory-stock-action button{
+    width:100%;min-height:44px;padding:11px 20px;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;
+    display:inline-flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 2px 6px rgba(0,112,243,0.2);transition:all 0.18s ease;
+  }
+  .inventory-stock-action button:hover:not(:disabled){
+    transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,112,243,0.3);
+  }
+  .inventory-stock-action.action-add button{
+    box-shadow:0 2px 6px rgba(16,185,129,0.24);
+  }
+  .inventory-stock-action.action-add button:hover:not(:disabled){
+    box-shadow:0 4px 12px rgba(16,185,129,0.35);
+  }
+
+  /* Inventory WhatsApp Settings */
+  #inventory-whatsapp-settings .ops-row{
+    display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;align-items:end;margin:18px 0 20px;
+  }
+  @media(max-width:768px){
+    #inventory-whatsapp-settings .ops-row{grid-template-columns:1fr;}
+  }
+  #inventory-save-settings{
+    min-height:44px;padding:11px 26px;border-radius:10px;font-size:14px;font-weight:700;
+    background:linear-gradient(135deg,#10B981,#059669);border:1px solid #10B981;color:#FFFFFF;cursor:pointer;
+    box-shadow:0 2px 8px rgba(16,185,129,0.25);transition:all 0.18s ease;display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  }
+  #inventory-save-settings:hover{
+    transform:translateY(-1px);box-shadow:0 4px 14px rgba(16,185,129,0.35);
+  }
 
   @keyframes fade{from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:translateY(0);}}
 
@@ -1024,8 +1179,10 @@ if(window.history)window.history.scrollRestoration='manual';
         </div>
       </div>
       <div class="inventory-stock-list" id="inventory-stock-list"></div>
-      <div class="ops-row"><label><span data-i18n="inventoryCategory">Category</span><select id="inventory-category"></select></label></div>
-      <p class="ops-status" id="inventory-current-balance"></p>
+      <div class="inventory-control-bar">
+        <label class="inventory-category-field"><span data-i18n="inventoryCategory">Category</span><select id="inventory-category"></select></label>
+        <p class="ops-status" id="inventory-current-balance"></p>
+      </div>
       <div class="inventory-stock-edit-grid">
         <div class="inventory-stock-action">
           <label><span data-i18n="inventoryCurrentQuantity">Current number with supervisor</span><input id="inventory-current-quantity" type="number" min="0" max="1000000" step="1" inputmode="numeric"></label>
