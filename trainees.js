@@ -16,7 +16,7 @@ const Trainees=(()=>{
   let formatting=D.defaultFormat(),duplicateIds=new Map();
   let rowOffsets=[0],rowHeights=new Map(),drawnStart=-1,drawnEnd=-1,drawnColumns='',scrollFrame=0;
   let visibleCache=null,columnOptionsKey='',headersKey='',mergeCacheFormat=null,mergeCache=[];
-  let excelTools=null,prometricTools=null,formulaCache=new Map();
+  let excelTools=null,prometricTools=null,certificateTools=null,formulaCache=new Map();
   const searchRows=new WeakMap();
   let lastDataRow=-1;
   let positionTimer,restoringPosition=false;
@@ -593,6 +593,8 @@ const Trainees=(()=>{
       resetSort:()=>{sortCol=-1;render();},setColumnWidth,saveColumnWidths,resetColumnWidth});
     if(typeof TraineePrometric!=='undefined')prometricTools=TraineePrometric.mount({D,$,tr,node,button,
       state:()=>({cells,view,owner,epoch,user:Cloud.userId(),loaded:loaded&&!loading,editing:!!editing,bounds:bounds()}),commitEdit,change,flush,focusCell,message});
+    if(typeof TraineeCertificate!=='undefined')certificateTools=TraineeCertificate.mount({D,$,tr,node,button,
+      state:()=>({cells,view,owner,epoch,loaded:loaded&&!loading,cursor:{...cursor}}),catalog:()=>DEFAULT_KEYCODES,commitEdit,message});
     translate();
   }
   function addColumn(){
@@ -703,6 +705,7 @@ const Trainees=(()=>{
     updateContextMenuTranslations();
     excelTools?.translate();
     prometricTools?.translate();
+    certificateTools?.translate();
     if(!editing)render();renderCodes();
   }
   async function open(){
@@ -722,6 +725,7 @@ const Trainees=(()=>{
     if(loading)return false;
     savePosition();
     prometricTools?.reset();
+    certificateTools?.reset();
     excelTools?.closeFiles();
     closeDuplicateDetails();
     commitEdit();if(!discard&&!await flush())return false;
@@ -1274,8 +1278,8 @@ const Trainees=(()=>{
     catch(error){$('sheet-code-status').textContent=/CONFLICT/.test(error.message||'')?tr('تغيرت الأكواد. حدّث القائمة وحاول مجددًا.','Codes changed. Refresh and try again.'):tr('تعذر تخصيص الأكواد. تأكد أن المستخدم نشط ثم حدّث القائمة.','Could not assign codes. Check that the user is active, then refresh.');}
     finally{codeBusy=false;$('sheet-code-workspace').inert=false;$('sheet-owner').disabled=false;}
   }
-  function reset(){prometricTools?.reset();setExpandedView(false);excelTools?.closeFiles();closeDuplicateDetails();closeContextMenu();$('sheet-find-dialog')?.close();clearTimeout(timer);epoch++;owner='';cells=[];formatting=D.defaultFormat();loaded=false;loading=false;editing=null;history=[];future=[];revision=savedRevision=0;if(initialized){render();$('sheet-owner').replaceChildren();$('sheet-code-list').replaceChildren();$('sheet-workspace').inert=true;}}
-  function suspend(){prometricTools?.reset();setExpandedView(false);excelTools?.closeFiles();closeDuplicateDetails();closeContextMenu();$('sheet-find-dialog')?.close();clearTimeout(timer);}
+  function reset(){prometricTools?.reset();certificateTools?.reset();setExpandedView(false);excelTools?.closeFiles();closeDuplicateDetails();closeContextMenu();$('sheet-find-dialog')?.close();clearTimeout(timer);epoch++;owner='';cells=[];formatting=D.defaultFormat();loaded=false;loading=false;editing=null;history=[];future=[];revision=savedRevision=0;if(initialized){render();$('sheet-owner').replaceChildren();$('sheet-code-list').replaceChildren();$('sheet-workspace').inert=true;}}
+  function suspend(){prometricTools?.reset();certificateTools?.reset();setExpandedView(false);excelTools?.closeFiles();closeDuplicateDetails();closeContextMenu();$('sheet-find-dialog')?.close();clearTimeout(timer);}
   return {open,translate,hasDraft,flush,reset,suspend,savePosition};
 })();
 Trainees.translate();

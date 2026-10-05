@@ -259,6 +259,15 @@
 #sheet-workspace .sheet-align-group button{min-height:26px;padding:4px 8px}
 .sheet-file-dialog{border:1px solid #d7dfe8;border-radius:12px;background:#fff;color:#16324f;padding:20px;width:min(800px,calc(100vw - 32px));max-height:85vh;box-sizing:border-box;overflow:auto;font-family:var(--ui-font);box-shadow:0 20px 70px #10295740}
 .sheet-file-dialog::backdrop{background:#10295765}
+.sheet-certificate-dialog{width:min(900px,calc(100vw - 32px))}
+.sheet-certificate-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 18px}
+.sheet-certificate-fields label{min-width:0}
+.sheet-certificate-fields input{width:100%;box-sizing:border-box;font:inherit;padding:9px;border:1px solid #d7dfe8;border-radius:6px;background:#fff;color:#16324f}
+.sheet-certificate-fields input[readonly]{background:#f4f7fb}
+.sheet-certificate-fields input:not([readonly]){border-color:#107c41}
+.sheet-certificate-fields button{align-self:end;margin:12px 0}
+#sheet-certificate-status{font-size:13px;overflow-wrap:anywhere}
+@media(max-width:600px){.sheet-certificate-fields{grid-template-columns:minmax(0,1fr)}}
 .sheet-file-dialog h3{margin:0;font-size:18px}
 .sheet-file-dialog button{font:inherit;border:1px solid #d7dfe8;border-radius:6px;padding:7px 12px;cursor:pointer;background:#fff;color:#16324f}
 .sheet-file-dialog button:disabled{opacity:.5;cursor:default}

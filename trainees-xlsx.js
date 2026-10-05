@@ -33,6 +33,22 @@ const TraineeXlsx=(()=>{
     return workbook.xlsx.writeBuffer();
   }
   const key=value=>String(value).trim().normalize('NFKC').replace(/\s+/g,' ').toLocaleLowerCase();
+  async function writeCertificate(ExcelJS,data){
+    if(data.headers?.length!==8||data.values?.length!==8||data.values.some(value=>typeof value!=='string'||value.length>MAX_CELL))throw Error('CERTIFICATE_DATA');
+    const workbook=new ExcelJS.Workbook(),sheet=workbook.addWorksheet('Certificate name change');
+    sheet.views=[{state:'frozen',ySplit:1}];
+    [48,24,32,25,16,20,58,40].forEach((width,c)=>{sheet.getColumn(c+1).width=width;});
+    sheet.addRow(data.headers);sheet.addRow(data.values);sheet.getRow(1).height=34;sheet.getRow(2).height=32;
+    for(let r=1;r<=2;r++)for(let c=1;c<=8;c++){
+      const cell=sheet.getCell(r,c);cell.font={name:'Arial',size:11,bold:true,color:{argb:r===1?'FFFFFFFF':'FF000000'}};
+      cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:r===1?(c===3?'FF0BA3B5':'FF0AA3D2'):(c===3?'FF98D8CA':'FFCCEDF7')}};
+      cell.alignment={vertical:'middle',wrapText:true,horizontal:r===2&&(c===5||c===6)?'center':'left'};
+      cell.border=Object.fromEntries(['top','bottom','left','right'].map(side=>[side,{style:'thin',color:{argb:'FF000000'}}]));cell.numFmt='@';
+    }
+    if(/^\d{4}-\d{2}-\d{2}$/.test(data.dateISO||'')){sheet.getCell('E2').value=new Date(data.dateISO+'T00:00:00Z');sheet.getCell('E2').numFmt='m/d/yyyy';}
+    sheet.pageSetup={orientation:'landscape',paperSize:8,fitToPage:true,fitToWidth:1,fitToHeight:0};sheet.printArea='A1:H2';
+    return workbook.xlsx.writeBuffer();
+  }
   function prepare(rows,hasHeaders,labels,customHeaders={}){
     const headers=hasHeaders?rows[0]||[]:[],data=hasHeaders?rows.slice(1):rows;
     let last=data.length;while(last&&!data[last-1].some(Boolean))last--;
@@ -47,6 +63,6 @@ const TraineeXlsx=(()=>{
     return {rows:data.slice(0,last),targets,headers:custom,width};
   }
   function detectHeaders(rows,labels){return (rows[0]||[]).filter(value=>value&&labels.some(pair=>pair.some(label=>key(label)===key(value)))).length>=2;}
-  if(typeof module!=='undefined')module.exports={cellText,sheetData,write,prepare,detectHeaders};
-  return {cellText,sheetData,write,prepare,detectHeaders};
+  if(typeof module!=='undefined')module.exports={cellText,sheetData,write,writeCertificate,prepare,detectHeaders};
+  return {cellText,sheetData,write,writeCertificate,prepare,detectHeaders};
 })();
