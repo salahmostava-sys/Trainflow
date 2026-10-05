@@ -132,6 +132,12 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),path
     assert.equal(await page.locator('.sheet-get-exam-code').count(),0,'An existing code has no allocation or replacement button');
     assert.ok((await page.locator('#sheet-trainee-title').textContent()).endsWith('Trainee'));
     const details=await page.locator('#sheet-trainee-record').textContent();assert.match(details,/hidden@example.invalid/);assert.match(details,/demo-password/);assert.match(details,/EXTRA-AZ/);
+    for(const viewport of [{width:1366,height:768},{width:1280,height:720},{width:1024,height:600}]){
+      await page.setViewportSize(viewport);
+      const fit=await page.locator('#sheet-trainee-dialog').evaluate(el=>{const rect=el.getBoundingClientRect();return {noVerticalScroll:el.scrollHeight<=el.clientHeight+1,noHorizontalScroll:el.scrollWidth<=el.clientWidth+1,inside:rect.top>=0&&rect.bottom<=innerHeight,allFields:[...el.querySelectorAll('dt,dd')].every(field=>{const box=field.getBoundingClientRect();return box.top>=rect.top&&box.bottom<=rect.bottom;})};});
+      assert.deepEqual(fit,{noVerticalScroll:true,noHorizontalScroll:true,inside:true,allFields:true},'All trainee details fit without scrolling at '+JSON.stringify(viewport));
+    }
+    await page.screenshot({path:path.join(__dirname,'../artifacts/trainee-details-fit.png')});await page.setViewportSize({width:1500,height:1000});
     assert.match(details,/كي كود/);assert.match(details,/LIVE-SALES-AR/);assert.doesNotMatch(details,/LIVE-SALES-EN/);
     assert.match(details,/محترف الأعمال المعتمد في المبيعات CBP-S/);
     assert.equal(await page.locator('#sheet-trainee-record .sheet-detail-category').textContent(),'فئة المراجعة','Shows the effective category, including overrides and display labels');
@@ -161,6 +167,7 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),path
     await page.mouse.click(10,10);await page.locator('#sheet-trainee-dialog').waitFor({state:'hidden'});
     await page.evaluate(()=>document.getElementById('sheet-grid').parentElement.scrollTop=0);await cell(0,3).waitFor({state:'visible'});await cell(0,3).dblclick();
     await page.keyboard.press('Escape');await cell(0,0).click();await page.keyboard.press('Delete');await cell(0,3).dblclick();
+    await page.setViewportSize({width:1366,height:768});assert.equal(await page.locator('#sheet-trainee-dialog').evaluate(el=>el.scrollHeight<=el.clientHeight+1),true,'Empty Code field and allocation action fit without scrolling');assert.equal(await page.locator('.sheet-get-exam-code').isVisible(),true);await page.setViewportSize({width:1500,height:1000});
     await page.evaluate(()=>{
       window.claimCount=0;Cloud.claimTraineeCode=async(category,targetOwner)=>{if(category!=='Review-category'||targetOwner!=='demo-admin')throw Error('Wrong category or owner');window.claimCount++;previewCodes.push({code:'ALLOCATED-DEMO',category,owner_id:targetOwner,used_on:'04/10/2026',version:2});Trainees.translate();window.previewSaveError='NETWORK';return 'ALLOCATED-DEMO';};
     });
