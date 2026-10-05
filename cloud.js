@@ -469,13 +469,13 @@ const Cloud = (() => {
     }catch(e){fail(e);}
   }
   async function addMember(){
-    if(role!=='admin') return;
+    if(role!=='admin'||!$('member-email')) return;
     const email=$('member-email').value.trim().toLowerCase();
     if(!email || !email.includes('@')) return;
-    const memberRole=$('member-role').value;
+    const memberRole=$('member-role')?.value||'operator';
     if(!['copy_only','operator','admin'].includes(memberRole))return;
     const {error}=await client.from('ibta_members').insert({email,role:memberRole,active:true});
-    if(error) fail(error);else {setStatus('memberAdded',false,email);$('member-email').value='';if(typeof renderMemberList==='function')renderMemberList();}
+    if(error) fail(error);else {setStatus('memberAdded',false,email);if($('member-email'))$('member-email').value='';if(typeof renderMemberList==='function'&&$('member-list'))renderMemberList();}
   }
   async function exportData(){
     if(role!=='admin') return;
@@ -590,7 +590,7 @@ const Cloud = (() => {
       $('import-legacy').addEventListener('click',importLegacy);
       $('export-data').addEventListener('click',exportData);
       $('export-codes-csv').addEventListener('click',exportCodesCsv);
-      $('add-member').addEventListener('click',addMember);
+      if($('add-member')) $('add-member').addEventListener('click',addMember);
       $('prometric-settings-form').addEventListener('submit',savePrometricSettings);
       $('profile-name-form').addEventListener('submit',saveProfileName);
       $('profile-email-form').addEventListener('submit',saveProfileEmail);

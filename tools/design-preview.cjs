@@ -38,7 +38,7 @@ const mock=`const previewSheets=new Map();const previewCodes=[{code:'DEMO-PRIVAT
     document.getElementById('auth-box').hidden=true;document.getElementById('app').hidden=false;document.getElementById('cloud-tools').hidden=false;
     document.getElementById('settings-tab-inventory').hidden=false;if(document.getElementById('inventory-whatsapp-settings'))document.getElementById('inventory-whatsapp-settings').hidden=false;
     document.getElementById('cred-account-val').textContent='DEMO-ACCOUNT';document.getElementById('cred-password-val').textContent='Demo-only-2026';
-    ['sign-out','add-member','import-legacy','export-data'].forEach(id=>document.getElementById(id).addEventListener('click',()=>showToast('معاينة تصميم — الإجراء غير متاح هنا')));
+    ['sign-out','add-member','import-legacy','export-data'].forEach(id=>document.getElementById(id)?.addEventListener('click',()=>showToast('معاينة تصميم — الإجراء غير متاح هنا')));
     applyLanguage();
     try{await restoreWorkspaceView();}finally{document.getElementById('app').classList.remove('workspace-restoring');}
   }

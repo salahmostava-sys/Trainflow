@@ -1357,7 +1357,7 @@ if(window.history)window.history.scrollRestoration='manual';
     <section id="cloud-tools" class="cloud-controls" hidden>
       <div class="cloud-popover settings-card">
         <p id="cloud-status" hidden></p>
-        <details id="admin-tools" class="cloud-admin" open><summary><span data-i18n="manageDataUsers">إدارة البيانات والمستخدمين</span></summary>
+        <details id="admin-tools" class="cloud-admin" open><summary><span data-i18n="manageDataUsers">إدارة البيانات والنسخ الاحتياطي</span></summary>
           <div class="cloud-admin-content">
             <div class="settings-card backup-tools" style="box-shadow:none;border-color:#E2E8F0;background:#F8FAFC;">
               <h3 data-i18n="restoreTitle" style="margin:0 0 10px;font-size:15px;font-weight:700;">Restore a backup</h3>
@@ -1376,18 +1376,7 @@ if(window.history)window.history.scrollRestoration='manual';
               </div>
               <p id="restore-preview" class="ops-status" role="status" aria-live="polite"></p>
             </div>
-            <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin:16px 0 10px;">
-              <div style="flex:1;min-width:200px;">
-                <label for="member-email" data-i18n="newMemberEmail" style="font-size:12.5px;font-weight:700;margin-bottom:6px;display:block;">بريد مستخدم جديد</label>
-                <input id="member-email" type="email" placeholder="user@example.com" style="margin:0;">
-              </div>
-              <div style="width:160px;">
-                <label for="member-role" data-i18n="memberRole" style="font-size:12.5px;font-weight:700;margin-bottom:6px;display:block;">Role</label>
-                <select id="member-role" style="margin:0;"><option value="copy_only" data-i18n="roleCopyOnly">Copy codes only</option><option value="operator" data-i18n="roleOperator" selected>Operator</option><option value="admin" data-i18n="roleAdmin">Administrator</option></select>
-              </div>
-              <button id="add-member" class="resource-btn" type="button" data-i18n="addMember" style="min-height:42px;">اعتماد المستخدم</button>
-            </div>
-            <div id="member-list" class="ops-list"></div>
+
             <details class="settings-card" id="audit-details" style="margin-top:16px;box-shadow:none;border-color:#E2E8F0;"><summary data-i18n="activityTitle" style="cursor:pointer;font-weight:700;color:var(--blue-600);font-size:14px;">Recent activity</summary><div id="audit-list" class="ops-list"></div></details>
           </div>
         </details>
@@ -1505,7 +1494,7 @@ const TRANSLATIONS = {
     authInvalidCredentials:"Invalid email or password.", authEmailNotConfirmed:"Confirm your email address before signing in.",
     authEmailLimit:"Too many emails were sent. Please try again later.", authAlreadyRegistered:"An account with this email already exists.",
     currentAccount:"Current account", accountMenu:"Account menu", adminRole:"Admin", userRole:"User", refresh:"Refresh", signOut:"Sign out",
-    manageDataUsers:"Manage data and users", importLegacy:"Import old browser data", exportBackup:"Download backup",
+    manageDataUsers:"Data management & backup", importLegacy:"Import old browser data", exportBackup:"Download backup",
     newMemberEmail:"New user's email", addMember:"Approve user",
     memberRole:"Role",roleCopyOnly:"Copy codes only",roleOperator:"Operator",roleAdmin:"Administrator",memberInactive:"Inactive",memberActive:"Active",memberSave:"Save member",activityTitle:"Recent activity",activityEmpty:"No activity found.",
     auditInsert:"Added",auditUpdate:"Updated",auditDelete:"Deleted",auditCodes:"Code",auditMembers:"Team member",auditSettings:"System settings",
@@ -1607,7 +1596,7 @@ const TRANSLATIONS = {
     authInvalidCredentials:"البريد الإلكتروني أو كلمة المرور غير صحيحين.", authEmailNotConfirmed:"أكّد بريدك الإلكتروني قبل تسجيل الدخول.",
     authEmailLimit:"تم تجاوز حد رسائل البريد الإلكتروني. حاول مرة أخرى لاحقًا.", authAlreadyRegistered:"يوجد حساب مسجل بهذا البريد الإلكتروني.",
     currentAccount:"الحساب الحالي", accountMenu:"قائمة الحساب", adminRole:"مدير", userRole:"مستخدم", refresh:"تحديث", signOut:"تسجيل الخروج",
-    manageDataUsers:"إدارة البيانات والمستخدمين", importLegacy:"استيراد بيانات المتصفح القديمة", exportBackup:"تنزيل نسخة احتياطية",
+    manageDataUsers:"إدارة البيانات والنسخ الاحتياطي", importLegacy:"استيراد بيانات المتصفح القديمة", exportBackup:"تنزيل نسخة احتياطية",
     newMemberEmail:"بريد مستخدم جديد", addMember:"اعتماد المستخدم",
     memberRole:"الصلاحية",roleCopyOnly:"نسخ الأكواد فقط",roleOperator:"مشغّل",roleAdmin:"مدير",memberInactive:"معطّل",memberActive:"نشط",memberSave:"حفظ المستخدم",activityTitle:"آخر النشاطات",activityEmpty:"لا يوجد نشاط مسجل.",
     auditInsert:"إضافة",auditUpdate:"تعديل",auditDelete:"حذف",auditCodes:"كود",auditMembers:"مستخدم",auditSettings:"إعدادات النظام",

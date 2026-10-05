@@ -109,7 +109,8 @@ document.getElementById('bulk-import-submit').addEventListener('click',async()=>
 });
 async function renderMemberList(){
   if(Cloud.role()!=='admin')return;
-  const box=document.getElementById('member-list');box.innerHTML='';
+  const box=document.getElementById('member-list');if(!box)return;
+  box.innerHTML='';
   try{
     const members=await Cloud.listMembers();
     members.forEach(member=>{
@@ -151,7 +152,7 @@ async function renderAuditList(){
     });
   }catch{box.textContent=t('genericError');}
 }
-document.getElementById('admin-tools').addEventListener('toggle',event=>{if(event.target.open)renderMemberList();});
+document.getElementById('admin-tools').addEventListener('toggle',event=>{if(event.target.open&&document.getElementById('member-list'))renderMemberList();});
 document.getElementById('audit-details').addEventListener('toggle',event=>{if(event.target.open)renderAuditList();});
 
 function sortCategories(cats){
