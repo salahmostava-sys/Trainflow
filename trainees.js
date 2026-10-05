@@ -510,7 +510,7 @@ const Trainees=(()=>{
       if(!match||row<0||row>=totalInputRows()||col<0||col>=labels.length||!visibleCols().includes(col)){message(tr('اكتب عنوان خلية موجودة وعمود ظاهر، مثل D150.','Enter an existing cell in a visible column, such as D150.'),true);return;}
       commitEdit();clearFilters();render();focusCell(row,col);
     });
-    $('sheet-owner').addEventListener('change',async()=>{const next=$('sheet-owner').value;$('sheet-owner').value=owner;await switchOwner(next);});
+    $('sheet-owner')?.addEventListener('change',async()=>{const next=$('sheet-owner').value;$('sheet-owner').value=owner;await switchOwner(next);});
     if($('sheet-mode'))$('sheet-mode').onclick=()=>setMode('sheet');if($('sheet-codes-mode'))$('sheet-codes-mode').onclick=()=>setMode('codes');
     $('sheet-save').onclick=()=>flush();$('sheet-reload').onclick=()=>reload();
     $('sheet-add').onclick=()=>{commitEdit();clearFilters();const r=cells.length;if(r>=D.MAX_ROWS)return limitError();const next=cells.slice();next.push(D.blank());change(next,false);render();focusCell(r,0);};
@@ -1281,12 +1281,12 @@ const Trainees=(()=>{
     if(!chosen.length)return;if(chosen.length>250){$('sheet-code-status').textContent=tr('اختر حتى 250 كودًا في المرة.','Select up to 250 codes at a time.');return;}
     const snapshot=new Map(Cloud.codeSnapshot().map(row=>[row.code,row]));const items=chosen.map(code=>({code,version:snapshot.get(code).version}));
     if(!confirm(codeMode==='pool'?tr('تخصيص الأكواد المحددة للمستخدم المعروض؟','Assign selected codes to the displayed user?'):tr('إرجاع الأكواد المحددة للمخزون؟','Return selected codes to stock?')))return;
-    codeBusy=true;$('sheet-code-workspace').inert=true;$('sheet-owner').disabled=true;
+    codeBusy=true;$('sheet-code-workspace').inert=true;if($('sheet-owner'))$('sheet-owner').disabled=true;
     try{await Cloud.assignCodes(codeMode==='pool'?owner:null,items);renderCodes();$('sheet-code-status').textContent=tr('تم تحديث تخصيص الأكواد.','Code assignments updated.');}
     catch(error){$('sheet-code-status').textContent=/CONFLICT/.test(error.message||'')?tr('تغيرت الأكواد. حدّث القائمة وحاول مجددًا.','Codes changed. Refresh and try again.'):tr('تعذر تخصيص الأكواد. تأكد أن المستخدم نشط ثم حدّث القائمة.','Could not assign codes. Check that the user is active, then refresh.');}
-    finally{codeBusy=false;$('sheet-code-workspace').inert=false;$('sheet-owner').disabled=false;}
+    finally{codeBusy=false;$('sheet-code-workspace').inert=false;if($('sheet-owner'))$('sheet-owner').disabled=false;}
   }
-  function reset(){prometricTools?.reset();certificateTools?.reset();setExpandedView(false);excelTools?.closeFiles();closeDuplicateDetails();closeContextMenu();$('sheet-find-dialog')?.close();clearTimeout(timer);epoch++;owner='';cells=[];formatting=D.defaultFormat();loaded=false;loading=false;editing=null;history=[];future=[];revision=savedRevision=0;if(initialized){render();$('sheet-owner').replaceChildren();$('sheet-code-list').replaceChildren();$('sheet-workspace').inert=true;}}
+  function reset(){prometricTools?.reset();certificateTools?.reset();setExpandedView(false);excelTools?.closeFiles();closeDuplicateDetails();closeContextMenu();$('sheet-find-dialog')?.close();clearTimeout(timer);epoch++;owner='';cells=[];formatting=D.defaultFormat();loaded=false;loading=false;editing=null;history=[];future=[];revision=savedRevision=0;if(initialized){render();$('sheet-owner')?.replaceChildren();$('sheet-code-list').replaceChildren();$('sheet-workspace').inert=true;}}
   function suspend(){prometricTools?.reset();certificateTools?.reset();setExpandedView(false);excelTools?.closeFiles();closeDuplicateDetails();closeContextMenu();$('sheet-find-dialog')?.close();clearTimeout(timer);}
   return {open,translate,hasDraft,flush,reset,suspend,savePosition};
 })();
