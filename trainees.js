@@ -1065,12 +1065,22 @@ const Trainees=(()=>{
   function paint(){
     if($('sheet-data-tools'))$('sheet-data-tools').hidden=Cloud.role()!=='admin';
     const [r1,r2,c1,c2]=bounds();
+    const cols=visibleCols(),selectedCols=cols.filter(c=>c>=c1&&c<=c2),firstCol=selectedCols[0],lastCol=selectedCols[selectedCols.length-1],rtl=formatting.direction==='rtl';
+    const origin=cursor.r===0&&anchor.r===view.length-1?{r:0,c:anchor.c}:anchor;
     $('sheet-delete-col').disabled=!loaded||c1<D.BASE_WIDTH;
     $('sheet-delete-col').title=c1<D.BASE_WIDTH?tr('الأعمدة الأساسية ثابتة؛ يمكن إخفاؤها.','Core columns are fixed; they can be hidden.'):tr('حذف الأعمدة المحددة بكل بياناتها','Delete selected columns and their data');
-    $('sheet-grid').querySelectorAll('td[data-col]').forEach(td=>{const r=+td.dataset.v,c=+td.dataset.col,current=r===cursor.r&&c===cursor.c;td.classList.toggle('sheet-selected',r>=r1&&r<=r2&&c>=c1&&c<=c2);td.classList.toggle('sheet-current',current);td.classList.toggle('sheet-focus-axis',r===cursor.r||c===cursor.c);td.tabIndex=current?0:-1;td.setAttribute('aria-selected',String(r>=r1&&r<=r2&&c>=c1&&c<=c2));});
+    $('sheet-grid').querySelectorAll('td[data-col]').forEach(td=>{
+      const r=+td.dataset.v,c=+td.dataset.col,current=r===cursor.r&&c===cursor.c,selected=r>=r1&&r<=r2&&c>=c1&&c<=c2,endRow=r+td.rowSpan-1,endCol=cols[cols.indexOf(c)+td.colSpan-1]??c;
+      td.classList.toggle('sheet-selected',selected);td.classList.toggle('sheet-current',current);td.classList.toggle('sheet-focus-axis',r===cursor.r||c===cursor.c);
+      td.classList.toggle('sheet-selection-origin',selected&&origin.r>=r&&origin.r<=endRow&&origin.c>=c&&origin.c<=endCol);
+      td.classList.toggle('sheet-selection-top',selected&&r===r1);td.classList.toggle('sheet-selection-bottom',selected&&endRow>=r2);
+      td.classList.toggle('sheet-selection-left',selected&&(rtl?endCol>=lastCol:c===firstCol));td.classList.toggle('sheet-selection-right',selected&&(rtl?c===firstCol:endCol>=lastCol));
+      td.classList.toggle('sheet-selection-corner',selected&&endRow>=r2&&endCol>=lastCol);td.classList.toggle('sheet-selection-rtl',rtl);
+      td.tabIndex=current?0:-1;td.setAttribute('aria-selected',String(selected));
+    });
     if(document.activeElement!==$('sheet-address'))$('sheet-address').value=colLetter(cursor.c)+((view[cursor.r]??0)+1);
     $('sheet-grid').querySelectorAll('thead th[data-col]').forEach(th=>th.classList.toggle('sheet-active-header',+th.dataset.col>=c1&&+th.dataset.col<=c2));
-    $('sheet-grid').querySelectorAll('th[data-rowv]').forEach(th=>th.classList.toggle('sheet-focus-row-header',+th.dataset.rowv===cursor.r));
+    $('sheet-grid').querySelectorAll('th[data-rowv]').forEach(th=>{th.classList.toggle('sheet-focus-row-header',+th.dataset.rowv===cursor.r);th.classList.toggle('sheet-selected-row-header',+th.dataset.rowv>=r1&&+th.dataset.rowv<=r2);});
     const style=formatting.styles[(view[cursor.r]??0)+':'+cursor.c]||{};
     $('sheet-bold').setAttribute('aria-pressed',String(!!style.bold));$('sheet-selection-size').value=String(style.size||formatting.fontSize);
     $('sheet-fill').value=style.bg||'#ffffff';$('sheet-text-color').value=style.color||'#16324f';

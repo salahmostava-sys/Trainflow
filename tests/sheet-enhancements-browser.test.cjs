@@ -26,13 +26,26 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),path
     await cell(2,3).click();
     assert.equal(await page.locator('td.sheet-current').getAttribute('data-v'),'2');
     assert.equal(await page.locator('td.sheet-focus-axis').count(),await page.locator('td[data-col="3"]').count()+await page.locator('td[data-v="2"]').count()-1,'Focus shades the mounted row and column');
-    assert.equal(await cell(2,20).evaluate(el=>getComputedStyle(el,'::after').backgroundColor),'rgba(37, 99, 235, 0.055)');
+    assert.equal(await cell(2,20).evaluate(el=>getComputedStyle(el,'::after').backgroundColor),'rgba(16, 124, 65, 0.055)');
     assert.equal(await cell(10,3).evaluate(el=>getComputedStyle(el,'::after').pointerEvents),'none','Focus never blocks editing or selection');
     assert.equal(await cell(10,4).evaluate(el=>el.classList.contains('sheet-focus-axis')),false);
     await page.keyboard.press('ArrowDown');
     assert.equal(await page.locator('th.sheet-focus-row-header').getAttribute('data-rowv'),'3');
     assert.equal(await cell(2,20).evaluate(el=>el.classList.contains('sheet-focus-axis')),false,'Previous row highlight clears on keyboard movement');
     assert.equal(await cell(3,20).evaluate(el=>el.classList.contains('sheet-focus-axis')),true);
+    for(const direction of ['ltr','rtl']){
+      await page.locator('#sheet-direction').selectOption(direction);
+      const start=await cell(0,2).boundingBox(),end=await cell(2,4).boundingBox();await page.mouse.move(start.x+start.width/2,start.y+start.height/2);await page.mouse.down();await page.mouse.move(end.x+end.width/2,end.y+end.height/2,{steps:6});await page.mouse.up();
+      assert.equal(await page.locator('td.sheet-selected').count(),9,'Dragging selects the same rectangle in '+direction);
+      const shade=await cell(1,3).evaluate(el=>{const style=getComputedStyle(el,'::before');return {fill:style.backgroundColor,edges:[style.borderTopWidth,style.borderRightWidth,style.borderBottomWidth,style.borderLeftWidth],events:style.pointerEvents};});
+      assert.deepEqual(shade,{fill:'rgba(0, 0, 0, 0.2)',edges:['0px','0px','0px','0px'],events:'none'},'Range interior has grey shading without individual outlines');
+      assert.equal(await cell(0,2).evaluate(el=>getComputedStyle(el,'::before').backgroundColor),'rgba(0, 0, 0, 0)','Selection origin stays clear');
+      const edge=await cell(0,2).evaluate(el=>{const style=getComputedStyle(el,'::before');return [style.borderTopWidth,style.borderRightWidth,style.borderBottomWidth,style.borderLeftWidth];});assert.deepEqual(edge,direction==='rtl'?['2px','2px','0px','0px']:['2px','0px','0px','2px']);
+      assert.equal(await cell(2,4).evaluate(el=>getComputedStyle(el,'::after').backgroundColor),'rgb(16, 124, 65)','Bottom corner is green');
+      assert.equal(await cell(2,4).evaluate(el=>getComputedStyle(el).boxShadow),'none','Only the outside of the range has a frame');
+    }
+    await cell(0,3).click();await cell(12,3).click({modifiers:['Shift']});await page.screenshot({path:path.join(__dirname,'../artifacts/trainees-selection.png')});
+    await page.locator('#sheet-direction').selectOption('ltr');await cell(3,3).click();assert.equal(await page.locator('td.sheet-selection-corner').count(),1,'Old range edges clear after selecting a single cell');
     const normalWidth=await cell(0,0).evaluate(el=>el.getBoundingClientRect().width);
     assert.equal(await page.locator('#sheet-formula').count(),0,'Value-editing box is removed');
     const headerFont=await page.locator('th[data-col="0"]').evaluate(el=>getComputedStyle(el).fontSize);
@@ -136,6 +149,8 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),path
       await page.setViewportSize(viewport);
       const fit=await page.locator('#sheet-trainee-dialog').evaluate(el=>{const rect=el.getBoundingClientRect();return {noVerticalScroll:el.scrollHeight<=el.clientHeight+1,noHorizontalScroll:el.scrollWidth<=el.clientWidth+1,inside:rect.top>=0&&rect.bottom<=innerHeight,allFields:[...el.querySelectorAll('dt,dd')].every(field=>{const box=field.getBoundingClientRect();return box.top>=rect.top&&box.bottom<=rect.bottom;})};});
       assert.deepEqual(fit,{noVerticalScroll:true,noHorizontalScroll:true,inside:true,allFields:true},'All trainee details fit without scrolling at '+JSON.stringify(viewport));
+      const rows=await page.locator('#sheet-trainee-record dd').evaluateAll(fields=>fields.map(field=>({left:field.getBoundingClientRect().left,top:field.getBoundingClientRect().top})));
+      assert.ok(rows.every((row,index)=>Math.abs(row.left-rows[0].left)<1&&(!index||row.top>rows[index-1].top)),'Every field appears in one vertical column');
     }
     await page.screenshot({path:path.join(__dirname,'../artifacts/trainee-details-fit.png')});await page.setViewportSize({width:1500,height:1000});
     assert.match(details,/كي كود/);assert.match(details,/LIVE-SALES-AR/);assert.doesNotMatch(details,/LIVE-SALES-EN/);
