@@ -265,6 +265,130 @@ if(window.history)window.history.scrollRestoration='manual';
     padding-left:38px!important;
   }
 
+  /* Modern File Upload Input Styling */
+  .file-upload-field{
+    display:flex!important;
+    flex-direction:column!important;
+    gap:7px!important;
+    min-width:0;
+    flex:1;
+  }
+  .file-upload-label-text{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    font-size:13px;
+    font-weight:600;
+    color:#334155;
+    letter-spacing:-0.1px;
+  }
+  .file-upload-badge{
+    font-size:11px;
+    font-weight:700;
+    padding:2px 8px;
+    border-radius:999px;
+    background:#EFF6FF;
+    color:#2563EB;
+    border:1px solid #BFDBFE;
+    letter-spacing:0.3px;
+  }
+  .settings-card input[type="file"],
+  .settings-pane input[type="file"],
+  .ops-card input[type="file"]{
+    display:flex!important;
+    align-items:center!important;
+    width:100%!important;
+    min-height:46px!important;
+    padding:5px 12px!important;
+    border:1.5px dashed #CBD5E1!important;
+    border-radius:10px!important;
+    background:#F8FAFC!important;
+    color:#475569!important;
+    font-family:inherit!important;
+    font-size:13px!important;
+    font-weight:500!important;
+    box-sizing:border-box!important;
+    cursor:pointer!important;
+    transition:all 0.2s cubic-bezier(0.4,0,0.2,1)!important;
+    box-shadow:0 1px 2px rgba(15,23,42,0.04)!important;
+  }
+  .settings-card input[type="file"]:hover,
+  .settings-pane input[type="file"]:hover,
+  .ops-card input[type="file"]:hover{
+    border-color:var(--blue, #0070F3)!important;
+    background:#F0F7FF!important;
+    box-shadow:0 2px 8px rgba(0,112,243,0.08)!important;
+  }
+  .settings-card input[type="file"]:focus,
+  .settings-pane input[type="file"]:focus,
+  .ops-card input[type="file"]:focus{
+    outline:none!important;
+    border-color:var(--blue, #0070F3)!important;
+    border-style:solid!important;
+    box-shadow:0 0 0 3.5px rgba(0,112,243,0.15)!important;
+    background:#FFFFFF!important;
+  }
+  .settings-card input[type="file"]::file-selector-button,
+  .settings-pane input[type="file"]::file-selector-button,
+  .ops-card input[type="file"]::file-selector-button{
+    display:inline-flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    padding:7px 16px!important;
+    margin-inline-end:12px!important;
+    border:none!important;
+    border-radius:7px!important;
+    background:linear-gradient(135deg, #0070F3 0%, #0051C7 100%)!important;
+    color:#FFFFFF!important;
+    font-family:inherit!important;
+    font-size:12.5px!important;
+    font-weight:700!important;
+    cursor:pointer!important;
+    box-shadow:0 2px 6px rgba(0,112,243,0.28)!important;
+    transition:all 0.18s ease!important;
+    line-height:1.2!important;
+  }
+  .settings-card input[type="file"]::file-selector-button:hover,
+  .settings-pane input[type="file"]::file-selector-button:hover,
+  .ops-card input[type="file"]::file-selector-button:hover{
+    background:linear-gradient(135deg, #005BD6 0%, #003EA3 100%)!important;
+    box-shadow:0 4px 12px rgba(0,112,243,0.38)!important;
+    transform:translateY(-1px)!important;
+  }
+  .settings-card input[type="file"]::file-selector-button:active,
+  .settings-pane input[type="file"]::file-selector-button:active,
+  .ops-card input[type="file"]::file-selector-button:active{
+    transform:translateY(0)!important;
+    box-shadow:0 1px 3px rgba(0,112,243,0.2)!important;
+  }
+  .settings-card input[type="file"]::-webkit-file-upload-button,
+  .settings-pane input[type="file"]::-webkit-file-upload-button,
+  .ops-card input[type="file"]::-webkit-file-upload-button{
+    display:inline-flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    padding:7px 16px!important;
+    margin-inline-end:12px!important;
+    border:none!important;
+    border-radius:7px!important;
+    background:linear-gradient(135deg, #0070F3 0%, #0051C7 100%)!important;
+    color:#FFFFFF!important;
+    font-family:inherit!important;
+    font-size:12.5px!important;
+    font-weight:700!important;
+    cursor:pointer!important;
+    box-shadow:0 2px 6px rgba(0,112,243,0.28)!important;
+    transition:all 0.18s ease!important;
+    line-height:1.2!important;
+  }
+  .settings-card input[type="file"]::-webkit-file-upload-button:hover,
+  .settings-pane input[type="file"]::-webkit-file-upload-button:hover,
+  .ops-card input[type="file"]::-webkit-file-upload-button:hover{
+    background:linear-gradient(135deg, #005BD6 0%, #003EA3 100%)!important;
+    box-shadow:0 4px 12px rgba(0,112,243,0.38)!important;
+    transform:translateY(-1px)!important;
+  }
+
   @media(max-width:768px){
     .settings-grid-2col,.settings-extensions-grid,.inventory-stock-edit-grid{grid-template-columns:1fr!important;}
     .settings-header-banner{flex-direction:column;align-items:flex-start;padding:16px 18px;}
@@ -1104,7 +1228,14 @@ if(window.history)window.history.scrollRestoration='manual';
       </div>
       <div class="ops-row">
         <label><span data-i18n="bulkImportCategory">Category</span><select id="bulk-import-category"></select></label>
-        <label><span data-i18n="bulkImportFile">CSV or text file</span><input id="bulk-import-file" type="file" accept=".csv,.txt,text/csv,text/plain"></label>
+        <label class="file-upload-field">
+          <span class="file-upload-label-text">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--blue);"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            <span data-i18n="bulkImportFile">CSV or text file</span>
+            <span class="file-upload-badge">.CSV / .TXT</span>
+          </span>
+          <input id="bulk-import-file" type="file" accept=".csv,.txt,text/csv,text/plain">
+        </label>
       </div>
       <div id="bulk-import-preview" class="ops-status" role="status" aria-live="polite"></div>
       <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;">
@@ -1233,7 +1364,14 @@ if(window.history)window.history.scrollRestoration='manual';
               <div class="cloud-backup-controls">
                 <button id="import-legacy" type="button" data-i18n="importLegacy">استيراد بيانات المتصفح القديمة</button>
                 <button id="export-data" type="button" data-i18n="exportBackup">تنزيل نسخة احتياطية</button>
-                <label><span data-i18n="restoreFile">Choose a TrainFlow backup JSON file</span><input id="restore-file" type="file" accept=".json,application/json"></label>
+                <label class="file-upload-field">
+                  <span class="file-upload-label-text">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--blue);"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                    <span data-i18n="restoreFile">Choose a TrainFlow backup JSON file</span>
+                    <span class="file-upload-badge">.JSON</span>
+                  </span>
+                  <input id="restore-file" type="file" accept=".json,application/json">
+                </label>
                 <button id="restore-button" type="button" disabled data-i18n="restoreButton">Restore data</button>
               </div>
               <p id="restore-preview" class="ops-status" role="status" aria-live="polite"></p>
