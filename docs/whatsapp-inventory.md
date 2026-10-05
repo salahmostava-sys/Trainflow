@@ -4,7 +4,7 @@ Settings → Inventory contains an automatic sending switch and a Saudi time inp
 The default is 16:59, one minute before the existing 17:00 manual-login cutoff.
 Choose **WhatsApp Web — Chrome** for the local device integration described in
 [the Chrome setup guide](whatsapp-web.md). This is the default provider and needs
-the device awake, Chrome running, WhatsApp signed in and a valid IBTA session.
+the device awake, Chrome running, WhatsApp signed in and a valid TrainFlow session.
 
 The optional **WhatsApp Business API** provider described below uses the database
 scheduler and works when browsers are closed or signed out. It snapshots

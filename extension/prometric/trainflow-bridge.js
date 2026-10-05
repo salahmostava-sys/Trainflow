@@ -1,4 +1,4 @@
-/* IBTA page bridge; database sessions never leave the app. */
+/* TrainFlow page bridge; database sessions never leave the app. */
 (()=>{
   'use strict';const ORIGIN='https://ibta-ops.pages.dev';
   const post=data=>window.postMessage({channel:'IBTA_PROMETRIC_EXTENSION',...data},ORIGIN);

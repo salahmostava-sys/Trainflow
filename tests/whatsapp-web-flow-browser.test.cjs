@@ -15,7 +15,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
           const currentLang='ar';window.cfg={provider:'web',enabled:false,time:'16:59',phoneId:'',template:'',language:'ar',apiVersion:'v24.0',last:null};
           const Cloud={role:()=> 'admin',userId:()=> 'fixture-admin',inventoryDeliveryEligible:()=>true,inventoryMessageSettings:()=>({number:'966500000000'}),inventoryDelivery:async options=>{if(options)window.cfg={...window.cfg,...options};return window.cfg;},inventoryReportSnapshot:async()=>({categories:['Foundation'],stock:{Foundation:3},available:{Foundation:12},settings:{number:'966500000000'}})};
           function inventoryMessage(){return 'ISOLATED TEST REPORT';}async function copyText(){return true;}
-          </script><script id="inventory-delivery-script" src="inventory-delivery.js" data-extension="ibta-whatsapp-web.zip"></script></body></html>`});
+          </script><script id="inventory-delivery-script" src="inventory-delivery.js" data-extension="trainflow-whatsapp-web.zip"></script></body></html>`});
       }
       if(url.origin==='https://web.whatsapp.com')return route.fulfill({contentType:'text/html; charset=utf-8',body:`<!doctype html><html><head><meta charset="utf-8"></head><body><h1>Isolated WhatsApp fixture</h1><div id="main"><footer><div contenteditable="true" role="textbox"></div><button aria-label="Send">Send</button></footer></div><script>
         const composer=document.querySelector('[contenteditable]');composer.innerText=new URL(location.href).searchParams.get('text')||'';

@@ -1,5 +1,5 @@
 if (typeof importScripts === 'function') {
-  importScripts('utils.js', 'ibta-integration.js');
+  importScripts('utils.js', 'trainflow-integration.js');
 } else if (typeof require === 'function') {
   const utils = require('./utils.js');
   globalThis.generateCredentials = utils.generateCredentials;

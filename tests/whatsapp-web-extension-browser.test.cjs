@@ -10,7 +10,8 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
     const id=await worker.evaluate(()=>chrome.runtime.id),popup=await ctx.newPage(),errors=[];
     popup.on('pageerror',e=>errors.push(e.message));await popup.goto('chrome-extension://'+id+'/popup.html');
     await popup.waitForFunction(()=>document.getElementById('status').textContent.includes('متوقف على هذا الجهاز'),null,{timeout:10000}).catch(async error=>{throw Error(error.message+'\nErrors: '+JSON.stringify(errors)+'\nPopup: '+await popup.locator('body').innerText());});
-    assert.match(await popup.locator('#diagnostics').textContent(),/الإصدار 1\.0\.2/);
+    const version=JSON.parse(fs.readFileSync(path.join(extension,'manifest.json'),'utf8')).version;
+    assert((await popup.locator('#diagnostics').textContent()).includes('الإصدار '+version));
     await popup.locator('#stop').click();await popup.waitForFunction(()=>!document.getElementById('stop').disabled);
     assert.match(await popup.locator('#status').textContent(),/متوقف على هذا الجهاز/);assert.deepEqual(errors,[]);
     await popup.screenshot({path:path.join(artifacts,'whatsapp-extension-popup.png')});

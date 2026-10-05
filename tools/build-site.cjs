@@ -6,7 +6,7 @@ const {Script}=require('node:vm');
 const root = path.resolve(__dirname, '..');
 const output = path.join(root, 'dist');
 fs.mkdirSync(output, { recursive: true });
-let html=fs.readFileSync(path.join(root,'ibta-ops.html'),'utf8');
+let html=fs.readFileSync(path.join(root,'trainflow.html'),'utf8');
 const files=['prometric-core.js','prometric-registration.js','certificate-name.js','cloud.js','ops-ui.js','inventory-delivery.js','trainees.js','trainees-excel.js','trainees-core.js','trainees-xlsx.js','trainees-files.js','trainees.css','trainee-reports.js','session-policy.js'];
 const vendor=fs.readFileSync(require.resolve('exceljs/dist/exceljs.min.js'));
 fs.writeFileSync(path.join(output,'exceljs-4.4.0.min.js'),vendor);
@@ -32,10 +32,12 @@ for(const file of fs.readdirSync(path.join(root,'extension/whatsapp-web'))){
   zip.file(file,content,{date:new Date('2026-01-01T00:00:00Z')});
 }
 Promise.all([zip.generateAsync({type:'nodebuffer',compression:'DEFLATE'}),prometricZip.generateAsync({type:'nodebuffer',compression:'DEFLATE'})]).then(([bytes,prometricBytes])=>{
+  fs.writeFileSync(path.join(output,'trainflow-prometric.zip'),prometricBytes);
   fs.writeFileSync(path.join(output,'ibta-prometric.zip'),prometricBytes);
-  html=html.replaceAll('"ibta-prometric.zip"','"ibta-prometric.zip?v='+createHash('sha256').update(prometricBytes).digest('hex').slice(0,12)+'"');
+  html=html.replaceAll('"trainflow-prometric.zip"','"trainflow-prometric.zip?v='+createHash('sha256').update(prometricBytes).digest('hex').slice(0,12)+'"');
+  fs.writeFileSync(path.join(output,'trainflow-whatsapp-web.zip'),bytes);
   fs.writeFileSync(path.join(output,'ibta-whatsapp-web.zip'),bytes);
-  html=html.replaceAll('"ibta-whatsapp-web.zip"','"ibta-whatsapp-web.zip?v='+createHash('sha256').update(bytes).digest('hex').slice(0,12)+'"');
+  html=html.replaceAll('"trainflow-whatsapp-web.zip"','"trainflow-whatsapp-web.zip?v='+createHash('sha256').update(bytes).digest('hex').slice(0,12)+'"');
   fs.writeFileSync(path.join(output,'index.html'),html);console.log('WhatsApp Web and Prometric extension packages ready');
 }).catch(error=>{console.error(error.message);process.exitCode=1;});
 

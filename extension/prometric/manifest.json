@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Prometric Auto Register — IBTA",
-  "version": "4.1.0",
-  "description": "Prometric registration linked to your IBTA trainee sheet",
+  "name": "Prometric Auto Register — TrainFlow",
+  "version": "4.1.1",
+  "description": "Prometric registration linked to your TrainFlow trainee sheet",
   "permissions": [
     "tabs",
     "storage",
@@ -58,7 +58,7 @@
         "https://ibta-ops.pages.dev/*"
       ],
       "js": [
-        "ibta-bridge.js"
+        "trainflow-bridge.js"
       ],
       "run_at": "document_start"
     }

@@ -6,12 +6,12 @@ the same profile as the user's WhatsApp Web session. It needs no Meta token.
 
 ## Install and enable
 
-1. Download `https://ibta-ops.pages.dev/ibta-whatsapp-web.zip` from Inventory
+1. Download `https://ibta-ops.pages.dev/trainflow-whatsapp-web.zip` from Inventory
    settings and extract it into a permanent folder. Developers can instead load
    `extension/whatsapp-web` directly.
 2. Open `chrome://extensions` in the WhatsApp Chrome profile, enable Developer
    mode, choose Load unpacked, and select the folder containing `manifest.json`.
-3. Reload IBTA and sign in as an administrator. Save the existing recipient
+3. Reload TrainFlow and sign in as an administrator. Save the existing recipient
    number including country code, and complete all supervisor category balances.
 4. In Settings → Inventory choose WhatsApp Web — Chrome, enable automatic
    sending, set a Saudi time, and save. The default is 16:59, before the existing
@@ -20,7 +20,7 @@ the same profile as the user's WhatsApp Web session. It needs no Meta token.
 
 Enable on **one device only**: duplicate prevention is local to that Chrome
 profile, not a cross-device server lock. Keep the device awake, Chrome running,
-WhatsApp signed in, and the IBTA session valid before the prefetch time, one
+WhatsApp signed in, and the TrainFlow session valid before the prefetch time, one
 minute before delivery. The extension cannot wake a sleeping device. Do not move
 or delete its installation folder.
 
@@ -28,7 +28,7 @@ or delete its installation folder.
 
 The extension uses a fixed UTC+3 Saudi calendar and Chrome alarms. It requests
 a fresh, administrator-authorized inventory snapshot one minute before sending.
-An existing healthy IBTA tab is used; otherwise a background IBTA tab is opened.
+An existing healthy TrainFlow tab is used; otherwise a background TrainFlow tab is opened.
 Authentication still needs to be valid in that tab. Only available category
 counts, supervisor balances, labels and message settings are returned; trainee
 records, Prometric credentials, auth tokens and database keys are not shared
@@ -52,8 +52,8 @@ login, changed draft, blocked dialog or unrecognized UI yields failure or an
 unknown outcome rather than a blind send. WhatsApp UI changes may require an
 extension update.
 
-If the popup shows the installed version but IBTA says the extension is not
-connected after an extension Reload, reload the **IBTA page too**, or use Open
+If the popup shows the installed version but TrainFlow says the extension is not
+connected after an extension Reload, reload the **TrainFlow page too**, or use Open
 program and settings from the popup to open a fresh tab in that Chrome profile.
 Existing content-script contexts are invalidated by extension reloads. Sign in
 if needed, then save sending settings again to enable this device. The shared
@@ -63,7 +63,7 @@ alarm dated today when testing. Choose a time at least three minutes ahead.
 
 The extension popup refreshes the report and can stop sending on this device.
 Stopping locally does not disable the shared setting; save the setting again
-to re-enable this device. Disable and save in IBTA to turn off the shared
+to re-enable this device. Disable and save in TrainFlow to turn off the shared
 setting too. Switching to Meta stops this extension when saved on this device;
 other previously configured devices must also stop or receive the updated
 configuration before their own alarms.
@@ -80,12 +80,12 @@ not ready/openable, or a mismatching draft), explicitly changing the time or
 recipient and saving allows a new attempt. Sent, in-progress and ambiguous
 outcomes stay blocked for the day to prevent duplicates. Updating the installed
 unpacked extension requires replacing its files and pressing Reload in
-`chrome://extensions`, then reloading IBTA and WhatsApp tabs.
+`chrome://extensions`, then reloading TrainFlow and WhatsApp tabs.
 
 ## Permissions and validation
 
 Manifest V3 permissions are `storage` and `alarms`, with host access limited to
-the IBTA site and WhatsApp Web. No general `tabs` permission, cookie access,
+the TrainFlow site and WhatsApp Web. No general `tabs` permission, cookie access,
 download permission, external sending service or remotely executed code is used.
 Local storage contains configuration, a temporary report and last attempt status.
 This is an unpacked extension, not a Chrome Web Store installation.

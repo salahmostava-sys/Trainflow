@@ -108,7 +108,7 @@ els['inventory-message-language']=new Element();
 ctx.atob=atob;
 vm.runInContext(fs.readFileSync(path.join(__dirname,'../session-policy.js'),'utf8'),ctx);
 vm.runInContext(fs.readFileSync(path.join(__dirname,'../cloud.js'),'utf8'),ctx);
-const html=fs.readFileSync(path.join(__dirname,'../ibta-ops.html'),'utf8');
+const html=fs.readFileSync(path.join(__dirname,'../trainflow.html'),'utf8');
 assert.match(html,/family=IBM\+Plex\+Sans\+Arabic/);
 assert.match(html,/--ui-font:'IBM Plex Sans Arabic'/);
 assert.match(html,/#auth-box\{font-family:var\(--ui-font\)/);
@@ -132,6 +132,8 @@ for(const [,script] of html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g
 vm.runInContext(fs.readFileSync(path.join(__dirname,'../ops-ui.js'),'utf8'),ctx);
 const run=s=>vm.runInContext(s,ctx);
 assert.equal(run("validBackup({format:'ibta-ops-backup',settings:{categoryOrder:[],codeCategories:[],keycodes:[]},codes:[{code:'A',category:'Foundation-100'}]})"),true);
+assert.equal(run("validBackup({format:'trainflow-backup',settings:{categoryOrder:[],codeCategories:[],keycodes:[]},codes:[{code:'A',category:'Foundation-100'}]})"),true);
+assert.equal(run("validBackup({format:'foreign-backup',settings:{categoryOrder:[],codeCategories:[],keycodes:[]},codes:[{code:'A',category:'Foundation-100'}]})"),false);
 assert.equal(run("validBackup({settings:{},codes:[{code:'A',category:'X'}]})"),false);
 assert.equal(run("validBackup({settings:{categoryOrder:[],codeCategories:[],keycodes:[]},codes:[],traineeSheets:[{owner_id:'00000000-0000-0000-0000-000000000001',cells:[Array(500).fill('')],format:{styles:{'0:499':{bold:true}}}}]})"),true,'Backups accept custom trainee columns and their formatting');
 assert.equal(run("validBackup({settings:{categoryOrder:[],codeCategories:[],keycodes:[]},codes:[],traineeSheets:[{owner_id:'00000000-0000-0000-0000-000000000001',cells:[Array(501).fill('')]}]})"),false,'Import keeps the column limit');
@@ -390,6 +392,7 @@ for(const key of usedKeys) assert(englishKeys.includes(key),`Missing translation
   db.traineeSheets=[{owner_id:'00000000-0000-0000-0000-000000000001',cells:[wideBackupRow],format:{headers:{499:'Review'},styles:{'0:499':{bold:true}}}}];
   await run('Cloud.exportData()');
   const exportedBackup=JSON.parse(await backupBlobs.at(-1).text());
+  assert.equal(exportedBackup.format,'trainflow-backup','New exports use the TrainFlow format');
   assert.deepEqual(exportedBackup.traineeSheets,db.traineeSheets,'Export includes every custom column and its formatting');
   assert.deepEqual(exportedBackup.settings,db.settings.payload);assert.equal(exportedBackup.codes.length,db.codes.length);assert.deepEqual(exportedBackup.supervisorStock,db.stock);
   assert.equal(run('validBackup('+JSON.stringify(exportedBackup)+')'),true,'Exported app backup can be imported again');

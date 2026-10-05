@@ -1,15 +1,42 @@
 {
   "manifest_version": 3,
-  "name": "IBTA — WhatsApp daily inventory",
-  "version": "1.0.2",
-  "description": "Send your IBTA inventory report through your logged-in WhatsApp Web at your chosen Saudi time.",
+  "name": "TrainFlow — WhatsApp daily inventory",
+  "version": "1.0.3",
+  "description": "Send your TrainFlow inventory report through your logged-in WhatsApp Web at your chosen Saudi time.",
   "minimum_chrome_version": "120",
-  "permissions": ["alarms", "storage"],
-  "host_permissions": ["https://ibta-ops.pages.dev/*", "https://web.whatsapp.com/*"],
-  "background": {"service_worker": "background.js"},
-  "action": {"default_popup": "popup.html", "default_title": "IBTA WhatsApp"},
+  "permissions": [
+    "alarms",
+    "storage"
+  ],
+  "host_permissions": [
+    "https://ibta-ops.pages.dev/*",
+    "https://web.whatsapp.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "TrainFlow WhatsApp"
+  },
   "content_scripts": [
-    {"matches": ["https://ibta-ops.pages.dev/*"], "js": ["bridge.js"], "run_at": "document_idle"},
-    {"matches": ["https://web.whatsapp.com/*"], "js": ["sender.js"], "run_at": "document_idle"}
+    {
+      "matches": [
+        "https://ibta-ops.pages.dev/*"
+      ],
+      "js": [
+        "bridge.js"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://web.whatsapp.com/*"
+      ],
+      "js": [
+        "sender.js"
+      ],
+      "run_at": "document_idle"
+    }
   ]
 }

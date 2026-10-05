@@ -102,7 +102,7 @@ const Cloud = (() => {
       $('signed-in').textContent=(name?name+' · ':'')+email+' · '+(role==='admin'?t('adminRole'):role==='copy_only'?t('roleCopyOnly'):t('userRole'));
       $('account-menu-name').textContent=name || t('currentAccount');
       $('account-menu-email').textContent=email;
-      $('account-avatar').textContent=(name || email).trim().charAt(0).toUpperCase() || 'IB';
+      $('account-avatar').textContent=(name || email).trim().charAt(0).toUpperCase() || 'TF';
     }
     if(profileStatusKey){
       $('profile-status').textContent=profileStatusKey==='error'?errorText(profileStatusError):t(profileStatusKey);
@@ -493,9 +493,9 @@ const Cloud = (() => {
         if(error)throw error;traineeSheets.push(...data);if(data.length<100)break;
       }
     }catch(error){fail(error);return;}
-    const blob=new Blob([JSON.stringify({format:'ibta-ops-backup',version:4,exportedAt:new Date().toISOString(),settings:config.payload,codes:[...rows.values()],supervisorStock:[...stock].map(([category,remaining])=>({category,remaining})),traineeSheets},null,2)],{type:'application/json'});
+    const blob=new Blob([JSON.stringify({format:'trainflow-backup',version:4,exportedAt:new Date().toISOString(),settings:config.payload,codes:[...rows.values()],supervisorStock:[...stock].map(([category,remaining])=>({category,remaining})),traineeSheets},null,2)],{type:'application/json'});
     if(blob.size>10000000){setStatus('error',true,Error(currentLang==='ar'?'النسخة تتجاوز 10 ميجابايت. انسخ جداول المتدربين منفصلة قبل المتابعة.':'Backup exceeds 10 MB. Copy trainee sheets separately before continuing.'));return;}
-    const url=window.URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='ibta-backup-'+new Date().toISOString().slice(0,10)+'.json';a.click();window.URL.revokeObjectURL(url);
+    const url=window.URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='trainflow-backup-'+new Date().toISOString().slice(0,10)+'.json';a.click();window.URL.revokeObjectURL(url);
   }
   async function exportCodesCsv(){
     if(role!=='admin')return;
@@ -507,12 +507,12 @@ const Cloud = (() => {
     };
     const lines=[['Code','Category','Used On'],...[...rows.values()].map(row=>[row.code,row.category,row.used_on || ''])];
     const blob=new Blob(['\uFEFF'+lines.map(line=>line.map(csvCell).join(',')).join('\r\n')],{type:'text/csv;charset=utf-8'});
-    const url=window.URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='ibta-codes-'+new Date().toISOString().slice(0,10)+'.csv';a.click();window.URL.revokeObjectURL(url);
+    const url=window.URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='trainflow-codes-'+new Date().toISOString().slice(0,10)+'.csv';a.click();window.URL.revokeObjectURL(url);
   }
   async function restoreData(backup){
     if(!ready || role!=='admin')throw Error('IBTA_NOT_APPROVED');
     if(typeof Trainees!=='undefined' && !await Trainees.flush())throw Error('UNSAVED_SHEET');
-    if(backup?.format && backup.format!=='ibta-ops-backup')throw Error('IBTA_INVALID_BACKUP');
+    if(backup?.format && !['trainflow-backup','ibta-ops-backup'].includes(backup.format))throw Error('IBTA_INVALID_BACKUP');
     if(!Array.isArray(backup?.settings?.categoryOrder) || !Array.isArray(backup?.settings?.codeCategories) ||
        !Array.isArray(backup?.settings?.keycodes) || !Array.isArray(backup.codes))throw Error('IBTA_INVALID_BACKUP');
     if(backup.supervisorStock!==undefined && (!Array.isArray(backup.supervisorStock) ||

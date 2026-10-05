@@ -13,7 +13,7 @@ if(window.history)window.history.scrollRestoration='manual';
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
-<title id="doc-title">IBTA Tools</title>
+<title id="doc-title">TrainFlow</title>
 <style>
   :root{
     --bg:#FFFFFF;
@@ -573,9 +573,9 @@ if(window.history)window.history.scrollRestoration='manual';
 <section id="auth-box" dir="rtl" lang="ar" hidden>
   <div class="auth-shell">
     <aside class="auth-story" aria-label="عن البرنامج">
-      <div class="auth-brand"><span class="auth-logo" aria-hidden="true">IB</span><div><strong data-i18n="appTitle">أدوات IBTA</strong><small data-i18n="authBrandTagline">مساحة عمل فريقك</small></div><button id="auth-lang-btn" class="auth-lang-btn" type="button">EN</button></div>
+      <div class="auth-brand"><span class="auth-logo" aria-hidden="true">TF</span><div><strong data-i18n="appTitle">TrainFlow</strong><small data-i18n="authBrandTagline">مساحة عمل فريقك</small></div><button id="auth-lang-btn" class="auth-lang-btn" type="button">EN</button></div>
       <div class="auth-intro">
-        <div class="auth-eyebrow" data-i18n="authEyebrow">عمليات IBTA</div>
+        <div class="auth-eyebrow" data-i18n="authEyebrow">عمليات التدريب والاختبارات</div>
         <h2><span data-i18n="authHeadline1">أكوادك منظّمة.</span><br><span data-i18n="authHeadline2">وفريقك على اتصال.</span></h2>
         <p data-i18n="authIntro">مساحة واحدة لإدارة الأكواد ومتابعة استخدامها، أينما كنت.</p>
         <div class="auth-features">
@@ -608,15 +608,15 @@ if(window.history)window.history.scrollRestoration='manual';
   <div class="app-sticky-bar">
   <header class="top">
     <div class="brand">
-      <div class="brand-mark">IB</div>
+      <div class="brand-mark">TF</div>
       <div>
-        <h1 data-i18n="appTitle">IBTA Tools</h1>
+        <h1 data-i18n="appTitle">TrainFlow</h1>
       </div>
     </div>
     <div class="header-actions">
       <button class="icon-pill-btn" id="lang-btn">AR</button>
       <div class="account-menu" id="account-menu">
-        <button class="icon-pill-btn account-trigger" id="account-menu-btn" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="account-menu-popover"><span class="account-avatar" id="account-avatar" aria-hidden="true">IB</span></button>
+        <button class="icon-pill-btn account-trigger" id="account-menu-btn" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="account-menu-popover"><span class="account-avatar" id="account-avatar" aria-hidden="true">TF</span></button>
         <div class="account-popover" id="account-menu-popover" hidden>
           <div class="account-summary"><strong id="account-menu-name" data-i18n="currentAccount">الحساب الحالي</strong><span id="account-menu-email" dir="ltr"></span></div>
           <button class="account-option" id="settings-btn" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"/><path d="M19.4 15a1.8 1.8 0 0 0 .36 1.98l.07.07-1.78 1.78-.07-.07A1.8 1.8 0 0 0 16 18.4a1.8 1.8 0 0 0-1 1.66V20h-2v-.06a1.8 1.8 0 0 0-1-1.66 1.8 1.8 0 0 0-1.98.36l-.07.07-1.78-1.78.07-.07A1.8 1.8 0 0 0 8.6 15a1.8 1.8 0 0 0-1.66-1H7v-2h-.06A1.8 1.8 0 0 0 8.6 11a1.8 1.8 0 0 0-.36-1.98l-.07-.07 1.78-1.78.07.07A1.8 1.8 0 0 0 12 7.6a1.8 1.8 0 0 0 1-1.66V6h2v.06a1.8 1.8 0 0 0 1 1.66 1.8 1.8 0 0 0 1.98-.36l.07-.07 1.78 1.78-.07.07A1.8 1.8 0 0 0 19.4 11a1.8 1.8 0 0 0 1.66 1H21v2h.06A1.8 1.8 0 0 0 19.4 15Z"/></svg><span data-i18n="settingsTitle">الإعدادات</span></button>
@@ -870,7 +870,7 @@ if(window.history)window.history.scrollRestoration='manual';
             <div id="member-list" class="ops-list"></div>
             <div class="ops-card">
               <h3 data-i18n="restoreTitle">Restore a backup</h3>
-              <label><span data-i18n="restoreFile">Choose an IBTA backup JSON file</span><input id="restore-file" type="file" accept=".json,application/json"></label>
+              <label><span data-i18n="restoreFile">Choose a TrainFlow backup JSON file</span><input id="restore-file" type="file" accept=".json,application/json"></label>
               <p id="restore-preview" class="ops-status" role="status" aria-live="polite"></p>
               <button id="restore-button" type="button" disabled data-i18n="restoreButton">Restore data</button>
             </div>
@@ -914,7 +914,7 @@ const TRANSLATIONS = {
   en: {
     copyBtn:"Copy", copyFailed:"Copy failed. Please try again.", enterCredential:"Enter the value first.",
     sessionCredentials:"The Prometric credentials are prefilled for this session.",
-    appTitle:"IBTA Tools",
+    appTitle:"TrainFlow",
     tabKeycodes:"Keycodes", tabPrometric:"Prometric", tabCodes:"VOUCHERS", tabInventory:"Inventory",
     codeDensityCompact:"Compact view", codeDensityComfortable:"Comfortable view", codeExpandHeight:"Expand height", codeNormalHeight:"Normal height", codeScrollToTop:"Show from start (#1)", codeScrollToToday:"Go to today's codes",
     inventoryIntro:"Codes with you are unused codes in the system. Supervisor balances decrease automatically when new codes are added.",
@@ -979,7 +979,7 @@ const TRANSLATIONS = {
     categoryRemoved:"Category removed",
     editBtn:"Edit", editCategory:"Edit category", editExam:"Edit exam", editCode:"Edit code", cancelBtn:"Cancel", invalidCodeEdit:"Enter a unique code and a date in DD/MM/YYYY format.", itemUpdated:"Changes saved", manageRecords:"Edit system data", manageRecordsDesc:"Choose a record here to edit it without adding controls to the daily work screen.",
     authBrandTagline:"Your team's workspace", authHeadline1:"Your codes, organized.", authHeadline2:"Your team, connected.",
-    authEyebrow:"IBTA OPERATIONS",
+    authEyebrow:"TRAINING & EXAM OPERATIONS",
     authIntro:"One place to manage codes and track their use, wherever you are.",
     authFeatureCodes:"Clearly track available and used codes", authFeatureTeam:"Shared data and individual access",
     authFeatureAccess:"Access from any internet-connected device", authFooter:"Simpler management. Clearer tracking.",
@@ -997,7 +997,7 @@ const TRANSLATIONS = {
     newMemberEmail:"New user's email", addMember:"Approve user",
     memberRole:"Role",roleCopyOnly:"Copy codes only",roleOperator:"Operator",roleAdmin:"Administrator",memberInactive:"Inactive",memberActive:"Active",memberSave:"Save member",activityTitle:"Recent activity",activityEmpty:"No activity found.",
     auditInsert:"Added",auditUpdate:"Updated",auditDelete:"Deleted",auditCodes:"Code",auditMembers:"Team member",auditSettings:"System settings",
-    restoreTitle:"Restore a backup",restoreFile:"Choose an IBTA backup JSON file",restoreButton:"Restore data",restorePreview:n=>"This backup contains "+n+" codes. Restoring replaces current codes, shared settings, and any trainee sheets and supervisor balances included in the backup.",restoreDone:"Backup restored successfully.",restoreInvalid:"The backup file is invalid.",restoreConfirm:n=>"Restore the "+n+" codes in this backup, replacing current codes, shared settings, and any included trainee sheets and supervisor balances?",
+    restoreTitle:"Restore a backup",restoreFile:"Choose a TrainFlow backup JSON file",restoreButton:"Restore data",restorePreview:n=>"This backup contains "+n+" codes. Restoring replaces current codes, shared settings, and any trainee sheets and supervisor balances included in the backup.",restoreDone:"Backup restored successfully.",restoreInvalid:"The backup file is invalid.",restoreConfirm:n=>"Restore the "+n+" codes in this backup, replacing current codes, shared settings, and any included trainee sheets and supervisor balances?",
     bulkImportTitle:"Import codes from a file",bulkImportCategory:"Category",bulkImportFile:"CSV or text file",bulkImportButton:"Import valid codes",exportCodesCsv:"Export codes CSV",bulkImportPreview:(valid,duplicates,invalid)=>valid+" new codes ready · "+duplicates+" duplicates skipped · "+invalid+" invalid rows",bulkImportDone:n=>n+" codes imported.",lowStockLabel:"Low-stock warning at or below",lowStockWarning:items=>"Low stock: "+items,saveBtn:"Save",
     dbConnected:"Connected to the database", saving:"Saving…", saved:"Saved to the database", refreshed:"Data refreshed",
     copyRecorded:"Code copied and marked as used", copyReserved:"Code reserved for your account, but copying failed. Click it to retry or remove the used mark.",
@@ -1018,7 +1018,7 @@ const TRANSLATIONS = {
   ar: {
     copyBtn:"نسخ", copyFailed:"تعذر النسخ. حاول مرة أخرى.", enterCredential:"أدخل القيمة أولًا.",
     sessionCredentials:"بيانات دخول Prometric موجودة مسبقًا لهذه الجلسة.",
-    appTitle:"أدوات IBTA",
+    appTitle:"TrainFlow",
     tabKeycodes:"مفاتيح الأكواد", tabPrometric:"بروميترك", tabCodes:"VOUCHERS", tabInventory:"المخزون",
     codeDensityCompact:"عرض مدمج", codeDensityComfortable:"عرض مريح", codeExpandHeight:"توسيع الارتفاع", codeNormalHeight:"الارتفاع العادي", codeScrollToTop:"عرض من البداية (#1)", codeScrollToToday:"الذهاب لأكواد اليوم",
     inventoryIntro:"اللي معاك هو الأكواد غير المستخدمة في النظام. رصيد المشرف ينقص تلقائيًا عند إضافة أكواد جديدة.",
@@ -1083,7 +1083,7 @@ const TRANSLATIONS = {
     categoryRemoved:"تم حذف الفئة",
     editBtn:"تعديل", editCategory:"تعديل الفئة", editExam:"تعديل الامتحان", editCode:"تعديل الكود", cancelBtn:"إلغاء", invalidCodeEdit:"أدخل كودًا غير مكرر، واكتب التاريخ بصيغة يوم/شهر/سنة.", itemUpdated:"تم حفظ التعديل", manageRecords:"تعديل بيانات النظام", manageRecordsDesc:"اختر البيانات المطلوب تعديلها هنا، بعيدًا عن شاشة العمل اليومية.",
     authBrandTagline:"مساحة عمل فريقك", authHeadline1:"أكوادك منظّمة.", authHeadline2:"وفريقك على اتصال.",
-    authEyebrow:"عمليات IBTA",
+    authEyebrow:"عمليات التدريب والاختبارات",
     authIntro:"مساحة واحدة لإدارة الأكواد ومتابعة استخدامها، أينما كنت.",
     authFeatureCodes:"متابعة واضحة للأكواد المتاحة والمستخدمة", authFeatureTeam:"بيانات مشتركة وصلاحيات لكل مستخدم",
     authFeatureAccess:"وصول من أي جهاز متصل بالإنترنت", authFooter:"إدارة أبسط. متابعة أوضح.",
@@ -1101,7 +1101,7 @@ const TRANSLATIONS = {
     newMemberEmail:"بريد مستخدم جديد", addMember:"اعتماد المستخدم",
     memberRole:"الصلاحية",roleCopyOnly:"نسخ الأكواد فقط",roleOperator:"مشغّل",roleAdmin:"مدير",memberInactive:"معطّل",memberActive:"نشط",memberSave:"حفظ المستخدم",activityTitle:"آخر النشاطات",activityEmpty:"لا يوجد نشاط مسجل.",
     auditInsert:"إضافة",auditUpdate:"تعديل",auditDelete:"حذف",auditCodes:"كود",auditMembers:"مستخدم",auditSettings:"إعدادات النظام",
-    restoreTitle:"استعادة نسخة احتياطية",restoreFile:"اختر ملف نسخة IBTA بصيغة JSON",restoreButton:"استعادة البيانات",restorePreview:n=>"النسخة تحتوي على "+n+" كود. الاستعادة ستستبدل الأكواد والإعدادات المشتركة، وجداول المتدربين وأرصدة المشرف الموجودة في النسخة.",restoreDone:"تمت استعادة النسخة الاحتياطية.",restoreInvalid:"ملف النسخة الاحتياطية غير صالح.",restoreConfirm:n=>"استعادة "+n+" كود واستبدال الأكواد والإعدادات المشتركة، وجداول المتدربين وأرصدة المشرف الموجودة في النسخة؟",
+    restoreTitle:"استعادة نسخة احتياطية",restoreFile:"اختر ملف نسخة TrainFlow بصيغة JSON",restoreButton:"استعادة البيانات",restorePreview:n=>"النسخة تحتوي على "+n+" كود. الاستعادة ستستبدل الأكواد والإعدادات المشتركة، وجداول المتدربين وأرصدة المشرف الموجودة في النسخة.",restoreDone:"تمت استعادة النسخة الاحتياطية.",restoreInvalid:"ملف النسخة الاحتياطية غير صالح.",restoreConfirm:n=>"استعادة "+n+" كود واستبدال الأكواد والإعدادات المشتركة، وجداول المتدربين وأرصدة المشرف الموجودة في النسخة؟",
     bulkImportTitle:"استيراد أكواد من ملف",bulkImportCategory:"الفئة",bulkImportFile:"ملف CSV أو نص",bulkImportButton:"استيراد الأكواد الصالحة",exportCodesCsv:"تصدير الأكواد CSV",bulkImportPreview:(valid,duplicates,invalid)=>valid+" كود جديد جاهز · "+duplicates+" مكرر تم تجاهله · "+invalid+" صف غير صالح",bulkImportDone:n=>"تم استيراد "+n+" كود.",lowStockLabel:"تنبيه انخفاض الرصيد عند",lowStockWarning:items=>"رصيد منخفض: "+items,saveBtn:"حفظ",
     dbConnected:"متصل بقاعدة البيانات", saving:"جارٍ الحفظ…", saved:"تم الحفظ في قاعدة البيانات", refreshed:"تم تحديث البيانات",
     copyRecorded:"تم نسخ الكود وتسجيل استخدامه", copyReserved:"تم حجز الكود لحسابك لكن النسخ فشل. اضغط عليه لإعادة النسخ أو ألغِ علامة الاستخدام.",
@@ -2405,10 +2405,10 @@ applyLanguage();
 Cloud.boot();
 </script>
 <script src="ops-ui.js"></script>
-<script id="inventory-delivery-script" src="inventory-delivery.js" data-extension="ibta-whatsapp-web.zip"></script>
+<script id="inventory-delivery-script" src="inventory-delivery.js" data-extension="trainflow-whatsapp-web.zip"></script>
 <script src="trainees-core.js"></script>
 <script src="prometric-core.js"></script>
-<script id="prometric-registration-script" src="prometric-registration.js" data-extension="ibta-prometric.zip"></script>
+<script id="prometric-registration-script" src="prometric-registration.js" data-extension="trainflow-prometric.zip"></script>
 <script src="trainees-xlsx.js"></script>
 <script id="sheet-files-script" src="trainees-files.js" data-worker="trainees-xlsx-worker.js"></script>
 <script src="trainees-excel.js"></script>

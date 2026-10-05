@@ -3,7 +3,7 @@ let pendingBackup=null,pendingImportCodes=[];
 const opsText=(id,value)=>{document.getElementById(id).textContent=value;};
 
 function validBackup(value){
-  if(!value || (value.format && value.format!=='ibta-ops-backup') ||
+  if(!value || (value.format && !['trainflow-backup','ibta-ops-backup'].includes(value.format)) ||
      !value.settings || typeof value.settings!=='object' || Array.isArray(value.settings) ||
      !Array.isArray(value.settings.categoryOrder) || !Array.isArray(value.settings.codeCategories) ||
      !Array.isArray(value.settings.keycodes) ||

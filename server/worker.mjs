@@ -67,13 +67,13 @@ export async function handleApi(request,env={},fetcher=(...args)=>globalThis.fet
     const noBody=[204,205,304].includes(response.status);
     return new Response(noBody?null:response.body,{status:response.status,headers:resultHeaders});
   }catch(error){
-    console.error('IBTA_API_FAILURE',{stage,operation:name,errorType:error?.name||'Error'});
+    console.error('TRAINFLOW_API_FAILURE',{stage,operation:name,errorType:error?.name||'Error'});
     const reason=/illegal invocation|receiver|this.*binding/i.test(error?.message||'')?'RUNTIME':/redirect/i.test(error?.message||'')?'REDIRECT':/network|fetch|dns|connect/i.test(error?.message||'')?'NETWORK':error instanceof TypeError?'TYPE':'OTHER';
     return json(503,'SERVER_UNAVAILABLE_'+stage.toUpperCase()+'_'+reason);
   }
 }
 export default {async fetch(request,env){const path=new URL(request.url).pathname;
-  if(path==='/api/health')return Response.json({runtime:'javascript-server',version:1},{headers:{'Cache-Control':'no-store'}});
+  if(path==='/api/health')return Response.json({app:'TrainFlow',runtime:'javascript-server',version:1},{headers:{'Cache-Control':'no-store'}});
   if(path.startsWith('/api/data/'))return handleApi(request,env);
   if(path.startsWith('/api/'))return json(404,'API_NOT_FOUND');
   return env.ASSETS.fetch(request);
