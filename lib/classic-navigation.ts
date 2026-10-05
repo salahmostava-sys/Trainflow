@@ -6,18 +6,13 @@ type WorkspaceWindow = Window & {
   TRAINFLOW_SHOW_PANEL?: (panel: Panel) => void | Promise<void>;
   TRAINFLOW_ACTIVATE_SETTINGS_TAB?: (tab: string) => void;
 };
-type Router = {
-  push: (href: string, options: { scroll: boolean }) => void;
-  replace: (href: string, options: { scroll: boolean }) => void;
-};
-
 const paths: Record<Panel, string> = {
   keycodes: '/keycodes', prometric: '/prometric', codes: '/vouchers',
   inventory: '/inventory', trainees: '/trainees', settings: '/settings',
 };
 
 // Keep the original workspace mounted while Next updates the URL and history.
-export function connectClassicNavigation(router: Router) {
+export function connectClassicNavigation() {
   const runtime = window as WorkspaceWindow;
   let booting = true, restoring = 0, queued = false, disposed = false;
   let pendingUrl: string | null = null;
@@ -38,8 +33,10 @@ export function connectClassicNavigation(router: Router) {
     if (href === location.pathname + location.search || href === pendingUrl) return;
     pendingUrl = href;
     // Initial restoration replaces / or /login instead of adding a false Back step.
-    if (booting || !routeView()) router.replace(href, { scroll: false });
-    else router.push(href, { scroll: false });
+    // Next integrates the native History API. Avoid fetching another copy of
+    // the server-rendered classic markup over the live, edited workspace.
+    if (booting || !routeView()) history.replaceState(null, '', href);
+    else history.pushState(null, '', href);
   };
   const changed = () => {
     if (disposed || restoring || queued) return;

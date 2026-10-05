@@ -16,12 +16,22 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=r
     for(const target of [page,reference]){try{await target.locator('#app').waitFor({state:'visible'});}catch(error){console.error({url:target.url(),errors,authMessage:await target.locator('#auth-message').textContent()});throw error;}await target.locator('#trainees-tab').click();await target.waitForFunction(()=>document.getElementById('sheet-status').textContent==='تم الحفظ');await target.evaluate(()=>document.fonts.ready);}
     await page.waitForURL('**/trainees');
     assert.equal(await page.locator('iframe').count(),0,'Original UI runs directly in the TypeScript/React page, preserving extension access');
-    assert.equal(await page.locator('nav.tabs button').count(),5);assert.equal(await page.locator('aside').count(),await reference.locator('aside').count(),'Only the original sheet allocation panel remains');
+    assert.equal(await page.locator('nav.tabs button').count(),6);assert.equal(await page.locator('aside').count(),await reference.locator('aside').count(),'Sidebar and sheet allocation panels match the original runtime');
     const geometry=target=>target.evaluate(()=>['nav.tabs','#sheet-workspace','#sheet-grid','#sheet-search'].map(selector=>{const el=document.querySelector(selector),rect=el.getBoundingClientRect();return {selector,x:Math.round(rect.x),y:Math.round(rect.y),width:Math.round(rect.width),font:getComputedStyle(el).fontFamily};}));
     assert.deepEqual(await geometry(page),await geometry(reference),'Layout geometry and fonts match the original UI');
     await page.evaluate(()=>{const row=Array(13).fill('');row[0]='EXISTING-VOUCHER';row[1]='existing@example.invalid';row[3]='EXISTING TRAINEE';row[7]='CBP-L';previewSheets.set('demo-admin',{cells:[row],version:0});});
     await page.locator('#sheet-reload').click();await page.waitForFunction(()=>document.getElementById('sheet-status').textContent==='تم الحفظ');
     assert.equal(await page.locator('td[data-v="0"][data-col="0"]').textContent(),'EXISTING-VOUCHER');
+    await page.context().grantPermissions(['clipboard-read','clipboard-write']);
+    await page.locator('td[data-v="0"][data-col="0"]').click();await page.keyboard.press('Control+c');
+    await page.waitForFunction(()=>document.getElementById('sheet-status').textContent==='تم النسخ إلى الحافظة');
+    assert.equal(await page.evaluate(()=>navigator.clipboard.readText()),'EXISTING-VOUCHER','Cell value is on the system clipboard');
+    await page.evaluate(()=>{const input=document.createElement('textarea');input.id='external-paste-target';input.style.cssText='position:fixed;top:0;left:0;z-index:1000';document.body.append(input);});
+    await page.locator('#external-paste-target').focus();await page.keyboard.press('Control+v');assert.equal(await page.locator('#external-paste-target').inputValue(),'EXISTING-VOUCHER','Pastes outside the sheet into an ordinary text field');
+    await page.locator('td[data-v="0"][data-col="0"]').click();await page.locator('td[data-v="0"][data-col="1"]').click({modifiers:['Shift']});await page.keyboard.press('Control+c');
+    await page.waitForFunction(async()=>await navigator.clipboard.readText()==='EXISTING-VOUCHER\texisting@example.invalid');
+    await page.locator('#external-paste-target').fill('');await page.keyboard.press('Control+v');assert.equal(await page.locator('#external-paste-target').inputValue(),'EXISTING-VOUCHER\texisting@example.invalid','Range copies as Excel-compatible tab separated text');
+    await page.evaluate(()=>document.getElementById('external-paste-target').remove());
     await page.locator('td[data-v="0"][data-col="3"]').dblclick();await page.locator('#sheet-trainee-dialog').waitFor({state:'visible'});assert.match(await page.locator('#sheet-trainee-record').textContent(),/EXISTING TRAINEE/);await page.locator('#sheet-trainee-dialog .sheet-detail-close').click();
     await page.locator('#sheet-xlsx-import').click();assert.equal(await page.locator('#sheet-xlsx-mode option').count(),3);await page.keyboard.press('Escape');
     assert.equal(await page.locator('#prometric-registration-script').getAttribute('data-extension')?.then(value=>value.startsWith('/workspace/trainflow-prometric.zip')),true);
@@ -47,6 +57,14 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=r
     await page.locator('nav.tabs button[data-tab="prometric"]').click();await page.waitForURL('**/prometric');await page.goBack();await page.waitForURL('**/trainees');await page.waitForFunction(()=>document.getElementById('panel-trainees').classList.contains('active'));
     assert.equal(await page.evaluate(()=>window.originalSheetNode===document.getElementById('panel-trainees')),true,'Next navigation keeps the existing sheet DOM mounted');
     assert.equal(await page.locator('body > script[src*="/workspace/"]').count(),scriptCount,'Navigation does not boot the original scripts twice');
+    const openWidth=await page.locator('#sheet-workspace').evaluate(el=>el.getBoundingClientRect().width);
+    await page.locator('#sidebar-toggle').click();assert.equal(await page.locator('#workspace-sidebar').isVisible(),false);assert.equal(await page.locator('#sidebar-toggle').getAttribute('aria-expanded'),'false');
+    const closedWidth=await page.locator('#sheet-workspace').evaluate(el=>el.getBoundingClientRect().width);assert.ok(closedWidth>openWidth,'Closing the sidebar gives the sheet more space');
+    await page.reload();await page.locator('#app').waitFor({state:'visible'});assert.equal(await page.locator('#workspace-sidebar').isVisible(),false,'Closed preference survives refresh');
+    await page.locator('#sidebar-toggle').click();await page.locator('#workspace-sidebar').waitFor({state:'visible'});
+    await page.setViewportSize({width:390,height:844});await page.locator('#sidebar-close').click();await page.locator('#sidebar-toggle').click();assert.equal(await page.locator('#sidebar-backdrop').isVisible(),true);assert.equal(await page.locator('#workspace-sidebar').isVisible(),true);
+    await page.locator('nav.tabs button[data-tab="inventory"]').click();await page.waitForURL('**/inventory');assert.equal(await page.locator('#workspace-sidebar').isVisible(),false,'Choosing a page dismisses the mobile sidebar');assert.equal(await page.locator('#sidebar-backdrop').isVisible(),false);
+    await page.locator('#sidebar-toggle').click();await page.locator('#trainees-tab').click();await page.waitForURL('**/trainees');await page.setViewportSize({width:1366,height:900});await page.locator('#sidebar-toggle').click();
     await page.locator('#lang-btn').click();assert.equal(await page.locator('#html-root').getAttribute('lang'),'en');
     await page.reload();await page.locator('#app').waitFor({state:'visible'});await page.waitForFunction(()=>document.getElementById('sheet-status')?.textContent==='Saved');assert.equal(await page.locator('#html-root').getAttribute('lang'),'en','Refresh preserves the same language and selected sheet panel');
     const health=await page.request.get('http://localhost:'+port+'/api/health');assert.equal((await health.json()).runtime,'nextjs');const privateResponse=await page.request.get('http://localhost:'+port+'/api/data/ibta_codes');assert.equal(privateResponse.status(),401,'Next API keeps unauthenticated requests out of the existing database');

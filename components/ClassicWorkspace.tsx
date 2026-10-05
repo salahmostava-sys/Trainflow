@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { connectClassicNavigation } from '@/lib/classic-navigation';
 import { classicMarkup, classicScripts } from '@/generated/classic-ui';
 
@@ -37,9 +36,8 @@ function startWorkspace(): Promise<void> {
 }
 
 export default function ClassicWorkspace() {
-  const router = useRouter();
   useEffect(() => {
-    const navigation = connectClassicNavigation(router);
+    const navigation = connectClassicNavigation();
     void startWorkspace().then(() => navigation.ready()).catch((error: Error) => {
       const startup = document.getElementById('startup-screen');
       const login = document.getElementById('auth-box');
@@ -52,7 +50,7 @@ export default function ClassicWorkspace() {
       console.error(error);
     });
     return () => navigation.dispose();
-  }, [router]);
+  }, []);
 
   return <div className="trainflow-workspace-root" dangerouslySetInnerHTML={{ __html: classicMarkup }} />;
 }
