@@ -208,18 +208,16 @@ function renderInventory(){
   categorySelect.value=categories.includes(previous)?previous:(categories[0] || '');
   syncInventoryAction();
   const complete=categories.length>0 && categories.every(category=>Object.hasOwn(stock,category));
-  const number=messageSettings.number,message=inventoryMessage(categories,stock);
-  document.getElementById('inventory-message').textContent=message;
-  document.getElementById('inventory-message').dir=messageSettings.language==='ar'?'rtl':'ltr';
-  document.getElementById('inventory-message-hint').textContent=!complete?t('inventoryMessageHint'):!number?t('inventoryPhoneMissing'):'';
-  const link=document.getElementById('inventory-whatsapp-link');
-  if(complete && /^\d{8,15}$/.test(number)){
-    link.href='https://wa.me/'+number+'?text='+encodeURIComponent(message);
-    link.setAttribute('aria-disabled','false');
-  }else{
-    link.removeAttribute('href');link.setAttribute('aria-disabled','true');
+  const message=inventoryMessage(categories,stock);
+  const msgEl=document.getElementById('inventory-message');
+  if(msgEl){
+    msgEl.textContent=message;
+    msgEl.dir=messageSettings.language==='ar'?'rtl':'ltr';
   }
-  document.getElementById('inventory-copy-message').disabled=!complete;
+  const hintEl=document.getElementById('inventory-message-hint');
+  if(hintEl)hintEl.textContent=!complete?t('inventoryMessageHint'):'';
+  const copyBtn=document.getElementById('inventory-copy-message');
+  if(copyBtn)copyBtn.disabled=!complete;
 }
 function syncInventoryAction(){
   const category=document.getElementById('inventory-category').value;
@@ -257,27 +255,15 @@ document.getElementById('inventory-set-current').addEventListener('click',async(
 document.getElementById('inventory-add-purchased').addEventListener('click',async()=>{
   await saveInventoryBalance('replenishment','inventory-purchased-quantity');
 });
-document.getElementById('inventory-save-settings').addEventListener('click',async()=>{
-  const number=document.getElementById('inventory-whatsapp-number').value.trim();
-  const name=document.getElementById('inventory-supervisor-name').value.trim();
-  const language=document.getElementById('inventory-message-language').value;
+document.getElementById('inventory-save-settings')?.addEventListener('click',async()=>{
+  const number=document.getElementById('inventory-whatsapp-number')?.value.trim()||'';
+  const name=document.getElementById('inventory-supervisor-name')?.value.trim()||'';
+  const language=document.getElementById('inventory-message-language')?.value||'ar';
   const status=document.getElementById('inventory-number-status');
-  if(number && !/^\d{8,15}$/.test(number)){status.textContent=t('inventoryPhoneInvalid');return;}
-  if(name.length>100 || /[\r\n\x00-\x1f]/.test(name)){status.textContent=t('inventorySupervisorNameInvalid');return;}
-  try{await Cloud.saveInventoryMessageSettings(number,name,language);status.textContent=t('saved');if(typeof InventoryDelivery!=='undefined')InventoryDelivery.ready();}
-  catch{status.textContent=t('genericError');}
-});
-document.getElementById('inventory-whatsapp-link').addEventListener('click',e=>{
-  const categories=sortCategories(Object.keys(state.codesByCategory || {})),stock=Cloud.stockSnapshot(),messageSettings=Cloud.inventoryMessageSettings();
-  const complete=categories.length>0 && categories.every(category=>Object.hasOwn(stock,category));
-  const number=messageSettings.number;
-  if(complete && /^\d{8,15}$/.test(number)){
-    const message=inventoryMessage(categories,stock);
-    e.currentTarget.href='https://wa.me/'+number+'?text='+encodeURIComponent(message);
-    document.getElementById('inventory-message').textContent=message;
-  }else{
-    e.preventDefault();
-  }
+  if(number && !/^\d{8,15}$/.test(number)){if(status)status.textContent=t('inventoryPhoneInvalid');return;}
+  if(name.length>100 || /[\r\n\x00-\x1f]/.test(name)){if(status)status.textContent=t('inventorySupervisorNameInvalid');return;}
+  try{await Cloud.saveInventoryMessageSettings(number,name,language);if(status)status.textContent=t('saved');if(typeof InventoryDelivery!=='undefined')InventoryDelivery.ready();}
+  catch{if(status)status.textContent=t('genericError');}
 });
 document.getElementById('inventory-copy-message').addEventListener('click',async()=>{
   const categories=sortCategories(Object.keys(state.codesByCategory || {})),stock=Cloud.stockSnapshot();

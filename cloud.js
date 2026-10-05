@@ -175,9 +175,9 @@ const Cloud = (() => {
     $('settings-prometric-password').value=PROMETRIC_PASSWORD;
     $('settings-zoom-link').value=p.links?.zoom || '';
     $('settings-prometric-link').value=p.links?.prometric || '';
-    $('inventory-whatsapp-number').value=p.inventoryWhatsappNumber || '';
-    $('inventory-supervisor-name').value=p.inventorySupervisorName || '';
-    $('inventory-message-language').value=p.inventoryMessageLanguage==='en'?'en':'ar';
+    if($('inventory-whatsapp-number')) $('inventory-whatsapp-number').value=p.inventoryWhatsappNumber || '';
+    if($('inventory-supervisor-name')) $('inventory-supervisor-name').value=p.inventorySupervisorName || '';
+    if($('inventory-message-language')) $('inventory-message-language').value=p.inventoryMessageLanguage==='en'?'en':'ar';
     $('profile-name').value=accountName();
     $('profile-email').value=user?.email || '';
     currentLang=state.uiLang;
@@ -202,7 +202,7 @@ const Cloud = (() => {
     $('code-bulk-tools').hidden=!admin;
     $('reset-tools').hidden=!admin;
     $('inventory-admin').hidden=!admin;
-    $('inventory-whatsapp-settings').hidden=!admin;
+    if($('inventory-whatsapp-settings')) $('inventory-whatsapp-settings').hidden=!admin;
     document.querySelectorAll('.col-notes input').forEach(el=>{el.disabled=role==='copy_only';});
     document.querySelectorAll('.code-unmark-btn').forEach(el=>{el.hidden=role==='copy_only';});
     if(!admin && ($('settings-tab-data').getAttribute('aria-selected')==='true' || $('settings-tab-prometric').getAttribute('aria-selected')==='true' || $('settings-tab-inventory').getAttribute('aria-selected')==='true')) activateSettingsTab('profile');
@@ -331,11 +331,8 @@ const Cloud = (() => {
     if(role==='admin' && config){
       const p=config.payload;
       const shared=[['settings-prometric-account',p.credentials?.account || ''],['settings-prometric-password',p.credentials?.password || ''],
-        ['settings-zoom-link',p.links?.zoom || ''],['settings-prometric-link',p.links?.prometric || ''],
-        ['inventory-whatsapp-number',p.inventoryWhatsappNumber || ''],
-        ['inventory-supervisor-name',p.inventorySupervisorName || ''],
-        ['inventory-message-language',p.inventoryMessageLanguage==='en'?'en':'ar']];
-      if(shared.some(([id,value])=>$(id).value!==value)) return true;
+        ['settings-zoom-link',p.links?.zoom || ''],['settings-prometric-link',p.links?.prometric || '']];
+      if(shared.some(([id,value])=>$(id) && $(id).value!==value)) return true;
     }
     return [...document.querySelectorAll('.kc-add-cat-input, .add-box textarea')]
       .some(input => input.value.trim());

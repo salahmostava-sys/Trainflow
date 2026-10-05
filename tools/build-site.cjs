@@ -26,21 +26,13 @@ fs.writeFileSync(path.join(output,'index.html'),html);
 console.log('Cloudflare Pages files ready in dist/');
 fs.writeFileSync(path.join(output,'_worker.js'),fs.readFileSync(path.join(root,'server','worker.mjs'),'utf8').replace("import '../session-policy.js';","import './session-policy.js';"));
 fs.writeFileSync(path.join(output,'_routes.json'),JSON.stringify({version:1,include:['/api/*'],exclude:[]}));
-const JSZip=require(require.resolve('jszip',{paths:[path.dirname(require.resolve('exceljs'))]})),zip=new JSZip();
+const JSZip=require(require.resolve('jszip',{paths:[path.dirname(require.resolve('exceljs'))]}));
 const prometricZip=new JSZip();
 for(const file of fs.readdirSync(path.join(root,'extension/prometric'))){let bytes=fs.readFileSync(path.join(root,'extension/prometric',file));if(/\.(?:js|json|html|css|md)$/.test(file)||file==='LICENSE')bytes=Buffer.from(bytes.toString('utf8').replace(/\r\n/g,'\n'));if(file.endsWith('.js'))new Script(bytes.toString('utf8'),{filename:'prometric/'+file});prometricZip.file(file,bytes,{date:new Date('2026-01-01T00:00:00Z')});}
-for(const file of fs.readdirSync(path.join(root,'extension/whatsapp-web'))){
-  const content=fs.readFileSync(path.join(root,'extension/whatsapp-web',file),'utf8').replace(/\r\n/g,'\n');
-  if(file.endsWith('.js'))new Script(content,{filename:file});
-  zip.file(file,content,{date:new Date('2026-01-01T00:00:00Z')});
-}
-Promise.all([zip.generateAsync({type:'nodebuffer',compression:'DEFLATE'}),prometricZip.generateAsync({type:'nodebuffer',compression:'DEFLATE'})]).then(([bytes,prometricBytes])=>{
+prometricZip.generateAsync({type:'nodebuffer',compression:'DEFLATE'}).then(prometricBytes=>{
   fs.writeFileSync(path.join(output,'trainflow-prometric.zip'),prometricBytes);
   fs.writeFileSync(path.join(output,'ibta-prometric.zip'),prometricBytes);
   html=html.replaceAll('"trainflow-prometric.zip"','"trainflow-prometric.zip?v='+createHash('sha256').update(prometricBytes).digest('hex').slice(0,12)+'"');
-  fs.writeFileSync(path.join(output,'trainflow-whatsapp-web.zip'),bytes);
-  fs.writeFileSync(path.join(output,'ibta-whatsapp-web.zip'),bytes);
-  html=html.replaceAll('"trainflow-whatsapp-web.zip"','"trainflow-whatsapp-web.zip?v='+createHash('sha256').update(bytes).digest('hex').slice(0,12)+'"');
-  fs.writeFileSync(path.join(output,'index.html'),html);console.log('WhatsApp Web and Prometric extension packages ready');
+  fs.writeFileSync(path.join(output,'index.html'),html);console.log('Prometric extension package ready');
 }).catch(error=>{console.error(error.message);process.exitCode=1;});
 
