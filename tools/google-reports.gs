@@ -35,12 +35,15 @@ function doPost(e) {
     if(voucher<0)throw Error('لم أجد عمود VOUCHER في '+location+'؛ تأكد من HEADER_ROW و'+(p.kind==='operations'?'OPERATIONS_TAB':'SUCCESS_TAB')+' (بدون اسم تبويب يُستخدم أول تبويب في الملف)');
     var existing=new Set(last>header?tab.getRange(header+1,voucher+1,last-header,1).getDisplayValues().flat().map(normalize):[]);
     var fresh=attempts.filter(r=>!existing.has(normalize(r[0])));
-    function headerKey(h){return String(h).replace(/[\s\u200b-\u200f\u061c\ufeff_]/g,'').toLowerCase();}
+    function headerKey(h){return String(h).replace(/[\s\u200b-\u200f\u061c\ufeff_\u0640\u064b-\u065f\u0670]/g,'').replace(/[أإآٱ]/g,'ا').toLowerCase();}
     var mapping={'voucher':0,'الإيميل':1,'الايميل':1,'البريدالإلكتروني':1,'الاسمباللغةالعربية':2,'الاسمبالعربي':2,'الاسمباللغةالإنجليزية':3,'الاسمباللغةالانجليزية':3,'الاسمبالإنجليزي':3,'رقمالهوية/الإقامة':4,'رقمالهوية/الاقامة':4,'رقمالهوية':4,'رقمالهاتف':5,'رقمالجوال':5,'الجوال':5,'الجهة':6,'الإختبار':7,'الاختبار':7,'الحالة':11};
+    var normalizedMapping={};Object.keys(mapping).forEach(h=>normalizedMapping[headerKey(h)]=mapping[h]);mapping=normalizedMapping;
     var required=p.kind==='success'?[0,2,11]:[0,1,2,3,4,5,6,7,11];
     var mapped=headings.map(h=>mapping[headerKey(h)]);
-    if(required.some(c=>!mapped.includes(c))||!headings.some(h=>headerKey(h)==='تاريخالإختبار'||headerKey(h)==='تاريخالاختبار'))throw Error('أعمدة التقرير ناقصة أو أسماؤها غير معروفة؛ راجع دليل الربط');
-    var values=fresh.map(r=>headings.map(h=>{var k=headerKey(h);if(k==='تاريخالاختبار'||k==='تاريخالإختبار')return p.date.split('-').reverse().join('/');return mapping[k]===undefined?'':String(r[mapping[k]]||'');}));
+    var columnNames={0:'VOUCHER',1:'الإيميل',2:'الاسم باللغة العربية',3:'الاسم باللغة الإنجليزية',4:'رقم الهوية / الإقامة',5:'رقم الجوال',6:'الجهة',7:'الإختبار',11:'الحالة'},missingColumns=required.filter(c=>!mapped.includes(c)).map(c=>columnNames[c]);
+    if(!headings.some(h=>headerKey(h)==='تاريخالاختبار'))missingColumns.push('تاريخ الإختبار');
+    if(missingColumns.length)throw Error('أعمدة التقرير المطلوبة غير الموجودة في '+location+': '+missingColumns.join('، '));
+    var values=fresh.map(r=>headings.map(h=>{var k=headerKey(h);if(k==='تاريخالاختبار')return p.date.split('-').reverse().join('/');return mapping[k]===undefined?'':String(r[mapping[k]]||'');}));
     if(values.length){var start=Math.max(last+1,header+1),end=start+values.length-1;if(end>tab.getMaxRows())tab.insertRowsAfter(tab.getMaxRows(),end-tab.getMaxRows());
       var range=tab.getRange(start,1,values.length,width);
       if(last>header){var template=tab.getRange(last,1,1,width);template.copyTo(range,SpreadsheetApp.CopyPasteType.PASTE_FORMAT,false);template.copyTo(range,SpreadsheetApp.CopyPasteType.PASTE_DATA_VALIDATION,false);}
