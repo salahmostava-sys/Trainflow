@@ -40,11 +40,11 @@ function installBoundaryFixtures(){
         if(!row)return {data:[]};
         Object.assign(row,{used_on:args.use_date,used_by:user.id,version:row.version+1});return {data:[clone(row)]};
       }
-      if(name==='ibta_save_trainee_sheet_formatted'){
+      if(name==='ibta_save_trainee_worksheet'){
         if(db.saveError)return {error:{message:db.saveError}};
         const old=db.sheets[args.target_owner]||{version:0};
         if(old.version!==args.expected_version)return {error:{message:'CONFLICT'}};
-        db.sheets[args.target_owner]={cells:clone(args.new_cells),format:clone(args.new_format),version:old.version+1};
+        db.sheets[args.target_owner]={sheet_id:args.target_sheet,sheet_name:'Sheet 1',sheet_hidden:false,sheet_order:0,cells:clone(args.new_cells),format:clone(args.new_format),version:old.version+1};
         return {data:old.version+1};
       }
       if(name==='ibta_inventory_delivery_status')return {data:{enabled:false,provider:'web',time:'16:59'}};

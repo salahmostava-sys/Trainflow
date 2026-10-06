@@ -139,7 +139,7 @@ const Trainees=(()=>{
   }
   function insertRow(pos='above'){
     commitEdit();
-    if(filtered()||formatting.hiddenRows?.length){message(tr('امسح الفلاتر والفرز وأظهر الصفوف قبل الإدراج.','Clear filters and sorting and unhide rows before inserting.'),true);return;}
+    if(filtered()||formatting.hiddenRows?.length){message(()=>tr('امسح الفلاتر والفرز وأظهر الصفوف قبل الإدراج.','Clear filters and sorting and unhide rows before inserting.'),true);return;}
     const selected=selectedRows(),count=Math.max(1,selected.length);
     if(cells.length+count>D.MAX_ROWS)return limitError();
     let targetIdx=view[Math.min(...selected)]??cells.length;
@@ -271,7 +271,7 @@ const Trainees=(()=>{
     if(!loaded)return;if(!singleSelection())return;commitEdit();const [,,c1,c2]=bounds(),insert=action!=='delete';
     let start=insert?Math.max(D.BASE_WIDTH,cursor.c+((action==='right')!==(formatting.direction==='rtl')?1:0)):c1;
     const count=c2-c1+1;
-    if(!insert&&start<D.BASE_WIDTH){message(tr('أعمدة بيانات المتدرب الأساسية ثابتة. يمكنك إخفاؤها أو مسح محتواها.','The trainee fields are fixed. You can hide them or clear their contents.'),true);return;}
+    if(!insert&&start<D.BASE_WIDTH){message(()=>tr('أعمدة بيانات المتدرب الأساسية ثابتة. يمكنك إخفاؤها أو مسح محتواها.','The trainee fields are fixed. You can hide them or clear their contents.'),true);return;}
     if(!insert&&!confirm(tr('حذف الأعمدة المحددة بكل بياناتها؟ يمكنك التراجع.','Delete selected columns and their data? You can undo.')))return;
     let name='';if(insert){name=prompt(tr('اسم العمود الجديد:','New column name:'),tr('عمود جديد','New column'));if(name===null)return;}
     let next;try{next=D.columns(cells,formatting,start,count,insert,colCount());}catch{limitError();return;}
