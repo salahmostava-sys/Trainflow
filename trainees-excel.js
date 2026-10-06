@@ -4,7 +4,7 @@ const TraineeExcel=(()=>{
   function mount(h){
     const {D,$,tr,node,button}=h,tools=$('sheet-workspace').querySelector('.sheet-format-tools');
     const text=(el,ar,en)=>{el.dataset.excelAr=ar;el.dataset.excelEn=en;el.textContent=tr(ar,en);return el;};
-    const action=(id,ar,en,run)=>{const el=button('',()=>{h.commitEdit();if(!h.state().loaded)return;const fail=error=>h.message(error.message||tr('تعذر تنفيذ العملية','Could not complete the action'),true);try{const result=run();if(result?.catch)result.catch(fail);}catch(error){fail(error);}});el.id=id;return text(el,ar,en);};
+    const action=(id,ar,en,run)=>{const el=button('',()=>{h.commitEdit();if(!h.state().loaded)return;const fail=error=>h.message(()=>error.message||tr('تعذر تنفيذ العملية','Could not complete the action'),true);try{const result=run();if(result?.catch)result.catch(fail);}catch(error){fail(error);}});el.id=id;return text(el,ar,en);};
     const group=(id,ar,en)=>{const box=node('section',undefined,{id,class:'sheet-ribbon-group'}),body=node('div',undefined,{class:'sheet-ribbon-actions'});box.append(body,text(node('small'),ar,en));tools.append(box);return body;};
     const dropdowns=[];
     const closeMenus=()=>dropdowns.forEach(({list})=>{if(list.matches(':popover-open'))list.hidePopover();});
@@ -47,7 +47,7 @@ const TraineeExcel=(()=>{
     menu(font,'sheet-border-menu','حدود ▾','Borders ▾',[...['all','outline','none','top','bottom','left','right'].map((v,i)=>[v,['كل الحدود','حدود خارجية','بدون حدود','علوي','سفلي','يسار','يمين'][i],['All borders','Outside borders','No borders','Top','Bottom','Left','Right'][i],()=>borders(v)]),['format','تنسيق الحدود…','Format borders…',()=>{closeMenus();borderEditor.open();}]]);
     const align=group('sheet-excel-alignment','المحاذاة','Alignment');align.append($('sheet-align-right').parentElement);$('sheet-wrap').remove();
     const merge=mode=>{
-      const s=state();if(ranges(s).length>1){h.message(tr('اختر منطقة واحدة متجاورة للدمج.','Select one contiguous range to merge.'),true);return;}if(s.filtered){h.message(tr('امسح الفلاتر والفرز قبل الدمج.','Clear filters and sorting before merging.'),true);return;}const [r1,r2,c1,c2]=s.bounds,a=s.view[r1],b=s.view[r2];
+      const s=state();if(ranges(s).length>1){h.message(()=>tr('اختر منطقة واحدة متجاورة للدمج.','Select one contiguous range to merge.'),true);return;}if(s.filtered){h.message(()=>tr('امسح الفلاتر والفرز قبل الدمج.','Clear filters and sorting before merging.'),true);return;}const [r1,r2,c1,c2]=s.bounds,a=s.view[r1],b=s.view[r2];
       if(mode==='selection'){mutate((cells,fmt)=>{for(const r of rows(s)){for(const c of columns(s)){const key=r+':'+c,v=fmt.styles[key]||{};delete v.centerAcross;fmt.styles[key]=v;}fmt.styles[r+':'+c1]={...fmt.styles[r+':'+c1],align:'center',centerAcross:c2-c1+1};}});return;}
       if(mode!=='unmerge'&&r1===r2&&c1===c2)return;
       const occupied=rows(s).some(r=>columns(s).some(c=>(r!==a||c!==c1)&&s.cells[r]?.[c]));if(mode!=='unmerge'&&occupied&&!confirm(tr('الدمج يحتفظ بقيمة أول خلية فقط. متابعة؟ يمكنك التراجع.','Merge keeps only the first cell value. Continue? You can undo.')))return;

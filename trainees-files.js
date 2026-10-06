@@ -52,18 +52,18 @@ const TraineeFiles=(()=>{
         const prepared=prepareImport(s),fresh=importMode.value==='new';let start=fresh?0:s.cells.length;while(start&&!s.cells[start-1].some(Boolean))start--;
         if(start+prepared.rows.length>D.MAX_ROWS)throw Error('SHEET_LIMIT');
         const fmt=fresh?D.defaultFormat():D.format(s.formatting);Object.assign(fmt.headers,prepared.headers);const next=D.pasteMapped(fresh?[]:s.cells,prepared.rows,start,prepared.targets);if(fresh){if(!await h.newSheet(next,fmt))return;}else h.change(next,true,fmt);
-        dialog.close();h.message((fresh?tr('تم بدء الشيت بـ','Sheet started with '):tr('تمت إضافة ','Added '))+prepared.rows.length+tr(' صفًا. يمكنك التراجع باستخدام Ctrl+Z.',' rows. You can undo with Ctrl+Z.'));
+        dialog.close();h.message(()=>(fresh?tr('تم بدء الشيت بـ','Sheet started with '):tr('تمت إضافة ','Added '))+prepared.rows.length+tr(' صفًا. يمكنك التراجع باستخدام Ctrl+Z.',' rows. You can undo with Ctrl+Z.'));
       }catch(error){status.textContent=errorText(error);}
     };
     dialog.addEventListener('close',()=>{generation++;stop(importWorker);importWorker=null;preview=null;file.value='';grid.replaceChildren();status.textContent='';sheetSelect.replaceChildren();apply.disabled=true;});
     const exportButton=action('sheet-xlsx-export','تصدير Excel','Export Excel',async()=>{
       if(exportWorker)return;const owner=h.state().owner;exportButton.disabled=true;
       try{
-        const s=h.state();if(!s.loaded||s.owner!==owner)return;h.message(tr('جارٍ تجهيز ملف Excel…','Preparing Excel file…'));exportWorker=createWorker();
+        const s=h.state();if(!s.loaded||s.owner!==owner)return;h.message(()=>tr('جارٍ تجهيز ملف Excel…','Preparing Excel file…'));exportWorker=createWorker();
         const result=await request(exportWorker,'write',{cells:s.cells,headers:s.labels.map(pair=>tr(...pair)),format:s.formatting});
         if(!h.state().loaded||h.state().owner!==owner)return;
-        const url=URL.createObjectURL(new Blob([result.buffer],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'})),a=node('a',undefined,{href:url,download:'trainees.xlsx'});a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);h.message(tr('تم تصدير بيانات الجدول إلى Excel.','Table data exported to Excel.'));
-      }catch(error){if(error.message!=='CANCELLED'&&h.state().owner===owner)h.message(errorText(error),true);}finally{stop(exportWorker);exportWorker=null;exportButton.disabled=false;}
+        const url=URL.createObjectURL(new Blob([result.buffer],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'})),a=node('a',undefined,{href:url,download:'trainees.xlsx'});a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);h.message(()=>tr('تم تصدير بيانات الجدول إلى Excel.','Table data exported to Excel.'));
+      }catch(error){if(error.message!=='CANCELLED'&&h.state().owner===owner)h.message(()=>errorText(error),true);}finally{stop(exportWorker);exportWorker=null;exportButton.disabled=false;}
     });
     const importButton=action('sheet-xlsx-import','استيراد Excel','Import Excel',()=>{selectedOwner=h.state().owner;importMode.value='';updateMode();apply.disabled=true;status.textContent=tr('اختر ملفًا لمعاينته.','Choose a file to preview.');sheetLabel.hidden=headersLabel.hidden=true;dialog.showModal();});
     host.prepend(exportButton,importButton);translate();

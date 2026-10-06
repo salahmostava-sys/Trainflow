@@ -5,6 +5,8 @@ class Element {
   appendChild(e){this.children.push(e);} removeChild(e){this.children=this.children.filter(x=>x!==e);}
   addEventListener(event,fn){this.listeners[event]=fn;} select(){} focus(){} matches(){return false;}
   setAttribute(name,value){this[name]=value;}
+  get textContent(){return (this._text || '')+this.children.map(child=>child.textContent || '').join('');}
+  set textContent(value){this.children=[];this._text=String(value);}
   getAttribute(name){return this[name] ?? null;}
   getBoundingClientRect(){return {top:600,bottom:640,left:1250,right:1290,width:40,height:40};}
   removeAttribute(name){delete this[name];}
@@ -160,8 +162,8 @@ for(const key of usedKeys) assert(englishKeys.includes(key),`Missing translation
   els['settings-tab-data'].listeners.click();
   assert.equal(els['settings-pane-data'].hidden,false);
   assert.equal(els['settings-pane-profile'].hidden,true);
-  els['settings-tab-data'].listeners.keydown({key:'ArrowRight',preventDefault(){}});
-  assert.equal(els['settings-pane-prometric'].hidden,false);
+  els['settings-tab-data'].listeners.keydown({key:'ArrowLeft',preventDefault(){}});
+  assert.equal(els['settings-pane-prometric'].hidden,false,'ArrowLeft advances to the next tab in Arabic');
   els['settings-tab-profile'].listeners.click();
   assert.equal(els['settings-pane-profile'].hidden,false);
   assert.equal(els['account-menu-email'].textContent,'test@example.invalid');
