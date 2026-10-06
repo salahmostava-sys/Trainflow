@@ -34,7 +34,11 @@ The sidebar stays on the **right** in both languages. Open or close it with the 
 | Spreadsheet editing | Cell address, selected content display and separate search; virtual rows and columns, direct editing, search, filters, formulas, Undo/Redo and saved formatting |
 | Multiple selections | Drag and Shift for adjacent cells or columns; Ctrl/Cmd for separate areas; formatting and clearing affect selected cells only |
 | Clipboard | Plain text plus a styled HTML table, including saved fills, fonts, borders and automatic result/duplicate-ID colors |
-| Excel import | Preview first; explicitly choose append to the current sheet or replace its contents with a fresh sheet |
+| Excel import | Preview first; explicitly choose append to the current sheet or create an independent worksheet while keeping the original |
+| Excel commands | Insert/Delete cells, rows and custom columns; Format sizes, visibility and sheet names/copies/tab colors; five merge modes; multi-level Sort & Filter |
+| Borders | Excel-style line/color editor, None/Outline/Inside presets and clickable edges; saved formatting retained in rich clipboard and XLSX |
+| Worksheets | Independent saved tabs, create/copy/move/rename/hide/unhide/delete, save-before-switch and backups of all worksheets |
+| Voucher names | Get reserves a voucher and saves the English trainee name (Arabic fallback) atomically; editable name column and colored XLSX export |
 | Voucher export | A visible Export vouchers button; unused only or all vouchers, all categories or the current category, with usage colors |
 | Prometric | Preview selected trainees, register through the Chrome extension and recover confirmed results after interrupted saves |
 | Certificate correction | Enter the new English name and download Certificate Data Change Sheet.xlsx without a password column |
@@ -87,7 +91,7 @@ flowchart LR
 
 The interface is mounted directly by React, without an iframe. Existing HTML/CSS and command modules preserve the established UI and data behavior. The TypeScript navigation bridge uses native browser history to keep the live sheet mounted. The server adapter reuses the validated JavaScript API and the signed-in user's JWT.
 
-The existing Supabase project, accounts, ibta_* tables, sheet versions and permissions remain in use. These interface changes do not migrate or reset production records. RLS and transactional database functions enforce access independently of the UI.
+The existing Supabase project, accounts, ibta_* tables, sheet versions and permissions remain in use. Worksheet migrations preserve the original sheet as Sheet 1 and extend its key to owner + sheet ID. Existing trainee values are preserved. RLS and transactional database functions enforce access independently of the UI.
 
 ## Repository map
 
@@ -110,6 +114,7 @@ pnpm test                              # Unit and API regressions
 pnpm build                             # Assets, extensions, types and Next production build
 pnpm test:next                         # Production Next workspace using synthetic data
 node tests/selection-export-browser.test.cjs
+node tests/worksheet-actions-browser.test.cjs
 node tests/sheet-enhancements-browser.test.cjs
 node tests/daily-reports-browser.test.cjs
 ~~~

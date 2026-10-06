@@ -10,6 +10,9 @@ const Trainees=(()=>{
   const labels=new Proxy(baseLabels,{get(target,prop){if(prop==='length')return colCount();if(prop==='map')return fn=>allLabels().map(fn);if(prop==='forEach')return fn=>allLabels().forEach(fn);if(prop==='filter')return fn=>allLabels().filter(fn);if(prop==='slice')return (s,e)=>allLabels().slice(s,e);if(typeof prop==='string'&&/^\d+$/.test(prop)){return getColLabel(Number(prop));}return target[prop];}});
   const tr=(ar,en)=>currentLang==='ar'?ar:en;
   let owner='',cells=[],version=0,revision=0,savedRevision=0,loaded=false,loading=false,epoch=0;
+  const FIRST_SHEET='00000000-0000-0000-0000-000000000001';
+  let sheetId=FIRST_SHEET,worksheets=[],sheetTools=null,worksheetBusy=false,sortRules=[];
+  const workspaceIdentity=()=>sheetId===FIRST_SHEET?owner:owner+':'+sheetId;
   let timer,saving=null,history=[],future=[],view=[],sortCol=-1,sortDir=1,anchor={r:0,c:0},cursor={r:0,c:0},editing=null;
   let members=[],mode='sheet',codeMode='owned',codeBusy=false,initialized=false;
   let dragging=false,dragMoved=false,rowDragging=false,columnDragging=false,skipSelectionClick=false;
@@ -21,7 +24,7 @@ const Trainees=(()=>{
   const searchRows=new WeakMap();
   let lastDataRow=-1;
   let positionTimer,restoringPosition=false;
-  const positionKey=()=> 'ibta_trainee_position:'+Cloud.userId()+':'+owner;
+  const positionKey=()=> 'ibta_trainee_position:'+Cloud.userId()+':'+workspaceIdentity();
   function savePosition(){
     clearTimeout(positionTimer);if(!initialized||!loaded||loading||restoringPosition||!owner||!view.length)return;
     const scroll=$('sheet-grid').parentElement;if(!$('panel-trainees').classList.contains('active')||!scroll.clientHeight)return;const first=rowAtOffset(scroll.scrollTop);
@@ -81,8 +84,12 @@ const Trainees=(()=>{
   let hoverTimer,hoverHideTimer,detailTimer,hoverCell=null,detailKey='',detailPage=0,detailSource=-1;
   let colWidths={};
   try{colWidths=JSON.parse(localStorage.getItem('ibta_trainee_col_widths')||'{}')||{};}catch{}
+  const legacyWidths={...colWidths};
   function applySavedColWidths(){
     const ws=$('sheet-workspace');if(!ws)return;
+    for(let c=0;c<D.MAX_COLS;c++)ws.style.removeProperty('--col-w-'+c);
+    colWidths={...(formatting.widths||(sheetId===FIRST_SHEET?legacyWidths:{}))};
+    if(formatting.defaultWidth)for(let c=0;c<colCount();c++)if(!colWidths[c])ws.style.setProperty('--col-w-'+c,formatting.defaultWidth+'px');
     Object.entries(colWidths).forEach(([c,w])=>{ws.style.setProperty('--col-w-'+c,w+'px');});
   }
   function setColumnWidth(c,width){
@@ -96,13 +103,13 @@ const Trainees=(()=>{
     saveColumnWidths();
   }
   function saveColumnWidths(){
-    try{localStorage.setItem('ibta_trainee_col_widths',JSON.stringify(colWidths));}catch{}
+    if(loaded){const fmt=D.format(formatting);fmt.widths={...colWidths};change(cells,true,fmt);}
   }
   let cellAlignments={};
   try{cellAlignments=JSON.parse(localStorage.getItem('ibta_trainee_alignments')||'{}')||{};}catch{}
-  function getCellAlign(idx,col){return formatting.styles[idx+':'+col]?.align||cellAlignments[(owner||'default')+':'+idx+':'+col]||'';}
+  function getCellAlign(idx,col){return formatting.styles[idx+':'+col]?.align||cellAlignments[(workspaceIdentity()||'default')+':'+idx+':'+col]||'';}
   function setCellAlign(idx,col,align){
-    const key=(owner||'default')+':'+idx+':'+col;
+    const key=(workspaceIdentity()||'default')+':'+idx+':'+col;
     if(!align)delete cellAlignments[key];else cellAlignments[key]=align;
   }
   function saveAlignments(){try{localStorage.setItem('ibta_trainee_alignments',JSON.stringify(cellAlignments));}catch{}}
@@ -119,7 +126,7 @@ const Trainees=(()=>{
     return next;
   }
   function shiftAlignmentsOnInsert(insertIdx){
-    const prefix=(owner||'default')+':',updated={};
+    const prefix=(workspaceIdentity()||'default')+':',updated={};
     for(const [key,val]of Object.entries(cellAlignments)){
       if(key.startsWith(prefix)){
         const rest=key.slice(prefix.length);
@@ -132,14 +139,16 @@ const Trainees=(()=>{
   }
   function insertRow(pos='above'){
     commitEdit();
-    if(cells.length>=D.MAX_ROWS)return limitError();
-    let targetIdx=view[cursor.r]??cells.length;
-    if(pos==='below')targetIdx++;
+    if(filtered()||formatting.hiddenRows?.length){message(tr('امسح الفلاتر والفرز وأظهر الصفوف قبل الإدراج.','Clear filters and sorting and unhide rows before inserting.'),true);return;}
+    const selected=selectedRows(),count=Math.max(1,selected.length);
+    if(cells.length+count>D.MAX_ROWS)return limitError();
+    let targetIdx=view[Math.min(...selected)]??cells.length;
+    if(pos==='below')targetIdx=(view[Math.max(...selected)]??cells.length)+1;
     const next=cells.slice();
     while(next.length<targetIdx)next.push(D.blank());
-    next.splice(targetIdx,0,D.blank());
-    const nextFmt=shiftStylesOnInsert(formatting,targetIdx);
-    shiftAlignmentsOnInsert(targetIdx);
+    next.splice(targetIdx,0,...Array.from({length:count},()=>D.blank(colCount())));
+    const nextFmt=D.format(formatting);nextFmt.styles={};for(const [key,v]of Object.entries(formatting.styles)){const [r,c]=key.split(':').map(Number);const value={...v};if(value.mergeRows&&r<targetIdx&&r+value.mergeRows>targetIdx)value.mergeRows+=count;nextFmt.styles[(r>=targetIdx?r+count:r)+':'+c]=value;}
+    if(nextFmt.hiddenRows)nextFmt.hiddenRows=nextFmt.hiddenRows.map(r=>r>=targetIdx?r+count:r);
     change(next,true,nextFmt);
     focusCell(pos==='above'?cursor.r:cursor.r+1,cursor.c);
     message(tr('تم إدراج صف جديد','New row inserted'));
@@ -261,13 +270,14 @@ const Trainees=(()=>{
   function editColumns(action){
     if(!loaded)return;if(!singleSelection())return;commitEdit();const [,,c1,c2]=bounds(),insert=action!=='delete';
     let start=insert?Math.max(D.BASE_WIDTH,cursor.c+((action==='right')!==(formatting.direction==='rtl')?1:0)):c1;
-    const count=insert?1:c2-c1+1;
-    if(!insert&&(start<D.BASE_WIDTH||!confirm(tr('حذف الأعمدة المحددة بكل بياناتها؟ يمكنك التراجع.','Delete selected columns and their data? You can undo.'))))return;
+    const count=c2-c1+1;
+    if(!insert&&start<D.BASE_WIDTH){message(tr('أعمدة بيانات المتدرب الأساسية ثابتة. يمكنك إخفاؤها أو مسح محتواها.','The trainee fields are fixed. You can hide them or clear their contents.'),true);return;}
+    if(!insert&&!confirm(tr('حذف الأعمدة المحددة بكل بياناتها؟ يمكنك التراجع.','Delete selected columns and their data? You can undo.')))return;
     let name='';if(insert){name=prompt(tr('اسم العمود الجديد:','New column name:'),tr('عمود جديد','New column'));if(name===null)return;}
     let next;try{next=D.columns(cells,formatting,start,count,insert,colCount());}catch{limitError();return;}
     if(insert)next.format.headers[start]=name.trim()||tr('عمود جديد','New column');
     change(next.cells,false,next.format);
-    const prefix=(owner||'default')+':',mapped={};
+    const prefix=(workspaceIdentity()||'default')+':',mapped={};
     for(const [key,value]of Object.entries(cellAlignments)){if(!key.startsWith(prefix)){mapped[key]=value;continue;}const [r,c]=key.slice(prefix.length).split(':').map(Number),target=insert?(c>=start?c+count:c):(c<start?c:c>=start+count?c-count:null);if(target!==null)mapped[prefix+r+':'+target]=value;}
     cellAlignments=mapped;saveAlignments();extraSelections=[];anchor=cursor={r:cursor.r,c:Math.min(start,colCount()-1)};render();
     message(tr('تم تحديث الأعمدة. يمكنك التراجع.','Columns updated. You can undo.'));
@@ -594,16 +604,19 @@ const Trainees=(()=>{
     window.addEventListener('beforeunload',e=>{savePosition();if(hasDraft()){e.preventDefault();e.returnValue='';}});
     window.addEventListener('pagehide',savePosition);
     document.addEventListener('visibilitychange',()=>{if(document.hidden)savePosition();});
+    if(typeof TraineeSheets!=='undefined')sheetTools=TraineeSheets.mount({$,tr,node,button,state:()=>({owner,sheetId,worksheets,loaded:loaded&&!loading&&!worksheetBusy}),switchSheet:id=>switchOwner(owner,false,id),action:worksheetAction});
     if(typeof TraineeExcel!=='undefined')excelTools=TraineeExcel.mount({D,$,tr,node,button,
-      state:()=>({cells,formatting,view,owner,loaded:loaded&&!loading,expandedView,labels:allLabels(),importLabels:baseLabels,bounds:bounds(),ranges:selectionRanges(),cursor:{...cursor},cols:visibleCols(),filtered:filtered()}),
-      replaceSheet:(next,fmt)=>{change(next,false,fmt);const prefix=(owner||'default')+':';for(const key of Object.keys(cellAlignments))if(key.startsWith(prefix))delete cellAlignments[key];saveAlignments();clearFilters();render();focusCell(0,0);},
+      state:()=>({cells,formatting,view,owner:workspaceIdentity(),sheetId,loaded:loaded&&!loading&&!worksheetBusy,expandedView,labels:allLabels(),importLabels:baseLabels,bounds:bounds(),ranges:selectionRanges(),cursor:{...cursor},cols:visibleCols(),filtered:filtered()||!!formatting.hiddenRows?.length}),
+      replaceSheet:(next,fmt)=>{change(next,false,fmt);const prefix=(workspaceIdentity()||'default')+':';for(const key of Object.keys(cellAlignments))if(key.startsWith(prefix))delete cellAlignments[key];saveAlignments();clearFilters();render();focusCell(0,0);},
       commitEdit,change,formatSelection,focusCell,render,message,cutSelection,copySelection,pasteSelection,executePaste,
       insertRow,addColumn,editColumns,deleteSelectedRows,deleteSelectedCells,clearSelection,openFindDialog,
+      worksheet:(action)=>sheetTools?.open(action),
+      newSheet:async(next,fmt)=>{if(!await worksheetAction('create'))return false;change(next,true,fmt);clearFilters();render();focusCell(0,0);return await flush();},
       select:(a,b)=>{commitEdit();extraSelections=[];anchor=a;cursor=b;paint();},
-      flush,sort:(column,direction)=>{commitEdit();sortCol=column;sortDir=direction;render();},
-      resetSort:()=>{sortCol=-1;render();},setColumnWidth,saveColumnWidths,resetColumnWidth});
+      flush,sort:(column,direction)=>{commitEdit();sortRules=[];sortCol=column;sortDir=direction;render();},customSort:rules=>{commitEdit();sortRules=rules;sortCol=-1;render();},
+      resetSort:()=>{sortRules=[];sortCol=-1;render();},clearFilters:()=>{clearFilters();render();},setColumnWidth,saveColumnWidths,resetColumnWidth});
     if(typeof TraineePrometric!=='undefined')prometricTools=TraineePrometric.mount({D,$,tr,node,button,
-      state:()=>({cells,view,owner,epoch,user:Cloud.userId(),loaded:loaded&&!loading,editing:!!editing,bounds:bounds(),selectedRows:selectedRows().map(r=>view[r])}),commitEdit,change,flush,focusCell,message});
+      state:()=>({cells,view,owner:workspaceIdentity(),epoch,user:Cloud.userId(),loaded:loaded&&!loading,editing:!!editing,bounds:bounds(),selectedRows:selectedRows().map(r=>view[r])}),commitEdit,change,flush,focusCell,message});
     if(typeof TraineeCertificate!=='undefined')certificateTools=TraineeCertificate.mount({D,$,tr,node,button,
       state:()=>({cells,view,owner,epoch,loaded:loaded&&!loading,cursor:{...cursor}}),catalog:()=>DEFAULT_KEYCODES,commitEdit,message});
     translate();
@@ -716,6 +729,7 @@ const Trainees=(()=>{
     if($('sheet-copy'))$('sheet-copy').title=tr('نسخ كل الأعمدة بما فيها المخفية','Copy every column, including hidden columns');
     updateContextMenuTranslations();
     excelTools?.translate();
+    sheetTools?.translate();
     prometricTools?.translate();
     certificateTools?.translate();
     if(!editing)render();renderCodes();
@@ -730,7 +744,7 @@ const Trainees=(()=>{
     renderCodes();
     prometricTools?.poll();
   }
-  async function switchOwner(next,discard=false){
+  async function switchOwner(next,discard=false,nextSheet=sheetId){
     if(loading)return false;
     savePosition();
     prometricTools?.reset();
@@ -741,19 +755,34 @@ const Trainees=(()=>{
     const token=++epoch;loading=true;$('sheet-workspace').inert=true;
     message(tr('جارٍ تحميل الجدول…','Loading sheet…'));
     try{
-      const data=await Cloud.readTrainees(next);if(token!==epoch)return false;
-      const normalized=D.normalize(data.cells);owner=next;cells=normalized;formatting=D.format(data.format);version=Number(data.version);revision=savedRevision=0;history=[];future=[];loaded=true;
+      const list=Cloud.listTraineeSheets?await Cloud.listTraineeSheets(next):[{sheet_id:FIRST_SHEET,sheet_name:'Sheet 1',sheet_hidden:false,sheet_order:0}];
+      if(!owner){try{nextSheet=localStorage.getItem('ibta_active_worksheet:'+next)||nextSheet;}catch{}}
+      if(!list.some(s=>s.sheet_id===nextSheet&&!s.sheet_hidden))nextSheet=list.find(s=>!s.sheet_hidden)?.sheet_id||FIRST_SHEET;
+      const data=await Cloud.readTrainees(next,nextSheet);if(token!==epoch)return false;
+      const normalized=D.normalize(data.cells);owner=next;sheetId=nextSheet;worksheets=list;cells=normalized;formatting=D.format(data.format);colWidths={...(formatting.widths||(sheetId===FIRST_SHEET?legacyWidths:{}))};version=Number(data.version);revision=savedRevision=0;history=[];future=[];loaded=true;
+      try{localStorage.setItem('ibta_active_worksheet:'+next,sheetId);}catch{}
       clearFilters();extraSelections=[];anchor=cursor={r:0,c:0};owner=next;render();restorePosition();renderCodes();if(typeof rememberWorkspaceView==='function')rememberWorkspaceView({sheetOwner:owner});message(tr('تم الحفظ','Saved'));return true;
     }catch(error){if(token===epoch)message(errorMessage(error),true);return false;}
-    finally{if(token===epoch){loading=false;$('sheet-workspace').inert=!loaded;}}
+    finally{if(token===epoch){loading=false;$('sheet-workspace').inert=!loaded;sheetTools?.paint();}}
+  }
+  async function worksheetAction(action,options={}){
+    if(loading||worksheetBusy||!loaded)return false;commitEdit();if(!await flush())return false;
+    worksheetBusy=true;$('sheet-workspace').inert=true;closeDuplicateDetails();sheetTools?.paint();const activeOwner=owner,token=epoch;
+    try{
+      const target=options.sheetId||sheetId;
+      const result=await Cloud.traineeSheetAction(activeOwner,target,action,options);
+      if(token!==epoch||owner!==activeOwner)return false;
+      return await switchOwner(activeOwner,true,['create','copy'].includes(action)?result:sheetId);
+    }catch(error){message(/LAST_VISIBLE_WORKSHEET/.test(error.message)?tr('يجب الاحتفاظ بشيت ظاهر واحد على الأقل.','Keep at least one visible worksheet.'):errorMessage(error),true);return false;}
+    finally{worksheetBusy=false;$('sheet-workspace').inert=!loaded||loading;sheetTools?.paint();}
   }
   async function reload(){
     commitEdit();if(saving)await saving;
     if(hasDraft()&&!confirm(tr('إعادة التحميل ستستبدل تعديلاتك غير المحفوظة. انسخ الجدول أولًا للاحتفاظ بها. المتابعة؟','Reload replaces unsaved edits. Copy the sheet first to keep them. Continue?')))return;
     clearTimeout(timer);await switchOwner(owner||Cloud.userId(),true);
   }
-  function clearFilters(){['sheet-search','sheet-org','sheet-date','sheet-result'].forEach(id=>$(id).value='');$('sheet-duplicates-only').checked=false;sortCol=-1;}
-  function filtered(){return sortCol>=0||$('sheet-duplicates-only').checked||['sheet-search','sheet-org','sheet-date','sheet-result'].some(id=>$(id).value);}
+  function clearFilters(){['sheet-search','sheet-org','sheet-date','sheet-result'].forEach(id=>$(id).value='');$('sheet-duplicates-only').checked=false;sortCol=-1;sortRules=[];}
+  function filtered(){return sortRules.length>0||sortCol>=0||$('sheet-duplicates-only').checked||['sheet-search','sheet-org','sheet-date','sheet-result'].some(id=>$(id).value);}
   function matchesSearch(row,search){
     if(!search)return true;
     let values=searchRows.get(row);if(!values){values=row.filter(Boolean).map(value=>value.toLocaleLowerCase());if(Object.isFrozen(row))searchRows.set(row,values);}
@@ -763,8 +792,9 @@ const Trainees=(()=>{
     const search=$('sheet-search').value.toLocaleLowerCase(),org=$('sheet-org').value.toLocaleLowerCase(),date=$('sheet-date').value.toLocaleLowerCase(),result=$('sheet-result').value;
     duplicateIds=D.duplicates(cells);
     view=cells.map((_,i)=>i).filter(i=>matchesSearch(cells[i],search)&&(!org||cells[i][6].toLocaleLowerCase().includes(org))&&(!date||cells[i][8].toLocaleLowerCase().includes(date))&&(!result||cells[i][11]===result)&&(!$('sheet-duplicates-only').checked||duplicateIds.has(D.idKey(cells[i][4]))));
-    if(sortCol>=0)view.sort((a,b)=>sortDir*(cells[a][sortCol]||'').localeCompare(cells[b][sortCol]||'',currentLang,{numeric:true})||a-b);
+    const rules=sortRules.length?sortRules:sortCol>=0?[{column:sortCol,direction:sortDir}]:[];if(rules.length)view.sort((a,b)=>{for(const rule of rules){const value=rule.direction*(D.formulaValue(cells,a,rule.column,formulaCache)||'').localeCompare(D.formulaValue(cells,b,rule.column,formulaCache)||'',currentLang,{numeric:true});if(value)return value;}return a-b;});
     updateLastDataRow();if(!filtered())for(let i=cells.length;i<totalInputRows();i++)view.push(i);
+    if(formatting.hiddenRows?.length){const hidden=new Set(formatting.hiddenRows);view=view.filter(r=>!hidden.has(r));}
   }
   function render(){
     if(!initialized)return;hideDuplicateHint();clearTimeout(detailTimer);formulaCache.clear();const oldView=view;buildView();if(oldView.length!==view.length||oldView.some((r,i)=>r!==view[i]))extraSelections=[];
@@ -883,7 +913,7 @@ const Trainees=(()=>{
     td.style.fontFamily=style.font?style.font+', sans-serif':'';td.style.fontStyle=style.italic?'italic':'';td.style.textDecoration=[style.underline?'underline':'',style.strike?'line-through':''].filter(Boolean).join(' ')||'';
     td.style.verticalAlign=style.valign||'middle';td.style.whiteSpace=typeof style.wrap==='boolean'?(style.wrap?'pre-wrap':'nowrap'):'';td.style.textIndent=style.indent?style.indent*8+'px':'';
     td.style.overflowWrap=style.wrap?'anywhere':'';
-    for(const side of ['Top','Bottom','Left','Right'])td.style['border'+side]=style['border'+side]===true?'1px solid #475569':style['border'+side]===false||style.border==='none'?'0':style.border==='all'||style.border==='outline'||style.border===side.toLowerCase()?'1px solid #475569':'';
+    for(const side of ['Top','Bottom','Left','Right'])td.style['border'+side]=D.borderCss(style,side.toLowerCase())??(style['border'+side]===true?'1px solid #475569':style['border'+side]===false||style.border==='none'?'0':style.border==='all'||style.border==='outline'||style.border===side.toLowerCase()?'1px solid #475569':'');td.style.backgroundImage=D.borderImage(style);td.style.backgroundSize='100% 100%';
     for(const key of ['height','min-height']){if(style.height)td.style.setProperty(key,style.height*excelView.zoom/100+'px','important');else td.style.removeProperty(key);}
     const align=getCellAlign(index,column);
     if(align)td.style.textAlign=align;else td.style.removeProperty('text-align');
@@ -902,9 +932,10 @@ const Trainees=(()=>{
       td.append(select);
     }else{
       const span=node('span',value.startsWith('=')?D.formulaValue(cells,index,column,formulaCache):value,{class:'sheet-cell-value'});td.append(span);
+      td.classList.toggle('sheet-center-across-anchor',!!style.centerAcross);if(style.centerAcross){const parts=visibleCols().filter(c=>c>=column&&c<column+style.centerAcross);span.classList.add('sheet-center-across');span.style.width='calc(('+parts.map(c=>'var(--col-w-'+c+','+(colWidths[c]||formatting.defaultWidth||160)+'px)').join(' + ')+') * var(--sheet-zoom,1))';}
       // Table text alignment falls back to the text direction when a nowrap line overflows.
       // Physical flex alignment keeps long exam names aligned to the requested cell edge.
-      if(align&&!style.rotation&&!(typeof style.wrap==='boolean'?style.wrap:excelView.wrap)){span.style.display='flex';span.style.justifyContent=align;}
+      if(align&&!style.centerAcross&&!style.rotation&&!(typeof style.wrap==='boolean'?style.wrap:excelView.wrap)){span.style.display='flex';span.style.justifyContent=align;}
       if(value.startsWith('=')){td.dataset.formula=value;td.title=value;}else delete td.dataset.formula;
       if(style.rotation){span.style.display='inline-block';if(Math.abs(style.rotation)===90){span.style.writingMode='vertical-rl';if(style.rotation===-90)span.style.transform='rotate(180deg)';}else{span.style.transform='rotate('+style.rotation+'deg)';td.style.setProperty('height','70px','important');}}
       if(column===4){const duplicates=duplicateIds.get(D.idKey(value));if(duplicates){td.classList.add('sheet-id-duplicate');td.append(node('span',tr('مكرر ×','Duplicate ×')+duplicates.length,{class:'sheet-duplicate-badge'}));td.setAttribute('aria-haspopup','dialog');}}
@@ -974,8 +1005,12 @@ const Trainees=(()=>{
         try{
           if(!await flush())throw Error(tr('احفظ تعديلات الجدول أولًا.','Save sheet changes first.'));
           if(cells[index]?.[0]?.trim()){refreshRecord();return;}
-          const code=await Cloud.claimTraineeCode(codeCategory,selectedOwner);
+          const identity=value=>JSON.stringify([value?.[1],value?.[2],value?.[3],value?.[4],value?.[7]]);
+          if(identity(cells[index])!==identity(row))throw Error(tr('بيانات الصف تغيرت. افتح بيانات المتدرب من جديد.','The row changed. Reopen the trainee details.'));
+          const currentRow=cells[index],traineeName=currentRow?.[3]?.trim()||currentRow?.[2]?.trim()||'';
+          const code=await Cloud.claimTraineeCode(codeCategory,selectedOwner,traineeName);
           if(token!==epoch||owner!==selectedOwner)throw Error('CONFLICT');
+          if(identity(cells[index])!==identity(currentRow))throw Error(tr('تم حجز الفاوتشر باسم المتدرب، لكن مكان الصف تغير. ستجد الكود باسمه في صفحة Vouchers.','The voucher was reserved with the trainee name, but the row moved. Find the named voucher on Vouchers.'));
           if(cells[index]?.[0]?.trim())throw Error(tr('خانة الكود تغيرت أثناء الحجز. لم يتم استبدال الكود الموجود.','Code changed during reservation. The existing code was preserved.'));
           change(D.paste(cells,[[code]],index,0),false);
           action.hidden=true;
@@ -1171,10 +1206,10 @@ const Trainees=(()=>{
   async function flush(keepEditing=false){
     commitEdit(false,keepEditing);clearTimeout(timer);if(saving){const ok=await saving;if(!ok)return false;return flush(keepEditing);}
     if(!loaded||revision===savedRevision)return true;
-    const token=epoch,snapshot=revision,saveOwner=owner,data=D.storage(cells),saveFormat=D.format(formatting);
+    const token=epoch,snapshot=revision,saveOwner=owner,saveSheet=sheetId,data=D.storage(cells),saveFormat=D.format(formatting);
     message(tr('جارٍ الحفظ…','Saving…'));
     saving=(async()=>{
-      try{const result=await Cloud.saveTrainees(saveOwner,data,version,saveFormat);if(token!==epoch)return false;version=Number(result);savedRevision=snapshot;message(revision===savedRevision?tr('تم الحفظ','Saved'):tr('تعديلات غير محفوظة…','Unsaved changes…'));return true;}
+      try{const result=await Cloud.saveTrainees(saveOwner,data,version,saveFormat,saveSheet);if(token!==epoch)return false;version=Number(result);savedRevision=snapshot;message(revision===savedRevision?tr('تم الحفظ','Saved'):tr('تعديلات غير محفوظة…','Unsaved changes…'));return true;}
       catch(error){if(token===epoch)message(errorMessage(error),true);return false;}
     })();const ok=await saving;saving=null;
     if(ok&&token===epoch&&revision!==savedRevision)return flush(keepEditing);return ok;
@@ -1195,7 +1230,7 @@ const Trainees=(()=>{
         const td=node('td');row.append(td);if(!isSelected(r,c))continue;
         const value=cells[idx]?.[c]||'',style=formatting.styles[idx+':'+c]||{},result=c===11?({'ناجح':['#00b050','#ffffff'],'راسب':['#ff0000','#ffffff'],'لم يدخل':['#ffff00','#000000']}[value]):null,duplicate=c===4&&duplicateIds.has(D.idKey(value));
         td.textContent=value;Object.assign(td.style,{backgroundColor:duplicate?'#ffc7ce':result?.[0]||style.bg||'#ffffff',color:duplicate?'#9c0006':result?.[1]||style.color||'#16324f',fontWeight:style.bold||result?'700':'400',fontSize:(style.size||formatting.fontSize)+'px',fontFamily:style.font||'IBM Plex Sans Arabic',fontStyle:style.italic?'italic':'normal',textDecoration:[style.underline?'underline':'',style.strike?'line-through':''].filter(Boolean).join(' ')||'none',textAlign:getCellAlign(idx,c)||(formatting.direction==='rtl'?'right':'left'),verticalAlign:style.valign||'middle',whiteSpace:style.wrap===false?'nowrap':'pre-wrap',direction:formatting.direction,textIndent:(style.indent||0)*8+'px'});
-        for(const side of ['Top','Bottom','Left','Right'])td.style['border'+side]=style['border'+side]===true?'1px solid #475569':style['border'+side]===false||style.border==='none'?'0':style.border==='all'||style.border==='outline'||style.border===side.toLowerCase()?'1px solid #475569':'1px solid #dbe7f7';
+        for(const side of ['Top','Bottom','Left','Right'])td.style['border'+side]=D.borderCss(style,side.toLowerCase())??(style['border'+side]===true?'1px solid #475569':style['border'+side]===false||style.border==='none'?'0':style.border==='all'||style.border==='outline'||style.border===side.toLowerCase()?'1px solid #475569':'1px solid #dbe7f7');td.style.backgroundImage=D.borderImage(style);td.style.backgroundSize='100% 100%';
       }
     }
     return table.outerHTML;
@@ -1209,7 +1244,7 @@ const Trainees=(()=>{
     const logical=formatting.direction==='rtl'?(direction==='left'?'right':'left'):direction;
     const next=D.deleteCells(cells,formatting,indices,c1,c2,logical,colCount());
     change(next.cells,false,next.format);
-    const prefix=(owner||'default')+':',shift=c2-c1+1,mapped={};
+    const prefix=(workspaceIdentity()||'default')+':',shift=c2-c1+1,mapped={};
     for(const [key,value]of Object.entries(cellAlignments)){
       if(!key.startsWith(prefix)){mapped[key]=value;continue;}
       const [r,c]=key.slice(prefix.length).split(':').map(Number);
@@ -1315,7 +1350,7 @@ const Trainees=(()=>{
     catch(error){$('sheet-code-status').textContent=/CONFLICT/.test(error.message||'')?tr('تغيرت الأكواد. حدّث القائمة وحاول مجددًا.','Codes changed. Refresh and try again.'):tr('تعذر تخصيص الأكواد. تأكد أن المستخدم نشط ثم حدّث القائمة.','Could not assign codes. Check that the user is active, then refresh.');}
     finally{codeBusy=false;$('sheet-code-workspace').inert=false;if($('sheet-owner'))$('sheet-owner').disabled=false;}
   }
-  function reset(){prometricTools?.reset();certificateTools?.reset();setExpandedView(false);excelTools?.closeFiles();closeDuplicateDetails();closeContextMenu();$('sheet-find-dialog')?.close();clearTimeout(timer);epoch++;owner='';cells=[];formatting=D.defaultFormat();loaded=false;loading=false;editing=null;history=[];future=[];revision=savedRevision=0;if(initialized){$('sheet-cell-content').value='';$('sheet-cell-content').title='';render();$('sheet-owner')?.replaceChildren();$('sheet-code-list').replaceChildren();$('sheet-workspace').inert=true;}}
+  function reset(){sheetTools?.close();sheetId=FIRST_SHEET;worksheets=[];worksheetBusy=false;prometricTools?.reset();certificateTools?.reset();setExpandedView(false);excelTools?.closeFiles();closeDuplicateDetails();closeContextMenu();$('sheet-find-dialog')?.close();clearTimeout(timer);epoch++;owner='';cells=[];formatting=D.defaultFormat();loaded=false;loading=false;editing=null;history=[];future=[];revision=savedRevision=0;if(initialized){$('sheet-cell-content').value='';$('sheet-cell-content').title='';render();$('sheet-owner')?.replaceChildren();$('sheet-code-list').replaceChildren();$('sheet-workspace').inert=true;}}
   function suspend(){prometricTools?.reset();certificateTools?.reset();setExpandedView(false);excelTools?.closeFiles();closeDuplicateDetails();closeContextMenu();$('sheet-find-dialog')?.close();clearTimeout(timer);}
   return {open,translate,hasDraft,flush,reset,suspend,savePosition};
 })();

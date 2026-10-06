@@ -28,7 +28,7 @@ const accessToken='header.'+Buffer.from(JSON.stringify({amr:[{method:'password',
 const client={
   auth:{getSession:async()=>{if(firstSessionRead){firstSessionRead=false;await initialSessionRead;}return sessionReadError?{error:Error('NETWORK')}:{data:{session:{user:clone(authUser),access_token:accessToken}}};},onAuthStateChange(fn){authListener=fn;},signOut:async()=>{signOuts++;authListener?.('SIGNED_OUT',null);return {};},updateUser:async args=>{events.push({name:'auth_update',args:clone(args)});if(args.data)authUser.user_metadata={...authUser.user_metadata,...args.data};return {data:{user:clone(authUser)}};}},
   from(table){
-    if(table==='ibta_trainee_sheets')return {select(){return this;},order(){return this;},range:async(from,to)=>({data:clone(db.traineeSheets.slice(from,to+1)),error:null})};
+    if(table==='ibta_trainee_sheets'){const filters=[];const selected=()=>db.traineeSheets.filter(row=>filters.every(([key,value])=>row[key]===value));return {select(){return this;},eq(key,value){filters.push([key,value]);return this;},order(){return this;},maybeSingle:async()=>({data:clone(selected()[0]||null)}),then(resolve,reject){return Promise.resolve({data:clone(selected()),error:null}).then(resolve,reject);},range:async(from,to)=>({data:clone(selected().slice(from,to+1)),error:null})};}
     if(table==='ibta_supervisor_stock')return {select:async()=>({data:clone(db.stock),error:null})};
     if(table==='ibta_members'){
       let filter;
@@ -76,9 +76,10 @@ const client={
       if(args.backup.traineeSheets)db.traineeSheets=clone(args.backup.traineeSheets);
       return {};
     }
-    if(name==='ibta_claim_code'){
+    if(name==='ibta_set_voucher_trainee_name'){const row=db.codes.find(r=>r.code===args.target_code&&r.version===args.expected_version);if(!row)return {error:{message:'CONFLICT'}};row.trainee_name=args.trainee_name;row.version++;return {data:row.version};}
+    if(name==='ibta_claim_code'||name==='ibta_claim_trainee_voucher'){
       const row=db.codes.find(r=>r.code===args.target_code&&r.version===args.expected_version&&!r.used_on);
-      if(!row)return {data:[]};row.used_on=args.use_date;row.used_at='2026-09-30T09:45:00.000Z';row.used_by='user-1';row.version++;return {data:[clone(row)]};
+      if(!row)return {data:[]};row.used_on=args.use_date;if(name==='ibta_claim_trainee_voucher')row.trainee_name=args.trainee_name;row.used_at='2026-09-30T09:45:00.000Z';row.used_by='user-1';row.version++;return {data:[clone(row)]};
     }
     for(const c of args.changes){
       if(c.op==='update'){const r=db.codes.find(r=>r.code===c.code);assert.equal(c.version,r.version);r.notes=c.notes;r.used_on=c.used_on;r.version++;}
@@ -128,6 +129,7 @@ for(const tab of ['profile','data','prometric','inventory','extensions','reports
 }
 assert(!html.includes('id="autochain-toggle"'));assert(!html.includes('id="settings-tab-preferences"'));assert(!html.includes('id="signed-in"'));assert(!html.includes('id="refresh-data"'));
 assert(!html.includes('id="copy-prometric-link"'));
+vm.runInContext(fs.readFileSync(path.join(__dirname,'../voucher-names.js'),'utf8'),ctx);
 for(const [,script] of html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g))vm.runInContext(script,ctx);
 vm.runInContext(fs.readFileSync(path.join(__dirname,'../ops-ui.js'),'utf8'),ctx);
 const run=s=>vm.runInContext(s,ctx);
@@ -357,7 +359,7 @@ for(const key of usedKeys) assert(englishKeys.includes(key),`Missing translation
   assert.equal(els['profile-new-password'].value,'');
   run("activeCategory='Master-100';renderCodeGrid()");
   const rowToDelete=els['code-grid'].children.find(row=>row.children[2]?.textContent==='REVISED-CODE');
-  const deleteButton=rowToDelete.children[5].children.at(-1);
+  const deleteButton=rowToDelete.children.at(-1).children.at(-1);
   assert.match(deleteButton.innerHTML,/<svg/);
   const deleting=deleteButton.listeners.click({stopPropagation(){}});
   assert.equal(els['delete-dialog'].open,true);
@@ -389,9 +391,19 @@ for(const key of usedKeys) assert(englishKeys.includes(key),`Missing translation
   assert.equal(run('validBackup('+JSON.stringify(exportedBackup)+')'),true,'Exported app backup can be imported again');
   await run('Cloud.restoreData('+JSON.stringify(exportedBackup)+')');
   assert.equal(db.traineeSheets[0].cells[0][499],'00123');assert.equal(db.traineeSheets[0].format.styles['0:499'].bold,true);
+  const first='00000000-0000-0000-0000-000000000001',second='00000000-0000-0000-0000-000000000002';
+  db.traineeSheets[0]={...db.traineeSheets[0],sheet_id:first,sheet_name:'Existing',sheet_order:0,version:8};
+  db.traineeSheets.push({...clone(db.traineeSheets[0]),sheet_id:second,sheet_name:'Independent',version:4,cells:[Array(13).fill('Second')]});
+  assert.equal((await run("Cloud.readTrainees('"+first+"','"+second+"')")).cells[0][0],'Second','Read is scoped to worksheet identity');
+  assert.equal((await run("Cloud.readTrainees('"+first+"')")).cells[0][499],'00123','Legacy reads select the first worksheet only');
+  assert.equal((await run("Cloud.listTraineeSheets('"+first+"')")).length,2);
+  await run('Cloud.exportData()');const workbookBackup=JSON.parse(await backupBlobs.at(-1).text());assert.equal(run('validBackup('+JSON.stringify(workbookBackup)+')'),true);assert.equal(workbookBackup.traineeSheets.length,2);await run('Cloud.restoreData('+JSON.stringify(workbookBackup)+')');assert.equal(db.traineeSheets[1].sheet_name,'Independent');
+  const duplicateBackup=clone(workbookBackup);duplicateBackup.traineeSheets[1].sheet_id=first;assert.equal(run('validBackup('+JSON.stringify(duplicateBackup)+')'),false,'Duplicate owner/worksheet pairs are rejected');
   console.log('PASS: backup restore, bulk code import, account profile, reports, cloud persistence, and categories.');
   db.codes.push({code:'TRAINEE-ALLOCATE',category:'TRAINEE-CATEGORY',version:1,used_on:null,owner_id:null});
-  assert.equal(await run("Cloud.claimTraineeCode('TRAINEE-CATEGORY','user-1')"),'TRAINEE-ALLOCATE');
+  assert.equal(await run("Cloud.claimTraineeCode('TRAINEE-CATEGORY','user-1','AUTOMATIC TRAINEE')"),'TRAINEE-ALLOCATE');
+  assert.equal(db.codes.find(r=>r.code==='TRAINEE-ALLOCATE').trainee_name,'AUTOMATIC TRAINEE');assert.equal(run("state.voucherNames['TRAINEE-ALLOCATE']"),'AUTOMATIC TRAINEE');
+  assert.equal(await run("Cloud.saveVoucherName('TRAINEE-ALLOCATE','Edited trainee')"),true);assert.equal(db.codes.find(r=>r.code==='TRAINEE-ALLOCATE').trainee_name,'Edited trainee');
   const allocation=db.codes.find(r=>r.code==='TRAINEE-ALLOCATE');assert.equal(allocation.owner_id,'user-1');assert.equal(allocation.used_by,'user-1');assert.ok(allocation.used_on);
   await assert.rejects(run("Cloud.claimTraineeCode('NONEXISTENT','user-1')"));
   for(const name of ['inventoryReportSnapshot','inventoryDelivery','inventoryDeliveryEligible'])assert.equal(run('typeof Cloud.'+name),'undefined','Removed delivery APIs are absent');

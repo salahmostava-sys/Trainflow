@@ -1098,6 +1098,7 @@ if(window.history)window.history.scrollRestoration='manual';
           <div class="col-code" data-i18n="colCode">Code</div>
           <div class="col-date" data-i18n="colDate">Date</div>
           <div class="col-notes" data-i18n="colNotes">Notes</div>
+          <div class="col-trainee-name" data-i18n="colTraineeName">Trainee name</div>
           <div class="col-actions"></div>
         </div>
         <div class="code-list" id="code-grid"></div>
@@ -1434,6 +1435,7 @@ if(window.history)window.history.scrollRestoration='manual';
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.116.0/dist/umd/supabase.js"></script>
 <script src="session-policy.js"></script>
 <script src="cloud.js"></script>
+<script src="voucher-names.js"></script>
 <script>
 // ---------- TRANSLATIONS ----------
 const TRANSLATIONS = {
@@ -1502,7 +1504,7 @@ const TRANSLATIONS = {
     removeCategory:"Remove category",
     confirmRemoveCategory:cat=>"Remove category \""+cat+"\"? Its exams will move back to their original category.",
     categoryRemoved:"Category removed",
-    editBtn:"Edit", editCategory:"Edit category", editExam:"Edit exam", editCode:"Edit code", cancelBtn:"Cancel", invalidCodeEdit:"Enter a unique code and a date in DD/MM/YYYY format.", itemUpdated:"Changes saved", manageRecords:"Edit system data", manageRecordsDesc:"Choose a record here to edit it without adding controls to the daily work screen.",
+    colTraineeName:"Trainee name", editBtn:"Edit", editCategory:"Edit category", editExam:"Edit exam", editCode:"Edit code", cancelBtn:"Cancel", invalidCodeEdit:"Enter a unique code and a date in DD/MM/YYYY format.", itemUpdated:"Changes saved", manageRecords:"Edit system data", manageRecordsDesc:"Choose a record here to edit it without adding controls to the daily work screen.",
     authBrandTagline:"Your team's workspace", authHeadline1:"Your codes, organized.", authHeadline2:"Your team, connected.",
     authEyebrow:"TRAINING & EXAM OPERATIONS",
     authIntro:"One place to manage codes and track their use, wherever you are.",
@@ -1606,7 +1608,7 @@ const TRANSLATIONS = {
     removeCategory:"حذف الفئة",
     confirmRemoveCategory:cat=>"حذف فئة \""+cat+"\"؟ الامتحانات اللي جواها هترجع لفئتها الأصلية.",
     categoryRemoved:"تم حذف الفئة",
-    editBtn:"تعديل", editCategory:"تعديل الفئة", editExam:"تعديل الامتحان", editCode:"تعديل الكود", cancelBtn:"إلغاء", invalidCodeEdit:"أدخل كودًا غير مكرر، واكتب التاريخ بصيغة يوم/شهر/سنة.", itemUpdated:"تم حفظ التعديل", manageRecords:"تعديل بيانات النظام", manageRecordsDesc:"اختر البيانات المطلوب تعديلها هنا، بعيدًا عن شاشة العمل اليومية.",
+    colTraineeName:"اسم المتدرب", editBtn:"تعديل", editCategory:"تعديل الفئة", editExam:"تعديل الامتحان", editCode:"تعديل الكود", cancelBtn:"إلغاء", invalidCodeEdit:"أدخل كودًا غير مكرر، واكتب التاريخ بصيغة يوم/شهر/سنة.", itemUpdated:"تم حفظ التعديل", manageRecords:"تعديل بيانات النظام", manageRecordsDesc:"اختر البيانات المطلوب تعديلها هنا، بعيدًا عن شاشة العمل اليومية.",
     authBrandTagline:"مساحة عمل فريقك", authHeadline1:"أكوادك منظّمة.", authHeadline2:"وفريقك على اتصال.",
     authEyebrow:"عمليات التدريب والاختبارات",
     authIntro:"مساحة واحدة لإدارة الأكواد ومتابعة استخدامها، أينما كنت.",
@@ -3045,6 +3047,7 @@ function renderCodeGrid(){
     row.appendChild(c);
     row.appendChild(d);
     row.appendChild(notesCell);
+    row.appendChild(VoucherNames.cell(code));
     row.appendChild(actions);
     grid.appendChild(row);
   });
@@ -3124,6 +3127,8 @@ Cloud.boot();
 </script>
 <script src="ops-ui.js"></script>
 <script src="trainees-core.js"></script>
+<script src="trainees-borders.js"></script>
+<script src="trainees-sheets.js"></script>
 <script src="prometric-core.js"></script>
 <script id="prometric-registration-script" src="prometric-registration.js" data-extension="trainflow-prometric.zip"></script>
 <script src="trainees-xlsx.js"></script>

@@ -40,7 +40,7 @@ The sidebar stays on the right in both languages, supports a 60 px compact rail 
 3. Verify direct navigation, refresh and Back/Forward on the six page URLs.
 4. Check the sidebar in full, compact and closed modes, including the account popup on mobile.
 5. Use synthetic data for UI regression checks; test a real signed-in account separately when live writes are required.
-6. Confirm both extension ZIPs download from Settings → Extensions. Reinstall/reload existing unpacked extensions after an update.
+6. Confirm the Prometric extension ZIP downloads from Settings → Extensions. Reinstall/reload existing unpacked extensions after an update.
 
 The selection/export browser suite checks additive selections, rich clipboard MIME types and the actual colors inside downloaded XLSX files. External Google/Prometric actions need their own configured test accounts and are not exercised by that suite.
 
@@ -59,3 +59,7 @@ Download a private administrator backup before operational restores. Auth accoun
 For a frontend regression, roll back the Vercel deployment or revert the faulty commit and let production redeploy. Review and apply database migrations individually; do not rerun database.sql against the existing project. A frontend rollback does not reverse SQL changes or external report uploads.
 
 See [architecture](../ARCHITECTURE.md), [operations](operations-guide.md) and [server boundaries](javascript-server.md).
+
+## Workbook schema prerequisites
+
+Before deploying the workbook commands, apply the trainee_border_styles, trainee_worksheets, trainee_worksheet_integrity and voucher_trainee_names migrations in their checked-in order. The original trainee row becomes Sheet 1 in place. Legacy saves remain scoped to it. Frontend rollback retains the database changes; an old owner-only multi-row read cannot display a workbook with multiple worksheets, so restore a compatible frontend rather than dropping live sheet data. Verify create/copy/save/switch/delete and all-sheet backup restore with synthetic records.

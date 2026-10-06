@@ -6,6 +6,10 @@
   // edits, undo history and pending saves instead of copying every cell.
   const validatedSheets=new WeakSet(),validatedRows=new WeakSet();
   const storageRows=new WeakMap();
+  const BORDER_STYLES=['none','hair','dotted','dashDotDot','dashDot','dashed','thin','mediumDashed','mediumDashDotDot','mediumDashDot','medium','thick','double'];
+  const BORDER_SIDES=['top','bottom','left','right','diagonalUp','diagonalDown'];
+  function borderCss(style,side){const edge=style.borders?.[side];if(!edge)return null;if(edge.style==='none')return '0';const width=edge.style==='hair'?0.5:edge.style==='double'||edge.style==='thick'?3:edge.style.startsWith('medium')?2:1;return width+'px '+(edge.style==='double'?'double':edge.style==='dotted'?'dotted':/dash/i.test(edge.style)?'dashed':'solid')+' '+edge.color;}
+  function borderImage(style){const edges=['diagonalUp','diagonalDown'].map(side=>[side,style.borders?.[side]]).filter(([,edge])=>edge&&edge.style!=='none');if(!edges.length)return '';const lines=edges.map(([side,edge])=>'<line x1="0" y1="'+(side==='diagonalUp'?100:0)+'" x2="100" y2="'+(side==='diagonalUp'?0:100)+'" stroke="'+edge.color+'" stroke-width="'+(edge.style==='thick'?3:edge.style.startsWith('medium')?2:1)+'" vector-effect="non-scaling-stroke" '+(/dash/i.test(edge.style)?'stroke-dasharray="5 3"':edge.style==='dotted'?'stroke-dasharray="1 3"':'')+'/>').join('');return 'url("data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" preserveAspectRatio="none">'+lines+'</svg>')+'")';}
   const blank=(w=BASE_WIDTH)=>Array(Math.max(BASE_WIDTH,w)).fill('');
   function normalizeResult(value){
     const key=value.trim().toLocaleLowerCase();
@@ -20,6 +24,9 @@
     if(['rtl','ltr'].includes(value.direction))out.direction=value.direction;
     if(Number.isInteger(value.fontSize)&&value.fontSize>=10&&value.fontSize<=32)out.fontSize=value.fontSize;
     if(Array.isArray(value.hidden))out.hidden=[...new Set(value.hidden.filter(c=>Number.isInteger(c)&&c>=0&&c<MAX_COLS))];
+    if(Array.isArray(value.hiddenRows))out.hiddenRows=[...new Set(value.hiddenRows.filter(r=>Number.isInteger(r)&&r>=0&&r<MAX_ROWS))];
+    if(Number.isInteger(value.defaultWidth)&&value.defaultWidth>=40&&value.defaultWidth<=800)out.defaultWidth=value.defaultWidth;
+    if(value.widths&&typeof value.widths==='object'){out.widths={};for(const [c,w]of Object.entries(value.widths))if(/^(0|[1-9]\d*)$/.test(c)&&Number(c)<MAX_COLS&&Number.isInteger(w)&&w>=40&&w<=800)out.widths[c]=w;}
     if(value.headers&&typeof value.headers==='object'){
       out.headers={};
       for(const [c,name] of Object.entries(value.headers)){
@@ -33,8 +40,10 @@
       for(const field of ['italic','underline','strike','wrap','borderTop','borderBottom','borderLeft','borderRight'])if(typeof style[field]==='boolean')next[field]=style[field];
       if(['Arial','Calibri','Tahoma','Segoe UI','Times New Roman','IBM Plex Sans Arabic'].includes(style.font))next.font=style.font;
       if(['left','center','right'].includes(style.align))next.align=style.align;
+      if(Number.isInteger(style.centerAcross)&&style.centerAcross>1&&style.centerAcross<=MAX_COLS&&Number(key.split(':')[1])<MAX_COLS-1)next.centerAcross=Math.min(style.centerAcross,MAX_COLS-Number(key.split(':')[1]));
       if(['top','middle','bottom'].includes(style.valign))next.valign=style.valign;
       if(['none','all','outline','top','bottom','left','right'].includes(style.border))next.border=style.border;
+      if(style.borders&&typeof style.borders==='object'){const edges={};for(const side of BORDER_SIDES){const edge=style.borders[side];if(edge&&BORDER_STYLES.includes(edge.style)&&/^#[0-9a-f]{6}$/i.test(edge.color))edges[side]={style:edge.style,color:edge.color};}if(Object.keys(edges).length)next.borders=edges;}
       for(const [field,min,max]of [['indent',0,15],['rotation',-90,90],['height',20,400],['mergeCols',1,MAX_COLS],['mergeRows',1,MAX_ROWS]])if(Number.isInteger(style[field])&&style[field]>=min&&style[field]<=max)next[field]=style[field];
       const [row,column]=key.split(':').map(Number);if(next.mergeCols)next.mergeCols=Math.min(next.mergeCols,MAX_COLS-column);if(next.mergeRows)next.mergeRows=Math.min(next.mergeRows,MAX_ROWS-row);
       if(Number.isInteger(style.size)&&style.size>=10&&style.size<=32)next.size=style.size;
@@ -48,6 +57,7 @@
     const next=format(formatting),mapping=new Map();let at=0;
     rows.forEach((_,i)=>{if(!indices.has(i))mapping.set(i,at++);});next.styles={};
     const removed=[...indices].filter(i=>i<rows.length).length;
+    if(next.hiddenRows)next.hiddenRows=next.hiddenRows.filter(r=>!indices.has(r)).map(r=>r>=rows.length?r-removed:mapping.get(r)).filter(r=>r!==undefined);
     for(const [key,style]of Object.entries(formatting.styles)){const [r,c]=key.split(':').map(Number);const target=r>=rows.length?r-removed:mapping.get(r);if(target!==undefined){const v={...style};if(v.mergeRows)v.mergeRows=Math.max(1,v.mergeRows-[...indices].filter(i=>i>=r&&i<r+v.mergeRows).length);next.styles[target+':'+c]=v;}}
     return {cells:rows.filter((_,i)=>!indices.has(i)),format:next};
   }
@@ -140,6 +150,25 @@
     }
     return {cells:normalize(next),format:fmt};
   }
+  // Structural cell shifts are restricted to an unfiltered contiguous selection.
+  // Values and formats follow the same coordinate mapping; overflow never discards data.
+  function shiftCells(rows,formatting,bounds,insert,direction,width){
+    const [r1,r2,c1,c2]=bounds,h=r2-r1+1,w=c2-c1+1;
+    if(!['right','down','left','up'].includes(direction)||r1<0||c1<0||c2>=width||r2>=MAX_ROWS)throw Error('SHIFT_BOUNDS');
+    const horizontal=['left','right'].includes(direction),map=(r,c)=>{
+      if(horizontal){if(r<r1||r>r2||c<c1)return [r,c];if(insert)return [r,c+w];if(c<=c2)return null;return [r,c-w];}
+      if(c<c1||c>c2||r<r1)return [r,c];if(insert)return [r+h,c];if(r<=r2)return null;return [r-h,c];
+    },fmt=format(formatting),next=rows.map(row=>[...row]);
+    const valid=target=>target&&target[0]<MAX_ROWS&&target[1]<MAX_COLS;
+    for(let r=0;r<rows.length;r++)for(let c=0;c<rows[r].length;c++){const target=map(r,c);if(insert&&!valid(target)&&rows[r][c])throw Error('SHIFT_OVERFLOW');if(target&&(target[0]!==r||target[1]!==c)||!target)next[r][c]='';}
+    for(let r=0;r<rows.length;r++)for(let c=0;c<rows[r].length;c++){const target=map(r,c);if(!valid(target)||!rows[r][c])continue;while(next.length<=target[0])next.push(blank(width));while(next[target[0]].length<=target[1])next[target[0]].push('');next[target[0]][target[1]]=rows[r][c];}
+    fmt.styles={};for(const [key,style]of Object.entries(formatting.styles)){const [r,c]=key.split(':').map(Number),target=map(r,c);if(insert&&!valid(target))throw Error('SHIFT_OVERFLOW');if(valid(target)){const v={...style};delete v.mergeRows;delete v.mergeCols;delete v.centerAcross;fmt.styles[target.join(':')]=v;}}
+    return {cells:normalize(next),format:fmt};
+  }
+  function applyBorders(formatting,ranges,view,cols,draft){
+    const fmt=format(formatting),has=(r,c)=>selectedCell(ranges,r,c),rtl=fmt.direction==='rtl';
+    eachSelected(ranges,view,cols,(r,c,vr)=>{const at=cols.indexOf(c),key=r+':'+c,v=fmt.styles[key]||{},edges={...v.borders},endRow=Math.max(vr,view.indexOf(r+(v.mergeRows||1)-1)),endCol=Math.max(at,cols.findLastIndex(x=>x<=c+(v.mergeCols||1)-1));for(const [side,rr,cc,inside]of [['top',vr-1,c,'horizontal'],['bottom',endRow+1,c,'horizontal'],['left',vr,cols[rtl?endCol+1:at-1]??-1,'vertical'],['right',vr,cols[rtl?at-1:endCol+1]??-1,'vertical']]){const pen=draft[has(rr,cc)?inside:side];if(pen)edges[side]={...pen};}for(const side of ['diagonalUp','diagonalDown'])if(draft[side])edges[side]={...draft[side]};if(Object.keys(edges).length)fmt.styles[key]={...v,borders:edges};});return fmt;
+  }
   const courseAliases=[
     ['CBP-M','Marketing','التسويق'],['CBP-S','Sales','المبيعات'],['CBP-CS','Customer Service','خدمة العملاء'],
     ['CBP-AI','Artificial Intelligence','الذكاء الاصطناعي'],['CBP-L','Leadership','القيادة الإدارية','القيادة'],
@@ -169,6 +198,7 @@
     fmt.headers={};for(let c=BASE_WIDTH;c<width;c++){const target=map(c);if(target!==null)fmt.headers[target]=formatting.headers?.[c]||'Column '+(c+1);}
     if(insert)for(let c=start;c<start+count;c++)fmt.headers[c]='New column';
     fmt.hidden=(formatting.hidden||[]).map(map).filter(c=>c!==null);
+    if(formatting.widths){fmt.widths={};for(const [c,w]of Object.entries(formatting.widths)){const target=map(Number(c));if(target!==null)fmt.widths[target]=w;}}
     fmt.styles={};for(const [key,style]of Object.entries(formatting.styles||{})){const [r,c]=key.split(':').map(Number),target=map(c);if(target!==null){const v={...style};if(v.mergeCols){if(insert&&c<start&&c+v.mergeCols>start)v.mergeCols+=count;else if(!insert)v.mergeCols=Math.max(1,v.mergeCols-Math.max(0,Math.min(c+v.mergeCols,start+count)-Math.max(c,start)));}fmt.styles[r+':'+target]=v;}}
     return {cells:normalize(cells),format:fmt};
   }
@@ -209,7 +239,7 @@
   function eachSelected(ranges,view,cols,run){
     const columns=selectionColumns(ranges,cols);for(const r of selectionRows(ranges,view.length))for(const c of columns)if(selectedCell(ranges,r,c))run(view[r],c,r);
   }
-  const api={BASE_WIDTH,WIDTH,MAX_ROWS,MAX_COLS,MAX_CELL,blank,normalize,storage,parse,tsv,paste,pasteMapped,result:normalizeResult,defaultFormat,format,idKey,duplicates,removeRows,deleteCells,courseKeycode,columns,address,letter,number,formulaValue,shiftFormula,selectedCell,selectionRows,selectionColumns,eachSelected};
+  const api={BASE_WIDTH,WIDTH,MAX_ROWS,MAX_COLS,MAX_CELL,blank,normalize,storage,parse,tsv,paste,pasteMapped,result:normalizeResult,defaultFormat,format,idKey,duplicates,removeRows,deleteCells,shiftCells,applyBorders,BORDER_STYLES,BORDER_SIDES,borderCss,borderImage,courseKeycode,columns,address,letter,number,formulaValue,shiftFormula,selectedCell,selectionRows,selectionColumns,eachSelected};
   if(typeof module!=='undefined'&&module.exports)module.exports=api;
   else root.TraineeData=api;
 })(globalThis);

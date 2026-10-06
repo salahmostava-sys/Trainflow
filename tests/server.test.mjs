@@ -14,6 +14,8 @@ const post={method:'POST',headers:{Authorization:bearer,'Content-Type':'applicat
 assert.equal((await handleApi(request('rpc/ibta_apply_changes',post),{},upstream)).status,403);
 for(const operation of ['ibta_inventory_delivery_status','ibta_save_inventory_delivery']){const before=calls.length;assert.equal((await handleApi(request('rpc/'+operation,post),{},upstream)).status,404);assert.equal(calls.length,before,'Retired RPCs never reach the database');}
 assert.equal((await handleApi(request('rpc/ibta_restore_backup',post),{},upstream)).status,403);
+for(const operation of ['ibta_save_trainee_worksheet','ibta_trainee_worksheet_action']){assert.equal((await handleApi(request('rpc/'+operation,post),{},upstream)).status,200);assert.ok(calls.at(-1).url.includes(operation));assert.equal(calls.at(-1).options.headers.get('Authorization'),bearer);}
+assert.equal((await handleApi(request('rpc/ibta_claim_trainee_voucher',{...post,body:JSON.stringify({target_code:'TEST',expected_version:1,use_date:'01/01/1900',trainee_name:'Automatic trainee'})}),{},upstream)).status,200);assert.equal(JSON.parse(calls.at(-1).options.body).trainee_name,'Automatic trainee');assert.notEqual(JSON.parse(calls.at(-1).options.body).use_date,'01/01/1900');
 role='admin';assert.equal((await handleApi(request('rpc/ibta_restore_backup',post),{},upstream)).status,200);
 assert.equal((await handleApi(request('ibta_codes',{headers:{Authorization:bearer,Origin:'https://evil.invalid'}}),{},upstream)).status,403);
 assert.equal((await handleApi(request('rpc/ibta_claim_code',{...post,body:'{'}),{},upstream)).status,400);

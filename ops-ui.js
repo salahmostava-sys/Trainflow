@@ -12,7 +12,8 @@ function validBackup(value){
   const validCodes=value.codes.every(row=>{
     if(!row || typeof row.code!=='string' || typeof row.category!=='string' ||
        !row.code.trim() || row.code.length>200 || !row.category.trim() || row.category.length>100 ||
-       (row.notes!=null && (typeof row.notes!=='string' || row.notes.length>2000)))return false;
+       (row.notes!=null && (typeof row.notes!=='string' || row.notes.length>2000)) ||
+       (row.trainee_name!=null&&(typeof row.trainee_name!=='string'||row.trainee_name.length>200)))return false;
     const key=row.code.toLocaleLowerCase();
     if(seen.has(key))return false;
     seen.add(key);return true;
@@ -22,8 +23,13 @@ function validBackup(value){
     if(!Array.isArray(value.traineeSheets)||value.traineeSheets.length>1000)return false;
     const owners=new Set();
     for(const sheet of value.traineeSheets){
-      if(!sheet||typeof sheet.owner_id!=='string'||!/^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(sheet.owner_id)||owners.has(sheet.owner_id))return false;
-      owners.add(sheet.owner_id);
+      const uuid=/^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
+      if(!sheet||typeof sheet.owner_id!=='string'||!uuid.test(sheet.owner_id)||(sheet.sheet_id!==undefined&&!uuid.test(sheet.sheet_id)))return false;
+      const identity=sheet.owner_id.toLowerCase()+':'+(sheet.sheet_id||'00000000-0000-0000-0000-000000000001').toLowerCase();if(owners.has(identity))return false;owners.add(identity);
+      if(sheet.sheet_name!==undefined&&(typeof sheet.sheet_name!=='string'||!sheet.sheet_name.trim()||sheet.sheet_name.length>100))return false;
+      if(sheet.sheet_order!==undefined&&!Number.isInteger(sheet.sheet_order))return false;
+      if(sheet.sheet_hidden!==undefined&&typeof sheet.sheet_hidden!=='boolean')return false;
+      if(sheet.tab_color!=null&&!/^#[0-9a-f]{6}$/i.test(sheet.tab_color))return false;
       if(!Array.isArray(sheet.cells)||sheet.cells.length>1000000||sheet.cells.some(row=>!Array.isArray(row)||row.length<13||row.length>500||row.some(cell=>typeof cell!=='string'||cell.length>2000)))return false;
     }
   }

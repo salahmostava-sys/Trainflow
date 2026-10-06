@@ -6,7 +6,7 @@ const DATABASE_URL='https://xaeffreqwtozsgqajzpc.supabase.co';
 const PUBLIC_KEY='sb_publishable_TB0SB3SNFP1ygpRvMoeSGg_s8o0mHeO';
 const tables=new Set(['ibta_codes','ibta_settings','ibta_supervisor_stock','ibta_members','ibta_audit','ibta_trainee_sheets']);
 const adminRpc=new Set(['ibta_restore_backup','ibta_import_codes','ibta_change_supervisor_stock','ibta_assign_codes']);
-const userRpc=new Set(['ibta_apply_changes','ibta_claim_code','ibta_save_trainee_sheet_formatted']);
+const userRpc=new Set(['ibta_apply_changes','ibta_claim_code','ibta_save_trainee_sheet_formatted','ibta_save_trainee_worksheet','ibta_trainee_worksheet_action','ibta_set_voucher_trainee_name','ibta_claim_trainee_voucher']);
 const json=(status,message)=>Response.json({message},{status,headers:{'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
 // Vercel adds catch-all routing parameters to Edge request URLs. They are not
 // PostgREST filters: forwarding path=ibta_members causes PGRST100 on sign-in.
@@ -52,7 +52,7 @@ export async function handleApi(request,env={},fetcher=(...args)=>globalThis.fet
       const combined=new Uint8Array(bytes);let offset=0;for(const chunk of chunks){combined.set(chunk,offset);offset+=chunk.byteLength;}
       body=new TextDecoder().decode(combined);let payload;try{payload=JSON.parse(body);}catch{return json(400,'INVALID_JSON');}
       if(!payload||typeof payload!=='object'||Array.isArray(payload))return json(400,'INVALID_JSON');
-      if(name==='ibta_claim_code'){
+      if(name==='ibta_claim_code'||name==='ibta_claim_trainee_voucher'){
         const parts=new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Riyadh',day:'2-digit',month:'2-digit',year:'numeric'}).formatToParts(new Date());
         const part=name=>parts.find(p=>p.type===name).value;
         payload.use_date=part('day')+'/'+part('month')+'/'+part('year');body=JSON.stringify(payload);

@@ -20,7 +20,7 @@ const TraineeFiles=(()=>{
     const apply=node('button',undefined,{id:'sheet-xlsx-apply',type:'button',class:'sheet-primary'});apply.disabled=true;
     dialog.append(header,modeLabel,modeHint,fileLabel,sheetLabel,headersLabel,status,grid,apply);document.body.append(dialog);
     function translate(){title.textContent=tr('استيراد بيانات الجدول من Excel','Import table data from Excel');fileCaption.textContent=tr('ملف Excel بصيغة XLSX','Excel file (.xlsx)');sheetCaption.textContent=tr('ورقة البيانات','Worksheet');headersCaption.textContent=tr('الصف الأول يحتوي على عناوين الأعمدة','First row contains column headers');modeCaption.textContent=tr('طريقة الاستيراد','Import method');const selected=importMode.value;importMode.replaceChildren(node('option',tr('اختر طريقة الاستيراد','Choose import method'),{value:''}),node('option',tr('الإضافة إلى الشيت الحالي','Append to current sheet'),{value:'append'}),node('option',tr('بدء شيت جديد ببيانات الملف','Start a new sheet with this file'),{value:'new'}));importMode.value=selected;updateMode();if(preview)renderPreview();}
-    function updateMode(){const fresh=importMode.value==='new';modeHint.textContent=fresh?tr('سيستبدل محتوى الشيت الحالي وتنسيقه ببيانات الملف. يمكنك استرجاع القديم باستخدام Ctrl+Z.','This replaces the current sheet content and formatting with the file data. Restore the previous sheet with Ctrl+Z.'):importMode.value==='append'?tr('ستضاف بيانات الملف بعد آخر صف به بيانات، مع الاحتفاظ بالشيت الحالي.','File rows will be added after the last populated row, keeping the current sheet.'):tr('اختر الإضافة للشيت الحالي أو البدء من جديد. لن تتغير البيانات أثناء المعاينة.','Choose append or start fresh. Previewing does not change your data.');apply.textContent=fresh?tr('بدء الشيت ببيانات الملف','Start sheet with file data'):tr('إضافة الصفوف إلى نهاية الجدول','Append rows to the table');}
+    function updateMode(){const fresh=importMode.value==='new';modeHint.textContent=fresh?tr('سينشئ شيت مستقل ببيانات الملف مع الاحتفاظ بالشيت الحالي.','This creates a separate worksheet with the file data and keeps the current worksheet.'):importMode.value==='append'?tr('ستضاف بيانات الملف بعد آخر صف به بيانات، مع الاحتفاظ بالشيت الحالي.','File rows will be added after the last populated row, keeping the current sheet.'):tr('اختر الإضافة للشيت الحالي أو البدء من جديد. لن تتغير البيانات أثناء المعاينة.','Choose append or start fresh. Previewing does not change your data.');apply.textContent=fresh?tr('بدء الشيت ببيانات الملف','Start sheet with file data'):tr('إضافة الصفوف إلى نهاية الجدول','Append rows to the table');}
     function prepareImport(s){const fresh=importMode.value==='new';return TraineeXlsx.prepare(preview.rows,headers.checked,fresh?s.importLabels:s.labels,fresh?{}:s.formatting.headers);}
     function renderPreview(){
       apply.disabled=true;grid.replaceChildren();if(!preview)return;
@@ -46,12 +46,12 @@ const TraineeFiles=(()=>{
     sheetSelect.onchange=async()=>{const token=++generation,index=Number(sheetSelect.value);apply.disabled=true;status.textContent=tr('جارٍ قراءة الورقة…','Reading worksheet…');try{const result=await request(importWorker,'select',{index});if(token===generation&&dialog.open)showResult({...result,index});}catch(error){if(token===generation)status.textContent=errorText(error);}};
     headers.onchange=renderPreview;
     importMode.onchange=()=>{updateMode();renderPreview();};
-    apply.onclick=()=>{
+    apply.onclick=async()=>{
       if(apply.disabled||!preview)return;const s=h.state();if(!s.loaded||s.owner!==selectedOwner){dialog.close();return;}
       try{
         const prepared=prepareImport(s),fresh=importMode.value==='new';let start=fresh?0:s.cells.length;while(start&&!s.cells[start-1].some(Boolean))start--;
         if(start+prepared.rows.length>D.MAX_ROWS)throw Error('SHEET_LIMIT');
-        const fmt=fresh?D.defaultFormat():D.format(s.formatting);Object.assign(fmt.headers,prepared.headers);const next=D.pasteMapped(fresh?[]:s.cells,prepared.rows,start,prepared.targets);if(fresh)h.replaceSheet(next,fmt);else h.change(next,true,fmt);
+        const fmt=fresh?D.defaultFormat():D.format(s.formatting);Object.assign(fmt.headers,prepared.headers);const next=D.pasteMapped(fresh?[]:s.cells,prepared.rows,start,prepared.targets);if(fresh){if(!await h.newSheet(next,fmt))return;}else h.change(next,true,fmt);
         dialog.close();h.message((fresh?tr('تم بدء الشيت بـ','Sheet started with '):tr('تمت إضافة ','Added '))+prepared.rows.length+tr(' صفًا. يمكنك التراجع باستخدام Ctrl+Z.',' rows. You can undo with Ctrl+Z.'));
       }catch(error){status.textContent=errorText(error);}
     };
@@ -60,7 +60,7 @@ const TraineeFiles=(()=>{
       if(exportWorker)return;const owner=h.state().owner;exportButton.disabled=true;
       try{
         const s=h.state();if(!s.loaded||s.owner!==owner)return;h.message(tr('جارٍ تجهيز ملف Excel…','Preparing Excel file…'));exportWorker=createWorker();
-        const result=await request(exportWorker,'write',{cells:s.cells,headers:s.labels.map(pair=>tr(...pair))});
+        const result=await request(exportWorker,'write',{cells:s.cells,headers:s.labels.map(pair=>tr(...pair)),format:s.formatting});
         if(!h.state().loaded||h.state().owner!==owner)return;
         const url=URL.createObjectURL(new Blob([result.buffer],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'})),a=node('a',undefined,{href:url,download:'trainees.xlsx'});a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);h.message(tr('تم تصدير بيانات الجدول إلى Excel.','Table data exported to Excel.'));
       }catch(error){if(error.message!=='CANCELLED'&&h.state().owner===owner)h.message(errorText(error),true);}finally{stop(exportWorker);exportWorker=null;exportButton.disabled=false;}

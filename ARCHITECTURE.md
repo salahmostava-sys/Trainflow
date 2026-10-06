@@ -189,3 +189,11 @@ For a faulty frontend deployment, roll back through Vercel or revert the Git com
 - [JavaScript API details](docs/javascript-server.md)
 - [Google reports setup](docs/google-reports.md)
 - [Documentation index](docs/README.md)
+
+## Independent worksheets and voucher names — 6 October 2026
+
+The trainee key is now (owner_id, sheet_id); the existing row keeps the fixed first-sheet identifier and its cells/format. Metadata includes sheet_name, sheet_order, sheet_hidden and tab_color. List/read queries scope the owner and selected sheet, and saves use ibta_save_trainee_worksheet with the existing optimistic version and validators. Legacy save RPCs target only the original worksheet. The worksheet action RPC serializes changes per owner, caps creation at 100 sheets and guards the last visible worksheet. RLS retains approved-owner access and the admin override. Audit keys now identify the worksheet, including deletions.
+
+trainees-sheets.js manages tabs and metadata dialogs; trainees-borders.js stages border changes. trainees-core.js validates edge pens, row visibility, widths and non-destructive center-across metadata. Structural cell operations map values and styles together and reject overflow. Worker XLSX output includes formatting and borders. Cell Undo is isolated to the active worksheet; switching closes pending editors, saves first, increments the epoch and isolates Prometric session identity.
+
+ibta_codes.trainee_name stores the voucher recipient. ibta_claim_trainee_voucher updates usage and name atomically under the existing owner RLS and version condition. Manual name edits require operator/admin membership and a current voucher version. Code replacement preserves the name; JSON restores and exports include it. voucher-names.js renders the independent name input without reusing notes.
