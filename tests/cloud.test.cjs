@@ -6,6 +6,7 @@ class Element {
   addEventListener(event,fn){this.listeners[event]=fn;} select(){} focus(){} matches(){return false;}
   setAttribute(name,value){this[name]=value;}
   getAttribute(name){return this[name] ?? null;}
+  getBoundingClientRect(){return {top:600,bottom:640,left:1250,right:1290,width:40,height:40};}
   removeAttribute(name){delete this[name];}
   get options(){return this.children;}
   showModal(){this.open=true;}
