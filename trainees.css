@@ -231,10 +231,12 @@
   .sheet-trainee-dialog .sheet-detail-record .sheet-create-prometric{margin-top:10px;padding:8px 14px}
 }
 @media(min-width:761px) and (max-height:650px){
-  .sheet-trainee-dialog{padding:12px}
-  .sheet-trainee-dialog .sheet-detail-record{padding:10px;margin-top:8px}
-  .sheet-trainee-dialog .sheet-detail-record dl{row-gap:2px;line-height:1.35}
-  .sheet-trainee-dialog button.sheet-detail-copy-value{line-height:1.35}
+  .sheet-trainee-dialog{padding:10px;inset:8px 0 auto;max-height:calc(100dvh - 16px)}
+  .sheet-trainee-dialog .sheet-detail-header h2{font-size:16px}
+  .sheet-trainee-dialog .sheet-detail-record{padding:8px 10px;margin-top:6px}
+  .sheet-trainee-dialog .sheet-detail-record dl{row-gap:1px;line-height:1.28;font-size:12.5px}
+  .sheet-trainee-dialog button.sheet-detail-copy-value{line-height:1.28}
+  .sheet-trainee-dialog .sheet-detail-record .sheet-create-prometric{margin-top:6px;padding:6px 12px}
 }
 @media(max-width:760px){
   .sheet-trainee-dialog{inset:0;margin:0;width:100vw;max-width:100vw;height:100dvh;max-height:100dvh;border:0;border-radius:0;padding:14px;box-sizing:border-box}
@@ -269,18 +271,18 @@
 #sheet-workspace .sheet-grid th.sheet-rownum.sheet-selected-row-header{background:#d5ecdf!important;color:#107c41;box-shadow:inset 3px 0 #107c41}
 @media(max-width:700px){.sheet-local-note{font-size:12px}}
 /* All commands share one modern compact ribbon; formatting scrolls on narrow screens. */
-#sheet-workspace>.sheet-clean-toolbar{display:block;padding:0;background:#fff;border-bottom:1px solid #e2e8f0}
+#sheet-workspace>.sheet-clean-toolbar{display:block;padding:0;background:#fff;border-bottom:1px solid #e2e8f0;max-width:100%;overflow:hidden}
 #sheet-workspace .sheet-scroll{overflow-anchor:none}
-.sheet-ribbon-top{display:flex;align-items:center;gap:4px;padding:4px 10px;background:#ffffff;border-bottom:1px solid #e2e8f0;flex-wrap:wrap;min-height:36px;box-sizing:border-box}
+.sheet-ribbon-top{display:flex;align-items:center;gap:4px;padding:4px 10px;background:#ffffff;border-bottom:1px solid #e2e8f0;flex-wrap:wrap;min-height:36px;box-sizing:border-box;max-width:100%}
 .sheet-ribbon-divider{display:inline-block;width:1px;height:16px;background:#e2e8f0;margin:0 3px;flex-shrink:0;align-self:center}
 #sheet-workspace #sheet-ribbon-toggle{white-space:nowrap;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;font-weight:600;font-size:12px;border-radius:6px;padding:0 10px;min-height:28px;height:28px;cursor:pointer;transition:all .15s ease;display:inline-flex;align-items:center;gap:4px;box-sizing:border-box}
 #sheet-workspace #sheet-ribbon-toggle:hover{background:#dbeafe;border-color:#93c5fd;color:#1e40af}
 #sheet-workspace .sheet-ribbon-top .sheet-status{padding:3px 10px;font-size:11.5px;font-weight:600;border-radius:999px;background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;min-height:24px;display:inline-flex;align-items:center;gap:4px;margin-inline-start:auto;white-space:nowrap}
 #sheet-workspace .sheet-ribbon-top .sheet-status:empty{display:none}
 #sheet-workspace .sheet-ribbon-top .sheet-status[data-error=true]{background:#fff1f2;color:#e11d48;border-color:#fecdd3}
-.sheet-ribbon-panel{display:flex;flex-direction:column;padding:5px 10px;gap:4px;background:#fafbfc;border-bottom:1px solid #e2e8f0}
-.sheet-ribbon-command-row{display:flex;flex-wrap:nowrap;align-items:center;gap:4px;min-height:30px;padding:0;border:0;overflow-x:auto;scrollbar-width:thin}
-.sheet-ribbon-format-row{display:flex;flex-wrap:nowrap;align-items:center;gap:4px;min-height:30px;padding:0;border:0;overflow-x:auto;scrollbar-width:thin}
+.sheet-ribbon-panel{display:flex;flex-direction:column;padding:5px 10px;gap:4px;background:#fafbfc;border-bottom:1px solid #e2e8f0;max-width:100%;min-width:0;overflow:hidden;box-sizing:border-box}
+.sheet-ribbon-command-row{display:flex;flex-wrap:nowrap;align-items:center;gap:4px;min-height:30px;padding:0;border:0;overflow-x:auto;scrollbar-width:thin;max-width:100%;min-width:0}
+.sheet-ribbon-format-row{display:flex;flex-wrap:nowrap;align-items:center;gap:4px;min-height:30px;padding:0;border:0;overflow-x:auto;scrollbar-width:thin;max-width:100%;min-width:0}
 #sheet-workspace #sheet-prometric-open{background:#107c41!important;border-color:#107c41!important;color:#fff!important;font-weight:700!important}
 #sheet-workspace #sheet-prometric-open:hover{background:#0b6334!important;border-color:#0b6334!important}
 #sheet-workspace .sheet-clean-toolbar .sheet-ribbon-panel .sheet-ribbon-group{display:inline-flex!important;align-items:center;padding:0;border:0;min-width:0;max-width:none;gap:4px;justify-content:flex-start;flex:0 0 auto!important}
@@ -434,6 +436,7 @@ body.sheet-expanded-open{overflow:hidden}
   #sheet-workspace .sheet-ribbon-top{padding:8px}
   #sheet-workspace .sheet-ribbon-top .sheet-ribbon-actions{flex-wrap:nowrap;max-width:100%;overflow-x:auto;padding-bottom:4px}
   .sheet-ribbon-panel{padding:8px}
+  .sheet-ribbon-command-row{display:flex;flex-wrap:wrap;align-items:center;gap:4px;width:100%;max-width:100%}
   .sheet-ribbon-format-row{display:flex;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:thin;padding-bottom:4px}
   #sheet-workspace .sheet-clean-toolbar .sheet-ribbon-panel .sheet-ribbon-group{flex:0 0 auto;min-width:0}
   #sheet-workspace .sheet-filters{display:flex!important}
