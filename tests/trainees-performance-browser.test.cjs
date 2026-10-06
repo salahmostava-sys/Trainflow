@@ -42,7 +42,7 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),path
     await page.locator('#sheet-direction').selectOption('rtl');await go('C100');assert.equal(await page.locator('td.sheet-current').textContent(),'Trainee 99');await aligned();
     await go('SF2000');assert.equal(await page.locator('td.sheet-current').textContent(),'Last 1999');await aligned();
     await page.locator('#sheet-zoom-in').click();await go('SF3068');await aligned();
-    await page.setViewportSize({width:390,height:844});await go('C1');await aligned();assert.ok(await mounted()<1000);
+    await page.setViewportSize({width:390,height:844});if(await page.locator('#sidebar-backdrop').isVisible())await page.locator('#sidebar-backdrop').click({position:{x:10,y:10}});await go('C1');await aligned();assert.ok(await mounted()<1000);
     await page.locator('#sheet-save').click();await page.waitForFunction(()=>!Trainees.hasDraft());await page.locator('#sheet-reload').click();await page.waitForFunction(()=>document.getElementById('sheet-status').textContent==='تم الحفظ');
     await go('SF3068');assert.equal(await page.locator('td.sheet-current').textContent(),'Changed last','Far edits survive compact persistence and reload');
     await page.keyboard.press('Control+ArrowUp');assert.equal(await page.locator('td.sheet-current').getAttribute('data-v'),'0');

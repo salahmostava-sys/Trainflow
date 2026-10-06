@@ -203,3 +203,11 @@ Borders → Format borders opens the line/color editor. Choose a pen, use None/O
 Merge offers Merge & Center, Merge Across, Merge Cells, Unmerge Cells and Center Across Selection. Merging warns before discarding values outside the first cell. Center Across Selection preserves values and separate cells. Sort & Filter supports A to Z, Z to A, up to five custom sort levels, filter visibility, clearing and reapplying. Sorting changes the display order while keeping each trainee record intact.
 
 Get in trainee details reserves the voucher and saves the English trainee name in the same database update; Arabic is the fallback. Vouchers displays an editable Trainee name column for administrators/operators; copy-only accounts can view it. Names survive code edits, backups and colored voucher exports. A claim/version conflict writes neither usage nor a new name. Renaming a trainee later does not retroactively change a previously reserved voucher name; edit that name in Vouchers when needed.
+
+## أدوات الشيت بتصميم Excel
+
+قوائم Insert وDelete تتيح الخلايا والصفوف والأعمدة والشيتات المستقلة. قائمة Format تضم Cell Size وVisibility وOrganize Sheets؛ افتح Hide & Unhide بالنقر أو بالمرور عليها أو بالسهم المناسب لاتجاه الواجهة. قائمة Sort & Filter تبدأ بالفرز التصاعدي والتنازلي والفرز المخصص، ثم Filter وClear وReapply. Clear وReapply يتفعّلان عند وجود فرز أو فلتر. إغلاق قائمة الأدوات بـEscape يبقي القائمة الجانبية مفتوحة.
+
+زر Merge & Center يطبق الدمج والتوسيط على التحديد؛ السهم المجاور يفتح Merge Across وMerge Cells وUnmerge Cells وCenter Across Selection. المحاذاة الأفقية والرأسية والتفاف النص تحفظ مع الخلايا ويمكن التراجع عنها. عند وجود قيم متعددة، يطلب الدمج التأكيد قبل الاحتفاظ بقيمة أول خلية.
+
+Format borders يعرض 13 عينة لأسلوب الخط، ولونًا مع Automatic، والإعدادات المسبقة None وOutline وInside، ومعاينة الحواف والحدود الداخلية والقطرية. الإعدادات تتغير في المعاينة أولًا؛ Apply يطبقها، وCancel يلغيها. نسخ الخلايا الغني وتصدير Excel يحافظان على الحدود والألوان المحفوظة.

@@ -3,30 +3,52 @@ const TraineeExcel=(()=>{
   'use strict';
   function mount(h){
     const {D,$,tr,node,button}=h,tools=$('sheet-workspace').querySelector('.sheet-format-tools');
-    const text=(el,ar,en)=>{el.dataset.excelAr=ar;el.dataset.excelEn=en;el.textContent=tr(ar,en);return el;};
+    const svg=body=>'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" aria-hidden="true">'+body+'</svg>';
+    const grid=(kind='')=>svg('<rect x="3" y="4" width="18" height="16" stroke="#84929e"/><path d="M3 9h18M3 14h18M9 4v16M15 4v16" stroke="#bbc5ce"/>'+({insert:'<path d="M3 9h18v5H3z" fill="#ccecff" stroke="#1682bb"/><path d="M1 12h9m-5-4-4 4 4 4" stroke="#1682bb"/>',delete:'<path d="M3 9h18v5H3z" fill="#ccecff" stroke="#1682bb"/><path d="m14 8 8 8m0-8-8 8" stroke="#db4141"/>',columns:'<path d="M9 4h6v16H9z" fill="#ccecff" stroke="#1682bb"/>',merge:'<path d="M3 9h18v5H3z" fill="#ccecff" stroke="#1682bb"/><path d="m5 10 2 2-2 2 2m14-4-2 2 2 2" stroke="#1682bb"/>',unmerge:'<path d="M9 4v16M15 4v16" stroke="#1682bb"/>',format:'<path d="M3 9h18v5H3z" fill="#ccecff" stroke="#1682bb"/><path d="M9 1v4m6-4v4M1 9h4M1 14h4" stroke="#1682bb"/>',border:'<path d="M3 4h18v16H3z" stroke="#111" stroke-dasharray="2 2"/>'}[kind]||''));
+    const funnel=svg('<path d="M3 4h18l-7 8v7l-4 2v-9z" stroke="#555"/>');
+    const sort=reverse=>svg('<text x="2" y="9" stroke="none" fill="#267aa4" font-size="10">'+(reverse?'Z':'A')+'</text><text x="2" y="20" stroke="none" fill="#555" font-size="10">'+(reverse?'A':'Z')+'</text><path d="M17 3v17m-4-4 4 4 4-4"/>');
+    const iconFor=id=>{
+      if(id==='sheet-sort-menu-trigger')return '<svg viewBox="0 0 40 24" fill="none" stroke="#555" stroke-width="1.2" aria-hidden="true"><text x="2" y="9" stroke="none" fill="#267aa4" font-size="10">A</text><text x="2" y="20" stroke="none" fill="#555" font-size="10">Z</text><path d="M17 3v17m-4-4 4 4 4-4M23 5h15l-6 7v7l-3 2v-9z"/></svg>';
+      if(/sort-menu-(ascending|descending|custom|clear)$/.test(id))return sort(id.endsWith('descending'));
+      if(/sort-menu-(filter|clear-filters|reapply)$/.test(id))return funnel;
+      if(id==='sheet-merge-center'||id.includes('merge-menu'))return grid(id.endsWith('unmerge')?'unmerge':'merge');
+      if(id.includes('border-menu'))return grid('border');
+      if(id.includes('cell-format-menu'))return grid(id.includes('column')||id.includes('cols')?'columns':'format');
+      if(/sheet-(insert|add)/.test(id))return grid(id.includes('col')?'columns':'insert');
+      if(/sheet-delete/.test(id))return grid('delete');
+      if(id==='sheet-wrap-text')return svg('<path d="M3 5h18M3 10h12a4 4 0 0 1 0 8h-4m3-3-3 3 3 3M3 15h4"/>');
+      if(id.startsWith('sheet-valign-'))return svg('<path d="M3 '+({top:5,middle:12,bottom:19}[id.slice(13)]||12)+'h18"/><path d="M6 8h12M6 12h12M6 16h12" stroke="#929ca7"/>');
+      return '';
+    };
+    const paintLabel=el=>{const label=tr(el.dataset.excelAr,el.dataset.excelEn),icon=iconFor(el.id);el.replaceChildren();if(el.dataset.split==='true'){el.append(node('span','▾',{'aria-hidden':'true'}));el.setAttribute('aria-label',tr('خيارات الدمج','Merge options'));return;}if(icon){const image=node('span',undefined,{class:'sheet-command-icon','aria-hidden':'true'});image.innerHTML=icon;el.append(image);}el.append(node('span',el.getAttribute('aria-haspopup')==='menu'?label.replace(/ ▾$/,''):label,{class:'sheet-command-label'}));if(el.getAttribute('aria-haspopup')==='menu')el.append(node('span',el.dataset.submenu==='true'?'›':'▾',{class:'sheet-command-arrow','aria-hidden':'true'}));if(icon)el.setAttribute('aria-label',label.replace(/ ▾$/,''));};
+    const text=(el,ar,en)=>{el.dataset.excelAr=ar;el.dataset.excelEn=en;paintLabel(el);return el;};
     const action=(id,ar,en,run)=>{const el=button('',()=>{h.commitEdit();if(!h.state().loaded)return;const fail=error=>h.message(()=>error.message||tr('تعذر تنفيذ العملية','Could not complete the action'),true);try{const result=run();if(result?.catch)result.catch(fail);}catch(error){fail(error);}});el.id=id;return text(el,ar,en);};
     const group=(id,ar,en)=>{const box=node('section',undefined,{id,class:'sheet-ribbon-group'}),body=node('div',undefined,{class:'sheet-ribbon-actions'});box.append(body,text(node('small'),ar,en));tools.append(box);return body;};
     const dropdowns=[];
-    const closeMenus=()=>dropdowns.forEach(({list})=>{if(list.matches(':popover-open'))list.hidePopover();});
-    const dropdown=(host,id,ar,en,controls)=>{
+    const closeMenus=keep=>dropdowns.forEach(({list})=>{if(list.matches(':popover-open')&&(!keep?.nodeType||!list.contains(keep)))list.hidePopover();});
+    const dropdown=(host,id,ar,en,controls,submenu=false)=>{
       const box=node('div',undefined,{id,class:'sheet-command-dropdown'}),trigger=text(button('',()=>{}),ar+' ▾',en+' ▾'),list=node('div',undefined,{id:id+'-items',class:'sheet-command-popover',popover:'auto',role:'menu','data-trigger':id+'-trigger'});
-      trigger.id=id+'-trigger';trigger.setAttribute('aria-haspopup','menu');trigger.setAttribute('aria-controls',list.id);trigger.setAttribute('aria-expanded','false');
-      controls.forEach(el=>{el.setAttribute('role','menuitem');list.append(el);});box.append(trigger);host.append(box);document.body.append(list);
+      trigger.id=id+'-trigger';trigger.setAttribute('aria-haspopup','menu');trigger.setAttribute('aria-controls',list.id);trigger.setAttribute('aria-expanded','false');trigger.dataset.submenu=String(submenu);paintLabel(trigger);
+      controls.forEach(el=>{if(el.tagName==='BUTTON')el.setAttribute('role','menuitem');list.append(el);});box.append(trigger);host.append(box);if(submenu){box.append(list);box.classList.add('sheet-command-submenu');trigger.setAttribute('role','menuitem');}else document.body.append(list);
       const place=()=>{
         const a=trigger.getBoundingClientRect(),b=list.getBoundingClientRect(),gap=8;
-        list.style.left=Math.max(gap,Math.min(innerWidth-b.width-gap,list.dir==='rtl'?a.right-b.width:a.left))+'px';
-        list.style.top=Math.max(gap,Math.min(innerHeight-b.height-gap,a.bottom+b.height+4<=innerHeight?a.bottom+4:a.top-b.height-4))+'px';
+        const left=submenu?(list.dir==='rtl'?(a.left-b.width-gap>=gap?a.left-b.width-gap:a.right+gap):(a.right+b.width+gap<=innerWidth?a.right+gap:a.left-b.width-gap)):(list.dir==='rtl'?a.right-b.width:a.left);
+        list.style.left=Math.max(gap,Math.min(innerWidth-b.width-gap,left))+'px';
+        list.style.top=Math.max(gap,Math.min(innerHeight-b.height-gap,submenu?a.top:(a.bottom+b.height+4<=innerHeight?a.bottom+4:a.top-b.height-4)))+'px';
       };
       dropdowns.push({trigger,list,place});
-      trigger.onclick=()=>{if(list.matches(':popover-open')){list.hidePopover();return;}h.commitEdit();closeMenus();list.dir=document.documentElement.dir==='rtl'?'rtl':'ltr';list.setAttribute('aria-label',trigger.textContent);list.showPopover();place();};
+      trigger.onclick=()=>{if(list.matches(':popover-open')){if(!submenu)list.hidePopover();return;}h.commitEdit();closeMenus(trigger);list.dir=document.documentElement.dir==='rtl'?'rtl':'ltr';list.setAttribute('aria-label',trigger.textContent);list.showPopover();place();};
       list.addEventListener('toggle',()=>trigger.setAttribute('aria-expanded',String(list.matches(':popover-open'))));
-      list.addEventListener('click',e=>{if(e.target.closest('button:not(:disabled)'))list.hidePopover();});
-      const focusItem=last=>{const items=[...list.querySelectorAll('button:not(:disabled)')];(last?items.at(-1):items[0])?.focus();};
-      trigger.addEventListener('keydown',e=>{if(['ArrowDown','ArrowUp'].includes(e.key)){e.preventDefault();if(!list.matches(':popover-open'))trigger.click();focusItem(e.key==='ArrowUp');}});
-      list.addEventListener('keydown',e=>{const items=[...list.querySelectorAll('button:not(:disabled)')],i=items.indexOf(document.activeElement);if(['ArrowDown','ArrowUp','Home','End'].includes(e.key)){e.preventDefault();items[e.key==='Home'?0:e.key==='End'?items.length-1:(i+(e.key==='ArrowDown'?1:-1)+items.length)%items.length]?.focus();}});
+      list.addEventListener('click',e=>{const target=e.target.closest('button:not(:disabled)');if(target&&!target.hasAttribute('aria-haspopup'))closeMenus();});
+      const itemsInMenu=()=>[...list.querySelectorAll('button:not(:disabled)')].filter(el=>el.closest('.sheet-command-popover')===list);
+      const focusItem=last=>{const items=itemsInMenu();(last?items.at(-1):items[0])?.focus();};
+      if(submenu)trigger.addEventListener('mouseenter',()=>{if(!list.matches(':popover-open'))trigger.click();});
+      trigger.addEventListener('keydown',e=>{if(submenu&&e.key===(document.documentElement.dir==='rtl'?'ArrowLeft':'ArrowRight')){e.preventDefault();e.stopPropagation();if(!list.matches(':popover-open'))trigger.click();focusItem(false);return;}if(['ArrowDown','ArrowUp'].includes(e.key)){e.preventDefault();if(!list.matches(':popover-open'))trigger.click();focusItem(e.key==='ArrowUp');}});
+      list.addEventListener('keydown',e=>{if(e.target.closest('.sheet-command-popover')!==list)return;const items=itemsInMenu(),i=items.indexOf(document.activeElement);if(['ArrowDown','ArrowUp','Home','End'].includes(e.key)){e.preventDefault();e.stopPropagation();items[e.key==='Home'?0:e.key==='End'?items.length-1:(i+(e.key==='ArrowDown'?1:-1)+items.length)%items.length]?.focus();}});
       return box;
     };
     window.addEventListener('resize',closeMenus);document.addEventListener('scroll',e=>{if(!e.target.closest?.('.sheet-command-popover'))for(const item of dropdowns)if(item.list.matches(':popover-open'))item.place();},true);
+    const separator=()=>node('hr',undefined,{role:'separator'}),caption=(ar,en)=>text(node('div',undefined,{class:'sheet-menu-heading',role:'presentation'}),ar,en);
     const menu=(host,id,ar,en,items)=>dropdown(host,id,ar.replace(' ▾',''),en.replace(' ▾',''),items.map(([key,a,e,run])=>action(id+'-'+key,a,e,run)));
     const state=()=>h.state(),style=()=>{const s=state();return s.formatting.styles[s.view[s.cursor.r]+':'+s.cursor.c]||{};};
     const ranges=s=>s.ranges||[s.bounds],rows=s=>D.selectionRows(ranges(s),s.view.length).map(r=>s.view[r]),columns=s=>D.selectionColumns(ranges(s),s.cols);
@@ -45,7 +67,7 @@ const TraineeExcel=(()=>{
     const borderEditor=TraineeBorders.mount(h);
     const borders=type=>selected((cells,fmt,r,c,s)=>{const vr=s.view.indexOf(r),cols=s.cols,at=cols.indexOf(c),key=r+':'+c,old=fmt.styles[key]||{},has=(row,col)=>D.selectedCell(ranges(s),row,col);fmt.styles[key]={...old,border:type,borderTop:null,borderBottom:null,borderLeft:null,borderRight:null};delete fmt.styles[key].borders;if(type==='outline')Object.assign(fmt.styles[key],{border:'none',borderTop:!has(vr-1,c),borderBottom:!has(vr+1,c),borderLeft:!has(vr,cols[at-1]??-1),borderRight:!has(vr,cols[at+1]??D.MAX_COLS)});});
     menu(font,'sheet-border-menu','حدود ▾','Borders ▾',[...['all','outline','none','top','bottom','left','right'].map((v,i)=>[v,['كل الحدود','حدود خارجية','بدون حدود','علوي','سفلي','يسار','يمين'][i],['All borders','Outside borders','No borders','Top','Bottom','Left','Right'][i],()=>borders(v)]),['format','تنسيق الحدود…','Format borders…',()=>{closeMenus();borderEditor.open();}]]);
-    const align=group('sheet-excel-alignment','المحاذاة','Alignment');align.append($('sheet-align-right').parentElement);$('sheet-wrap').remove();
+    const align=group('sheet-excel-alignment','المحاذاة','Alignment');align.append($('sheet-align-right').parentElement);$('sheet-wrap').remove();const vertical=node('div',undefined,{class:'sheet-align-group sheet-valign-group'});for(const [key,ar,en]of [['top','محاذاة لأعلى','Top Align'],['middle','توسيط رأسي','Middle Align'],['bottom','محاذاة لأسفل','Bottom Align']])vertical.append(action('sheet-valign-'+key,ar,en,()=>h.formatSelection({valign:key})));align.append(vertical,action('sheet-wrap-text','التفاف النص','Wrap Text',()=>h.formatSelection({wrap:!(style().wrap??state().wrap)})));
     const merge=mode=>{
       const s=state();if(ranges(s).length>1){h.message(()=>tr('اختر منطقة واحدة متجاورة للدمج.','Select one contiguous range to merge.'),true);return;}if(s.filtered){h.message(()=>tr('امسح الفلاتر والفرز قبل الدمج.','Clear filters and sorting before merging.'),true);return;}const [r1,r2,c1,c2]=s.bounds,a=s.view[r1],b=s.view[r2];
       if(mode==='selection'){mutate((cells,fmt)=>{for(const r of rows(s)){for(const c of columns(s)){const key=r+':'+c,v=fmt.styles[key]||{};delete v.centerAcross;fmt.styles[key]=v;}fmt.styles[r+':'+c1]={...fmt.styles[r+':'+c1],align:'center',centerAcross:c2-c1+1};}});return;}
@@ -60,28 +82,32 @@ const TraineeExcel=(()=>{
     menu(align,'sheet-merge-menu','دمج وتوسيط ▾','Merge & Center ▾',[
       ['center','دمج وتوسيط','Merge & Center',()=>merge('center')],['across','دمج كل صف','Merge Across',()=>merge('across')],['cells','دمج الخلايا','Merge Cells',()=>merge('cells')],['unmerge','إلغاء الدمج','Unmerge Cells',()=>merge('unmerge')],['selection','توسيط عبر التحديد','Center Across Selection',()=>merge('selection')]
     ]);
+    $('sheet-merge-menu').classList.add('sheet-split-command');$('sheet-merge-menu').prepend(action('sheet-merge-center','دمج وتوسيط','Merge & Center',()=>merge('center')));$('sheet-merge-menu-trigger').dataset.split='true';paintLabel($('sheet-merge-menu-trigger'));
     const editing=group('sheet-excel-editing','الفرز والتحديد','Sort & selection');$('sheet-clear-format').remove();
     const sortDialog=node('dialog',undefined,{id:'sheet-sort-dialog',class:'sheet-file-dialog sheet-worksheet-dialog'}),sortTitle=text(node('h3'),'فرز مخصص','Custom Sort'),sortLevels=node('div',undefined,{id:'sheet-sort-levels'}),sortAdd=text(button('',()=>addSortLevel()),'إضافة مستوى','Add Level'),sortApply=text(button('',()=>{const rules=[...sortLevels.children].map(el=>({column:Number(el.firstChild.value),direction:Number(el.lastChild.value)}));if(new Set(rules.map(x=>x.column)).size!==rules.length){h.message(()=>tr('اختر أعمدة مختلفة لمستويات الفرز.','Choose different columns for sort levels.'),true);return;}h.customSort(rules);sortDialog.close();}),'تطبيق الفرز','Apply Sort'),sortCancel=text(button('',()=>sortDialog.close()),'إلغاء','Cancel');sortApply.id='sheet-sort-apply';sortAdd.id='sheet-sort-add-level';sortDialog.append(sortTitle,sortLevels,sortAdd,sortCancel,sortApply);document.body.append(sortDialog);
     function addSortLevel(){if(sortLevels.children.length>=5)return;const s=state(),line=node('div',undefined,{class:'sheet-sort-level'}),col=node('select',undefined,{'aria-label':tr('العمود','Column')}),dir=node('select',undefined,{'aria-label':tr('الترتيب','Order')});s.labels.forEach((pair,c)=>col.append(node('option',D.letter(c)+' · '+tr(...pair),{value:c})));col.value=String(sortLevels.children.length?s.cols[sortLevels.children.length]??0:s.cursor.c);dir.append(node('option',tr('تصاعدي A → Z','A to Z'),{value:1}),node('option',tr('تنازلي Z → A','Z to A'),{value:-1}));const remove=text(button('',()=>line.remove()),'حذف المستوى','Remove Level');line.append(col,remove,dir);sortLevels.append(line);}
     dropdown(editing,'sheet-sort-menu','الفرز والفلترة','Sort & Filter',[
-      action('sheet-sort-menu-ascending','تصاعدي A → Z','Sort A → Z',()=>h.sort(state().cursor.c,1)),action('sheet-sort-menu-descending','تنازلي Z → A','Sort Z → A',()=>h.sort(state().cursor.c,-1)),action('sheet-sort-menu-clear','إلغاء الفرز','Clear sort',h.resetSort),
+      action('sheet-sort-menu-ascending','فرز من A إلى Z','Sort A to Z',()=>h.sort(state().cursor.c,1)),action('sheet-sort-menu-descending','فرز من Z إلى A','Sort Z to A',()=>h.sort(state().cursor.c,-1)),
       action('sheet-sort-menu-custom','فرز مخصص…','Custom Sort…',()=>{sortLevels.replaceChildren();addSortLevel();closeMenus();sortDialog.showModal();}),
-      action('sheet-sort-menu-filter','إظهار / إخفاء الفلاتر','Filter',()=>{$('sheet-workspace').classList.toggle('sheet-filters-minimal');}),action('sheet-sort-menu-clear-filters','مسح الفلاتر','Clear',h.clearFilters),action('sheet-sort-menu-reapply','إعادة التطبيق','Reapply',h.render),
-      action('sheet-find-select-menu-all','تحديد الكل','Select all',()=>h.selectAll()),action('sheet-find-select-menu-row','تحديد الصف','Select row',()=>{const s=state();h.select({r:s.cursor.r,c:0},{r:s.cursor.r,c:s.cols[s.cols.length-1]});}),action('sheet-find-select-menu-column','تحديد العمود','Select column',()=>{const s=state();h.select({r:0,c:s.cursor.c},{r:Math.max(0,s.view.length-1),c:s.cursor.c});})
+      separator(),action('sheet-sort-menu-filter','إظهار / إخفاء الفلاتر','Filter',()=>{$('sheet-workspace').classList.toggle('sheet-filters-minimal');$('sheet-sort-menu-filter').setAttribute('aria-pressed',String(!$('sheet-workspace').classList.contains('sheet-filters-minimal')));}),action('sheet-sort-menu-clear-filters','مسح الفلاتر','Clear',h.clearFilters),action('sheet-sort-menu-reapply','إعادة التطبيق','Reapply',h.render),
+      separator(),action('sheet-sort-menu-clear','إلغاء الفرز','Clear sort',h.resetSort),action('sheet-find-select-menu-all','تحديد الكل','Select all',()=>h.selectAll()),action('sheet-find-select-menu-row','تحديد الصف','Select row',()=>{const s=state();h.select({r:s.cursor.r,c:0},{r:s.cursor.r,c:s.cols[s.cols.length-1]});}),action('sheet-find-select-menu-column','تحديد العمود','Select column',()=>{const s=state();h.select({r:0,c:s.cursor.c},{r:Math.max(0,s.view.length-1),c:s.cursor.c});})
     ]);
     const cellsGroup=$('sheet-add-col').closest('.sheet-ribbon-group').querySelector('.sheet-ribbon-actions');
     const rowHeight=()=>{const n=Number(prompt(tr('ارتفاع الصف (20–400 بكسل):','Row height (20–400 px):'),String(style().height||28)));if(!Number.isInteger(n)||n<20||n>400)return;const s=state();mutate((cells,fmt)=>{const ids=new Set(rows(s));for(const [key,v]of Object.entries(fmt.styles))if(ids.has(Number(key.split(':')[0])))delete v.height;for(const r of ids){const c=s.cols[0];fmt.styles[r+':'+c]={...fmt.styles[r+':'+c],height:n};}});};
     const columnWidth=auto=>{const s=state();let n=0;if(!auto){n=Number(prompt(tr('عرض العمود (40–800 بكسل):','Column width (40–800 px):'),'160'));if(!Number.isFinite(n)||n<40||n>800)return;}for(const c of columns(s)){const width=auto?Math.max(60,Math.min(800,s.cells.reduce((max,row)=>Math.max(max,String(row[c]||'').length),String(D.letter(c)).length)*7+24)):n;h.setColumnWidth(c,width);}h.saveColumnWidths();h.render();};
-    menu(cellsGroup,'sheet-cell-format-menu','تنسيق ▾','Format ▾',[
+    const formatEntries=[
       ['row-height','ارتفاع الصف…','Row Height…',rowHeight],['autofit-row','ضبط ارتفاع الصف تلقائيًا','AutoFit Row Height',()=>mutate((cells,fmt,s)=>{const ids=new Set(rows(s));for(const [key,v]of Object.entries(fmt.styles))if(ids.has(Number(key.split(':')[0])))delete v.height;})],['column-width','عرض العمود…','Column Width…',()=>columnWidth(false)],['autofit','ضبط عرض العمود تلقائيًا','AutoFit Column Width',()=>columnWidth(true)],
       ['default-width','العرض الافتراضي…','Default Width…',()=>{const n=Number(prompt(tr('العرض الافتراضي (40–800 بكسل):','Default width (40–800 px):'),'160'));if(Number.isInteger(n)&&n>=40&&n<=800)mutate((cells,fmt)=>{fmt.defaultWidth=n;});}],
       ['hide-rows','إخفاء الصفوف','Hide Rows',()=>mutate((cells,fmt,s)=>{fmt.hiddenRows=[...new Set([...(fmt.hiddenRows||[]),...rows(s)])];})],['show-rows','إظهار كل الصفوف','Unhide Rows',()=>mutate((cells,fmt)=>{fmt.hiddenRows=[];})],
       ['hide-cols','إخفاء الأعمدة','Hide Columns',()=>mutate((cells,fmt,s)=>{const selected=columns(s);if(selected.length>=s.cols.length)return;fmt.hidden=[...new Set([...fmt.hidden,...selected])];})],['show-cols','إظهار كل الأعمدة','Unhide Columns',()=>mutate((cells,fmt)=>{fmt.hidden=[];})],
       ...[['hide-sheet','إخفاء الشيت','Hide Sheet','hide'],['show-sheet','إظهار شيت…','Unhide Sheet…','show'],['rename-sheet','إعادة تسمية الشيت…','Rename Sheet…','rename'],['move-sheet','نقل أو نسخ الشيت…','Move or Copy Sheet…','move'],['tab-color','لون التبويب…','Tab Color…','color']].map(([key,ar,en,action])=>[key,ar,en,()=>{closeMenus();h.worksheet(action);}])
-    ]);
+    ];
+    const formatActions=formatEntries.map(([key,ar,en,run])=>action('sheet-cell-format-menu-'+key,ar,en,run));
+    dropdown(cellsGroup,'sheet-cell-format-menu','تنسيق','Format',[caption('حجم الخلية','Cell Size'),...formatActions.slice(0,5),separator(),caption('الإظهار والإخفاء','Visibility'),separator(),caption('تنظيم الشيتات','Organize Sheets'),...formatActions.slice(11)]);
+    const formatList=$('sheet-cell-format-menu-items'),visibility=dropdown(formatList,'sheet-cell-format-menu-visibility','إخفاء وإظهار','Hide & Unhide',formatActions.slice(5,11),true);formatList.insertBefore(visibility,formatList.querySelectorAll('hr')[1]);
     const toolbar=$('sheet-workspace').querySelector('.sheet-tools'),essential=toolbar.querySelector('.sheet-essential-tools .sheet-ribbon-actions');
     essential.append($('sheet-select-all'),$('sheet-undo'),$('sheet-redo'));
-    const viewBody=group('sheet-view-tools','عرض الجدول','View');
+    const viewBody=group('sheet-view-tools','عرض الجدول','View');viewBody.append($('sheet-row-size').closest('label'));
     const columnsDialog=node('dialog',undefined,{id:'sheet-columns-dialog',class:'sheet-file-dialog'}),columnBox=$('sheet-columns'),columnTitle=$('sheet-columns-title');
     const columnsButton=node('button',undefined,{id:'sheet-columns-title',type:'button'});columnsButton.textContent=columnTitle.textContent;
     const columnsClose=text(button('',()=>columnsDialog.close()),'إغلاق','Close');columnsClose.id='sheet-columns-close';columnsDialog.append(text(node('h3'),'الأعمدة الظاهرة','Visible columns'),$('sheet-column-options'),columnsClose);document.body.append(columnsDialog);columnBox.replaceWith(columnsButton);columnsButton.onclick=()=>columnsDialog.showModal();
@@ -107,7 +133,7 @@ const TraineeExcel=(()=>{
     tools.remove();toolbar.classList.add('sheet-clean-toolbar');
     const files=TraineeFiles.mount({...h,host:essential,text,action});
     essential.prepend(ribbonToggle);
-    return {syncRibbon,closeFiles(){closeMenus();columnsDialog.close();borderEditor.close();sortDialog.close();shiftDialog.close();files.close();},translate(){closeMenus();files.translate();borderEditor.translate();syncRibbon();for(const el of document.querySelectorAll('[data-excel-ar]'))el.textContent=tr(el.dataset.excelAr,el.dataset.excelEn);},paint(s){fontName.value=s.font||'IBM Plex Sans Arabic';const size=s.size||state().formatting.fontSize;$('sheet-font-size').textContent=size+' px';$('sheet-font-minus').disabled=size<=10;$('sheet-font-plus').disabled=size>=32;for(const field of ['italic','underline','strike'])$('sheet-'+field).setAttribute('aria-pressed',String(!!s[field]));}};
+    return {syncRibbon,closeFiles(){closeMenus();columnsDialog.close();borderEditor.close();sortDialog.close();shiftDialog.close();files.close();},translate(){closeMenus();files.translate();borderEditor.translate();syncRibbon();for(const el of document.querySelectorAll('[data-excel-ar]'))paintLabel(el);},paint(s){const current=state();$('sheet-sort-menu-clear-filters').disabled=!current.filtered;$('sheet-sort-menu-reapply').disabled=!current.filtered;$('sheet-sort-menu-filter').setAttribute('aria-pressed',String(!$('sheet-workspace').classList.contains('sheet-filters-minimal')));for(const key of ['top','middle','bottom'])$('sheet-valign-'+key).setAttribute('aria-pressed',String((s.valign||'middle')===key));$('sheet-wrap-text').setAttribute('aria-pressed',String(s.wrap??current.wrap));fontName.value=s.font||'IBM Plex Sans Arabic';const size=s.size||state().formatting.fontSize;$('sheet-font-size').textContent=size+' px';$('sheet-font-minus').disabled=size<=10;$('sheet-font-plus').disabled=size>=32;for(const field of ['italic','underline','strike'])$('sheet-'+field).setAttribute('aria-pressed',String(!!s[field]));}};
   }
   return {mount};
 })();

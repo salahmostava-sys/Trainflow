@@ -102,7 +102,7 @@ test('keyboard copying claims a voucher once and leaves selection controls indep
   await copy.focus();await page.keyboard.press('Space');
   await page.waitForFunction(()=>uiTestCopies.length===2&&!document.getElementById('app').inert);
   assert.deepEqual(await page.evaluate(()=>uiTestCopies),['FIRST','UI-VOUCHER']);
-  assert.ok(await page.evaluate(()=>uiTestDatabase.codes[0].used_on));
+  assert.ok(await page.evaluate(()=>uiTestDatabase.codes[0].used_on));assert.notEqual(await page.locator('.code-row[data-code="UI-VOUCHER"]').evaluate(el=>el.style.background),'','Used voucher receives its date color after a sheet has been opened');
   assert.equal(await page.getByRole('textbox',{name:'ملاحظات الكود UI-VOUCHER',exact:true}).count(),1);
   await navigate(page,'prometric');
   for(const [id,text] of [['cred-account','UI-ACCOUNT'],['cred-password','UI-PASSWORD']]){

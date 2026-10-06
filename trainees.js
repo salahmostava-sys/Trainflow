@@ -53,8 +53,8 @@ const Trainees=(()=>{
   let expandedView=false,previousViewZoom=null;
   function setRowSize(value){
     const next=Number(value);if(![15,21,28,36].includes(next))return;
-    rowSize=next;localStorage.setItem('ibta_trainee_row_size',String(rowSize));
-    $('sheet-row-size').value=String(rowSize);$('sheet-workspace').style.setProperty('--sheet-row-size',rowSize+'pt');
+    rowSize=next;try{localStorage.setItem('ibta_trainee_row_size',String(rowSize));}catch{}
+    $('sheet-row-size').value=String(rowSize);applyExcelView();
     resetRowHeights();rebuildRowOffsets();drawRows(true);
   }
   try{const pref=JSON.parse(localStorage.getItem('ibta_sheet_view')||'{}');excelView={wrap:pref.wrap===true,freeze:pref.freeze===true,zoom:Number.isInteger(pref.zoom)&&pref.zoom>=50&&pref.zoom<=200?pref.zoom:100};}catch{}
@@ -69,6 +69,7 @@ const Trainees=(()=>{
   function expandedZoom(){const scroll=$('sheet-grid').parentElement,head=$('sheet-grid').querySelector('thead').getBoundingClientRect().height;const row=Math.max(16,formatting.fontSize*1.2);return Math.max(50,Math.min(previousViewZoom??excelView.zoom,Math.floor(((scroll.clientHeight-head-18)/45-1)/row*10)*10));}
   function setExpandedView(active){
     if(!initialized||expandedView===active)return;commitEdit();const grid=$('sheet-grid'),scroll=grid.parentElement,first=rowAtOffset(scroll.scrollTop),offset=scroll.scrollTop-rowOffsets[first],oldZoom=excelView.zoom,left=scroll.scrollLeft;
+    const headBottom=grid.querySelector('thead th').getBoundingClientRect().bottom;const visualAnchor=[...grid.querySelectorAll('th[data-rowv]')].find(th=>th.parentElement.getBoundingClientRect().top>=headBottom-1);const anchorRow=visualAnchor?.dataset.rowv,anchorGap=visualAnchor?visualAnchor.parentElement.getBoundingClientRect().top-headBottom:0;
     expandedView=active;$('sheet-workspace').classList.toggle('sheet-expanded-view',active);document.body.classList.toggle('sheet-expanded-open',active);
     $('sheet-expanded').setAttribute('aria-pressed',String(active));$('sheet-workspace').classList.remove('sheet-expanded-tools');$('sheet-expanded-tools').setAttribute('aria-pressed','false');
     excelTools?.syncRibbon();
@@ -76,12 +77,13 @@ const Trainees=(()=>{
     if(active){previousViewZoom=excelView.zoom;excelView.zoom=expandedZoom();}else{excelView.zoom=previousViewZoom??excelView.zoom;previousViewZoom=null;}
     applyExcelView();resetRowHeights();rebuildRowOffsets();const top=rowOffsets[first]+offset*excelView.zoom/oldZoom;scroll.scrollTop=top;scroll.scrollLeft=left*excelView.zoom/oldZoom;drawRows(true);
     const measuredTop=rowOffsets[first]+offset*excelView.zoom/oldZoom;if(Math.abs(scroll.scrollTop-measuredTop)>1){scroll.scrollTop=measuredTop;drawRows(true);}
+    if(anchorRow!==undefined){for(let i=0;i<3;i++){const th=grid.querySelector('th[data-rowv=\"'+anchorRow+'\"]');if(!th)break;const delta=th.parentElement.getBoundingClientRect().top-grid.querySelector('thead th').getBoundingClientRect().bottom-anchorGap;if(Math.abs(delta)<0.5)break;scroll.scrollTop+=delta;drawRows(true);}}
     if(active)$('sheet-expanded-close').focus({preventScroll:true});else $('sheet-expanded').focus({preventScroll:true});
   }
   function applyExcelView(){
     const grid=$('sheet-grid');if(!grid)return;
     grid.style.setProperty('--sheet-zoom',String(excelView.zoom/100));
-    $('sheet-workspace').style.setProperty('--sheet-row-size',rowSize+'pt');
+    $('sheet-workspace').style.setProperty('--sheet-row-size',rowSize+'pt');$('sheet-workspace').style.setProperty('--sheet-row-height',(rowSize*4/3*(expandedView?0.8:1))+'px');
     $('sheet-zoom-slider').value=String(excelView.zoom);if(document.activeElement!==$('sheet-zoom-reset'))$('sheet-zoom-reset').value=excelView.zoom+'%';
     $('sheet-zoom-out').disabled=excelView.zoom<=50;$('sheet-zoom-in').disabled=excelView.zoom>=200;
     grid.classList.toggle('sheet-wrap-text',excelView.wrap);
@@ -470,7 +472,7 @@ const Trainees=(()=>{
   };
   function init(){
     if(initialized)return;initialized=true;
-    setTimeout(()=>TraineeReports.mount($('sheet-workspace'),()=>({owner,rows:cells}),async()=>{commitEdit();return await flush();}),0);
+    setTimeout(()=>TraineeReports.mount($('sheet-workspace'),()=>({owner,sheetId,rows:cells}),async()=>{commitEdit();return await flush();}),0);
     $('panel-trainees').innerHTML=`
       <div class="sheet-heading"><div><h2 id="sheet-title"></h2><p id="sheet-subtitle"></p></div></div>
       <div id="sheet-workspace" class="sheet-card">
@@ -637,7 +639,7 @@ const Trainees=(()=>{
     document.addEventListener('visibilitychange',()=>{if(document.hidden)savePosition();});
     if(typeof TraineeSheets!=='undefined')sheetTools=TraineeSheets.mount({$,tr,node,button,state:()=>({owner,sheetId,worksheets,loaded:loaded&&!loading&&!worksheetBusy}),switchSheet:id=>switchOwner(owner,false,id),action:worksheetAction});
     if(typeof TraineeExcel!=='undefined')excelTools=TraineeExcel.mount({D,$,tr,node,button,
-      state:()=>({cells,formatting,view,owner:workspaceIdentity(),sheetId,loaded:loaded&&!loading&&!worksheetBusy,expandedView,labels:allLabels(),importLabels:baseLabels,bounds:bounds(),ranges:selectionRanges(),cursor:{...cursor},cols:visibleCols(),filtered:filtered()||!!formatting.hiddenRows?.length}),
+      state:()=>({cells,formatting,view,owner:workspaceIdentity(),sheetId,loaded:loaded&&!loading&&!worksheetBusy,expandedView,wrap:excelView.wrap,labels:allLabels(),importLabels:baseLabels,bounds:bounds(),ranges:selectionRanges(),cursor:{...cursor},cols:visibleCols(),filtered:filtered()||!!formatting.hiddenRows?.length}),
       replaceSheet:(next,fmt)=>{change(next,false,fmt);const prefix=(workspaceIdentity()||'default')+':';for(const key of Object.keys(cellAlignments))if(key.startsWith(prefix))delete cellAlignments[key];saveAlignments();clearFilters();render();focusCell(0,0);},
       commitEdit,change,formatSelection,focusCell,render,message,cutSelection,copySelection,pasteSelection,executePaste,
       insertRow,addColumn,editColumns,deleteSelectedRows,deleteSelectedCells,clearSelection,openFindDialog,
@@ -894,7 +896,7 @@ const Trainees=(()=>{
     rowHeights.clear();for(const [key,style]of Object.entries(formatting.styles)){const r=Number(key.split(':')[0]),height=Math.max((style.height||0)*excelView.zoom/100,style.rotation?70:0);if(height)rowHeights.set(r,Math.max(rowHeights.get(r)||0,height));}
   }
   function rebuildRowOffsets(){
-    const estimate=Math.max((excelView.wrap?rowSize+13:rowSize)*excelView.zoom/100,formatting.fontSize*excelView.zoom/100*(excelView.wrap?1.5:1.2));
+    const estimate=Math.max((excelView.wrap?rowSize*4/3+8:rowSize*4/3*(expandedView?0.8:1)+1)*excelView.zoom/100,formatting.fontSize*excelView.zoom/100*(excelView.wrap?1.5:1.2));
     rowOffsets=new Float64Array(view.length+1);for(let r=0;r<view.length;r++)rowOffsets[r+1]=rowOffsets[r]+(rowHeights.get(view[r])||estimate);
   }
   function rowAtOffset(offset){let low=0,high=view.length;while(low<high){const mid=(low+high)>>1;if(rowOffsets[mid+1]<=offset)low=mid+1;else high=mid;}return Math.min(low,Math.max(0,view.length-1));}
@@ -948,7 +950,7 @@ const Trainees=(()=>{
     if(hadFocus){const active=grid.querySelector(`td[data-v="${cursor.r}"][data-col="${cursor.c}"]`);if(active)active.focus({preventScroll:true});else{grid.tabIndex=-1;grid.focus({preventScroll:true});}}
   }
   function updateVisibleRows(){
-    if(!expandedView)return;const grid=$('sheet-grid'),scroll=grid.parentElement,top=grid.querySelector('thead').getBoundingClientRect().bottom,bottom=scroll.getBoundingClientRect().top+scroll.clientHeight;
+    if(!expandedView)return;const grid=$('sheet-grid'),scroll=grid.parentElement,top=grid.querySelector('thead th').getBoundingClientRect().bottom,bottom=scroll.getBoundingClientRect().top+scroll.clientHeight;
     let count=0;grid.querySelectorAll('th[data-rowv]').forEach(th=>{const rect=th.parentElement.getBoundingClientRect();if(rect.top>=top-1&&rect.bottom<=bottom+1)count++;});
     $('sheet-visible-rows').textContent=tr('الصفوف الظاهرة: ','Visible rows: ')+count;
   }

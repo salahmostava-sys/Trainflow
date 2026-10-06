@@ -26,7 +26,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
     await ctx.route(/^https?:\/\//,async route=>{
       const url=new URL(route.request().url());
       if(url.origin==='https://trainf.vercel.app'){
-        if(url.pathname==='/')return route.fulfill({contentType:'text/html; charset=utf-8',body:template.replace('const previewSheets=new Map();','const previewSheets=new Map([["demo-admin",'+JSON.stringify({cells:fixtureRows,version:fixtureVersion,format:{direction:'ltr'}})+']]);')});
+        if(url.pathname==='/')return route.fulfill({contentType:'text/html; charset=utf-8',body:template.replace('const previewSheets=new Map(window.previewInitialSheets||[]);','const previewSheets=new Map([["demo-admin",'+JSON.stringify({cells:fixtureRows,version:fixtureVersion,format:{direction:'ltr'}})+']]);')});
         const file=url.pathname.slice(1);if(/^[a-z][a-z0-9-]*\.(js|css)$/.test(file)&&fs.existsSync(path.join(root,file)))return route.fulfill({contentType:file.endsWith('.css')?'text/css':'text/javascript',body:fs.readFileSync(path.join(root,file),'utf8')});
         return route.fulfill({status:404,body:''});
       }
@@ -57,7 +57,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
     await page.locator('#sheet-prometric-open').click();await page.locator('#sheet-prometric-refresh').click();await page.waitForFunction(()=>document.getElementById('sheet-prometric-status').textContent.includes('حُفظ: 2'),null,{timeout:15000});
     const saved=await page.evaluate(()=>previewSheets.get('demo-admin').cells);assert.equal(saved[1][9],'ALPHASTUDENT');assert.equal(saved[3][9],'BETASTUDENT1');assert.equal(saved[1][10],'A#aDemo1970');assert.equal(saved[2][9],'KEEP-USER');
     const acknowledged=await worker.evaluate(()=>chrome.storage.local.get('ibtaRun'));assert.ok(acknowledged.ibtaRun.items.every(i=>i.status==='saved'&&!i.password),'Credentials are acknowledged only after a successful sheet save');
-    await page.screenshot({path:path.join(artifacts,'prometric-registration-saved.png')});await page.locator('#sheet-prometric-dialog .sheet-file-header button').click();await page.locator('#sheet-owner').selectOption('demo-user');await page.waitForFunction(()=>document.getElementById('sheet-status').textContent==='تم الحفظ');assert.equal(await page.locator('td[data-v="0"][data-col="9"]').textContent(),'','Results never enter another user sheet');
+    await page.screenshot({path:path.join(artifacts,'prometric-registration-saved.png')});await page.locator('#sheet-prometric-dialog .sheet-file-header button').click();await require('./worksheet-ui-helper.cjs')(page).switchTo('demo-user');await page.waitForFunction(()=>document.getElementById('sheet-status').textContent==='تم الحفظ');assert.equal(await page.locator('td[data-v="0"][data-col="9"]').textContent(),'','Results never enter another user sheet');
     const popup=await ctx.newPage();await popup.goto('chrome-extension://'+new URL(worker.url()).host+'/popup.html');assert.equal(await popup.locator('#versionBadge').textContent(),'v'+JSON.parse(fs.readFileSync(path.join(extension,'manifest.json'),'utf8')).version);assert.equal(await popup.locator('#ibtaOpen').isVisible(),true);
     assert.deepEqual(errors,[]);console.log('PASS: installed MV3 bridge, preview/skipping, actual fixture registration steps, final username suffix, moved-row matching, failed-save retention, reload/closed-tab recovery, durable acknowledgment and owner isolation; zero real accounts created');
   }finally{await ctx?.close();server.kill();}

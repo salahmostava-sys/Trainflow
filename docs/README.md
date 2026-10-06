@@ -17,6 +17,7 @@ Updated 6 October 2026. Start with the [project overview](../README.md) or [live
 
 | Record | Date |
 | --- | --- |
+| [Worksheet regression audit](system-audit-2026-10-06.md) | 6 October 2026 |
 | [System audit](system-audit-2026-10-02.md) | 2 October 2026 |
 | [UI/UX audit](ui-ux-audit-2026-10-02.md) | 2 October 2026 |
 

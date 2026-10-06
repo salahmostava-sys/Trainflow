@@ -6,14 +6,16 @@ function doPost(e) {
   var lock=LockService.getScriptLock();
   try {
     var p=JSON.parse(e.parameter.payload||'{}'),props=PropertiesService.getScriptProperties();
-    if(!['operations','success'].includes(p.kind)||!/^\d{4}-\d{2}-\d{2}$/.test(p.date)||!/^[-\da-f]{36}$/i.test(p.owner)||typeof p.token!=='string')throw Error('طلب غير صالح');
+    if(!['operations','success'].includes(p.kind)||!/^\d{4}-\d{2}-\d{2}$/.test(p.date)||!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(p.owner)||typeof p.token!=='string')throw Error('طلب غير صالح');
     var match=/^https:\/\/docs\.google\.com\/spreadsheets\/d\/([\w-]+)/.exec(p.destination||'');
     var approved=props.getProperty(p.kind==='operations'?'OPERATIONS_ID':'SUCCESS_ID');
     if(!match||match[1]!==approved)throw Error('رابط التقرير لا يطابق إعدادات أداة الربط');
     var url=props.getProperty('SUPABASE_URL'),key=props.getProperty('SUPABASE_PUBLISHABLE_KEY');
     if(!/^https:\/\/[a-z0-9]+\.supabase\.co$/.test(url||'')||!key)throw Error('أكمل إعدادات Supabase');
     function read(path){var response=UrlFetchApp.fetch(url+'/rest/v1/'+path,{headers:{apikey:key,Authorization:'Bearer '+p.token},muteHttpExceptions:true});if(response.getResponseCode()!==200)throw Error('تعذر قراءة البيانات؛ سجل الدخول مجددًا وتأكد من صلاحيات الحساب');return JSON.parse(response.getContentText());}
-    var sheets=read('ibta_trainee_sheets?select=cells&owner_id=eq.'+encodeURIComponent(p.owner));
+    var worksheet=p.sheet||'00000000-0000-0000-0000-000000000001';
+    if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(worksheet))throw Error('معرّف الشيت غير صالح');
+    var sheets=read('ibta_trainee_sheets?select=cells&owner_id=eq.'+encodeURIComponent(p.owner)+'&sheet_id=eq.'+encodeURIComponent(worksheet));
     if(sheets.length!==1)throw Error('جدول المتدربين غير موجود أو غير مسموح لحسابك');
     var codes=[],offset=0;
     do{var batch=read('ibta_codes?select=code,used_at,used_on&owner_id=eq.'+encodeURIComponent(p.owner)+'&used_on=not.is.null&order=code&limit=1000&offset='+offset);codes=codes.concat(batch);offset+=batch.length;}while(batch.length===1000);

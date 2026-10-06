@@ -13,6 +13,7 @@ begin
   if uid is null then raise exception 'An approved administrator test context is required'; end if;
   perform set_config('request.jwt.claims',jsonb_build_object('sub',uid,'role','authenticated')::text,true);
   select cells into original from public.ibta_trainee_sheets where owner_id=uid and sheet_id=first;
+  set local role authenticated;
   independent=public.ibta_trainee_worksheet_action(uid,first,'create','Integration independent');
   copied=public.ibta_trainee_worksheet_action(uid,first,'copy','Integration copy');
   if (select cells from public.ibta_trainee_sheets where owner_id=uid and sheet_id=copied)

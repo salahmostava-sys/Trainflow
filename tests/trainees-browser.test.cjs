@@ -9,8 +9,9 @@ const {spawn}=require('node:child_process');
   try{
     const context=await browser.newContext({viewport:{width:1500,height:1000}}),page=await context.newPage(),errors=[];
     require('./sheet-toolbar-helper.cjs')(page);
+    const switchLanguage=async()=>{if(!await page.locator('#lang-btn').isVisible())await page.locator('#sidebar-toggle').click();await page.locator('#lang-btn').click();if(await page.locator('#sidebar-backdrop').isVisible())await page.locator('#sidebar-backdrop').click({position:{x:10,y:10}});};
     page.on('pageerror',error=>errors.push(error.message));
-    await page.goto('http://127.0.0.1:4174/');
+    const worksheets=require('./worksheet-ui-helper.cjs')(page);await page.goto('http://127.0.0.1:4174/');
     await page.locator('#trainees-tab').click();
     await page.waitForFunction(()=>document.getElementById('sheet-status').textContent==='تم الحفظ');
     const cell=(r,c)=>page.locator(`td[data-v="${r}"][data-col="${c}"]`);
@@ -32,18 +33,18 @@ const {spawn}=require('node:child_process');
     await page.locator('#sheet-search').fill('ثانٍ');assert.equal(await page.locator('#sheet-grid tbody tr').count(),1);
     await page.locator('#sheet-clear-filters').click();
     await page.locator('#sheet-save').click();await page.waitForFunction(()=>!Trainees.hasDraft());
-    await page.locator('#sheet-owner').selectOption('demo-user');
-    await page.waitForFunction(()=>document.getElementById('sheet-owner').value==='demo-user'&&!document.getElementById('sheet-owner').disabled);
+    await worksheets.switchTo('demo-user');
+
     assert.equal(await cell(0,0).textContent(),'','Switching users must not retain previous cells');
     await paste(0,0,'PRIVATE-ROW');await page.locator('#sheet-save').click();await page.waitForFunction(()=>!Trainees.hasDraft());
-    await page.locator('#sheet-owner').selectOption('demo-admin');
-    await page.waitForFunction(()=>document.getElementById('sheet-owner').value==='demo-admin'&&!document.getElementById('sheet-owner').disabled);
+    await worksheets.switchTo('demo-admin');
+
     assert.equal(await cell(0,2).textContent(),'اسم معدل');
     // A failed save must keep the current owner's draft and block switching.
     await page.evaluate(()=>window.previewSaveError='CONFLICT');await paste(0,0,'UNSAVED');await page.locator('#sheet-save').click();
     await page.waitForFunction(()=>document.getElementById('sheet-status').dataset.error==='true');
-    await page.locator('#sheet-owner').selectOption('demo-user');
-    assert.equal(await page.locator('#sheet-owner').inputValue(),'demo-admin');assert.equal(await cell(0,0).textContent(),'UNSAVED');
+    await worksheets.switchTo('demo-user');
+    assert.equal(await worksheets.owner(),'demo-admin');assert.equal(await cell(0,0).textContent(),'UNSAVED');
     await page.evaluate(()=>window.previewSaveError='');await page.locator('#sheet-save').click();await page.waitForFunction(()=>!Trainees.hasDraft());
     // Edits during an in-flight save must be persisted in a subsequent save.
     await page.evaluate(()=>window.previewDelay=250);await paste(0,1,'first@example.invalid');await page.locator('#sheet-save').click();await paste(0,1,'second@example.invalid');
@@ -69,7 +70,7 @@ const {spawn}=require('node:child_process');
     await cell(0,0).click();await page.keyboard.press('Tab');assert.equal(await page.locator('td:focus').getAttribute('data-col'),'2','Tab skips hidden columns');
     await page.keyboard.press('ArrowRight');assert.equal(await page.locator('td:focus').getAttribute('data-col'),'0','RTL arrows follow visual order');
     await page.locator('#sheet-save').click();await page.waitForFunction(()=>!Trainees.hasDraft());await page.locator('#sheet-reload').click();
-    await page.waitForFunction(()=>!document.getElementById('sheet-owner').disabled);
+    await page.waitForFunction(()=>!document.getElementById('sheet-workspace').inert);
     assert.equal(await cell(0,1).count(),0);assert.equal(await cell(0,2).evaluate(el=>getComputedStyle(el).fontSize),'20px');
     assert.equal(await page.locator('#sheet-direction').inputValue(),'rtl');
     await paste(0,0,'DEMO-001\tلصق مع عمود مخفي');assert.equal(await cell(0,2).textContent(),'لصق مع عمود مخفي');
@@ -80,19 +81,19 @@ const {spawn}=require('node:child_process');
     await page.locator('#sheet-grid tbody .sheet-rownum button').first().click();page.once('dialog',d=>d.accept());await page.locator('#sheet-delete').click();
     assert.notEqual(await cell(0,2).evaluate(el=>getComputedStyle(el).fontSize),'20px');
     await page.locator('#sheet-undo').click();assert.equal(await cell(0,2).evaluate(el=>getComputedStyle(el).fontSize),'20px');
-    await page.locator('#sheet-owner').selectOption('demo-user');
-    await page.waitForFunction(()=>document.getElementById('sheet-owner').value==='demo-user'&&!document.getElementById('sheet-owner').disabled);
+    await worksheets.switchTo('demo-user');
+
     assert.equal(await cell(0,1).count(),1);assert.equal(await page.locator('#sheet-direction').inputValue(),'ltr');
-    await page.locator('#sheet-owner').selectOption('demo-admin');
-    await page.waitForFunction(()=>document.getElementById('sheet-owner').value==='demo-admin'&&!document.getElementById('sheet-owner').disabled);
+    await worksheets.switchTo('demo-admin');
+
     assert.equal(await cell(0,1).count(),0);assert.equal(await page.locator('#sheet-direction').inputValue(),'rtl');
     // Result values remain Arabic, with stable colors, even under English UI.
     await cell(0,11).locator('select').selectOption('راسب');
     assert.equal(await cell(0,11).evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(255, 0, 0)');
     await cell(1,11).locator('select').selectOption('لم يدخل');
     assert.equal(await cell(1,11).evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(255, 255, 0)');
-    await page.locator('#lang-btn').click();assert.equal(await cell(0,11).locator('select').inputValue(),'راسب');
-    assert.match(await cell(0,11).locator('select').textContent(),/ناجح/);await page.locator('#lang-btn').click();
+    await switchLanguage();assert.equal(await cell(0,11).locator('select').inputValue(),'راسب');
+    assert.match(await cell(0,11).locator('select').textContent(),/ناجح/);await switchLanguage();
     // Duplicate marks use the whole sheet, not only visible/filtered rows.
     await paste(0,4,'٢١٢٣٤٥٦٧٨٩');await paste(1,4,'2123456789');
     assert.equal(await page.locator('.sheet-duplicate-badge').count(),2);
@@ -115,7 +116,7 @@ const {spawn}=require('node:child_process');
     assert.equal(await page.locator('.sheet-duplicate-badge').count(),0,'Resolving a duplicate clears both marks');
     await page.locator('#sheet-undo').click();assert.equal(await page.locator('.sheet-duplicate-badge').count(),2);
     // The detail dialog remains usable on mobile and has an explicit edit action.
-    await page.setViewportSize({width:390,height:844});await cell(0,4).click();await page.locator('#sheet-duplicate-dialog').waitFor({state:'visible'});
+    await page.setViewportSize({width:390,height:844});if(await page.locator('#sidebar-backdrop').isVisible())await page.locator('#sidebar-backdrop').click({position:{x:10,y:10}});await cell(0,4).click();await page.locator('#sheet-duplicate-dialog').waitFor({state:'visible'});
     assert.ok(await page.locator('#sheet-duplicate-dialog').evaluate(el=>el.scrollWidth<=el.clientWidth+1),'Mobile details must not overflow horizontally');
     await page.locator('#sheet-detail-edit').click();assert.equal(await cell(0,4).getAttribute('contenteditable'),'true');await page.keyboard.press('Escape');
     await page.setViewportSize({width:1500,height:1000});
