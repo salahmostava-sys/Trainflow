@@ -142,7 +142,7 @@ const Trainees=(()=>{
     shiftAlignmentsOnInsert(targetIdx);
     change(next,true,nextFmt);
     focusCell(pos==='above'?cursor.r:cursor.r+1,cursor.c);
-    message(tr('تم إدراج صف جديد','New row inserted'));
+    message(()=>tr('تم إدراج صف جديد','New row inserted'));
   }
   function addBulkRows(count=1000){
     commitEdit();clearFilters();
@@ -154,17 +154,17 @@ const Trainees=(()=>{
     change(next,false);
     render();
     focusCell(startIdx,0);
-    message(tr(`تمت إضافة ${n.toLocaleString()} صف دفعة واحدة بنجاح`,`Added ${n.toLocaleString()} rows at once successfully`));
+    message(()=>tr(`تمت إضافة ${n.toLocaleString()} صف دفعة واحدة بنجاح`,`Added ${n.toLocaleString()} rows at once successfully`));
   }
   function deleteSelectedRows(){
     commitEdit();const ids=new Set(selectedRows().map(r=>view[r]));
     if(!ids.size||!confirm(tr((ids.size>1?'حذف الصفوف المحددة؟':'حذف الصف المحدد؟'),(ids.size>1?'Delete selected rows?':'Delete selected row?'))))return;
     const next=D.removeRows(cells,formatting,ids);change(next.cells,true,next.format);
-    message(tr(ids.size>1?'تم حذف الصفوف المحددة':'تم حذف الصف المحدد',ids.size>1?'Selected rows deleted':'Selected row deleted'));
+    message(()=>tr(ids.size>1?'تم حذف الصفوف المحددة':'تم حذف الصف المحدد',ids.size>1?'Selected rows deleted':'Selected row deleted'));
   }
   async function cutSelection(){
     if(editing)return;
-    if(await copySelection()){clearSelection();message(tr('تم القص إلى الحافظة','Cut to clipboard'));}
+    if(await copySelection()){clearSelection();message(()=>tr('تم القص إلى الحافظة','Cut to clipboard'));}
   }
   async function copySelection(){
     if(editing||!loaded)return false;const text=selectionText();let copied=false;
@@ -173,13 +173,13 @@ const Trainees=(()=>{
       await navigator.clipboard.write([new ClipboardItem({'text/plain':new Blob([text],{type:'text/plain'}),'text/html':new Blob([selectionHtml()],{type:'text/html'})})]);copied=true;
     }catch{}
     if(!copied)copied=await copyText(text);
-    if(copied)message(tr('تم النسخ إلى الحافظة','Copied to clipboard'));
+    if(copied)message(()=>tr('تم النسخ إلى الحافظة','Copied to clipboard'));
     return copied;
   }
   function executePaste(values){
     if(!values||!values.length)return;
     if(!singleSelection())return;
-    if(filtered()&&values.length>1){message(tr('امسح الفلاتر والفرز قبل لصق عدة صفوف.','Clear filters and sorting before pasting multiple rows.'),true);return;}
+    if(filtered()&&values.length>1){message(()=>tr('امسح الفلاتر والفرز قبل لصق عدة صفوف.','Clear filters and sorting before pasting multiple rows.'),true);return;}
     if(!cells.length){cells=[D.blank()];revision++;}
     let [r,,c]=bounds();let idx=view[r];
     if(idx===undefined){idx=cells.length;r=Math.max(0,view.length);}
@@ -189,7 +189,7 @@ const Trainees=(()=>{
     const valuesWithBlanks=values.map(row=>Array.from({length:width},(_,col)=>row[col]||''));
     const next=D.pasteMapped(cells,valuesWithBlanks,idx,targets);
     extraSelections=[];change(next);anchor={r,c};cursor={r:Math.max(0,r+values.length-1),c:maxTargetCol};paint();
-    message(tr('تم اللصق بنجاح ('+values.length+' صف، '+width+' عمود)','Pasted successfully ('+values.length+' rows, '+width+' cols)'));
+    message(()=>tr('تم اللصق بنجاح ('+values.length+' صف، '+width+' عمود)','Pasted successfully ('+values.length+' rows, '+width+' cols)'));
   }
   async function pasteSelection(){
     if(editing)return;
@@ -270,7 +270,7 @@ const Trainees=(()=>{
     const prefix=(owner||'default')+':',mapped={};
     for(const [key,value]of Object.entries(cellAlignments)){if(!key.startsWith(prefix)){mapped[key]=value;continue;}const [r,c]=key.slice(prefix.length).split(':').map(Number),target=insert?(c>=start?c+count:c):(c<start?c:c>=start+count?c-count:null);if(target!==null)mapped[prefix+r+':'+target]=value;}
     cellAlignments=mapped;saveAlignments();extraSelections=[];anchor=cursor={r:cursor.r,c:Math.min(start,colCount()-1)};render();
-    message(tr('تم تحديث الأعمدة. يمكنك التراجع.','Columns updated. You can undo.'));
+    message(()=>tr('تم تحديث الأعمدة. يمكنك التراجع.','Columns updated. You can undo.'));
   }
   function updateContextMenuTranslations(){
     const menu=$('sheet-context-menu');if(!menu)return;
@@ -405,7 +405,7 @@ const Trainees=(()=>{
     if(count>0){
       change(D.normalize(next));render();
       $('sheet-find-status').textContent=tr(`تم استبدال ${count} عنصر بنجاح`,`Replaced ${count} occurrences`);
-      message(tr(`تم استبدال ${count} عنصر بنجاح`,`Replaced ${count} occurrences`));
+      message(()=>tr(`تم استبدال ${count} عنصر بنجاح`,`Replaced ${count} occurrences`));
     }else{
       $('sheet-find-status').textContent=tr('لم يتم العثور على أي نتائج للاستبدال','No occurrences found to replace');
     }
@@ -435,7 +435,12 @@ const Trainees=(()=>{
   const snapshot=()=>({cells,format:D.format(formatting),alignments:{...cellAlignments}});
   function node(tag,text,attrs={}){const el=document.createElement(tag);if(text!==undefined)el.textContent=text;for(const [key,value]of Object.entries(attrs))el.setAttribute(key,value);return el;}
   function button(text,fn,cls){const b=node('button',text,{type:'button'});if(cls)b.className=cls;b.addEventListener('click',fn);return b;}
-  const message=(text,error=false)=>{if(!$('sheet-status'))return;$('sheet-status').textContent=text;$('sheet-status').dataset.error=String(error);};
+  let statusTextForLanguage=()=>'',statusError=false;
+  function renderMessage(){
+    if(!$('sheet-status'))return;
+    $('sheet-status').textContent=statusTextForLanguage();$('sheet-status').dataset.error=String(statusError);
+  }
+  const message=(textForLanguage,error=false)=>{statusTextForLanguage=textForLanguage;statusError=error;renderMessage();};
   const errorMessage=error=>{
     const code=String(error?.code||''),message=String(error?.message||'');
     if(/CONFLICT|23505/.test(message+' '+code))return tr('تم تعديل الجدول من نافذة أخرى. انسخ تعديلاتك ثم أعد التحميل.','Another window changed this sheet. Copy your edits, then reload.');
@@ -509,7 +514,7 @@ const Trainees=(()=>{
       const match=/^([A-Z]+)([1-9]\d*)$/.exec($('sheet-address').value.trim().toUpperCase());
       let col=0;if(match)for(const letter of match[1])col=col*26+letter.charCodeAt(0)-64;
       const row=match?Number(match[2])-1:-1;col--;
-      if(!match||row<0||row>=totalInputRows()||col<0||col>=labels.length||!visibleCols().includes(col)){message(tr('اكتب عنوان خلية موجودة وعمود ظاهر، مثل D150.','Enter an existing cell in a visible column, such as D150.'),true);return;}
+      if(!match||row<0||row>=totalInputRows()||col<0||col>=labels.length||!visibleCols().includes(col)){message(()=>tr('اكتب عنوان خلية موجودة وعمود ظاهر، مثل D150.','Enter an existing cell in a visible column, such as D150.'),true);return;}
       commitEdit();clearFilters();render();focusCell(row,col);
     });
     $('sheet-owner')?.addEventListener('change',async()=>{const next=$('sheet-owner').value;$('sheet-owner').value=owner;await switchOwner(next);});
@@ -536,7 +541,7 @@ const Trainees=(()=>{
     $('sheet-selection-size').onchange=()=>formatSelection({size:Number($('sheet-selection-size').value)});
     for(let size=10;size<=32;size++)$('sheet-selection-size').append(node('option',String(size),{value:size}));
     $('sheet-undo').onclick=()=>undo(false);$('sheet-redo').onclick=()=>undo(true);
-    $('sheet-copy').onclick=async()=>{commitEdit();if(await copyText(D.tsv(cells)))message(tr('تم نسخ الجدول بالكامل','Entire sheet copied'));};
+    $('sheet-copy').onclick=async()=>{commitEdit();if(await copyText(D.tsv(cells)))message(()=>tr('تم نسخ الجدول بالكامل','Entire sheet copied'));};
     ['sheet-search','sheet-org','sheet-date','sheet-result'].forEach(id=>$(id).addEventListener('input',()=>{commitEdit();extraSelections=[];anchor=cursor={r:0,c:0};render();}));
     $('sheet-duplicates-only').onchange=()=>{commitEdit();extraSelections=[];anchor=cursor={r:0,c:0};render();};
     $('sheet-clear-filters').onclick=()=>{commitEdit();clearFilters();render();};
@@ -637,7 +642,7 @@ const Trainees=(()=>{
       change(nextCells,true,nextFormat);
       popover.hidden=true;
       focusCell(cursor.r,newColIdx);
-      message(tr('تمت إضافة عمود جديد: ','New column added: ')+(nextFormat.headers?.[newColIdx]||letter));
+      message(()=>tr('تمت إضافة عمود جديد: ','New column added: ')+(nextFormat.headers?.[newColIdx]||letter));
     },'sheet-create-col-btn');
     popover.append(createBtn);
 
@@ -655,7 +660,7 @@ const Trainees=(()=>{
           change(cells,true,next);
           popover.hidden=true;
           focusCell(cursor.r,c);
-          message(tr('تمت استعادة عمود '+colName,'Column restored: '+colName));
+          message(()=>tr('تمت استعادة عمود '+colName,'Column restored: '+colName));
         });
         popover.append(btn);
       });
@@ -666,7 +671,7 @@ const Trainees=(()=>{
           next.hidden=[];
           change(cells,true,next);
           popover.hidden=true;
-          message(tr('تم إظهار كافة الأعمدة','All columns are now visible'));
+          message(()=>tr('تم إظهار كافة الأعمدة','All columns are now visible'));
         },'sheet-add-all-btn');
         popover.append(allBtn);
       }
@@ -718,13 +723,14 @@ const Trainees=(()=>{
     excelTools?.translate();
     prometricTools?.translate();
     certificateTools?.translate();
+    renderMessage();
     if(!editing)render();renderCodes();
   }
   async function open(){
     init();if(loading)return;
     const admin=Cloud.role()==='admin';$('sheet-code-admin').hidden=!admin;
     if(!Cloud.userId())return;
-    if(admin){try{members=await Cloud.listMembers();}catch(error){message(errorMessage(error),true);return;}}
+    if(admin){try{members=await Cloud.listMembers();}catch(error){message(()=>errorMessage(error),true);return;}}
     else members=[];
     if(!owner||!loaded)await switchOwner(Cloud.userId());
     renderCodes();
@@ -739,12 +745,12 @@ const Trainees=(()=>{
     closeDuplicateDetails();
     commitEdit();if(!discard&&!await flush())return false;
     const token=++epoch;loading=true;$('sheet-workspace').inert=true;
-    message(tr('جارٍ تحميل الجدول…','Loading sheet…'));
+    message(()=>tr('جارٍ تحميل الجدول…','Loading sheet…'));
     try{
       const data=await Cloud.readTrainees(next);if(token!==epoch)return false;
       const normalized=D.normalize(data.cells);owner=next;cells=normalized;formatting=D.format(data.format);version=Number(data.version);revision=savedRevision=0;history=[];future=[];loaded=true;
-      clearFilters();extraSelections=[];anchor=cursor={r:0,c:0};owner=next;render();restorePosition();renderCodes();if(typeof rememberWorkspaceView==='function')rememberWorkspaceView({sheetOwner:owner});message(tr('تم الحفظ','Saved'));return true;
-    }catch(error){if(token===epoch)message(errorMessage(error),true);return false;}
+      clearFilters();extraSelections=[];anchor=cursor={r:0,c:0};owner=next;render();restorePosition();renderCodes();if(typeof rememberWorkspaceView==='function')rememberWorkspaceView({sheetOwner:owner});message(()=>tr('تم الحفظ','Saved'));return true;
+    }catch(error){if(token===epoch)message(()=>errorMessage(error),true);return false;}
     finally{if(token===epoch){loading=false;$('sheet-workspace').inert=!loaded;}}
   }
   async function reload(){
@@ -1082,7 +1088,7 @@ const Trainees=(()=>{
   function selectedRows(){return D.selectionRows(selectionRanges(),view.length);}
   function selectedColumns(){return D.selectionColumns(selectionRanges(),visibleCols());}
   function eachSelected(run){D.eachSelected(selectionRanges(),view,visibleCols(),run);}
-  function singleSelection(){if(!extraSelections.length)return true;message(tr('اختر منطقة واحدة متجاورة لهذه العملية.','Select one contiguous range for this action.'),true);return false;}
+  function singleSelection(){if(!extraSelections.length)return true;message(()=>tr('اختر منطقة واحدة متجاورة لهذه العملية.','Select one contiguous range for this action.'),true);return false;}
   function startSelection(a,b,extend=false,additive=false,kind='cell'){
     commitEdit();
     if(extend&&selectionKind===kind){cursor=b;}
@@ -1166,20 +1172,20 @@ const Trainees=(()=>{
     if(!loaded)return;history.push(snapshot());if(history.length>30)history.shift();future=[];cells=next;updateLastDataRow();formatting=D.format(nextFormat);formulaCache.clear();revision++;schedule();if(redraw)render();else{$('sheet-undo').disabled=false;$('sheet-redo').disabled=true;}
   }
   function undo(redo){commitEdit();const from=redo?future:history,to=redo?history:future;if(!from.length)return;to.push(snapshot());const next=from.pop();cells=next.cells;formatting=D.format(next.format);cellAlignments={...next.alignments};saveAlignments();revision++;schedule();render();if(view.length)focusCell(cursor.r,cursor.c);}
-  function schedule(){clearTimeout(timer);message(tr('تعديلات غير محفوظة…','Unsaved changes…'));const saveWhenIdle=()=>{if(editing?.el.dataset.composing==='true'){timer=setTimeout(saveWhenIdle,900);return;}flush(true);};timer=setTimeout(saveWhenIdle,900);}
+  function schedule(){clearTimeout(timer);message(()=>tr('تعديلات غير محفوظة…','Unsaved changes…'));const saveWhenIdle=()=>{if(editing?.el.dataset.composing==='true'){timer=setTimeout(saveWhenIdle,900);return;}flush(true);};timer=setTimeout(saveWhenIdle,900);}
   function hasDraft(){return !!editing||revision!==savedRevision||!!saving;}
   async function flush(keepEditing=false){
     commitEdit(false,keepEditing);clearTimeout(timer);if(saving){const ok=await saving;if(!ok)return false;return flush(keepEditing);}
     if(!loaded||revision===savedRevision)return true;
     const token=epoch,snapshot=revision,saveOwner=owner,data=D.storage(cells),saveFormat=D.format(formatting);
-    message(tr('جارٍ الحفظ…','Saving…'));
+    message(()=>tr('جارٍ الحفظ…','Saving…'));
     saving=(async()=>{
-      try{const result=await Cloud.saveTrainees(saveOwner,data,version,saveFormat);if(token!==epoch)return false;version=Number(result);savedRevision=snapshot;message(revision===savedRevision?tr('تم الحفظ','Saved'):tr('تعديلات غير محفوظة…','Unsaved changes…'));return true;}
-      catch(error){if(token===epoch)message(errorMessage(error),true);return false;}
+      try{const result=await Cloud.saveTrainees(saveOwner,data,version,saveFormat);if(token!==epoch)return false;version=Number(result);savedRevision=snapshot;message(revision===savedRevision?()=>tr('تم الحفظ','Saved'):()=>tr('تعديلات غير محفوظة…','Unsaved changes…'));return true;}
+      catch(error){if(token===epoch)message(()=>errorMessage(error),true);return false;}
     })();const ok=await saving;saving=null;
     if(ok&&token===epoch&&revision!==savedRevision)return flush(keepEditing);return ok;
   }
-  function limitError(){message(tr('الحد الأقصى 1,000,000 صف و500 عمود و2000 حرف للخلية.','Limit: 1,000,000 rows, 500 columns and 2,000 characters per cell.'),true);}
+  function limitError(){message(()=>tr('الحد الأقصى 1,000,000 صف و500 عمود و2000 حرف للخلية.','Limit: 1,000,000 rows, 500 columns and 2,000 characters per cell.'),true);}
   function clipboardRows(){
     const rows=selectedRows();if(!selectionRanges().every(([a,b])=>a===0&&b===view.length-1))return rows;
     // Whole columns exclude virtual input padding, while retaining explicitly formatted blank rows.
@@ -1204,7 +1210,7 @@ const Trainees=(()=>{
   function deleteSelectedCells(direction){
     if(!loaded)return;if(!singleSelection())return;commitEdit();
     const [r1,r2,c1,c2]=bounds(),indices=new Set(view.slice(r1,r2+1));
-    if(Object.entries(formatting.styles).some(([key,s])=>{if((s.mergeRows||1)===1&&(s.mergeCols||1)===1)return false;const [r,c]=key.split(':').map(Number);return c<=c2&&c+(s.mergeCols||1)-1>=c1&&[...indices].some(i=>i>=r&&i<r+(s.mergeRows||1));})){message(tr('ألغِ دمج الخلايا المحددة قبل إزاحة الخلايا.','Unmerge the selected cells before shifting cells.'),true);return;}
+    if(Object.entries(formatting.styles).some(([key,s])=>{if((s.mergeRows||1)===1&&(s.mergeCols||1)===1)return false;const [r,c]=key.split(':').map(Number);return c<=c2&&c+(s.mergeCols||1)-1>=c1&&[...indices].some(i=>i>=r&&i<r+(s.mergeRows||1));})){message(()=>tr('ألغِ دمج الخلايا المحددة قبل إزاحة الخلايا.','Unmerge the selected cells before shifting cells.'),true);return;}
     if(!confirm(tr('حذف الخلايا المحددة وإزاحة باقي بيانات الصف؟ يشمل الأعمدة المخفية.','Delete selected cells and shift the remaining row data? Hidden columns are included.')))return;
     const logical=formatting.direction==='rtl'?(direction==='left'?'right':'left'):direction;
     const next=D.deleteCells(cells,formatting,indices,c1,c2,logical,colCount());
@@ -1218,7 +1224,7 @@ const Trainees=(()=>{
       if(target!==null)mapped[prefix+r+':'+target]=value;
     }
     cellAlignments=mapped;saveAlignments();render();
-    message(tr('تم حذف الخلايا. يمكنك التراجع.','Cells deleted. You can undo.'));
+    message(()=>tr('تم حذف الخلايا. يمكنك التراجع.','Cells deleted. You can undo.'));
   }
   function paste(e){
     if(!loaded)return;e.preventDefault();commitEdit();
@@ -1244,17 +1250,17 @@ const Trainees=(()=>{
     e.preventDefault();
     if(isCtrlY||(isCtrlZ&&e.shiftKey)){
       if(editing)commitEdit();
-      if(future.length){undo(true);message(tr('تمت الإعادة (Redo)','Redo'));}
-      else{message(tr('لا توجد عمليات للإعادة','Nothing to redo'));}
+      if(future.length){undo(true);message(()=>tr('تمت الإعادة (Redo)','Redo'));}
+      else{message(()=>tr('لا توجد عمليات للإعادة','Nothing to redo'));}
       return true;
     }
     if(isCtrlZ){
       if(editing)commitEdit();
       if(history.length){
         undo(false);
-        message(tr('تم التراجع (Undo)','Undo'));
+        message(()=>tr('تم التراجع (Undo)','Undo'));
       }else{
-        message(tr('لا توجد عمليات للتراجع عنها','Nothing to undo'));
+        message(()=>tr('لا توجد عمليات للتراجع عنها','Nothing to undo'));
       }
       return true;
     }

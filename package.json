@@ -10,7 +10,8 @@
     "start": "next start",
     "lint": "next lint",
     "build:cloudflare": "node tools/build-site.cjs",
-    "test:next": "node tests/next-workspace-browser.test.cjs"
+    "test:next": "node tests/next-workspace-browser.test.cjs",
+    "test:ui": "node tests/ui-accessibility-browser.test.cjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.49.1",
