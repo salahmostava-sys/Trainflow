@@ -256,16 +256,6 @@ document.getElementById('inventory-set-current').addEventListener('click',async(
 document.getElementById('inventory-add-purchased').addEventListener('click',async()=>{
   await saveInventoryBalance('replenishment','inventory-purchased-quantity');
 });
-document.getElementById('inventory-save-settings')?.addEventListener('click',async()=>{
-  const number=document.getElementById('inventory-whatsapp-number')?.value.trim()||'';
-  const name=document.getElementById('inventory-supervisor-name')?.value.trim()||'';
-  const language=document.getElementById('inventory-message-language')?.value||'ar';
-  const status=document.getElementById('inventory-number-status');
-  if(number && !/^\d{8,15}$/.test(number)){if(status)status.textContent=t('inventoryPhoneInvalid');return;}
-  if(name.length>100 || /[\r\n\x00-\x1f]/.test(name)){if(status)status.textContent=t('inventorySupervisorNameInvalid');return;}
-  try{await Cloud.saveInventoryMessageSettings(number,name,language);if(status)status.textContent=t('saved');if(typeof InventoryDelivery!=='undefined')InventoryDelivery.ready();}
-  catch{if(status)status.textContent=t('genericError');}
-});
 document.getElementById('inventory-copy-message').addEventListener('click',async()=>{
   const categories=sortCategories(Object.keys(state.codesByCategory || {})),stock=Cloud.stockSnapshot();
   const message=inventoryMessage(categories,stock);

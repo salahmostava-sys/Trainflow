@@ -5,7 +5,7 @@ import '../session-policy.js';
 const DATABASE_URL='https://xaeffreqwtozsgqajzpc.supabase.co';
 const PUBLIC_KEY='sb_publishable_TB0SB3SNFP1ygpRvMoeSGg_s8o0mHeO';
 const tables=new Set(['ibta_codes','ibta_settings','ibta_supervisor_stock','ibta_members','ibta_audit','ibta_trainee_sheets']);
-const adminRpc=new Set(['ibta_restore_backup','ibta_import_codes','ibta_change_supervisor_stock','ibta_assign_codes','ibta_inventory_delivery_status','ibta_save_inventory_delivery']);
+const adminRpc=new Set(['ibta_restore_backup','ibta_import_codes','ibta_change_supervisor_stock','ibta_assign_codes']);
 const userRpc=new Set(['ibta_apply_changes','ibta_claim_code','ibta_save_trainee_sheet_formatted']);
 const json=(status,message)=>Response.json({message},{status,headers:{'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
 // Vercel adds catch-all routing parameters to Edge request URLs. They are not

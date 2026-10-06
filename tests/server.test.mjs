@@ -12,10 +12,9 @@ let response=await handleApi(request('ibta_codes?select=code'),{},upstream);asse
 active=false;assert.equal((await handleApi(request('ibta_codes'),{},upstream)).status,403);active=true;
 const post={method:'POST',headers:{Authorization:bearer,'Content-Type':'application/json'},body:JSON.stringify({changes:[],settings_payload:{}})};
 assert.equal((await handleApi(request('rpc/ibta_apply_changes',post),{},upstream)).status,403);
+for(const operation of ['ibta_inventory_delivery_status','ibta_save_inventory_delivery']){const before=calls.length;assert.equal((await handleApi(request('rpc/'+operation,post),{},upstream)).status,404);assert.equal(calls.length,before,'Retired RPCs never reach the database');}
 assert.equal((await handleApi(request('rpc/ibta_restore_backup',post),{},upstream)).status,403);
-for(const operation of ['ibta_inventory_delivery_status','ibta_save_inventory_delivery'])assert.equal((await handleApi(request('rpc/'+operation,post),{},upstream)).status,403);
 role='admin';assert.equal((await handleApi(request('rpc/ibta_restore_backup',post),{},upstream)).status,200);
-for(const operation of ['ibta_inventory_delivery_status','ibta_save_inventory_delivery'])assert.equal((await handleApi(request('rpc/'+operation,post),{},upstream)).status,200);
 assert.equal((await handleApi(request('ibta_codes',{headers:{Authorization:bearer,Origin:'https://evil.invalid'}}),{},upstream)).status,403);
 assert.equal((await handleApi(request('rpc/ibta_claim_code',{...post,body:'{'}),{},upstream)).status,400);
 assert.equal((await handleApi(request('rpc/ibta_claim_code',{...post,body:JSON.stringify({target_code:'TEST',expected_version:1,use_date:'01/01/1900'})}),{},upstream)).status,200);

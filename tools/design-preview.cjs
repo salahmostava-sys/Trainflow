@@ -2,10 +2,7 @@
 const http=require('node:http'),fs=require('node:fs'),path=require('node:path');
 const mock=`const previewSheets=new Map();const previewCodes=[{code:'DEMO-PRIVATE-001',category:'Foundation',owner_id:'demo-user',version:1,used_on:null},{code:'DEMO-POOL-002',category:'Master',owner_id:null,version:1,used_on:null}];const Cloud={
   role:()=>window.previewRole||'admin',userId:()=> 'demo-admin',email:()=> 'admin@example.invalid',
-  stockSnapshot:()=>({}),inventoryMessageSettings:()=>({number:window.previewRecipient||'',name:'',language:'ar'}),
-  inventoryDeliveryEligible:()=>!window.previewSignedOut,
-  inventoryReportSnapshot:async()=>({categories:['Foundation'],available:{Foundation:12},labels:{},stock:{Foundation:3},settings:{number:window.previewRecipient||'',name:'المشرف',language:'ar'}}),
-  async inventoryDelivery(options){if(this.role()!=='admin')throw Error('ADMIN_REQUIRED');if(window.previewDeliveryError)throw Error(window.previewDeliveryError);const old=window.previewDelivery||{provider:'web',enabled:false,time:'16:59',phoneId:'',template:'',language:'ar',apiVersion:'v24.0',connected:false,last:null};if(options){window.previewDeliveryCalls=(window.previewDeliveryCalls||[]).concat({...options,token:options.token?'[provided]':''});if(options.enabled&&options.provider==='meta'&&!(old.connected||options.token&&options.phoneId&&options.template))throw Error('WHATSAPP_NOT_CONNECTED');window.previewDelivery={...old,...options,connected:!!(options.phoneId&&options.template&&(old.connected||options.token))};delete window.previewDelivery.token;}return window.previewDelivery||old;},
+  stockSnapshot:()=>({}),inventoryMessageSettings:()=>({name:'',language:'ar'}),
   codeSnapshot:()=>previewCodes.map(row=>({...row})),
   refresh:async()=>true,
   listMembers:async()=>[{email:'user@example.invalid',user_id:'demo-user',active:true}],
@@ -36,7 +33,7 @@ const mock=`const previewSheets=new Map();const previewCodes=[{code:'DEMO-PRIVAT
     activeCategory='Foundation-100';
     document.getElementById('app').classList.add('workspace-restoring');
     document.getElementById('auth-box').hidden=true;document.getElementById('app').hidden=false;document.getElementById('cloud-tools').hidden=false;
-    document.getElementById('settings-tab-inventory').hidden=false;if(document.getElementById('inventory-whatsapp-settings'))document.getElementById('inventory-whatsapp-settings').hidden=false;
+    document.getElementById('settings-tab-inventory').hidden=false;
     document.getElementById('cred-account-val').textContent='DEMO-ACCOUNT';document.getElementById('cred-password-val').textContent='Demo-only-2026';
     ['sign-out','add-member','import-legacy','export-data'].forEach(id=>document.getElementById(id)?.addEventListener('click',()=>showToast('معاينة تصميم — الإجراء غير متاح هنا')));
     applyLanguage();
@@ -45,10 +42,9 @@ const mock=`const previewSheets=new Map();const previewCodes=[{code:'DEMO-PRIVAT
 };`;
 http.createServer((req,res)=>{
   const pathname=new URL(req.url,'http://localhost').pathname;
-  if(pathname==='/trainflow-whatsapp-web.zip'){res.setHeader('Content-Type','application/zip');return res.end(fs.readFileSync(path.join(__dirname,'../dist/trainflow-whatsapp-web.zip')));}
   if(pathname==='/trainflow-prometric.zip'){res.setHeader('Content-Type','application/zip');return res.end(fs.readFileSync(path.join(__dirname,'../dist/trainflow-prometric.zip')));}
   if(pathname==='/exceljs-4.4.0.min.js'){res.setHeader('Content-Type','text/javascript');return res.end(fs.readFileSync(require.resolve('exceljs/dist/exceljs.min.js')));}
-  if(['/codes-export.js','/prometric-core.js','/prometric-registration.js','/certificate-name.js','/inventory-delivery.js','/trainees.js','/trainees-excel.js','/trainees-core.js','/trainees-xlsx.js','/trainees-files.js','/trainees-xlsx-worker.js','/trainees.css','/ops-ui.js','/trainee-reports.js','/session-policy.js'].includes(pathname)){
+  if(['/codes-export.js','/prometric-core.js','/prometric-registration.js','/certificate-name.js','/trainees.js','/trainees-excel.js','/trainees-core.js','/trainees-xlsx.js','/trainees-files.js','/trainees-xlsx-worker.js','/trainees.css','/ops-ui.js','/trainee-reports.js','/session-policy.js'].includes(pathname)){
     res.setHeader('Content-Type',pathname.endsWith('.css')?'text/css':'text/javascript');
     return res.end(fs.readFileSync(path.join(__dirname,'..',pathname.slice(1))));
   }

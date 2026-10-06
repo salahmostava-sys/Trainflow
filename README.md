@@ -31,7 +31,7 @@ The sidebar stays on the **right** in both languages. Open or close it with the 
 
 | Area | Included |
 | --- | --- |
-| Spreadsheet editing | Virtual rows and columns, direct editing, search, filters, formulas, Undo/Redo and saved formatting |
+| Spreadsheet editing | Cell address, selected content display and separate search; virtual rows and columns, direct editing, search, filters, formulas, Undo/Redo and saved formatting |
 | Multiple selections | Drag and Shift for adjacent cells or columns; Ctrl/Cmd for separate areas; formatting and clearing affect selected cells only |
 | Clipboard | Plain text plus a styled HTML table, including saved fills, fonts, borders and automatic result/duplicate-ID colors |
 | Excel import | Preview first; explicitly choose append to the current sheet or replace its contents with a fresh sheet |
@@ -39,7 +39,7 @@ The sidebar stays on the **right** in both languages. Open or close it with the 
 | Prometric | Preview selected trainees, register through the Chrome extension and recover confirmed results after interrupted saves |
 | Certificate correction | Enter the new English name and download Certificate Data Change Sheet.xlsx without a password column |
 | Google reports | Preview operations and successful-trainee rows before uploading through your configured Apps Script connector |
-| Inventory | Supervisor balances, receipt allocations and an inventory message ready to copy to WhatsApp |
+| Inventory | Supervisor balances, receipt allocations and a stock summary ready to copy |
 | Team and recovery | Approved accounts, role enforcement, audit history and private JSON backup/restore |
 
 The standard category names **Foundation, Master, BIS, Corporate and CYBP** stay in English even when the interface is Arabic. Spreadsheet selection shading never changes the stored cell colors. Applications that accept rich clipboard content can retain colors; text-only destinations receive the values.
@@ -80,7 +80,7 @@ flowchart LR
     Next --> API[Validated JavaScript API]
     API --> DB[(Existing database with RLS)]
     UI --> Files[Local Excel worker and clipboard]
-    UI --> Chrome[Prometric and WhatsApp extensions]
+    UI --> Chrome[Prometric registration extension]
     UI --> Reports[Google Apps Script]
     Reports --> Sheets[Google Sheets]
 ~~~
@@ -96,7 +96,7 @@ The existing Supabase project, accounts, ibta_* tables, sheet versions and permi
 | app/, components/, lib/ | Next routes, React/TypeScript workspace adapter and navigation |
 | trainflow.html, root JS/CSS | Original interface and feature commands |
 | server/ | Shared authenticated API handler |
-| extension/ | Prometric and WhatsApp Web Chrome extensions |
+| extension/ | Prometric registration Chrome extension |
 | tools/ | Asset packaging, synthetic preview and Google connector |
 | database.sql, migrations/, supabase/migrations/ | Original schema and reviewed incremental SQL changes |
 | tests/, .github/workflows/ | Unit, integration, browser and CI checks |
@@ -114,7 +114,7 @@ node tests/sheet-enhancements-browser.test.cjs
 node tests/daily-reports-browser.test.cjs
 ~~~
 
-The broader pnpm test:browser command includes legacy preview suites; some older account-switch scenarios still reference the removed owner selector. Use the current focused suites above and review any legacy failures before treating the whole browser run as passing. SQL checks require a separate authenticated database session. Mocked browser checks do not prove a live Google upload, real Prometric registration or delivered WhatsApp message.
+The broader pnpm test:browser command includes legacy preview suites; some older account-switch scenarios still reference the removed owner selector. Use the current focused suites above and review any legacy failures before treating the whole browser run as passing. SQL checks require a separate authenticated database session. Mocked browser checks do not prove a live Google upload, real Prometric registration.
 
 ## Deploy and maintain
 
@@ -124,7 +124,7 @@ The broader pnpm test:browser command includes legacy preview suites; some older
 
 Cloudflare links have been removed from the application integrations. The retained static build helper is a compatibility tool, not the production address. Removing links and extension permissions does not delete an existing hosting account or its remote domain. See [deployment and domain retirement](docs/deployment.md).
 
-Download extension updates from **Settings → Extensions**, extract them and reload the unpacked extension in the same Chrome profile. Prometric **4.1.3** and WhatsApp Web **1.0.4** target the current Vercel origin; older installed copies must be updated.
+Download extension updates from **Settings → Extensions**, extract them and reload the unpacked extension in the same Chrome profile. Prometric **4.1.3** targets the current Vercel origin; older installed copies must be updated.
 
 Current administrator backups use trainflow-backup; older ibta-ops-backup files remain supported. Backups may contain trainee credentials and shared configuration. Auth accounts are managed separately. Do not rerun the original database.sql against a provisioned project; use reviewed migrations.
 
@@ -138,7 +138,5 @@ Current administrator backups use trainflow-backup; older ibta-ops-backup files 
 | API authentication and limits | [JavaScript server](docs/javascript-server.md) |
 | Google Sheets setup and missing headers | [Google reports](docs/google-reports.md) |
 | Chrome registration and recovery | [Prometric extension](extension/prometric/README.md) |
-| WhatsApp Web setup | [WhatsApp guide](docs/whatsapp-web.md) |
-| Optional database-scheduled Meta delivery | [Inventory delivery](docs/whatsapp-inventory.md) |
 
 Updated **6 October 2026**. Dated audit documents record earlier reviews; their observations are historical.

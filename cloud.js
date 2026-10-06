@@ -19,7 +19,7 @@ const Cloud = (() => {
   const dailyMessage=()=>currentLang==='ar'?'انتهت الجلسة الساعة 5 مساءً بتوقيت السعودية. سجّل الدخول من جديد.':'Your session ended at 5 PM Saudi time. Please sign in again.';
   async function endDailySession(){
     if(endingSession)return;endingSession=true;clearTimeout(sessionTimer);
-    if(typeof InventoryDelivery!=='undefined')InventoryDelivery.reset();
+
     $('app').hidden=true;$('cloud-tools').hidden=true;
     if(typeof Trainees!=='undefined')Trainees.suspend?.();
     const priorUser=user?.id;
@@ -79,7 +79,6 @@ const Cloud = (() => {
     if(raw==='IBTA_STOCK_NOT_SET') return t('inventoryStockNotSet');
     if(raw==='IBTA_STOCK_INSUFFICIENT') return t('inventoryStockInsufficient');
     if(raw==='IBTA_INVALID_STOCK_CHANGE') return t('inventoryInvalidChange');
-    if(raw==='IBTA_INVALID_PHONE') return t('inventoryPhoneInvalid');
     if(raw==='IBTA_LIBRARY_LOAD_FAILED') return t('libraryLoadFailed');
     if(raw.startsWith('IBTA_DUPLICATE_CODE:')) return t('duplicateCode')(raw.slice(20));
     if(/invalid login credentials|invalid credentials/i.test(raw) || error?.code==='invalid_credentials') return t('authInvalidCredentials');
@@ -178,7 +177,6 @@ const Cloud = (() => {
     $('settings-prometric-password').value=PROMETRIC_PASSWORD;
     $('settings-zoom-link').value=p.links?.zoom || '';
     $('settings-prometric-link').value=p.links?.prometric || '';
-    if($('inventory-whatsapp-number')) $('inventory-whatsapp-number').value=p.inventoryWhatsappNumber || '';
     if($('inventory-supervisor-name')) $('inventory-supervisor-name').value=p.inventorySupervisorName || '';
     if($('inventory-message-language')) $('inventory-message-language').value=p.inventoryMessageLanguage==='en'?'en':'ar';
     $('profile-name').value=accountName();
@@ -205,7 +203,6 @@ const Cloud = (() => {
     $('code-bulk-tools').hidden=!admin;
     $('reset-tools').hidden=!admin;
     $('inventory-admin').hidden=!admin;
-    if($('inventory-whatsapp-settings')) $('inventory-whatsapp-settings').hidden=!admin;
     document.querySelectorAll('.col-notes input').forEach(el=>{el.disabled=role==='copy_only';});
     document.querySelectorAll('.code-unmark-btn').forEach(el=>{el.hidden=role==='copy_only';});
     if(!admin && ($('settings-tab-data').getAttribute('aria-selected')==='true' || $('settings-tab-prometric').getAttribute('aria-selected')==='true' || $('settings-tab-inventory').getAttribute('aria-selected')==='true')) activateSettingsTab('profile');
@@ -416,7 +413,7 @@ const Cloud = (() => {
     finally{lock(false);}
   }
   async function enter(session){
-    if(!session){ready=false;if(typeof InventoryDelivery!=='undefined')InventoryDelivery.reset();$('app').hidden=true;$('cloud-tools').hidden=true;$('sign-out').hidden=true;$('auth-box').hidden=false;return;}
+    if(!session){ready=false;$('app').hidden=true;$('cloud-tools').hidden=true;$('sign-out').hidden=true;$('auth-box').hidden=false;return;}
     user=session.user;
     if(retainedDraftUser&&retainedDraftUser!==user.id){await client.auth.signOut({scope:'local'});throw Error(currentLang==='ar'?'ادخل بالحساب السابق لحفظ تعديلات الجدول أولًا.':'Sign in with the previous account to save your sheet edits first.');}
     sessionDeadline=SessionPolicy.expiresAt(session.access_token||'');
@@ -433,7 +430,7 @@ const Cloud = (() => {
     $('auth-box').hidden=true;$('app').hidden=false;$('cloud-tools').hidden=false;$('sign-out').hidden=false;
     try{if(typeof restoreWorkspaceView==='function')await restoreWorkspaceView();}finally{$('app').classList.remove('workspace-restoring');}
     setStatus('dbConnected');
-    if(typeof InventoryDelivery!=='undefined')InventoryDelivery.ready();
+
   }
   async function authenticate(signup){
     const email=$('auth-email').value.trim(),password=$('auth-password').value;
@@ -548,24 +545,6 @@ const Cloud = (() => {
     }catch(error){fail(error);throw error;}
     finally{lock(false);}
   }
-  async function saveInventoryMessageSettings(number,name,language){
-    if(!ready || role!=='admin')throw Error('IBTA_NOT_APPROVED');
-    if(number && !/^\d{8,15}$/.test(number))throw Error('IBTA_INVALID_PHONE');
-    if(name.length>100 || /[\r\n\x00-\x1f]/.test(name))throw Error('IBTA_INVALID_SUPERVISOR_NAME');
-    if(!['ar','en'].includes(language))throw Error('IBTA_INVALID_MESSAGE_LANGUAGE');
-    const payload=clone(config.payload);
-    payload.inventoryWhatsappNumber=number;
-    payload.inventorySupervisorName=name;
-    payload.inventoryMessageLanguage=language;
-    if(same(payload,config.payload))return true;
-    lock(true);setStatus('saving');
-    try{
-      const {error}=await client.rpc('ibta_apply_changes',{changes:[],settings_payload:payload,settings_version:config.version});
-      if(error)throw error;
-      await load();setStatus('saved');return true;
-    }catch(error){try{await load();}catch{}fail(error);throw error;}
-    finally{lock(false);}
-  }
   async function listMembers(){
     if(role!=='admin')return [];
     const {data,error}=await client.from('ibta_members').select('email,role,active,user_id').order('email');
@@ -604,7 +583,7 @@ const Cloud = (() => {
         location.reload();
       });
       client.auth.onAuthStateChange((event,session)=>{
-        if(event==='SIGNED_OUT'){ready=false;clearTimeout(sessionTimer);if(typeof InventoryDelivery!=='undefined')InventoryDelivery.reset();if(typeof Trainees!=='undefined'&&!retainedDraftUser)Trainees.reset();$('app').hidden=true;$('cloud-tools').hidden=true;$('sign-out').hidden=true;$('auth-box').hidden=false;}
+        if(event==='SIGNED_OUT'){ready=false;clearTimeout(sessionTimer);if(typeof Trainees!=='undefined'&&!retainedDraftUser)Trainees.reset();$('app').hidden=true;$('cloud-tools').hidden=true;$('sign-out').hidden=true;$('auth-box').hidden=false;}
         if(event==='USER_UPDATED' && session?.user){user=session.user;translateUi();}
       });
       const {data,error}=await client.auth.getSession();if(error)throw error;
@@ -636,17 +615,8 @@ const Cloud = (() => {
     if(error)throw error;
     await load();
   }
-  return {boot,persist,copyCode,claimTraineeCode,editCode,decorate,refresh,translateUi,restoreData,exportData,importCodes,listMembers,updateMember,auditEvents,exportCodesCsv,changeSupervisorStock,saveInventoryMessageSettings,
-    inventoryDelivery:async(options)=>{if(!ready||role!=='admin')throw Error('ADMIN_REQUIRED');const {data,error}=await client.rpc(options?'ibta_save_inventory_delivery':'ibta_inventory_delivery_status',options?{options}:{});if(error)throw error;return data;},
-    inventoryDeliveryEligible:()=>ready&&role==='admin'&&!checkDailySession(),
-    inventoryReportSnapshot:async()=>{
-      if(!ready||role!=='admin'||checkDailySession())throw Error('AUTH_REQUIRED');
-      const [settings,codes,balances]=await Promise.all([client.from('ibta_settings').select('payload').eq('id',1).single(),allRows(),client.from('ibta_supervisor_stock').select('category,remaining')]);
-      if(settings.error||balances.error)throw settings.error||balances.error;
-      const p=settings.data.payload,available={};for(const row of codes)if(!row.used_on)available[row.category]=(available[row.category]||0)+1;
-      return {categories:[...new Set([...(p.codeCategories||[]),...codes.map(r=>r.category)])],available,labels:p.categoryLabels||{},stock:Object.fromEntries(balances.data.map(r=>[r.category,r.remaining])),settings:{number:p.inventoryWhatsappNumber||'',name:p.inventorySupervisorName||'',language:p.inventoryMessageLanguage==='en'?'en':'ar'}};
-    },
+  return {boot,persist,copyCode,claimTraineeCode,editCode,decorate,refresh,translateUi,restoreData,exportData,importCodes,listMembers,updateMember,auditEvents,exportCodesCsv,changeSupervisorStock,
     reportSession:async()=>{if(!ready)throw Error('AUTH_REQUIRED');const {data,error}=await client.auth.getSession();if(error||!data.session)throw Error('AUTH_REQUIRED');return {token:data.session.access_token,url:SUPABASE_URL,key:KEY};},
     readTrainees,saveTrainees,assignCodes,userId:()=>user?.id || '',codeSnapshot:()=>[...rows.values()].map(row=>({...row})),
-    role:()=>role,email:()=>user?.email || '',existingCodes:()=>[...rows.keys()],stockSnapshot:()=>Object.fromEntries(stock),inventoryMessageSettings:()=>({number:config?.payload?.inventoryWhatsappNumber || '',name:config?.payload?.inventorySupervisorName || '',language:config?.payload?.inventoryMessageLanguage==='en'?'en':'ar'})};
+    role:()=>role,email:()=>user?.email || '',existingCodes:()=>[...rows.keys()],stockSnapshot:()=>Object.fromEntries(stock),inventoryMessageSettings:()=>({name:config?.payload?.inventorySupervisorName || '',language:config?.payload?.inventoryMessageLanguage==='en'?'en':'ar'})};
 })();

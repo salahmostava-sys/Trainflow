@@ -26,6 +26,7 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=r
     await page.locator('td[data-v="0"][data-col="0"]').click();await page.keyboard.press('Control+c');
     await page.waitForFunction(()=>document.getElementById('sheet-status').textContent==='تم النسخ إلى الحافظة');
     assert.equal(await page.evaluate(()=>navigator.clipboard.readText()),'EXISTING-VOUCHER','Cell value is on the system clipboard');
+    assert.equal(await page.locator('#sheet-cell-content').inputValue(),'EXISTING-VOUCHER');await page.locator('.sheet-search-group').screenshot({path:path.join(root,'artifacts/selected-cell-toolbar.png')});
     await page.evaluate(()=>{const input=document.createElement('textarea');input.id='external-paste-target';input.style.cssText='position:fixed;top:0;left:0;z-index:1000';document.body.append(input);});
     await page.locator('#external-paste-target').focus();await page.keyboard.press('Control+v');assert.equal(await page.locator('#external-paste-target').inputValue(),'EXISTING-VOUCHER','Pastes outside the sheet into an ordinary text field');
     await page.locator('td[data-v="0"][data-col="0"]').click();await page.locator('td[data-v="0"][data-col="1"]').click({modifiers:['Shift']});await page.keyboard.press('Control+c');
@@ -90,7 +91,8 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=r
     await page.locator('#lang-btn').click();assert.equal(await page.locator('#html-root').getAttribute('lang'),'en');
     await page.reload();await page.locator('#app').waitFor({state:'visible'});await page.waitForFunction(()=>document.getElementById('sheet-status')?.textContent==='Saved');assert.equal(await page.locator('#html-root').getAttribute('lang'),'en','Refresh preserves the same language and selected sheet panel');
     const health=await page.request.get('http://localhost:'+port+'/api/health');assert.equal((await health.json()).runtime,'nextjs');const privateResponse=await page.request.get('http://localhost:'+port+'/api/data/ibta_codes');assert.equal(privateResponse.status(),401,'Next API keeps unauthenticated requests out of the existing database');
-    const downloads=['trainflow-prometric.zip','trainflow-whatsapp-web.zip','exceljs-4.4.0.min.js','trainees-xlsx-worker.js','google-reports.gs','codes-export.js'];for(const file of downloads)assert.equal((await page.request.get('http://localhost:'+port+'/workspace/'+file)).status(),200,'Published original asset: '+file);
+    const downloads=['trainflow-prometric.zip','exceljs-4.4.0.min.js','trainees-xlsx-worker.js','google-reports.gs','codes-export.js'];for(const file of downloads)assert.equal((await page.request.get('http://localhost:'+port+'/workspace/'+file)).status(),200,'Published original asset: '+file);
+    for(const file of ['trainflow-whatsapp-web.zip','inventory-delivery.js'])assert.equal((await page.request.get('http://localhost:'+port+'/workspace/'+file)).status(),404,'Retired asset is unavailable: '+file);
     assert.deepEqual(errors,[]);console.log('PASS: production Next.js with classic layout, page/settings URLs, Back/Forward, direct links, refresh, mounted sheet, language, assets and API protection');
   }finally{await browser?.close();for(const server of servers)server.kill();}
 })().catch(error=>{console.error(error);process.exitCode=1;});

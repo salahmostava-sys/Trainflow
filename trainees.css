@@ -402,3 +402,9 @@ body.sheet-expanded-open{overflow:hidden}
   #sheet-workspace .sheet-filters{display:flex!important}
   .sheet-file-dialog{padding:14px}
 }
+
+/* Address, selected cell content and independent search in reading order. */
+#sheet-workspace .sheet-search-group{flex:1 1 500px;min-width:min(360px,100%);max-width:100%}
+#sheet-workspace #sheet-cell-content{flex:1 1 160px;width:0;min-width:80px;height:34px;padding:6px 10px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;color:#0f172a;cursor:text}
+#sheet-workspace .sheet-search-group #sheet-search{flex:0 1 220px;width:220px;min-width:100px}
+#sheet-workspace #sheet-cell-content:focus{outline:2px solid #93c5fd;outline-offset:1px}

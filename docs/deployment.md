@@ -42,11 +42,11 @@ The sidebar stays on the right in both languages, supports a 60 px compact rail 
 5. Use synthetic data for UI regression checks; test a real signed-in account separately when live writes are required.
 6. Confirm both extension ZIPs download from Settings → Extensions. Reinstall/reload existing unpacked extensions after an update.
 
-The selection/export browser suite checks additive selections, rich clipboard MIME types and the actual colors inside downloaded XLSX files. External Google/Prometric/WhatsApp actions need their own configured test accounts and are not exercised by that suite.
+The selection/export browser suite checks additive selections, rich clipboard MIME types and the actual colors inside downloaded XLSX files. External Google/Prometric actions need their own configured test accounts and are not exercised by that suite.
 
 ## Retire the former Cloudflare address
 
-Application links, extension host permissions, bridges and test fixtures now use the Vercel production origin. Prometric 4.1.3 and WhatsApp Web 1.0.4 no longer grant access to the former Cloudflare origin.
+Application links, extension host permissions, bridges and test fixtures now use the Vercel production origin. Prometric 4.1.3 no longer grants access to the former Cloudflare origin.
 
 This repository change does not delete a domain or a project from a Cloudflare account. Use the owning account's hosting controls to disable/remove the former address or delete its retired hosting project, as appropriate. Account access is required; no remote deletion is recorded by this change. Update Supabase Auth Site URL and allowed confirmation/recovery redirects to the intended Vercel origin in the existing project. Verify email redirects before removing an older callback address.
 

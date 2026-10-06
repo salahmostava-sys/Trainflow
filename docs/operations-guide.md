@@ -42,7 +42,7 @@ Verify the merged counts and marks before putting the team into operation. The o
 
 **تنزيل نسخة احتياطية** exports the shared configuration, codes, and supervisor balances. **استعادة نسخة احتياطية** previews the JSON and asks for confirmation before replacing them in one database transaction; a stale settings version or invalid row cancels the whole restore. Older backup files without supervisor balances leave the current balances untouched. The backup includes Prometric credentials and the Zoom meeting link; keep it private. Auth accounts are managed separately and are not restored from this file. There is no scheduled backup service configured. Supabase recommends regular off-site database dumps for Free projects; the app backup is an additional operational export, not a substitute for a full database dump.
 
-The separate **Inventory / المخزون** page shows a ready-to-send WhatsApp message with unused codes held by the team, the remaining supervisor balance, and totals for every code category. Administrators manage balances under **Settings → Inventory**, where a compact category list shows current supervisor stock and separate controls set the actual balance or add newly purchased codes to it. No starting numbers are inferred from codes already in the system. Every newly received code reduces the supervisor balance automatically. If there is no opening balance or insufficient stock, the whole code-add operation is rejected. Deleting or using an already received code does not return it to the supervisor automatically. The data model retains destination WhatsApp number, supervisor name and message language; their former recipient form is not mounted in the current classic screen. The message has three separated sections—codes with the team, codes with the supervisor, and totals—while keeping category names unchanged in Arabic and English. WhatsApp opens with the message prepared; a person must press Send there.
+The separate **Inventory / المخزون** page shows unused codes held by the team, supervisor balances and category totals. Use **Copy message** to copy the stock summary. Administrators manage balances under **Settings → Inventory**: set the actual opening balance or add newly purchased stock. Receiving new codes reduces supervisor stock; insufficient stock rejects the entire operation. Using or deleting an existing code does not restore supervisor stock. The report keeps the supervisor name and language preferences and has three sections: team stock, supervisor stock and totals.
 
 Settings → System data includes file import for up to 5,000 codes at a time. CSV files use the first `Code` column and the selected destination category; exact or case-insensitive duplicates are skipped. The same panel retains a plain CSV export. Colored XLSX export is available directly on VOUCHERS. Daily Google uploads use the Apps Script connector described in the Google guide; they are manual submissions, not two-way OAuth synchronization.
 
@@ -150,26 +150,8 @@ migration or additional Supabase permissions are required.
 Edge profile against local registration fixtures, including failed saves, reloads
 and closed-tab recovery. These tests create no real Prometric accounts.
 
-## Daily WhatsApp inventory messages
 
-The repository retains optional automatic-delivery source and database functions,
-but the current classic screen does not mount their configuration controls.
-Settings → Extensions provides the package download. In an enabled integration
-build, the Saudi time defaults to 16:59 before the 17:00 sign-out, and the Web provider uses
-WhatsApp Web in Chrome through the extension downloadable from these settings.
-Load `extension/whatsapp-web` through Chrome's Load unpacked control, reload TrainFlow,
-and save the enabled settings on one device only. The device must stay awake,
-Chrome and WhatsApp must stay running, and TrainFlow must be signed in before the
-prefetch time. Missing or stale reports are skipped. See [Chrome setup and
-delivery status](whatsapp-web.md).
-
-The optional Meta provider runs from the database even with the app closed. It
-requires a WhatsApp Business account, an approved six-variable template and a
-production token stored in Vault. See [Meta setup](whatsapp-inventory.md).
-Automatic sending is disabled until configured; setup tests send no messages.
-
-
-The last main panel and Settings pane restore on browser refresh after verified sign-in, without showing another panel or language first. Language is selected in the document head before the interface paints. Each signed-in viewer and sheet owner has an independent remembered cell and scroll viewport; refresh restores the current account's own sheet position. Only numeric coordinates and UI choices are stored, not trainee records or search text. The cell-address field sits beside table search. Regression coverage: `tests/workspace-position-browser.test.cjs`.
+The last main panel and Settings pane restore on browser refresh after verified sign-in, without showing another panel or language first. Language is selected in the document head before the interface paints. Each signed-in viewer and sheet owner has an independent remembered cell and scroll viewport; refresh restores the current account's own sheet position. Only numeric coordinates and UI choices are stored, not trainee records or search text. The cell-address field comes first in the toolbar, followed by the selected cell’s displayed content and a separate table search field. Regression coverage: `tests/workspace-position-browser.test.cjs`.
 
 Sheet selection uses a translucent grey overlay and one green frame around the selected range. The selection origin stays clear; selected row and column headers use green accents. Dragging and Shift selection work in both sheet directions. Virtualized rows retain the actual range edges, and the overlay does not alter saved cell fills, borders or copied formatting.
 
@@ -206,6 +188,6 @@ Use **Certificate name change** in the trainee toolbar, enter the new English na
 
 Google configuration belongs to **Settings → Google reports**. The trainee toolbar keeps the date, preview and upload actions alongside certificate/Prometric controls. Preview contains the exact two report shapes, paged every 50 rows. Actual target-sheet duplicate suppression happens during upload. Follow the [Google setup guide](google-reports.md) to configure file IDs, tab names and header row.
 
-Download Prometric 4.1.3 and WhatsApp Web 1.0.4 from **Settings → Extensions**. They use the Vercel origin; replace old unpacked extensions and reload the page. Scheduled delivery requires the optional configuration UI to be mounted as well as the Chrome/WhatsApp running conditions described in the [WhatsApp guide](whatsapp-web.md). Automatic chain copy has been removed; copying a keycode does not automatically claim another voucher.
+Download Prometric 4.1.3 from **Settings → Extensions**. Replace files in the installed extension’s folder and reload it for the current Vercel origin. Automatic chain copy has been removed; copying a keycode does not automatically claim a voucher.
 
-Current focused checks are pnpm test, pnpm build, pnpm test:next, tests/selection-export-browser.test.cjs and tests/sheet-enhancements-browser.test.cjs. Some legacy browser tests still expect the removed owner dropdown and need review before claiming the full browser aggregate passes. These checks do not send real reports, create real Prometric accounts or send WhatsApp messages.
+Current focused checks are pnpm test, pnpm build, pnpm test:next, tests/selection-export-browser.test.cjs and tests/sheet-enhancements-browser.test.cjs. Some legacy browser tests still expect the removed owner dropdown. These checks use synthetic records and do not submit real Google reports or create real Prometric accounts.

@@ -13,8 +13,6 @@ flowchart TB
     Auth[Supabase Auth]
     API[Next.js adapter and shared JavaScript API]
     DB[(Supabase PostgreSQL)]
-    WA[WhatsApp Web extension]
-    WhatsApp[WhatsApp Web]
     PRO[Prometric registration extension]
     Prometric[Prometric website]
     XLSX[Local Excel worker]
@@ -29,8 +27,6 @@ flowchart TB
     API -->|User JWT, RLS and transactional RPCs| DB
     UI <-->|Selected registration jobs and results| PRO
     PRO --> Prometric
-    UI <-->|Inventory configuration and fresh reports| WA
-    WA --> WhatsApp
     UI <-->|Import and export| XLSX
     XLSX <--> Files
     UI -->|User-triggered report submission| Reports
@@ -55,12 +51,10 @@ The browser is the working surface. The server checks operational requests, whil
 | `trainees-xlsx.js`, `trainees-xlsx-worker.js`, `trainees-files.js` | Local Excel import/export and file previews |
 | `certificate-name.js` | Certificate name correction preview and export |
 | `prometric-core.js`, `prometric-registration.js` | Registration eligibility, job preview and extension coordination |
-| `inventory-delivery.js` | Inventory reporting and scheduled delivery controls |
 | `trainee-reports.js` | Daily report preparation and Google report submission |
 | `session-policy.js` | Shared daily sign-in policy used by browser and API |
 | `server/worker.mjs` | Validated shared API called by the Next TypeScript adapter |
 | `extension/prometric/` | Manifest V3 registration extension and TrainFlow page bridge |
-| `extension/whatsapp-web/` | Manifest V3 schedule, inventory bridge and WhatsApp sender |
 | `tools/build-site.cjs` | Production assets, worker, asset hashes and extension ZIP packages |
 | `tools/design-preview.cjs` | UI preview with synthetic data; no production writes |
 | `tools/google-reports.gs` | Google Apps Script bridge for existing report spreadsheets |
@@ -83,10 +77,8 @@ The existing database keeps its stable `ibta_*` object names. TrainFlow is the p
 | `ibta_supervisor_stock` | Unallocated supervisor stock per category |
 | `ibta_supervisor_stock_events` | Stock adjustments and allocations |
 | `ibta_audit` | Database-generated action, actor and timestamp records |
-| `private.ibta_inventory_delivery` | Delivery configuration exposed through authorized RPCs |
-| `private.ibta_inventory_delivery_log` | Server delivery history, separate from browser extension state |
 
-Additional delivery objects are defined in the inventory migrations. Read their policies and functions before extending delivery behavior. Auth accounts are managed separately from application backups.
+Auth accounts are managed separately from application backups.
 
 ## Main workflows
 
@@ -120,9 +112,10 @@ The browser loads the signed-in account's private sheet and version; the page ha
 
 The application previews selected trainees, validates required values and skips existing credentials. The extension receives only selected names, emails and matching metadata, then processes registration jobs sequentially in a dedicated tab. Confirmed results fill blank matching credential cells. Pending results survive in extension storage until the application acknowledges a successful sheet save. Uncertain outcomes require checking Prometric before retrying.
 
-### Send an inventory report
+### Copy an inventory report
 
-The administrator configures a destination and Riyadh send time. The extension prepares a fresh report before sending, validates the destination and message and records the outcome. The computer, Chrome, WhatsApp Web and a valid application session must be available. Enable automatic sending on one device. The separate manual WhatsApp link opens a draft that a person sends themselves.
+The inventory page combines team balances, supervisor balances and category totals. Users can copy the report as text. There is no messaging integration or scheduled delivery.
+
 
 ### Exchange files and daily reports
 
@@ -140,7 +133,7 @@ The worker rejects foreign origins, missing/invalid tokens, inactive memberships
 
 Supabase REST remains reachable by authenticated clients, including the report bridge. Database RLS remains necessary even with the worker. Display names in Auth metadata do not grant privileges. Extension bridges validate the page origin, message source and channel.
 
-Only device preferences remain in browser local storage. Authentication uses session storage and daily sign-in rules. Registration results and scheduled delivery state also have extension-local storage. Operational records are persisted in PostgreSQL.
+Only device preferences remain in browser local storage. Authentication uses session storage and daily sign-in rules. Registration results also have extension-local storage. Operational records are persisted in PostgreSQL.
 
 ## Interface and selection
 
@@ -151,6 +144,8 @@ Selections consist of an active rectangle plus additive rectangles. Coordinates 
 Clipboard output contains both TSV and a styled HTML table. Separate rows/columns are compacted in displayed order and unselected intersections are blank. Stored colors and automatic result/duplicate-ID colors are copied; temporary selection overlays are excluded. Rich-paste support depends on the destination. Voucher export writes an XLSX workbook with the same usage-day palette and used-code strike-through. Standard category names remain English in both UI languages.
 
 ## Build and deployment
+
+The build generates public/workspace, generated/classic-ui.ts and .next. The Prometric ZIP is packaged from checked-in source. Operational records, SQL and private backups are not embedded in public assets.
 
 ~~~mermaid
 flowchart LR
@@ -165,7 +160,6 @@ flowchart LR
     Next --> Live[trainf.vercel.app]
 ~~~
 
-The build generates public/workspace, generated/classic-ui.ts and .next. Both extension ZIPs are packaged from the checked-in source. Prometric 4.1.3 and WhatsApp Web 1.0.4 trust the current Vercel origin; installed older versions must be updated. Operational records, SQL and private backups are not embedded in public assets.
 
 Cloudflare-domain references have been removed from active integrations. The static build helper remains for compatibility. Remote account/domain deletion is separate and is not performed by changing these repository files. See [deployment](docs/deployment.md).
 
@@ -193,6 +187,5 @@ For a faulty frontend deployment, roll back through Vercel or revert the Git com
 - [Operations guide](docs/operations-guide.md)
 - [Deployment and maintenance](docs/deployment.md)
 - [JavaScript API details](docs/javascript-server.md)
-- [WhatsApp Web setup](docs/whatsapp-web.md)
 - [Google reports setup](docs/google-reports.md)
 - [Documentation index](docs/README.md)

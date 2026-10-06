@@ -103,7 +103,6 @@ const ctx=vm.createContext({document,URL,Blob,localStorage:{getItem:k=>storage.g
 els['account-menu-popover']=new Element();els['account-menu-popover'].hidden=true;
 els['inventory-current-quantity']=new Element();
 els['inventory-purchased-quantity']=new Element();
-els['inventory-whatsapp-number']=new Element();
 els['inventory-supervisor-name']=new Element();
 els['inventory-message-language']=new Element();
 ctx.atob=atob;
@@ -121,8 +120,6 @@ assert(!html.includes('id="remaining-summary-details"'));
 assert(!html.includes('id="inventory-grid"'));
 assert(html.indexOf('id="panel-inventory"')<html.indexOf('id="settings-pane-inventory"'));
 assert(html.indexOf('id="settings-pane-inventory"')<html.indexOf('id="inventory-admin"'));
-assert(!html.includes('id="inventory-whatsapp-settings"'));
-assert(!html.includes('id="inventory-whatsapp-link"'));
 assert.match(html,/<details class="report-card" id="daily-used-details">/);
 assert.match(html,/#daily-used-results\{display:grid;grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/);
 for(const tab of ['profile','data','prometric','inventory','extensions','reports','sync']){
@@ -397,7 +394,7 @@ for(const key of usedKeys) assert(englishKeys.includes(key),`Missing translation
   assert.equal(await run("Cloud.claimTraineeCode('TRAINEE-CATEGORY','user-1')"),'TRAINEE-ALLOCATE');
   const allocation=db.codes.find(r=>r.code==='TRAINEE-ALLOCATE');assert.equal(allocation.owner_id,'user-1');assert.equal(allocation.used_by,'user-1');assert.ok(allocation.used_on);
   await assert.rejects(run("Cloud.claimTraineeCode('NONEXISTENT','user-1')"));
-  const inventorySnapshot=await run('Cloud.inventoryReportSnapshot()');assert.ok(inventorySnapshot.categories.length);assert.equal(inventorySnapshot.available['TRAINEE-CATEGORY']||0,0,'Claimed codes are excluded from the prepared report');assert.doesNotMatch(JSON.stringify(inventorySnapshot),/test-password|test-account|credentials|traineeSheets/,'No credentials or trainee data enters the Web report');
+  for(const name of ['inventoryReportSnapshot','inventoryDelivery','inventoryDeliveryEligible'])assert.equal(run('typeof Cloud.'+name),'undefined','Removed delivery APIs are absent');
   let resets=0,flushes=0;
   ctx.Trainees={flush:async()=>{flushes++;return false;},hasDraft:()=>true,reset(){resets++;}};
   ctx.testExpiry=ctx.SessionPolicy.expiresAt(accessToken);

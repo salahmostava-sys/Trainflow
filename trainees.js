@@ -502,7 +502,7 @@ const Trainees=(()=>{
     };
     zoomInput.onfocus=()=>zoomInput.select();zoomInput.onblur=commitZoom;
     zoomInput.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();commitZoom();zoomInput.blur();}else if(e.key==='Escape'){e.preventDefault();e.stopPropagation();zoomInput.value=excelView.zoom+'%';zoomInput.blur();}};
-    const search=$('sheet-search'),searchGroup=node('div',undefined,{class:'sheet-search-group'});search.replaceWith(searchGroup);searchGroup.append(search,node('input',undefined,{id:'sheet-address',value:'A1','aria-label':'عنوان الخلية / Cell address',title:'D150',autocomplete:'off',spellcheck:'false',dir:'ltr'}));
+    const search=$('sheet-search'),searchGroup=node('div',undefined,{class:'sheet-search-group'});search.replaceWith(searchGroup);searchGroup.append(node('input',undefined,{id:'sheet-address',value:'A1','aria-label':'عنوان الخلية / Cell address',title:'D150',autocomplete:'off',spellcheck:'false',dir:'ltr'}),node('input',undefined,{id:'sheet-cell-content',type:'text',readonly:'',dir:'auto',autocomplete:'off',spellcheck:'false'}),search);
     $('sheet-address').addEventListener('keydown',e=>{
       if(e.key==='Escape'){e.preventDefault();$('sheet-address').blur();paint();return;}
       if(e.key!=='Enter')return;e.preventDefault();if(!loaded)return;
@@ -675,6 +675,7 @@ const Trainees=(()=>{
   }
   function translate(){
     ($('sidebar-trainees-label')||$('trainees-tab')).textContent=tr('المتدربون','Trainees');if(!initialized)return;
+    $('sheet-cell-content').placeholder=tr('محتوى الخلية المحددة','Selected cell content');$('sheet-cell-content').setAttribute('aria-label',tr('محتوى الخلية المحددة','Selected cell content'));
     if($('sheet-more-tools'))$('sheet-more-tools').textContent=tr('التنسيق وأدوات إضافية','Formatting & more tools');
     $('sheet-zoom-label').textContent=tr('زوم الجدول','Table zoom');
     for(const [id,ar,en]of [['sheet-zoom-out','تصغير الجدول','Zoom out'],['sheet-zoom-in','تكبير الجدول','Zoom in'],['sheet-zoom-slider','نسبة زوم الجدول','Table zoom percentage'],['sheet-zoom-reset','اكتب نسبة الزوم من 50 إلى 200','Enter zoom percentage from 50 to 200']]){$(id).setAttribute('aria-label',tr(ar,en));$(id).title=tr(ar,en);}
@@ -1114,6 +1115,9 @@ const Trainees=(()=>{
       td.tabIndex=current?0:-1;td.setAttribute('aria-selected',String(selected));
     });
     if(document.activeElement!==$('sheet-address'))$('sheet-address').value=colLetter(cursor.c)+((view[cursor.r]??0)+1);
+    const activeRow=view[cursor.r],raw=cells[activeRow]?.[cursor.c]||'';
+    const content=activeRow===undefined?'':raw.startsWith('=')&&cursor.c!==11?String(D.formulaValue(cells,activeRow,cursor.c,formulaCache)):raw;
+    $('sheet-cell-content').value=content;$('sheet-cell-content').title=content;
     $('sheet-grid').setAttribute('aria-multiselectable','true');
     $('sheet-grid').querySelectorAll('thead th[data-col]').forEach(th=>th.classList.toggle('sheet-active-header',selectedCols.includes(+th.dataset.col)));
     $('sheet-grid').querySelectorAll('th[data-rowv]').forEach(th=>{th.classList.toggle('sheet-focus-row-header',+th.dataset.rowv===cursor.r);th.classList.toggle('sheet-selected-row-header',ranges.some(([a,b])=>+th.dataset.rowv>=a&&+th.dataset.rowv<=b));});
@@ -1231,7 +1235,7 @@ const Trainees=(()=>{
     const activeDlg=document.querySelector('dialog[open]');
     if(activeDlg)return false;
     const activeId=document.activeElement?.id;
-    if(activeId==='sheet-search'||activeId==='sheet-org'||activeId==='sheet-date'||activeId==='sheet-code-search'||activeId==='sheet-add-bulk-count')return false;
+    if(activeId==='sheet-cell-content'||activeId==='sheet-search'||activeId==='sheet-org'||activeId==='sheet-date'||activeId==='sheet-code-search'||activeId==='sheet-add-bulk-count')return false;
 
     const isCtrlZ=(e.ctrlKey||e.metaKey)&&(e.code==='KeyZ'||e.key.toLowerCase()==='z');
     const isCtrlY=(e.ctrlKey||e.metaKey)&&(e.code==='KeyY'||e.key.toLowerCase()==='y');
@@ -1311,7 +1315,7 @@ const Trainees=(()=>{
     catch(error){$('sheet-code-status').textContent=/CONFLICT/.test(error.message||'')?tr('تغيرت الأكواد. حدّث القائمة وحاول مجددًا.','Codes changed. Refresh and try again.'):tr('تعذر تخصيص الأكواد. تأكد أن المستخدم نشط ثم حدّث القائمة.','Could not assign codes. Check that the user is active, then refresh.');}
     finally{codeBusy=false;$('sheet-code-workspace').inert=false;if($('sheet-owner'))$('sheet-owner').disabled=false;}
   }
-  function reset(){prometricTools?.reset();certificateTools?.reset();setExpandedView(false);excelTools?.closeFiles();closeDuplicateDetails();closeContextMenu();$('sheet-find-dialog')?.close();clearTimeout(timer);epoch++;owner='';cells=[];formatting=D.defaultFormat();loaded=false;loading=false;editing=null;history=[];future=[];revision=savedRevision=0;if(initialized){render();$('sheet-owner')?.replaceChildren();$('sheet-code-list').replaceChildren();$('sheet-workspace').inert=true;}}
+  function reset(){prometricTools?.reset();certificateTools?.reset();setExpandedView(false);excelTools?.closeFiles();closeDuplicateDetails();closeContextMenu();$('sheet-find-dialog')?.close();clearTimeout(timer);epoch++;owner='';cells=[];formatting=D.defaultFormat();loaded=false;loading=false;editing=null;history=[];future=[];revision=savedRevision=0;if(initialized){$('sheet-cell-content').value='';$('sheet-cell-content').title='';render();$('sheet-owner')?.replaceChildren();$('sheet-code-list').replaceChildren();$('sheet-workspace').inert=true;}}
   function suspend(){prometricTools?.reset();certificateTools?.reset();setExpandedView(false);excelTools?.closeFiles();closeDuplicateDetails();closeContextMenu();$('sheet-find-dialog')?.close();clearTimeout(timer);}
   return {open,translate,hasDraft,flush,reset,suspend,savePosition};
 })();
