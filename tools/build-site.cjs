@@ -8,7 +8,7 @@ const next = process.argv.includes('--next');
 const output = path.join(root, next ? 'public/workspace' : 'dist');
 fs.mkdirSync(output, { recursive: true });
 // Remove retired assets when rebuilding an existing output directory.
-for(const file of ['inventory-delivery.js','trainflow-whatsapp-web.zip']){const retired=path.join(output,file);if(fs.existsSync(retired))fs.unlinkSync(retired);}
+for(const file of ['inventory-delivery.js','trainflow-whatsapp-web.zip','_worker.js','_routes.json']){const retired=path.join(output,file);if(fs.existsSync(retired))fs.unlinkSync(retired);}
 let html=fs.readFileSync(path.join(root,'trainflow.html'),'utf8');
 const files=['prometric-core.js','prometric-registration.js','certificate-name.js','cloud.js','ops-ui.js','trainees.js','trainees-excel.js','trainees-borders.js','trainees-sheets.js','trainees-core.js','trainees-xlsx.js','trainees-files.js','trainees.css','trainee-reports.js','session-policy.js','codes-export.js','voucher-names.js'];
 const vendor=fs.readFileSync(require.resolve('exceljs/dist/exceljs.min.js'));
@@ -26,11 +26,7 @@ for(const file of files){
   html=html.replaceAll('"'+file+'"','"'+file+'?v='+hash+'"');fs.copyFileSync(path.join(root,file),path.join(output,file));
 }
 fs.writeFileSync(path.join(output,'index.html'),html);
-console.log((next ? 'Next.js workspace' : 'Cloudflare Pages')+' files ready in '+path.relative(root,output)+'/');
-if(!next){
-  fs.writeFileSync(path.join(output,'_worker.js'),fs.readFileSync(path.join(root,'server','worker.mjs'),'utf8').replace("import '../session-policy.js';","import './session-policy.js';"));
-  fs.writeFileSync(path.join(output,'_routes.json'),JSON.stringify({version:1,include:['/api/*'],exclude:[]}));
-}
+console.log((next ? 'Next.js workspace' : 'Static workspace')+' files ready in '+path.relative(root,output)+'/');
 const JSZip=require(require.resolve('jszip',{paths:[path.dirname(require.resolve('exceljs'))]}));
 const prometricZip=new JSZip();
 for(const file of fs.readdirSync(path.join(root,'extension/prometric'))){let bytes=fs.readFileSync(path.join(root,'extension/prometric',file));if(/\.(?:js|json|html|css|md)$/.test(file)||file==='LICENSE')bytes=Buffer.from(bytes.toString('utf8').replace(/\r\n/g,'\n'));if(file.endsWith('.js'))new Script(bytes.toString('utf8'),{filename:'prometric/'+file});prometricZip.file(file,bytes,{date:new Date('2026-01-01T00:00:00Z')});}

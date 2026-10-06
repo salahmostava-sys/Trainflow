@@ -4,7 +4,7 @@ Integrated from the user's Prometric Auto Register 4.0 source (Salah Mostafa,
 ISC license). Its original popup, registration steps, generation pattern,
 address defaults and import/export tools are retained.
 
-Production origin: **https://trainf.vercel.app/**. Updated 6 October 2026. This version removes the former Cloudflare origin from host permissions and the page bridge.
+Production origin: **https://trainf.vercel.app/**. Updated 6 October 2026. Configured exclusively for the Vercel production origin.
 
 ## Update an installed unpacked extension
 

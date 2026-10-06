@@ -44,13 +44,11 @@ The sidebar stays on the right in both languages, supports a 60 px compact rail 
 
 The selection/export browser suite checks additive selections, rich clipboard MIME types and the actual colors inside downloaded XLSX files. External Google/Prometric actions need their own configured test accounts and are not exercised by that suite.
 
-## Retire the former Cloudflare address
+## Production Origin & Domain Configuration
 
-Application links, extension host permissions, bridges and test fixtures now use the Vercel production origin. Prometric 4.1.3 no longer grants access to the former Cloudflare origin.
+Application links, extension host permissions, bridges and test fixtures exclusively use the Vercel production origin (`https://trainf.vercel.app/`).
 
-This repository change does not delete a domain or a project from a Cloudflare account. Use the owning account's hosting controls to disable/remove the former address or delete its retired hosting project, as appropriate. Account access is required; no remote deletion is recorded by this change. Update Supabase Auth Site URL and allowed confirmation/recovery redirects to the intended Vercel origin in the existing project. Verify email redirects before removing an older callback address.
-
-pnpm build:cloudflare remains a compatibility/static packaging helper that writes dist and a worker. It is not the active Vercel deployment command. Keeping the helper does not reinstate extension access to the retired domain.
+Ensure Supabase Auth Site URL and allowed confirmation/recovery redirects are set to the intended Vercel origin in the existing project. Verify email redirects to guarantee seamless authentication.
 
 ## Backups and rollback
 

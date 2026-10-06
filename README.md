@@ -127,7 +127,7 @@ The broader pnpm test:browser command includes legacy preview suites; some older
 **Repository:** [salahmostava-sys/Trainflow](https://github.com/salahmostava-sys/Trainflow)
 **Branch:** main · **Build:** pnpm build · **Framework:** Next.js
 
-Cloudflare links have been removed from the application integrations. The retained static build helper is a compatibility tool, not the production address. Removing links and extension permissions does not delete an existing hosting account or its remote domain. See [deployment and domain retirement](docs/deployment.md).
+The application and browser extensions run exclusively on the Vercel production origin. See [deployment](docs/deployment.md).
 
 Download extension updates from **Settings → Extensions**, extract them and reload the unpacked extension in the same Chrome profile. Prometric **4.1.3** targets the current Vercel origin; older installed copies must be updated.
 

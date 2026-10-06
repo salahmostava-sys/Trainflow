@@ -161,7 +161,7 @@ flowchart LR
 ~~~
 
 
-Cloudflare-domain references have been removed from active integrations. The static build helper remains for compatibility. Remote account/domain deletion is separate and is not performed by changing these repository files. See [deployment](docs/deployment.md).
+All active integrations, browser extensions, and API routes are unified on the Vercel deployment. See [deployment](docs/deployment.md).
 
 ## Compatibility decisions
 

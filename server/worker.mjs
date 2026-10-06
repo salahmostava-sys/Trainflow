@@ -1,4 +1,4 @@
-/* Cloudflare Pages advanced-mode JavaScript backend.
+/* Edge & Next.js operational JavaScript backend.
  * Only the caller's JWT is forwarded: database RLS stays authoritative.
  */
 import '../session-policy.js';
