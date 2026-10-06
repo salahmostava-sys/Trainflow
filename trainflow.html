@@ -88,6 +88,8 @@ if(window.history)window.history.scrollRestoration='manual';
   html[data-sidebar="closed"] #app.sheet-wide{padding-right:20px;}
   #workspace-sidebar{position:fixed;right:16px;left:auto;top:16px;bottom:16px;width:224px;padding:16px 12px;background:linear-gradient(180deg,#f2f7ff,#fff 55%);border:1px solid var(--border);border-radius:18px;box-shadow:var(--shadow);z-index:42;overflow-y:auto;display:flex;flex-direction:column;}
   html[data-sidebar="closed"] #workspace-sidebar{display:none;}
+  #sidebar-toggle-dock{position:fixed;right:16px;left:auto;top:16px;z-index:43;}
+  html[data-sidebar="open"] #sidebar-toggle-dock{display:none;}
   .sidebar-heading{display:flex;align-items:center;gap:9px;padding:0 2px 20px;margin-bottom:12px;border-bottom:1px solid var(--border);}
   .sidebar-heading .brand-mark{width:32px;height:32px;font-size:14px;border-radius:10px;}
   .sidebar-heading strong{font-size:15px;}
@@ -96,7 +98,7 @@ if(window.history)window.history.scrollRestoration='manual';
   #sidebar-compact svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
   html[data-sidebar-size="compact"] #workspace-sidebar{width:60px;padding:16px 6px;}
   html[data-sidebar-size="compact"] .sidebar-heading{flex-direction:column;gap:10px;padding-inline:0;}
-  html[data-sidebar-size="compact"] .sidebar-controls{margin-inline-start:0;}
+  html[data-sidebar-size="compact"] .sidebar-controls{margin-inline-start:0;flex-direction:column;}
   html[data-sidebar-size="compact"] .sidebar-heading strong,html[data-sidebar-size="compact"] nav.tabs button>span{display:none;}
   html[data-sidebar-size="compact"] #sidebar-compact svg{transform:rotate(180deg);}
   html[data-sidebar-size="compact"] nav.tabs button{justify-content:center;padding:13px 0;gap:0;}
@@ -112,7 +114,7 @@ if(window.history)window.history.scrollRestoration='manual';
   .sidebar-footer .account-popover{inset-block-start:auto;inset-block-end:calc(100% + 9px);inset-inline-end:0;}
   html[data-sidebar-size="compact"] .sidebar-footer{flex-direction:column;gap:6px;}
   html[data-sidebar-size="compact"] .sidebar-footer #lang-btn{width:40px;padding:0;}
-  @media(max-width:760px){#app.wrap{padding-right:16px;}html[data-sidebar-size="compact"] #app.wrap{padding-right:108px;}html[data-sidebar="closed"] #app.wrap{padding-right:16px;}#workspace-sidebar{width:min(270px,calc(100vw - 36px));right:12px;top:12px;bottom:12px;}}
+  @media(max-width:760px){#app.wrap{padding-right:16px;}html[data-sidebar-size="compact"] #app.wrap{padding-right:108px;}html[data-sidebar="closed"] #app.wrap{padding-right:16px;}#workspace-sidebar{width:min(270px,calc(100vw - 36px));right:12px;top:12px;bottom:12px;}#sidebar-toggle-dock{right:12px;top:12px;}}
 
   section.panel{display:none;}
   section.panel.active{display:block; animation:fade .18s ease;}
@@ -1012,8 +1014,9 @@ if(window.history)window.history.scrollRestoration='manual';
 <div class="wrap sheet-wide" id="app" hidden>
 
   <button class="sidebar-backdrop" id="sidebar-backdrop" type="button" aria-label="إغلاق القائمة الجانبية" hidden></button>
+  <div id="sidebar-toggle-dock" hidden></div>
   <aside id="workspace-sidebar" aria-label="الصفحات">
-    <div class="sidebar-heading"><span class="brand-mark" aria-hidden="true">TF</span><strong>TrainFlow</strong><div class="sidebar-controls"><button class="icon-pill-btn square" id="sidebar-compact" type="button" aria-controls="workspace-sidebar" aria-expanded="true" aria-label="تصغير القائمة الجانبية"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button><button class="icon-pill-btn square" id="sidebar-toggle" type="button" aria-controls="workspace-sidebar" aria-expanded="true" aria-label="إغلاق القائمة الجانبية"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button></div></div>
+    <div class="sidebar-heading"><span class="brand-mark" aria-hidden="true">TF</span><strong>TrainFlow</strong><div class="sidebar-controls" id="sidebar-controls"><button class="icon-pill-btn square" id="sidebar-compact" type="button" aria-controls="workspace-sidebar" aria-expanded="true" aria-label="تصغير القائمة الجانبية"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button><button class="icon-pill-btn square" id="sidebar-toggle" type="button" aria-controls="workspace-sidebar" aria-expanded="true" aria-label="إغلاق القائمة الجانبية"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button></div></div>
   <nav class="tabs" aria-label="الصفحات">
     <button data-tab="trainees" id="trainees-tab" class="active" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3 20v-2a6 6 0 0 1 12 0v2m2-15a3 3 0 0 1 0 6m1 3a5 5 0 0 1 3 4v2"/></svg><span id="sidebar-trainees-label">المتدربون</span></button>
     <button data-tab="keycodes"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="8" r="4"/><path d="m11 11 9 9m-4-4 3-3m-6 0 3-3"/></svg><span data-i18n="tabKeycodes">Keycodes</span></button>
@@ -2000,6 +2003,12 @@ function updateSidebar() {
   const sidebar    = document.getElementById('workspace-sidebar');
   const sizeButton = document.getElementById('sidebar-compact');
   const backdrop   = document.getElementById('sidebar-backdrop');
+  const dock       = document.getElementById('sidebar-toggle-dock');
+
+  // Keep the same control reachable when its sidebar is hidden or inert.
+  const toggleHost = open ? document.getElementById('sidebar-controls') : dock;
+  if (toggle.parentElement !== toggleHost) toggleHost.appendChild(toggle);
+  dock.hidden = open;
 
   // Toggle button
   toggle.setAttribute('aria-expanded', String(open));
@@ -2041,6 +2050,7 @@ document.getElementById('sidebar-compact').addEventListener('click', () => {
 // Open / close via toggle button
 document.getElementById('sidebar-toggle').addEventListener('click', () => {
   setSidebarOpen(!window.IBTA_SIDEBAR_OPEN, true);
+  document.getElementById('sidebar-toggle').focus();
 });
 
 // Close via mobile backdrop tap
