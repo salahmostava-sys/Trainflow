@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="100%" height="100%">
+  <defs>
+    <!-- Vibrant App Icon Gradient (Vercel Electric Blue to Cyan) -->
+    <linearGradient id="iconBgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00C6FF" />
+      <stop offset="50%" stop-color="#0070F3" />
+      <stop offset="100%" stop-color="#004AD7" />
+    </linearGradient>
+
+    <!-- Inner stream highlight gradient -->
+    <linearGradient id="whiteGlowStream" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" />
+      <stop offset="100%" stop-color="#E0F7FF" />
+    </linearGradient>
+
+    <filter id="iconShadow" x="-15%" y="-15%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#0070F3" flood-opacity="0.38"/>
+    </filter>
+  </defs>
+
+  <!-- Squircle App Badge Container -->
+  <rect x="4" y="4" width="120" height="120" rx="28" fill="url(#iconBgGrad)" filter="url(#iconShadow)" />
+
+  <!-- Subtle glossy surface border -->
+  <rect x="4" y="4" width="120" height="120" rx="28" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="1.5" />
+
+  <!-- Option 3 Infinity Stream Symbol inside the Badge -->
+  <g transform="translate(14, 16) scale(0.35)" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Top Wings -->
+    <path d="M 40 45 C 40 45 68 43 85 43 C 92 43 94 49 88 52 C 72 58 52 61 40 62 Z" 
+          fill="#FFFFFF" />
+    <path d="M 42 66 C 50 66 75 62 89 60 C 96 58 98 64 92 67 C 78 73 62 76 50 76 Z" 
+          fill="#E0F7FF" opacity="0.9" />
+
+    <!-- Streamlines (3 parallel tracks) -->
+    <!-- Track 1 -->
+    <path d="M 95 48 
+             C 68 48, 48 70, 48 102 
+             C 48 136, 72 164, 104 164 
+             C 132 164, 154 146, 172 122 
+             C 194 94, 216 70, 248 70 
+             C 284 70, 310 96, 310 130 
+             C 310 166, 280 192, 245 192 
+             C 212 192, 190 174, 172 150 
+             C 152 124, 130 102, 102 102
+             C 84 102, 70 116, 70 134" 
+          fill="none" 
+          stroke="url(#whiteGlowStream)" 
+          stroke-width="16" />
+
+    <!-- Track 2 -->
+    <path d="M 94 68 
+             C 76 68, 64 84, 64 104 
+             C 64 128, 82 148, 106 148 
+             C 128 148, 146 134, 162 114 
+             C 186 86, 210 60, 248 60 
+             C 292 60, 326 90, 326 130 
+             C 326 174, 288 206, 245 206 
+             C 205 206, 180 184, 160 160 
+             C 142 136, 122 118, 100 118" 
+          fill="none" 
+          stroke="#E0F7FF" 
+          stroke-width="12" 
+          opacity="0.88" />
+
+    <!-- Track 3 -->
+    <path d="M 92 88 
+             C 84 88, 78 96, 78 106 
+             C 78 120, 90 132, 106 132 
+             C 122 132, 138 122, 152 106 
+             C 178 78, 204 48, 248 48 
+             C 300 48, 342 84, 342 130 
+             C 342 182, 296 220, 245 220 
+             C 198 220, 168 194, 148 168 
+             C 132 148, 116 134, 98 134" 
+          fill="none" 
+          stroke="#BAEEFF" 
+          stroke-width="8" 
+          opacity="0.75" />
+  </g>
+</svg>

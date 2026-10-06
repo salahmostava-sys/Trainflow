@@ -19,6 +19,8 @@ if(window.history)window.history.scrollRestoration='manual';
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="icon" type="image/svg+xml" href="public/favicon.svg">
+<link rel="apple-touch-icon" href="public/favicon.svg">
 <title id="doc-title">TrainFlow</title>
 <style>
   :root{
@@ -54,6 +56,15 @@ if(window.history)window.history.scrollRestoration='manual';
     width:40px; height:40px; border-radius:12px; background:linear-gradient(135deg, var(--blue), var(--blue-600));
     display:flex; align-items:center; justify-content:center; font-weight:700; color:#fff; font-size:17px; flex:none;
     box-shadow:0 4px 12px rgba(0,112,243,.28);
+  }
+  .brand-mark svg, .auth-logo svg{
+    width:100%; height:100%; display:block; border-radius:inherit;
+  }
+  .brand-mark:has(svg){
+    padding:0; overflow:hidden; background:transparent; box-shadow:none;
+  }
+  .auth-logo:has(svg){
+    padding:0; overflow:hidden; background:transparent; border:none;
   }
   .brand h1{font-size:19.5px; margin:0; font-weight:700; letter-spacing:-.2px;}
 
@@ -990,7 +1001,7 @@ if(window.history)window.history.scrollRestoration='manual';
 <section id="auth-box" dir="rtl" lang="ar" hidden>
   <div class="auth-shell">
     <aside class="auth-story" aria-label="عن البرنامج">
-      <div class="auth-brand"><span class="auth-logo" aria-hidden="true">TF</span><div><strong data-i18n="appTitle">TrainFlow</strong><small data-i18n="authBrandTagline">مساحة عمل فريقك</small></div><button id="auth-lang-btn" class="auth-lang-btn" type="button">EN</button></div>
+      <div class="auth-brand"><span class="auth-logo" aria-hidden="true"><svg viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="tfAuthBgGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#00C6FF"/><stop offset="50%" stop-color="#0070F3"/><stop offset="100%" stop-color="#004AD7"/></linearGradient><linearGradient id="tfAuthStream" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#FFFFFF"/><stop offset="100%" stop-color="#E0F7FF"/></linearGradient></defs><rect width="128" height="128" rx="28" fill="url(#tfAuthBgGrad)"/><g transform="translate(14, 18) scale(0.35)" stroke-linecap="round" stroke-linejoin="round"><path d="M 40 45 C 40 45 68 43 85 43 C 92 43 94 49 88 52 C 72 58 52 61 40 62 Z" fill="#FFFFFF"/><path d="M 42 66 C 50 66 75 62 89 60 C 96 58 98 64 92 67 C 78 73 62 76 50 76 Z" fill="#E0F7FF" opacity="0.9"/><path d="M 95 48 C 68 48, 48 70, 48 102 C 48 136, 72 164, 104 164 C 132 164, 154 146, 172 122 C 194 94, 216 70, 248 70 C 284 70, 310 96, 310 130 C 310 166, 280 192, 245 192 C 212 192, 190 174, 172 150 C 152 124, 130 102, 102 102 C 84 102, 70 116, 70 134" fill="none" stroke="url(#tfAuthStream)" stroke-width="16"/><path d="M 94 68 C 76 68, 64 84, 64 104 C 64 128, 82 148, 106 148 C 128 148, 146 134, 162 114 C 186 86, 210 60, 248 60 C 292 60, 326 90, 326 130 C 326 174, 288 206, 245 206 C 205 206, 180 184, 160 160 C 142 136, 122 118, 100 118" fill="none" stroke="#E0F7FF" stroke-width="12" opacity="0.88"/><path d="M 92 88 C 84 88, 78 96, 78 106 C 78 120, 90 132, 106 132 C 122 132, 138 122, 152 106 C 178 78, 204 48, 248 48 C 300 48, 342 84, 342 130 C 342 182, 296 220, 245 220 C 198 220, 168 194, 148 168 C 132 148, 116 134, 98 134" fill="none" stroke="#BAEEFF" stroke-width="8" opacity="0.75"/></g></svg></span><div><strong data-i18n="appTitle">TrainFlow</strong><small data-i18n="authBrandTagline">مساحة عمل فريقك</small></div><button id="auth-lang-btn" class="auth-lang-btn" type="button">EN</button></div>
       <div class="auth-intro">
         <div class="auth-eyebrow" data-i18n="authEyebrow">عمليات التدريب والاختبارات</div>
         <h2><span data-i18n="authHeadline1">أكوادك منظّمة.</span><br><span data-i18n="authHeadline2">وفريقك على اتصال.</span></h2>
@@ -1027,7 +1038,7 @@ if(window.history)window.history.scrollRestoration='manual';
   <button class="sidebar-backdrop" id="sidebar-backdrop" type="button" aria-label="إغلاق القائمة الجانبية" hidden></button>
   <div id="sidebar-toggle-dock" hidden></div>
   <aside id="workspace-sidebar" aria-label="الصفحات">
-    <div class="sidebar-heading"><span class="brand-mark" aria-hidden="true">TF</span><strong>TrainFlow</strong><div class="sidebar-controls" id="sidebar-controls"><button class="icon-pill-btn square" id="sidebar-compact" type="button" aria-controls="workspace-sidebar" aria-expanded="true" aria-label="تصغير القائمة الجانبية"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button><button class="icon-pill-btn square" id="sidebar-toggle" type="button" aria-controls="workspace-sidebar" aria-expanded="true" aria-label="إغلاق القائمة الجانبية"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button></div></div>
+    <div class="sidebar-heading"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="tfSideBgGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#00C6FF"/><stop offset="50%" stop-color="#0070F3"/><stop offset="100%" stop-color="#004AD7"/></linearGradient><linearGradient id="tfSideStream" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#FFFFFF"/><stop offset="100%" stop-color="#E0F7FF"/></linearGradient></defs><rect width="128" height="128" rx="28" fill="url(#tfSideBgGrad)"/><g transform="translate(14, 18) scale(0.35)" stroke-linecap="round" stroke-linejoin="round"><path d="M 40 45 C 40 45 68 43 85 43 C 92 43 94 49 88 52 C 72 58 52 61 40 62 Z" fill="#FFFFFF"/><path d="M 42 66 C 50 66 75 62 89 60 C 96 58 98 64 92 67 C 78 73 62 76 50 76 Z" fill="#E0F7FF" opacity="0.9"/><path d="M 95 48 C 68 48, 48 70, 48 102 C 48 136, 72 164, 104 164 C 132 164, 154 146, 172 122 C 194 94, 216 70, 248 70 C 284 70, 310 96, 310 130 C 310 166, 280 192, 245 192 C 212 192, 190 174, 172 150 C 152 124, 130 102, 102 102 C 84 102, 70 116, 70 134" fill="none" stroke="url(#tfSideStream)" stroke-width="16"/><path d="M 94 68 C 76 68, 64 84, 64 104 C 64 128, 82 148, 106 148 C 128 148, 146 134, 162 114 C 186 86, 210 60, 248 60 C 292 60, 326 90, 326 130 C 326 174, 288 206, 245 206 C 205 206, 180 184, 160 160 C 142 136, 122 118, 100 118" fill="none" stroke="#E0F7FF" stroke-width="12" opacity="0.88"/><path d="M 92 88 C 84 88, 78 96, 78 106 C 78 120, 90 132, 106 132 C 122 132, 138 122, 152 106 C 178 78, 204 48, 248 48 C 300 48, 342 84, 342 130 C 342 182, 296 220, 245 220 C 198 220, 168 194, 148 168 C 132 148, 116 134, 98 134" fill="none" stroke="#BAEEFF" stroke-width="8" opacity="0.75"/></g></svg></span><strong>TrainFlow</strong><div class="sidebar-controls" id="sidebar-controls"><button class="icon-pill-btn square" id="sidebar-compact" type="button" aria-controls="workspace-sidebar" aria-expanded="true" aria-label="تصغير القائمة الجانبية"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button><button class="icon-pill-btn square" id="sidebar-toggle" type="button" aria-controls="workspace-sidebar" aria-expanded="true" aria-label="إغلاق القائمة الجانبية"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button></div></div>
   <nav class="tabs" aria-label="الصفحات">
     <button data-tab="trainees" id="trainees-tab" class="active" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3 20v-2a6 6 0 0 1 12 0v2m2-15a3 3 0 0 1 0 6m1 3a5 5 0 0 1 3 4v2"/></svg><span id="sidebar-trainees-label">المتدربون</span></button>
     <button data-tab="keycodes"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="8" r="4"/><path d="m11 11 9 9m-4-4 3-3m-6 0 3-3"/></svg><span data-i18n="tabKeycodes">Keycodes</span></button>
