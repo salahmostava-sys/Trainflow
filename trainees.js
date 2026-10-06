@@ -48,7 +48,15 @@ const Trainees=(()=>{
   function updateLastDataRow(){lastDataRow=cells.length-1;while(lastDataRow>=0&&!cells[lastDataRow].some(Boolean))lastDataRow--;}
   const totalInputRows=()=>Math.min(D.MAX_ROWS,Math.max(cells.length,lastDataRow+1001));
   let excelView={wrap:false,freeze:false,zoom:100};
+  let rowSize=15;
+  try{const savedRowSize=Number(localStorage.getItem('ibta_trainee_row_size'));if([15,21,28,36].includes(savedRowSize))rowSize=savedRowSize;}catch{}
   let expandedView=false,previousViewZoom=null;
+  function setRowSize(value){
+    const next=Number(value);if(![15,21,28,36].includes(next))return;
+    rowSize=next;localStorage.setItem('ibta_trainee_row_size',String(rowSize));
+    $('sheet-row-size').value=String(rowSize);$('sheet-workspace').style.setProperty('--sheet-row-size',rowSize+'pt');
+    resetRowHeights();rebuildRowOffsets();drawRows(true);
+  }
   try{const pref=JSON.parse(localStorage.getItem('ibta_sheet_view')||'{}');excelView={wrap:pref.wrap===true,freeze:pref.freeze===true,zoom:Number.isInteger(pref.zoom)&&pref.zoom>=50&&pref.zoom<=200?pref.zoom:100};}catch{}
   function setZoom(value){
     if(expandedView)previousViewZoom=null;
@@ -73,6 +81,7 @@ const Trainees=(()=>{
   function applyExcelView(){
     const grid=$('sheet-grid');if(!grid)return;
     grid.style.setProperty('--sheet-zoom',String(excelView.zoom/100));
+    $('sheet-workspace').style.setProperty('--sheet-row-size',rowSize+'pt');
     $('sheet-zoom-slider').value=String(excelView.zoom);if(document.activeElement!==$('sheet-zoom-reset'))$('sheet-zoom-reset').value=excelView.zoom+'%';
     $('sheet-zoom-out').disabled=excelView.zoom<=50;$('sheet-zoom-in').disabled=excelView.zoom>=200;
     grid.classList.toggle('sheet-wrap-text',excelView.wrap);
@@ -469,6 +478,7 @@ const Trainees=(()=>{
         <div class="sheet-format-tools">
           <details id="sheet-columns"><summary id="sheet-columns-title"></summary><div id="sheet-column-options"></div></details>
           <button type="button" id="sheet-font-minus">A−</button><output id="sheet-font-size"></output><button type="button" id="sheet-font-plus">A+</button>
+          <label><span id="sheet-row-size-label"></span><select id="sheet-row-size"><option value="15">15</option><option value="21">21</option><option value="28">28</option><option value="36">36</option></select></label>
           <label><span id="sheet-selection-size-label"></span><select id="sheet-selection-size"></select></label>
           <button type="button" id="sheet-bold"><b>B</b></button>
           <div class="sheet-align-group" role="group">
@@ -503,6 +513,7 @@ const Trainees=(()=>{
     const localNote=node('small',undefined,{id:'sheet-local-note',class:'sheet-local-note'});$('sheet-workspace').querySelector('.sheet-format-tools').append(localNote);
     const more=button(tr('التنسيق وأدوات إضافية','Formatting & more tools'),()=>{const expanded=$('sheet-workspace').classList.toggle('sheet-show-tools');more.setAttribute('aria-expanded',String(expanded));});more.id='sheet-more-tools';more.className='sheet-mobile-toggle';more.setAttribute('aria-expanded','false');toolbar.before(more);
     for(const key of ['wrap','freeze'])$('sheet-'+key).onclick=()=>{commitEdit();excelView[key]=!excelView[key];saveExcelView();applyExcelView();resetRowHeights();rebuildRowOffsets();drawRows(true);};
+    $('sheet-row-size').value=String(rowSize);$('sheet-row-size').onchange=()=>setRowSize($('sheet-row-size').value);
     const zoomTools=node('div',undefined,{class:'sheet-zoom-tools',dir:'ltr'});
     zoomTools.innerHTML='<span id="sheet-zoom-label"></span><button type="button" id="sheet-zoom-out">−</button><input type="range" id="sheet-zoom-slider" min="50" max="200" step="1" value="100"><button type="button" id="sheet-zoom-in">+</button><input type="text" inputmode="numeric" autocomplete="off" spellcheck="false" id="sheet-zoom-reset" value="100%">';
     $('sheet-workspace').querySelector('.sheet-footer').append(zoomTools);
@@ -711,6 +722,8 @@ const Trainees=(()=>{
     $('sheet-cell-content').placeholder=tr('محتوى الخلية المحددة','Selected cell content');$('sheet-cell-content').setAttribute('aria-label',tr('محتوى الخلية المحددة','Selected cell content'));
     if($('sheet-more-tools'))$('sheet-more-tools').textContent=tr('التنسيق وأدوات إضافية','Formatting & more tools');
     $('sheet-zoom-label').textContent=tr('زوم الجدول','Table zoom');
+  $('sheet-row-size-label').textContent=tr('حجم الصف','Row size');
+  $('sheet-row-size').setAttribute('aria-label',tr('حجم الصف','Row size'));
     for(const [id,ar,en]of [['sheet-zoom-out','تصغير الجدول','Zoom out'],['sheet-zoom-in','تكبير الجدول','Zoom in'],['sheet-zoom-slider','نسبة زوم الجدول','Table zoom percentage'],['sheet-zoom-reset','اكتب نسبة الزوم من 50 إلى 200','Enter zoom percentage from 50 to 200']]){$(id).setAttribute('aria-label',tr(ar,en));$(id).title=tr(ar,en);}
     document.querySelectorAll('.sheet-ribbon-group small[data-ar]').forEach(el=>el.textContent=tr(el.dataset.ar,el.dataset.en));
     if(typeof TraineeReports!=='undefined')TraineeReports.translate();
@@ -881,7 +894,7 @@ const Trainees=(()=>{
     rowHeights.clear();for(const [key,style]of Object.entries(formatting.styles)){const r=Number(key.split(':')[0]),height=Math.max((style.height||0)*excelView.zoom/100,style.rotation?70:0);if(height)rowHeights.set(r,Math.max(rowHeights.get(r)||0,height));}
   }
   function rebuildRowOffsets(){
-    const estimate=Math.max((excelView.wrap?28:expandedView?17:21)*excelView.zoom/100,formatting.fontSize*excelView.zoom/100*(excelView.wrap?1.5:1.2));
+    const estimate=Math.max((excelView.wrap?rowSize+13:rowSize)*excelView.zoom/100,formatting.fontSize*excelView.zoom/100*(excelView.wrap?1.5:1.2));
     rowOffsets=new Float64Array(view.length+1);for(let r=0;r<view.length;r++)rowOffsets[r+1]=rowOffsets[r]+(rowHeights.get(view[r])||estimate);
   }
   function rowAtOffset(offset){let low=0,high=view.length;while(low<high){const mid=(low+high)>>1;if(rowOffsets[mid+1]<=offset)low=mid+1;else high=mid;}return Math.min(low,Math.max(0,view.length-1));}

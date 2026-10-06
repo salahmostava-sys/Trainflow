@@ -20,9 +20,9 @@
   --border: rgba(240, 246, 252, 0.12);
   --border-hover: rgba(240, 246, 252, 0.25);
 
-  --green: #3fb950;
-  --green2: #2ea043;
-  --green-glow: rgba(63, 185, 80, 0.18);
+  --green: #00d2ff;
+  --green2: #0070f3;
+  --green-glow: rgba(0, 210, 255, 0.18);
 
   --text: #f0f6fc;
   --muted: #8b949e;
@@ -33,16 +33,16 @@
   --yellow: #d29922;
   --yellow-glow: rgba(210, 153, 34, 0.18);
 
-  --blue: #58a6ff;
-  --blue-glow: rgba(88, 166, 255, 0.18);
+  --blue: #00d2ff;
+  --blue-glow: rgba(0, 210, 255, 0.18);
 
   --radius: 12px;
   --radius-sm: 8px;
   --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   --glass: blur(14px);
   --card-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-  --grad-green: linear-gradient(135deg, #2ea043 0%, #3fb950 100%);
-  --grad-blue: linear-gradient(135deg, #1f6feb 0%, #58a6ff 100%);
+  --grad-green: linear-gradient(135deg, #004bb5 0%, #00d2ff 100%);
+  --grad-blue: linear-gradient(135deg, #0070f3 0%, #00d2ff 100%);
 }
 
 /* ─── Light Mode Overrides ───────────────────────────────────────────────────── */
@@ -54,9 +54,9 @@ body.light-mode {
   --border: rgba(31, 35, 40, 0.15);
   --border-hover: rgba(31, 35, 40, 0.3);
 
-  --green: #1a7f37;
-  --green2: #2da44e;
-  --green-glow: rgba(26, 127, 55, 0.12);
+  --green: #0070f3;
+  --green2: #004bb5;
+  --green-glow: rgba(0, 112, 243, 0.12);
 
   --text: #1f2328;
   --muted: #57606a;
@@ -67,11 +67,11 @@ body.light-mode {
   --yellow: #9a6700;
   --yellow-glow: rgba(154, 103, 0, 0.14);
 
-  --blue: #0969da;
-  --blue-glow: rgba(9, 105, 218, 0.12);
+  --blue: #0070f3;
+  --blue-glow: rgba(0, 112, 243, 0.12);
 
   --card-shadow: 0 8px 30px 0 rgba(31, 38, 135, 0.08);
-  --grad-green: linear-gradient(135deg, #2da44e 0%, #1a7f37 100%);
+  --grad-green: linear-gradient(135deg, #004bb5 0%, #0070f3 100%);
 }
 
 /* ─── Body ───────────────────────────────────────────────────────────────────── */
@@ -126,7 +126,7 @@ body {
 .hdr-icon {
   width: 36px;
   height: 36px;
-  background: #fff url('icon.png') center/contain no-repeat;
+  background: transparent url('trainflow-app-icon.svg') center/contain no-repeat;
   border-radius: 10px;
   flex-shrink: 0;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
@@ -177,8 +177,8 @@ body {
   color: var(--muted);
 }
 .status-pill.running {
-  background: rgba(63, 185, 80, 0.12);
-  border-color: rgba(63, 185, 80, 0.35);
+  background: rgba(0, 210, 255, 0.12);
+  border-color: rgba(0, 210, 255, 0.35);
   color: var(--green);
 }
 .status-pill.paused {
@@ -188,7 +188,7 @@ body {
 }
 .status-pill.single {
   background: var(--blue-glow);
-  border-color: rgba(88, 166, 255, 0.35);
+  border-color: rgba(0, 210, 255, 0.35);
   color: var(--blue);
 }
 .status-dot {
@@ -605,7 +605,7 @@ body.light-mode .btn-yellow {
 .upload-area:hover,
 .upload-area.drag {
   border-color: var(--blue);
-  background: rgba(88, 166, 255, 0.06);
+  background: rgba(0, 210, 255, 0.06);
   transform: translateY(-1px);
 }
 .upload-area input[type=file] {
@@ -614,7 +614,7 @@ body.light-mode .btn-yellow {
 .upload-btn {
   background: var(--blue-glow);
   color: var(--blue);
-  border: 1px solid rgba(88, 166, 255, 0.3);
+  border: 1px solid rgba(0, 210, 255, 0.3);
   padding: 8px 14px;
   border-radius: 8px;
   font-weight: 700;
@@ -665,8 +665,8 @@ body.light-mode .btn-yellow {
   letter-spacing: 0.8px;
 }
 .stat-card.done {
-  border-color: rgba(63, 185, 80, 0.35);
-  background: rgba(63, 185, 80, 0.08);
+  border-color: rgba(0, 210, 255, 0.35);
+  background: rgba(0, 210, 255, 0.08);
 }
 .stat-card.done .stat-card-val {
   color: var(--green);
@@ -932,7 +932,7 @@ body.light-mode .btn-yellow {
 .q-status.done {
   color: var(--green);
   background: var(--green-glow);
-  border-color: rgba(63, 185, 80, 0.25);
+  border-color: rgba(0, 210, 255, 0.25);
 }
 .q-status.failed {
   color: var(--red);
@@ -996,10 +996,10 @@ body.light-mode .btn-yellow {
 .btn-blue {
   background: var(--blue-glow);
   color: var(--blue);
-  border: 1px solid rgba(88, 166, 255, 0.35);
+  border: 1px solid rgba(0, 210, 255, 0.35);
 }
 .btn-blue:hover:not(:disabled) {
-  background: rgba(88, 166, 255, 0.25);
+  background: rgba(0, 210, 255, 0.25);
   box-shadow: 0 0 16px var(--blue-glow);
 }
 .controls-row {
@@ -1022,7 +1022,7 @@ body.light-mode .btn-yellow {
 .msg.ok {
   display: block;
   background: var(--green-glow);
-  border: 1px solid rgba(63, 185, 80, 0.25);
+  border: 1px solid rgba(0, 210, 255, 0.25);
   color: var(--green);
 }
 .msg.err {
@@ -1167,7 +1167,7 @@ body.light-mode .btn-yellow {
 }
 .hist-filter-tab.active {
   background: var(--green-glow);
-  border-color: rgba(63, 185, 80, 0.35);
+  border-color: rgba(0, 210, 255, 0.35);
   color: var(--green);
 }
 .hist-list {
@@ -1225,7 +1225,7 @@ body.light-mode .btn-yellow {
 .hist-badge.done {
   background: var(--green-glow);
   color: var(--green);
-  border: 1px solid rgba(63, 185, 80, 0.25);
+  border: 1px solid rgba(0, 210, 255, 0.25);
 }
 .hist-badge.failed {
   background: var(--red-glow);
@@ -1328,7 +1328,7 @@ body.light-mode .btn-yellow {
   letter-spacing: 0.6px;
   background: var(--blue-glow);
   color: var(--blue);
-  border: 1px solid rgba(88, 166, 255, 0.3);
+  border: 1px solid rgba(0, 210, 255, 0.3);
   padding: 1px 7px;
   border-radius: 8px;
   margin-left: 6px;
@@ -1351,9 +1351,9 @@ body.light-mode .btn-yellow {
   gap: 3px;
 }
 .hist-day-stat.ok {
-  background: rgba(63, 185, 80, 0.12);
+  background: rgba(0, 210, 255, 0.12);
   color: var(--green);
-  border: 1px solid rgba(63, 185, 80, 0.25);
+  border: 1px solid rgba(0, 210, 255, 0.25);
 }
 .hist-day-stat.fail {
   background: rgba(255, 123, 114, 0.12);
@@ -1439,16 +1439,16 @@ body.light-mode .btn-yellow {
   transition: var(--transition);
 }
 .analytics-card.green {
-  border-color: rgba(63, 185, 80, 0.35);
-  background: rgba(63, 185, 80, 0.05);
+  border-color: rgba(0, 210, 255, 0.35);
+  background: rgba(0, 210, 255, 0.05);
 }
 .analytics-card.red {
   border-color: rgba(255, 123, 114, 0.35);
   background: rgba(255, 123, 114, 0.05);
 }
 .analytics-card.blue {
-  border-color: rgba(88, 166, 255, 0.35);
-  background: rgba(88, 166, 255, 0.05);
+  border-color: rgba(0, 210, 255, 0.35);
+  background: rgba(0, 210, 255, 0.05);
 }
 .analytics-card-val {
   font-size: 17px;
@@ -1472,7 +1472,7 @@ body.light-mode .btn-yellow {
   gap: 12px;
   padding: 11px 16px;
   background: var(--blue-glow);
-  border-bottom: 1px solid rgba(88, 166, 255, 0.35);
+  border-bottom: 1px solid rgba(0, 210, 255, 0.35);
   font-size: 12px;
   color: var(--blue);
   backdrop-filter: var(--glass);
@@ -1487,7 +1487,7 @@ body.light-mode .btn-yellow {
 }
 .clip-timer circle {
   fill: none;
-  stroke: rgba(88, 166, 255, 0.25);
+  stroke: rgba(0, 210, 255, 0.25);
   stroke-width: 2.5;
 }
 .clip-timer circle.prog {
@@ -1506,7 +1506,7 @@ body.light-mode .btn-yellow {
 }
 .clip-copy {
   background: none;
-  border: 1px solid rgba(88, 166, 255, 0.4);
+  border: 1px solid rgba(0, 210, 255, 0.4);
   color: var(--blue);
   font-size: 11.5px;
   padding: 5px 12px;
@@ -1517,7 +1517,7 @@ body.light-mode .btn-yellow {
   white-space: nowrap;
 }
 .clip-copy:hover {
-  background: rgba(88, 166, 255, 0.18);
+  background: rgba(0, 210, 255, 0.18);
 }
 
 /* ─── Modal Architecture ─────────────────────────────────────────────────────── */
@@ -1908,9 +1908,9 @@ body.light-mode .custom-multiselect-actions {
   flex: 1 1 auto;
   width: 100%;
   text-align: center;
-  background: rgba(88, 166, 255, 0.08);
+  background: rgba(0, 210, 255, 0.08);
   color: var(--blue);
-  border: 1px solid rgba(88, 166, 255, 0.28);
+  border: 1px solid rgba(0, 210, 255, 0.28);
   border-radius: 5px;
   padding: 4px 10px;
   font-size: 10px;
