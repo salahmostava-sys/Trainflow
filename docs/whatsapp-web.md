@@ -1,13 +1,14 @@
 # Local Chrome WhatsApp inventory delivery
 
+The current classic settings screen offers the extension download, but the optional automatic-delivery controls in inventory-delivery.js are not mounted there. The integration setup below applies to a build that mounts those controls and restores the recipient form; downloading the extension alone does not enable or configure scheduled sending. Existing database delivery configuration is unchanged.
+
 This is the default provider in Settings → Inventory. It sends the existing
 inventory message to the existing saved recipient using a Chrome extension in
 the same profile as the user's WhatsApp Web session. It needs no Meta token.
 
 ## Install and enable
 
-1. Download `https://ibta-ops.pages.dev/trainflow-whatsapp-web.zip` from Inventory
-   settings and extract it into a permanent folder. Developers can instead load
+1. Download `https://trainf.vercel.app/trainflow-whatsapp-web.zip` from Settings → Extensions and extract it into a permanent folder. Developers can instead load
    `extension/whatsapp-web` directly.
 2. Open `chrome://extensions` in the WhatsApp Chrome profile, enable Developer
    mode, choose Load unpacked, and select the folder containing `manifest.json`.
@@ -102,7 +103,7 @@ DOM and actual delivery still require verification after installation.
 The optional [Meta server provider](whatsapp-inventory.md) remains available;
 its scheduler does not dispatch while the configured provider is Web.
 
-Version 1.0.2 fixes a syntax error in the popup's last-attempt text that prevented
+The earlier 1.0.2 release fixed a syntax error in the popup's last-attempt text that prevented
 the popup from running. It displays the installed version, recipient, next alarm
 and report readiness, and handles absent/rejected background replies explicitly.
 The background also accepts its own extension page when opened in a browser tab.
@@ -120,3 +121,9 @@ fulfilled locally or blocked. The browser-created WhatsApp tab is navigated to
 its exact prepared URL after test routing attaches. No WhatsApp session, real
 recipient or operational records are used. The test also reloads the extension,
 verifies that the old page disconnects, and verifies recovery after page reload.
+
+## Current package and origin
+
+Updated 6 October 2026. The packaged extension is **1.0.4** and trusts **https://trainf.vercel.app/** and WhatsApp Web. It no longer grants access to the former Cloudflare origin. Download it from Settings → Extensions, replace/reload the existing unpacked extension and reload TrainFlow. Merely refreshing the site does not update an unpacked extension. The ZIP is regenerated during the site build.
+
+The optional inventory settings controls are implemented in inventory-delivery.js but are not mounted in the current classic screen. Migrating the frontend origin does not enable automatic sending, change the saved recipient or migrate database records. Local duplicate prevention still applies to one browser profile. See [deployment](deployment.md) for domain retirement and Auth redirects.

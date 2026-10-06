@@ -3,7 +3,7 @@ let workbook=null;
 self.onmessage=async({data})=>{
   try{
     let result;
-    if(data.action==='write'||data.action==='certificate'){const bytes=data.action==='certificate'?await TraineeXlsx.writeCertificate(ExcelJS,data):await TraineeXlsx.write(ExcelJS,data.cells,data.headers);result={buffer:bytes instanceof ArrayBuffer?bytes:bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength)};}
+    if(['write','certificate','codes'].includes(data.action)){const bytes=data.action==='certificate'?await TraineeXlsx.writeCertificate(ExcelJS,data):data.action==='codes'?await TraineeXlsx.writeCodes(ExcelJS,data):await TraineeXlsx.write(ExcelJS,data.cells,data.headers);result={buffer:bytes instanceof ArrayBuffer?bytes:bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength)};}
     else{
       if(data.action==='read'){workbook=new ExcelJS.Workbook();await workbook.xlsx.load(data.buffer);}
       const sheets=workbook?.worksheets.filter(sheet=>sheet.state==='visible');

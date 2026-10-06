@@ -1,6 +1,6 @@
 /* TrainFlow page bridge; database sessions never leave the app. */
 (()=>{
-  'use strict';const ORIGIN='https://ibta-ops.pages.dev';
+  'use strict';const ORIGIN='https://trainf.vercel.app';
   const post=data=>window.postMessage({channel:'IBTA_PROMETRIC_EXTENSION',...data},ORIGIN);
   window.addEventListener('message',async event=>{
     const data=event.data;

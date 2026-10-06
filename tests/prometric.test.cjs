@@ -17,7 +17,7 @@ assert.equal(P.indexRows(Array.from({length:3068},(_,i)=>trainee('TEST STUDENT '
     storage:{local:{async get(keys){if(typeof keys==='string')keys=[keys];return Object.fromEntries((keys||Object.keys(stored)).map(k=>[k,clone(stored[k])]));},async set(values){Object.assign(stored,clone(values));},async remove(keys){for(const k of typeof keys==='string'?[keys]:keys)delete stored[k];}}},
     tabs:{onRemoved:event(),async create({url}){return {id:++nextTab,url};},async get(id){return {id};},async update(){},async remove(){},async sendMessage(){}},action:{setBadgeText(){},setBadgeBackgroundColor(){}},notifications:{create(){}},contextMenus:{create(){},onClicked:event()}};
   ctx.importScripts=(...files)=>files.forEach(file=>vm.runInContext(fs.readFileSync(path.join(root,file),'utf8'),ctx,{filename:file}));vm.runInContext(fs.readFileSync(path.join(root,'background.js'),'utf8'),ctx);
-  const api=vm.runInContext('IbtaRegistration',ctx),sender={id:'fixture-extension',frameId:0,url:'https://ibta-ops.pages.dev/',tab:{id:10}},base={owner:'owner-one',client:'test-client'};
+  const api=vm.runInContext('IbtaRegistration',ctx),sender={id:'fixture-extension',frameId:0,url:'https://trainf.vercel.app/',tab:{id:10}},base={owner:'owner-one',client:'test-client'};
   await assert.rejects(()=>api.enqueue({...base,type:'PING'},{...sender,frameId:1}),/FORBIDDEN/);
   await assert.rejects(()=>api.enqueue({...base,type:'PING'},{...sender,url:'https://other.invalid/'}),/FORBIDDEN/);
   const items=P.prepare([a,trainee(a[3],a[1],a[4],'CBP-M')],[0,1]).items;

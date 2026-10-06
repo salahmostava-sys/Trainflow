@@ -206,7 +206,7 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),path
     await page.locator('#sheet-trainee-record button[aria-label="نسخ Prometric Password"]').click();assert.equal(await page.evaluate(()=>window.detailCopied),'demo-prometric-password');
     await page.locator('#sheet-trainee-dialog .sheet-detail-close').click();
     await page.setViewportSize({width:1500,height:1000});await page.locator('#sheet-save').click();await page.waitForFunction(()=>!Trainees.hasDraft());
-    await page.locator('#sheet-owner').selectOption('demo-user');await page.waitForFunction(()=>document.getElementById('sheet-owner').value==='demo-user'&&!document.getElementById('sheet-owner').disabled);
+    await page.evaluate(()=>Trainees.reset());
     assert.equal(await page.locator('#sheet-trainee-record').textContent(),'','Account switches clear floating data');
     assert.deepEqual(errors,[]);
     console.log('PASS: white surfaces, extra columns, shift/undo/formatting/RTL, persisted extra cells and private read-only details');

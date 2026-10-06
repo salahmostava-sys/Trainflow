@@ -48,7 +48,7 @@ http.createServer((req,res)=>{
   if(pathname==='/trainflow-whatsapp-web.zip'){res.setHeader('Content-Type','application/zip');return res.end(fs.readFileSync(path.join(__dirname,'../dist/trainflow-whatsapp-web.zip')));}
   if(pathname==='/trainflow-prometric.zip'){res.setHeader('Content-Type','application/zip');return res.end(fs.readFileSync(path.join(__dirname,'../dist/trainflow-prometric.zip')));}
   if(pathname==='/exceljs-4.4.0.min.js'){res.setHeader('Content-Type','text/javascript');return res.end(fs.readFileSync(require.resolve('exceljs/dist/exceljs.min.js')));}
-  if(['/prometric-core.js','/prometric-registration.js','/certificate-name.js','/inventory-delivery.js','/trainees.js','/trainees-excel.js','/trainees-core.js','/trainees-xlsx.js','/trainees-files.js','/trainees-xlsx-worker.js','/trainees.css','/ops-ui.js','/trainee-reports.js','/session-policy.js'].includes(pathname)){
+  if(['/codes-export.js','/prometric-core.js','/prometric-registration.js','/certificate-name.js','/inventory-delivery.js','/trainees.js','/trainees-excel.js','/trainees-core.js','/trainees-xlsx.js','/trainees-files.js','/trainees-xlsx-worker.js','/trainees.css','/ops-ui.js','/trainee-reports.js','/session-policy.js'].includes(pathname)){
     res.setHeader('Content-Type',pathname.endsWith('.css')?'text/css':'text/javascript');
     return res.end(fs.readFileSync(path.join(__dirname,'..',pathname.slice(1))));
   }
@@ -58,4 +58,3 @@ http.createServer((req,res)=>{
   html=html.replace(/<script src="https:\/\/cdn.jsdelivr.net[^>]+><\/script>/,'').replace('<script src="cloud.js"></script>','<script>'+mock+'</script>');
   res.setHeader('Content-Type','text/html; charset=utf-8');res.setHeader('Cache-Control','no-store');res.end(html);
 }).listen(Number(process.env.IBTA_PREVIEW_PORT)||4174,'127.0.0.1',()=>console.log('Design-only preview ready'));
-

@@ -199,7 +199,17 @@
     }catch(error){result=typeof error==='string'&&error.startsWith('#')?error:'#VALUE!';}finally{visiting.delete(key);}cache.set(key,result);return result;
   }
   function shiftFormula(value,dr,dc){return value.startsWith('=')?value.replace(/(\$?)([A-Z]+)(\$?)([1-9]\d*)/gi,(all,ac,col,ar,row)=>{const a=address(col+row);if(!a)return '#REF!';const r=a.r+(ar?0:dr),c=a.c+(ac?0:dc);return r<0||r>=MAX_ROWS||c<0||c>=MAX_COLS?'#REF!':ac+letter(c)+ar+(r+1);}):value;}
-  const api={BASE_WIDTH,WIDTH,MAX_ROWS,MAX_COLS,MAX_CELL,blank,normalize,storage,parse,tsv,paste,pasteMapped,result:normalizeResult,defaultFormat,format,idKey,duplicates,removeRows,deleteCells,courseKeycode,columns,address,letter,number,formulaValue,shiftFormula};
+  // Selection coordinates belong to the displayed view, not the stored row order.
+  const selectedCell=(ranges,r,c)=>ranges.some(([r1,r2,c1,c2])=>r>=r1&&r<=r2&&c>=c1&&c<=c2);
+  function selectionRows(ranges,length){
+    const spans=ranges.map(([a,b])=>[Math.max(0,a),Math.min(length-1,b)]).filter(([a,b])=>a<=b).sort((a,b)=>a[0]-b[0]),rows=[];let last=-1;
+    for(const [a,b]of spans)for(let r=Math.max(a,last+1);r<=b;r++){rows.push(r);last=r;}return rows;
+  }
+  const selectionColumns=(ranges,cols)=>cols.filter(c=>ranges.some(([, ,a,b])=>c>=a&&c<=b));
+  function eachSelected(ranges,view,cols,run){
+    const columns=selectionColumns(ranges,cols);for(const r of selectionRows(ranges,view.length))for(const c of columns)if(selectedCell(ranges,r,c))run(view[r],c,r);
+  }
+  const api={BASE_WIDTH,WIDTH,MAX_ROWS,MAX_COLS,MAX_CELL,blank,normalize,storage,parse,tsv,paste,pasteMapped,result:normalizeResult,defaultFormat,format,idKey,duplicates,removeRows,deleteCells,courseKeycode,columns,address,letter,number,formulaValue,shiftFormula,selectedCell,selectionRows,selectionColumns,eachSelected};
   if(typeof module!=='undefined'&&module.exports)module.exports=api;
   else root.TraineeData=api;
 })(globalThis);

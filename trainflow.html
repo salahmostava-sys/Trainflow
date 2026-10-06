@@ -1065,6 +1065,7 @@ if(window.history)window.history.scrollRestoration='manual';
     <div class="stats-row">
       <div class="stats" id="code-stats"></div>
       <div class="report-shortcuts">
+        <button class="icon-pill-btn" id="codes-export-open" type="button" data-i18n="codesExport">تصدير الأكواد</button>
         <details class="report-card" id="daily-used-details">
           <summary data-i18n="dailyUsedTitle">Codes used on a day</summary>
         </details>
@@ -1536,6 +1537,7 @@ const TRANSLATIONS = {
     memberAdded:email=>email+" was approved and can create an account and confirm their email.",
     libraryLoadFailed:"Could not load the connection library. Check your internet connection and reload the page.",
     authStoryLabel:"About the application",
+    codesExport:"Export vouchers",
     categoryNames:{Foundation:"Foundation",Master:"Master",BIS:"BIS",CYBP:"CYBP",Corporate:"Corporate"},
     languageNames:{Arabic:"Arabic",English:"English",العربية:"Arabic",الإنجليزية:"English"},
   },
@@ -1639,7 +1641,8 @@ const TRANSLATIONS = {
     memberAdded:email=>"تم اعتماد "+email+"؛ يستطيع إنشاء حسابه وتأكيد بريده.",
     libraryLoadFailed:"تعذر تحميل مكتبة الاتصال. تحقق من الإنترنت ثم أعد تحميل الصفحة.",
     authStoryLabel:"عن البرنامج",
-    categoryNames:{Foundation:"التأسيسي",Master:"المتقدم",BIS:"BIS",CYBP:"CYBP",Corporate:"المؤسسي"},
+    codesExport:"تصدير الأكواد",
+    categoryNames:{Foundation:"Foundation",Master:"Master",BIS:"BIS",CYBP:"CYBP",Corporate:"Corporate"},
     languageNames:{Arabic:"العربية",English:"الإنجليزية",العربية:"العربية",الإنجليزية:"الإنجليزية"},
   }
 };
@@ -1670,6 +1673,7 @@ function sortCategories(cats){
 // the number) is still used internally for all state lookups — only the label changes.
 function displayCatName(cat){
   const name=cat.replace(/-\d+$/, '');
+  if(CATEGORY_ORDER.includes(name))return name;
   return state?.categoryLabels?.[cat] || state?.categoryLabels?.[name] || t('categoryNames')[name] || name;
 }
 
@@ -3128,5 +3132,6 @@ Cloud.boot();
 <script src="certificate-name.js"></script>
 <script src="trainees.js"></script>
 <script id="trainee-reports-script" src="trainee-reports.js" data-connector="google-reports.gs"></script>
+<script src="codes-export.js"></script>
 </body>
 </html>

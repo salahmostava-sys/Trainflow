@@ -15,11 +15,11 @@ assert.equal(S.due(config,now+120001),false);assert.equal(S.due(config,now-1),fa
   const chrome={runtime:{id:'fixture-extension',getManifest:()=>({version:'1.0.1'}),onMessage:add('message'),onInstalled:add('installed'),onStartup:add('startup')},
     storage:{local:{async get(keys){if(typeof keys==='string')keys=[keys];return Object.fromEntries(keys.filter(k=>k in store).map(k=>[k,clone(store[k])]));},async set(data){Object.assign(store,clone(data));},async remove(keys){for(const key of Array.isArray(keys)?keys:[keys])delete store[key];}}},
     alarms:{onAlarm:add('alarm'),async create(name,options){alarmMap.set(name,{name,scheduledTime:options.when});},async get(name){return alarmMap.get(name);},async clear(name){return alarmMap.delete(name);}},
-    tabs:{onUpdated:add('updated'),async query(){return [{id:1,url:'https://ibta-ops.pages.dev/'}];},async sendMessage(){return {};},async create(options){const tab={id:id++,...options};created.push(tab);return tab;}}
+    tabs:{onUpdated:add('updated'),async query(){return [{id:1,url:'https://trainf.vercel.app/'}];},async sendMessage(){return {};},async create(options){const tab={id:id++,...options};created.push(tab);return tab;}}
   };
   const context=vm.createContext({chrome,WebSchedule:{...S,day:()=>S.day(clock),at:t=>S.at(t,clock),next:t=>S.next(t,clock),due:c=>S.due(c,clock),validSnapshot:(s,c)=>S.validSnapshot(s,c,clock)},importScripts(){},URL,Date:class extends Date{static now(){return clock;}},crypto:{randomUUID:()=> 'job-'+id},console});
   vm.runInContext(fs.readFileSync(path.join(__dirname,'../extension/whatsapp-web/background.js'),'utf8'),context);
-  const drain=()=>vm.runInContext('chain',context),send=(data,url='https://ibta-ops.pages.dev/',tabId=1)=>new Promise(resolve=>events.message(data,{id:'fixture-extension',url,tab:{id:tabId,url}},resolve));
+  const drain=()=>vm.runInContext('chain',context),send=(data,url='https://trainf.vercel.app/',tabId=1)=>new Promise(resolve=>events.message(data,{id:'fixture-extension',url,tab:{id:tabId,url}},resolve));
   await drain();await send({type:'CONFIG',payload:config},'https://evil.invalid/');assert.equal(store.config,undefined,'Other origins cannot configure the sender');
   assert.equal((await send({type:'PING'},'chrome-extension://fixture-extension/popup.html')).connected,true,'The extension page can also open in a tab');
   assert.equal((await send({type:'PING'},'chrome-extension://another-extension/popup.html')).allowed,false,'Other extension pages are not authorized');
@@ -45,6 +45,6 @@ assert.equal(S.due(config,now+120001),false);assert.equal(S.due(config,now-1),fa
   const changed={...retryConfig,time:'17:03'};await send({type:'CONFIG',payload:changed});assert.equal(store.last.state,'unknown','A possibly sent message cannot be retried by changing time');
   clock+=120000;await send({type:'SNAPSHOT',payload:{config:changed,report:{...snapshot,recipient:changed.recipient,time:changed.time,day:S.day(clock),at:clock}}});events.alarm({name:'send'});await drain();assert.equal(created.length,2);
   const manifest=JSON.parse(fs.readFileSync(path.join(__dirname,'../extension/whatsapp-web/manifest.json'),'utf8'));
-  assert.deepEqual(manifest.permissions,['alarms','storage']);assert.deepEqual(manifest.host_permissions,['https://ibta-ops.pages.dev/*','https://web.whatsapp.com/*']);
+  assert.deepEqual(manifest.permissions,['alarms','storage']);assert.deepEqual(manifest.host_permissions,['https://trainf.vercel.app/*','https://web.whatsapp.com/*']);
   console.log('PASS: Saudi scheduling, midnight, freshness, exact recipient/body, origin checks, one-shot approval, repeated alarms, next-day stale data and minimal permissions');
 })().catch(error=>{console.error(error);process.exitCode=1;});

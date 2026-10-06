@@ -66,7 +66,7 @@ const TraineePrometric=(()=>{
     }
     async function open(indices){
       h.commitEdit();const s=h.state();if(!s.loaded||!s.user)return;context={owner:s.owner,epoch:s.epoch};run=null;lastError='';
-      const selected=indices||s.view.slice(s.bounds[0],s.bounds[1]+1);try{plan=P.prepare(s.cells,selected);}catch(error){plan=null;lastError=errorText(error.message);}
+      const selected=indices||s.selectedRows||s.view.slice(s.bounds[0],s.bounds[1]+1);try{plan=P.prepare(s.cells,selected);}catch(error){plan=null;lastError=errorText(error.message);}
       dialog.dir=currentLang==='ar'?'rtl':'ltr';if(!dialog.open)dialog.showModal();translate();await poll(true);
     }
     async function startRegistration(){

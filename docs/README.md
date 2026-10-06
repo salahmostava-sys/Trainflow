@@ -1,15 +1,28 @@
 # TrainFlow documentation
 
-| Document | Contents |
-| --- | --- |
-| [Architecture](../ARCHITECTURE.md) | Components, diagrams, data ownership, workflows and compatibility |
-| [Operations guide](operations-guide.md) | Account setup, codes, inventory, trainee tools and backups |
-| [Deployment](deployment.md) | Local development, GitHub publishing, Cloudflare and verification |
-| [JavaScript server](javascript-server.md) | API routing, identity checks and database access |
-| [WhatsApp Web](whatsapp-web.md) | Extension setup, scheduling, delivery outcomes and troubleshooting |
-| [Inventory report](whatsapp-inventory.md) | Inventory report behavior and manual WhatsApp workflow |
-| [Google reports](google-reports.md) | Apps Script configuration and report column mapping |
-| [Prometric extension](../extension/prometric/README.md) | Registration setup and result recovery |
-| [WhatsApp extension](../extension/whatsapp-web/README.md) | Chrome installation and running requirements |
+Updated 6 October 2026. Start with the [project overview](../README.md) or [live workspace](https://trainf.vercel.app/).
 
-The dated `system-audit-*` and `ui-ux-audit-*` files record historical reviews; they are not substitutes for the current architecture and operations guides.
+## Current guides
+
+| Guide | Purpose |
+| --- | --- |
+| [Architecture](../ARCHITECTURE.md) | Next/React adapter, original UI, API boundaries and data ownership |
+| [Operations](operations-guide.md) | Accounts, private sheets, multiple selections, colored copy/export and backups |
+| [Deployment](deployment.md) | Vercel, local verification, extension updates, domain retirement and rollback |
+| [JavaScript API](javascript-server.md) | Authentication, validation and the shared server handler |
+| [Google reports](google-reports.md) | Apps Script properties, tab names, header rows and upload preview |
+| [Prometric extension](../extension/prometric/README.md) | Chrome installation, selected-row registration and result recovery |
+| [WhatsApp Web](whatsapp-web.md) | Local scheduling, running requirements and delivery troubleshooting |
+| [WhatsApp extension](../extension/whatsapp-web/README.md) | Installation and browser permissions |
+| [Optional Meta delivery](whatsapp-inventory.md) | Database-scheduled inventory messages, templates and delivery status |
+
+## Historical reviews
+
+| Record | Date |
+| --- | --- |
+| [System audit](system-audit-2026-10-02.md) | 2 October 2026 |
+| [UI/UX audit](ui-ux-audit-2026-10-02.md) | 2 October 2026 |
+
+These reviews retain their original observations and include current-status notes. They are not evidence of a new live database audit, Google upload, Prometric registration or WhatsApp delivery.
+
+For a missing VOUCHER header, start with the Google guide. For a missing/clipped sidebar, verify the published commit and full/compact/closed modes using the deployment guide. For spreadsheet shortcuts and colored exports, use the operations guide.

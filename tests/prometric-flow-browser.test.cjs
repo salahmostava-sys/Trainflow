@@ -7,7 +7,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
     const template=await(await fetch('http://127.0.0.1:4193/')).text(),makeRow=(name,email,id,user='')=>{const r=Array(52).fill('');r[1]=email;r[3]=name;r[4]=id;r[7]='CBP-L';r[9]=user;return r;};
     let fixtureRows=[makeRow('ALPHA STUDENT','alpha@example.invalid','0001'),makeRow('EXISTING STUDENT','existing@example.invalid','0002','KEEP-USER'),makeRow('BETA STUDENT','beta@example.invalid','0003')],fixtureVersion=0;
     const profile=fs.mkdtempSync(path.join(artifacts,'prometric-flow-'));
-    ctx=await chromium.launchPersistentContext(profile,{channel:'msedge',headless:true,viewport:{width:1500,height:1000},args:['--disable-extensions-except='+extension,'--load-extension='+extension,'--host-resolver-rules=MAP ibta-ops.pages.dev 127.0.0.1, MAP tcnet1.prometric.com 127.0.0.1']});
+    ctx=await chromium.launchPersistentContext(profile,{channel:'msedge',headless:true,viewport:{width:1500,height:1000},args:['--disable-extensions-except='+extension,'--load-extension='+extension,'--host-resolver-rules=MAP trainf.vercel.app 127.0.0.1, MAP tcnet1.prometric.com 127.0.0.1']});
     const created=[],profiles=[],submitted=[];
     await ctx.exposeBinding('fixtureCreated',(source,data)=>{created.push(data);});await ctx.exposeBinding('fixtureProfile',(source,data)=>{profiles.push(data);});await ctx.exposeBinding('fixtureSubmitted',(source,data)=>{submitted.push(data);});
     function registrationFixture(url){
@@ -25,7 +25,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
     }
     await ctx.route(/^https?:\/\//,async route=>{
       const url=new URL(route.request().url());
-      if(url.origin==='https://ibta-ops.pages.dev'){
+      if(url.origin==='https://trainf.vercel.app'){
         if(url.pathname==='/')return route.fulfill({contentType:'text/html; charset=utf-8',body:template.replace('const previewSheets=new Map();','const previewSheets=new Map([["demo-admin",'+JSON.stringify({cells:fixtureRows,version:fixtureVersion,format:{direction:'ltr'}})+']]);')});
         const file=url.pathname.slice(1);if(/^[a-z][a-z0-9-]*\.(js|css)$/.test(file)&&fs.existsSync(path.join(root,file)))return route.fulfill({contentType:file.endsWith('.css')?'text/css':'text/javascript',body:fs.readFileSync(path.join(root,file),'utf8')});
         return route.fulfill({status:404,body:''});
@@ -35,7 +35,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
     });
     const worker=ctx.serviceWorkers()[0]||await ctx.waitForEvent('serviceworker');await worker.evaluate(()=>chrome.storage.local.set({pageDelay:0.01,userDelay:1,autoSubmit:true,desktopNotifications:false,backgroundMode:false,passPattern:'{F}#{f}Demo1970'}));
     let page=await ctx.newPage();const errors=[];page.on('pageerror',error=>errors.push(error.message));page.on('dialog',dialog=>dialog.accept());
-    await page.addInitScript(()=>window.previewSaveError='NETWORK');await page.goto('https://ibta-ops.pages.dev/');await page.locator('#trainees-tab').click();await page.waitForFunction(()=>document.getElementById('sheet-status').textContent==='تم الحفظ');
+    await page.addInitScript(()=>window.previewSaveError='NETWORK');await page.goto('https://trainf.vercel.app/');await page.locator('#trainees-tab').click();await page.waitForFunction(()=>document.getElementById('sheet-status').textContent==='تم الحفظ');
     await page.locator('td[data-v="0"][data-col="3"]').click();await page.locator('td[data-v="2"][data-col="3"]').click({modifiers:['Shift']});await page.locator('#sheet-prometric-open').click();
     await page.waitForFunction(()=>document.getElementById('sheet-prometric-connection').textContent.includes('الإضافة متصلة'),null,{timeout:15000});assert.match(await page.locator('#sheet-prometric-summary').textContent(),/2.*1/);assert.match(await page.locator('#sheet-prometric-dialog').textContent(),/يوجد يوزر أو باسورد بالفعل/);
     await page.screenshot({path:path.join(artifacts,'prometric-registration-preview.png')});
@@ -52,7 +52,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
     assert.equal(created.length,2,'Only the two ready fixture registrations ran');assert.equal(submitted.length,2);assert.equal(profiles.length,2);assert.deepEqual(profiles.map(p=>p.Email),['alpha@example.invalid','beta@example.invalid']);assert.ok(profiles.every(p=>p.Country==='SA'));
     // Reload discards the failed in-memory draft, then reconnects to the persisted results.
     await page.reload();await page.locator('#trainees-tab').click();await page.waitForFunction(()=>document.querySelector('td[data-v="3"][data-col="9"]').textContent==='BETASTUDENT1',null,{timeout:15000});
-    await page.close();page=await ctx.newPage();page.on('pageerror',error=>errors.push(error.message));page.on('dialog',dialog=>dialog.accept());await page.addInitScript(()=>window.previewSaveError='NETWORK');await page.goto('https://ibta-ops.pages.dev/');await page.locator('#trainees-tab').click();await page.locator('#sheet-prometric-open').click();await page.waitForFunction(()=>!document.getElementById('sheet-prometric-recover').hidden);await page.locator('#sheet-prometric-recover').click();await page.waitForFunction(()=>document.querySelector('td[data-v="3"][data-col="9"]').textContent==='BETASTUDENT1',null,{timeout:15000});await page.locator('#sheet-prometric-dialog .sheet-file-header button').click();
+    await page.close();page=await ctx.newPage();page.on('pageerror',error=>errors.push(error.message));page.on('dialog',dialog=>dialog.accept());await page.addInitScript(()=>window.previewSaveError='NETWORK');await page.goto('https://trainf.vercel.app/');await page.locator('#trainees-tab').click();await page.locator('#sheet-prometric-open').click();await page.waitForFunction(()=>!document.getElementById('sheet-prometric-recover').hidden);await page.locator('#sheet-prometric-recover').click();await page.waitForFunction(()=>document.querySelector('td[data-v="3"][data-col="9"]').textContent==='BETASTUDENT1',null,{timeout:15000});await page.locator('#sheet-prometric-dialog .sheet-file-header button').click();
     await page.evaluate(()=>window.previewSaveError='');await page.locator('#sheet-save').click();await page.waitForFunction(()=>!Trainees.hasDraft());
     await page.locator('#sheet-prometric-open').click();await page.locator('#sheet-prometric-refresh').click();await page.waitForFunction(()=>document.getElementById('sheet-prometric-status').textContent.includes('حُفظ: 2'),null,{timeout:15000});
     const saved=await page.evaluate(()=>previewSheets.get('demo-admin').cells);assert.equal(saved[1][9],'ALPHASTUDENT');assert.equal(saved[3][9],'BETASTUDENT1');assert.equal(saved[1][10],'A#aDemo1970');assert.equal(saved[2][9],'KEEP-USER');

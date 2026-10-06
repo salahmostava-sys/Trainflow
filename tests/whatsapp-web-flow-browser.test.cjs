@@ -2,13 +2,13 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
 (async()=>{
   const root=path.resolve(__dirname,'..'),artifacts=path.join(root,'artifacts');fs.mkdirSync(artifacts,{recursive:true});
   const profile=fs.mkdtempSync(path.join(artifacts,'whatsapp-flow-test-')),extension=path.join(root,'extension/whatsapp-web');
-  const ctx=await chromium.launchPersistentContext(profile,{channel:'msedge',headless:true,args:['--disable-extensions-except='+extension,'--load-extension='+extension,'--host-resolver-rules=MAP ibta-ops.pages.dev 127.0.0.1, MAP web.whatsapp.com 127.0.0.1']});
+  const ctx=await chromium.launchPersistentContext(profile,{channel:'msedge',headless:true,args:['--disable-extensions-except='+extension,'--load-extension='+extension,'--host-resolver-rules=MAP trainf.vercel.app 127.0.0.1, MAP web.whatsapp.com 127.0.0.1']});
   let mockSends=0;
   try{
     // Both host pages are local fixtures. No request reaches IBTA or WhatsApp.
     await ctx.route(/^https?:\/\//,async route=>{
       const url=new URL(route.request().url());
-      if(url.origin==='https://ibta-ops.pages.dev'){
+      if(url.origin==='https://trainf.vercel.app'){
         if(url.pathname==='/inventory-delivery.js')return route.fulfill({contentType:'text/javascript; charset=utf-8',body:fs.readFileSync(path.join(root,'inventory-delivery.js'),'utf8')});
         if(url.pathname!=='/')return route.fulfill({status:404,body:''});
         return route.fulfill({contentType:'text/html; charset=utf-8',body:`<!doctype html><html><head><meta charset="utf-8"></head><body><h1>Isolated integration fixture</h1><div id="inventory-whatsapp-settings"></div><script>
@@ -25,7 +25,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
     });
     const worker=ctx.serviceWorkers()[0]||await ctx.waitForEvent('serviceworker',{timeout:10000});
     await worker.evaluate(()=>{self.fixtureMessages=[];chrome.runtime.onMessage.addListener((data,sender)=>{self.fixtureMessages.push({type:data.type,url:sender.url,tabURL:sender.tab?.url,tabId:sender.tab?.id,id:sender.id});});});
-    const page=await ctx.newPage(),errors=[];page.on('pageerror',error=>errors.push(error.message));await page.addInitScript(()=>{window.fixtureMessages=[];window.addEventListener('message',event=>{if(event.data?.channel?.startsWith('IBTA_'))window.fixtureMessages.push({origin:event.origin,sameSource:event.source===window,...event.data});});});await page.goto('https://ibta-ops.pages.dev/');
+    const page=await ctx.newPage(),errors=[];page.on('pageerror',error=>errors.push(error.message));await page.addInitScript(()=>{window.fixtureMessages=[];window.addEventListener('message',event=>{if(event.data?.channel?.startsWith('IBTA_'))window.fixtureMessages.push({origin:event.origin,sameSource:event.source===window,...event.data});});});await page.goto('https://trainf.vercel.app/');
     await page.evaluate(()=>InventoryDelivery.load());
     await page.waitForFunction(()=>document.getElementById('inventory-auto-connection').textContent.includes('الإضافة متصلة'),null,{timeout:10000}).catch(async error=>{console.log(JSON.stringify({errors,connection:await page.locator('#inventory-auto-connection').textContent(),pageMessages:await page.evaluate(()=>window.fixtureMessages),workerMessages:await worker.evaluate(()=>self.fixtureMessages)},null,2));throw error;});
     const time=new Date(Date.now()+10800000).toISOString().slice(11,16);await page.locator('#inventory-auto-time').fill(time);await page.locator('#inventory-auto-enabled').check();await page.locator('#inventory-auto-save').click();

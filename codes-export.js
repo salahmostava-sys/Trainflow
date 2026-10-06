@@ -1,0 +1,26 @@
+/* Export only the vouchers already visible to the signed-in account. */
+(()=>{
+  'use strict';
+  const $=id=>document.getElementById(id),tr=(ar,en)=>currentLang==='ar'?ar:en;
+  const dialog=document.createElement('dialog');dialog.id='codes-export-dialog';dialog.className='sheet-file-dialog';dialog.setAttribute('aria-labelledby','codes-export-title');
+  dialog.innerHTML='<div class="sheet-file-header"><h3 id="codes-export-title"></h3><button id="codes-export-close" type="button"></button></div><label><span id="codes-export-mode-label"></span><select id="codes-export-mode"><option value="remaining"></option><option value="all"></option></select></label><label><span id="codes-export-scope-label"></span><select id="codes-export-scope"><option value="all"></option><option value="current"></option></select></label><p id="codes-export-status" role="status" aria-live="polite"></p><button id="codes-export-save" class="sheet-primary" type="button"></button>';
+  document.body.append(dialog);let worker=null,busy=false,generation=0,cancelJob=null;
+  const rows=()=>{const colors=getDayColors(),onlyCurrent=$('codes-export-scope').value==='current',remaining=$('codes-export-mode').value==='remaining';return sortCategories(Object.keys(state.codesByCategory)).filter(cat=>!onlyCurrent||cat===activeCategory).flatMap(cat=>(state.codesByCategory[cat]||[]).filter(code=>!remaining||!state.usedCodes[code]).map(code=>{const used=state.usedCodes[code]||'',bg=used?colors[used]:'#ffffff';return {used:!!used,bg,color:used?getContrastText(bg):'#16324f',values:[code,displayCatName(cat),used?tr('مستخدم','Used'):tr('غير مستخدم','Unused'),used,state.codeUseTimes?.[code]?codeCopyTime(state.codeUseTimes[code]):'',state.codeNotes?.[code]||'']};}));};
+  const preview=()=>{const count=rows().length;$('codes-export-status').textContent=tr('سيتم تصدير '+count+' كود بصيغة Excel مع الألوان.','Export '+count+' vouchers to Excel with their colors.');$('codes-export-save').disabled=busy||!count;};
+  const translate=()=>{for(const [id,ar,en]of [['codes-export-open','تصدير الأكواد','Export vouchers'],['codes-export-title','تصدير الأكواد إلى Excel','Export vouchers to Excel'],['codes-export-close','إغلاق','Close'],['codes-export-mode-label','الأكواد المطلوبة','Vouchers to export'],['codes-export-scope-label','الفئات','Categories'],['codes-export-save','تحميل Excel','Download Excel']])$(id).textContent=tr(ar,en);$('codes-export-mode').options[0].textContent=tr('غير المستخدمة فقط','Unused only');$('codes-export-mode').options[1].textContent=tr('كل الأكواد','All vouchers');$('codes-export-scope').options[0].textContent=tr('جميع الفئات','All categories');$('codes-export-scope').options[1].textContent=tr('الفئة الحالية','Current category');};
+  $('codes-export-open').onclick=()=>{translate();preview();dialog.showModal();};$('codes-export-close').onclick=()=>dialog.close();$('codes-export-mode').onchange=$('codes-export-scope').onchange=preview;
+  dialog.addEventListener('close',()=>{generation++;cancelJob?.(Error('CANCELLED'));cancelJob=null;worker?.terminate();worker=null;busy=false;$('codes-export-save').disabled=false;});
+  new MutationObserver(()=>{if($('app').hidden&&dialog.open)dialog.close();}).observe($('app'),{attributes:true,attributeFilter:['hidden']});
+  $('codes-export-save').onclick=async()=>{
+    if(busy)return;const token=++generation,owner=Cloud.userId();let jobWorker;busy=true;$('codes-export-save').disabled=true;$('codes-export-status').textContent=tr('جارٍ تجهيز الملف…','Preparing file…');
+    try{
+      if(!await Cloud.refresh())throw Error('REFRESH_FAILED');if(token!==generation||!dialog.open||Cloud.userId()!==owner)return;
+      const data=rows();if(!data.length){preview();return;}
+      const url=await new Promise((resolve,reject)=>{cancelJob=reject;jobWorker=worker=new Worker($('sheet-files-script').dataset.worker);jobWorker.onerror=()=>reject(Error('EXPORT_FAILED'));jobWorker.onmessage=({data})=>data.error?reject(Error(data.error)):resolve(URL.createObjectURL(new Blob([data.result.buffer],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'})));jobWorker.postMessage({id:1,action:'codes',headers:currentLang==='ar'?['الكود','الفئة','الحالة','تاريخ الاستخدام','الوقت','ملاحظات']:['Code','Category','Status','Used on','Time','Notes'],rows:data});});
+      if(token!==generation||!dialog.open||Cloud.userId()!==owner){URL.revokeObjectURL(url);return;}
+      const a=document.createElement('a');a.href=url;a.download='TrainFlow Vouchers - '+($('codes-export-mode').value==='remaining'?'Unused':'All')+' - '+new Date().toISOString().slice(0,10)+'.xlsx';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);$('codes-export-status').textContent=tr('تم تحميل الملف مع ألوان الأكواد.','File downloaded with voucher colors.');
+    }catch{if(token===generation)$('codes-export-status').textContent=tr('تعذر التصدير. حدّث البيانات وحاول مرة أخرى.','Export failed. Refresh data and try again.');}
+    finally{jobWorker?.terminate();if(token===generation){worker=null;cancelJob=null;busy=false;$('codes-export-save').disabled=false;}}
+  };
+  translate();new MutationObserver(translate).observe(document.documentElement,{attributes:true,attributeFilter:['lang']});
+})();

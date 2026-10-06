@@ -1,5 +1,11 @@
 # Daily WhatsApp inventory report
 
+The current classic settings screen offers the extension download, but the optional automatic-delivery controls in inventory-delivery.js are not mounted there. The integration setup below applies to a build that mounts those controls and restores the recipient form; downloading the extension alone does not enable or configure scheduled sending. Existing database delivery configuration is unchanged.
+
+Updated 6 October 2026. The workspace now runs on [Vercel](https://trainf.vercel.app/). This guide describes the **optional Meta/database scheduler**; the local Chrome provider has a [separate guide](whatsapp-web.md). Frontend hosting and extension-origin changes do not provision a Meta account, enable sending or replace a Vault token. The saved configuration and database policies remain in the existing project. Delivery acceptance and actual receipt are separate outcomes; use the status/recovery instructions below.
+
+Download the local Chrome package from Settings → Extensions. Use Settings → Inventory for authorized recipient and provider settings. No real messages are sent by synthetic UI tests.
+
 Settings → Inventory contains an automatic sending switch and a Saudi time input.
 The default is 16:59, one minute before the existing 17:00 manual-login cutoff.
 Choose **WhatsApp Web — Chrome** for the local device integration described in

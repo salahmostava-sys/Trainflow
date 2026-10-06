@@ -1,6 +1,6 @@
 /* Authenticated app initiates jobs; only the dedicated Prometric tab confirms them. */
 const IbtaRegistration=(()=>{
-  'use strict';const ORIGIN='https://ibta-ops.pages.dev',MAX=5000;let serial=Promise.resolve();
+  'use strict';const ORIGIN='https://trainf.vercel.app',MAX=5000;let serial=Promise.resolve();
   const appSender=sender=>sender?.id===chrome.runtime.id&&sender.frameId===0&&Number.isInteger(sender.tab?.id)&&new URL(sender.url||'https://invalid.invalid').origin===ORIGIN;
   const str=(value,max)=>typeof value==='string'&&value.length>0&&value.length<=max;
   const same=(run,payload)=>run&&run.owner===payload.owner&&run.client===payload.client;

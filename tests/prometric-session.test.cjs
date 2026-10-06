@@ -34,7 +34,7 @@ function extensionFixture() {
   const extension = path.resolve(__dirname, '../extension/prometric');
   context.importScripts = (...files) => files.forEach(file => vm.runInContext(fs.readFileSync(path.join(extension, file), 'utf8'), context, { filename: file }));
   vm.runInContext(fs.readFileSync(path.join(extension, 'background.js'), 'utf8'), context, { filename: 'background.js' });
-  const app = { id: chrome.runtime.id, frameId: 0, url: 'https://ibta-ops.pages.dev/', tab: { id: 10 } };
+  const app = { id: chrome.runtime.id, frameId: 0, url: 'https://trainf.vercel.app/', tab: { id: 10 } };
   const popup = { id: chrome.runtime.id };
   const send = (message, sender = popup) => new Promise(resolve => chrome.runtime.onMessage.listener(message, sender, resolve));
   const request = payload => send({ action: 'ibtaRequest', payload: { owner: 'dummy-owner', client: 'dummy-client', ...payload } }, app);

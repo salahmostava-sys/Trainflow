@@ -2,6 +2,8 @@
 
 TrainFlow manages the work between receiving exam vouchers, assigning them to a team member, preparing trainees, registering Prometric accounts and reporting results. This document describes the implemented system, rather than a proposed redesign.
 
+Updated 6 October 2026. Production: [TrainFlow on Vercel](https://trainf.vercel.app/).
+
 ## System overview
 
 ```mermaid
@@ -9,7 +11,7 @@ flowchart TB
     Team[Approved team members]
     UI[TrainFlow browser workspace]
     Auth[Supabase Auth]
-    API[Cloudflare Pages JavaScript API]
+    API[Next.js adapter and shared JavaScript API]
     DB[(Supabase PostgreSQL)]
     WA[WhatsApp Web extension]
     WhatsApp[WhatsApp Web]
@@ -42,6 +44,8 @@ The browser is the working surface. The server checks operational requests, whil
 
 | Path | Responsibility |
 | --- | --- |
+| `app/`, `components/`, `lib/` | Next.js routes, React/TypeScript workspace adapter and native History navigation |
+| `codes-export.js` | Visible voucher-export dialog and colored XLSX preparation |
 | `trainflow.html` | Local application entry point, layout, shared styles and Arabic/English interface strings |
 | `cloud.js` | Authentication, same-origin data adapter, codes, stock, membership, backups and trainee persistence |
 | `ops-ui.js` | Administrative import, restore and settings interactions |
@@ -54,7 +58,7 @@ The browser is the working surface. The server checks operational requests, whil
 | `inventory-delivery.js` | Inventory reporting and scheduled delivery controls |
 | `trainee-reports.js` | Daily report preparation and Google report submission |
 | `session-policy.js` | Shared daily sign-in policy used by browser and API |
-| `server/worker.mjs` | Production JavaScript API running on Cloudflare Pages |
+| `server/worker.mjs` | Validated shared API called by the Next TypeScript adapter |
 | `extension/prometric/` | Manifest V3 registration extension and TrainFlow page bridge |
 | `extension/whatsapp-web/` | Manifest V3 schedule, inventory bridge and WhatsApp sender |
 | `tools/build-site.cjs` | Production assets, worker, asset hashes and extension ZIP packages |
@@ -110,7 +114,7 @@ Concurrent requests use server-side checks and optimistic versions. A clipboard 
 
 ### Edit a trainee sheet
 
-The browser loads the selected owner's sheet and version. Editing, sorting, formatting and Undo/Redo operate locally. Save submits cells and format with the expected version; a conflicting save is rejected. Virtual rendering draws the visible part of the sheet. Blank trailing rows do not expand the persisted matrix until populated.
+The browser loads the signed-in account's private sheet and version; the page has no owner selector. Editing, sorting, formatting and Undo/Redo operate locally. Save submits cells and format with the expected version; a conflicting save is rejected. Virtual rendering draws the visible part of the sheet. Blank trailing rows do not expand the persisted matrix until populated.
 
 ### Register Prometric accounts
 
@@ -138,24 +142,32 @@ Supabase REST remains reachable by authenticated clients, including the report b
 
 Only device preferences remain in browser local storage. Authentication uses session storage and daily sign-in rules. Registration results and scheduled delivery state also have extension-local storage. Operational records are persisted in PostgreSQL.
 
+## Interface and selection
+
+React mounts the original interface directly, without an iframe. A native History bridge updates the six page URLs and settings query while preserving the mounted sheet and its unsaved work. The physical sidebar remains on the right, with full, 60 px compact and closed states. Its opener is outside the closed sidebar. The account popup is portalled outside the scrolling sidebar and positioned inside the viewport.
+
+Selections consist of an active rectangle plus additive rectangles. Coordinates refer to the displayed view; stored rows are resolved through its mapping. Drag/Shift extend adjacent cells or entire columns. Ctrl/Cmd adds or toggles separate areas. Union iteration visits overlaps once. Formatting, clearing and selected-row registration respect that union. Structural shifts, multi-cell paste and merges require one contiguous region so gaps are not changed accidentally.
+
+Clipboard output contains both TSV and a styled HTML table. Separate rows/columns are compacted in displayed order and unselected intersections are blank. Stored colors and automatic result/duplicate-ID colors are copied; temporary selection overlays are excluded. Rich-paste support depends on the destination. Voucher export writes an XLSX workbook with the same usage-day palette and used-code strike-through. Standard category names remain English in both UI languages.
+
 ## Build and deployment
 
-```mermaid
+~~~mermaid
 flowchart LR
-    Source[GitHub main branch] --> CI[Unit tests and build]
-    Source --> Pages[Cloudflare Git integration]
-    Pages --> Build[node tools/build-site.cjs]
-    Build --> Static[index.html and versioned assets]
-    Build --> Worker[_worker.js and API routing]
-    Build --> Packages[TrainFlow extension ZIPs]
-    Static --> Production[Production workspace]
-    Worker --> Production
-    Packages --> Production
-```
+    Source[GitHub main] --> CI[Unit checks and build]
+    Source --> Vercel[Vercel Next deployment]
+    Vercel --> Build[pnpm build]
+    Build --> Assets[Versioned workspace assets and extension ZIPs]
+    Build --> Manifest[Generated TypeScript UI manifest]
+    Build --> Next[Next production output]
+    Manifest --> Next
+    Assets --> Next
+    Next --> Live[trainf.vercel.app]
+~~~
 
-The source entry point becomes `dist/index.html`. The build adds content hashes to browser assets and creates `trainflow-prometric.zip` and `trainflow-whatsapp-web.zip`. Legacy ZIP names remain available so older installed pages can still download updates. SQL, tests, backups and documentation are excluded from deployment.
+The build generates public/workspace, generated/classic-ui.ts and .next. Both extension ZIPs are packaged from the checked-in source. Prometric 4.1.3 and WhatsApp Web 1.0.4 trust the current Vercel origin; installed older versions must be updated. Operational records, SQL and private backups are not embedded in public assets.
 
-Cloudflare's project display name is `trainflow`. Its existing `ibta-ops.pages.dev` hostname remains stable: Cloudflare's rename dialog explicitly states that renaming does not change hostnames or deployments. Keeping that origin preserves Auth redirects and installed extension origin checks.
+Cloudflare-domain references have been removed from active integrations. The static build helper remains for compatibility. Remote account/domain deletion is separate and is not performed by changing these repository files. See [deployment](docs/deployment.md).
 
 ## Compatibility decisions
 
@@ -174,7 +186,7 @@ Rename these contracts only through a separately planned migration that updates 
 
 Run `pnpm test`, `pnpm test:browser` and `pnpm build` before publishing changes to runtime behavior. Browser suites require Microsoft Edge; SQL suites need a separately authenticated test database and are not part of JavaScript CI. A UI preview uses synthetic data and does not prove live sign-in or database writes.
 
-For a faulty frontend deployment, roll back through Cloudflare Pages or revert the Git commit and let the integration redeploy. Database migrations require their own recovery plan; a frontend rollback does not reverse schema changes. Application JSON exports supplement database backups and contain sensitive operational data, including configured credentials.
+For a faulty frontend deployment, roll back through Vercel or revert the Git commit and let the integration redeploy. Database migrations require their own recovery plan; a frontend rollback does not reverse schema changes. Application JSON exports supplement database backups and contain sensitive operational data, including configured credentials.
 
 ## Further reading
 

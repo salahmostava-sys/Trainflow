@@ -29,24 +29,24 @@ const TraineeExcel=(()=>{
     window.addEventListener('resize',closeMenus);document.addEventListener('scroll',e=>{if(!e.target.closest?.('.sheet-command-popover'))for(const item of dropdowns)if(item.list.matches(':popover-open'))item.place();},true);
     const menu=(host,id,ar,en,items)=>dropdown(host,id,ar.replace(' ▾',''),en.replace(' ▾',''),items.map(([key,a,e,run])=>action(id+'-'+key,a,e,run)));
     const state=()=>h.state(),style=()=>{const s=state();return s.formatting.styles[s.view[s.cursor.r]+':'+s.cursor.c]||{};};
-    const rows=s=>s.view.slice(s.bounds[0],s.bounds[1]+1),columns=s=>s.cols.filter(c=>c>=s.bounds[2]&&c<=s.bounds[3]);
+    const ranges=s=>s.ranges||[s.bounds],rows=s=>D.selectionRows(ranges(s),s.view.length).map(r=>s.view[r]),columns=s=>D.selectionColumns(ranges(s),s.cols);
     const mutate=(run)=>{
       const s=state(),cells=s.cells.slice(),fmt=D.format(s.formatting),changed=new Set();
       const rowAt=r=>{while(cells.length<=r)cells.push(D.blank());if(!changed.has(r)){cells[r]=[...cells[r]];changed.add(r);}return cells[r];};
       run(cells,fmt,s,rowAt);h.change(D.normalize(cells),true,fmt);
     };
-    const selected=(run)=>mutate((cells,fmt,s,rowAt)=>{const cols=columns(s);for(const r of rows(s))for(const c of cols)run(cells,fmt,r,c,s,rowAt);});
+    const selected=(run)=>mutate((cells,fmt,s,rowAt)=>D.eachSelected(ranges(s),s.view,s.cols,(r,c)=>run(cells,fmt,r,c,s,rowAt)));
     const toggle=field=>h.formatSelection({[field]:!style()[field]});
     const font=group('sheet-excel-font','الخط','Font'),fontName=node('select',undefined,{id:'sheet-font-family','aria-label':tr('نوع الخط','Font family')});
     for(const name of ['Arial','Calibri','Tahoma','Segoe UI','Times New Roman','IBM Plex Sans Arabic'])fontName.append(node('option',name,{value:name}));fontName.onchange=()=>h.formatSelection({font:fontName.value});font.append(fontName);
     for(const id of ['sheet-selection-size','sheet-font-minus','sheet-font-size','sheet-font-plus','sheet-bold','sheet-fill','sheet-text-color']){const el=$(id);font.append(el.closest('label')||el);}
     $('sheet-font-minus').onclick=()=>h.formatSelection({size:Math.max(10,(style().size||state().formatting.fontSize)-1)});$('sheet-font-plus').onclick=()=>h.formatSelection({size:Math.min(32,(style().size||state().formatting.fontSize)+1)});
     font.append(action('sheet-italic','I','I',()=>toggle('italic')),action('sheet-underline','U','U',()=>toggle('underline')),action('sheet-strike','شطب','Strike',()=>toggle('strike')));
-    const borders=type=>selected((cells,fmt,r,c,s)=>{const [r1,r2,c1,c2]=s.bounds,key=r+':'+c,old=fmt.styles[key]||{};fmt.styles[key]={...old,border:type,borderTop:null,borderBottom:null,borderLeft:null,borderRight:null};if(type==='outline')Object.assign(fmt.styles[key],{border:'none',borderTop:r===s.view[r1],borderBottom:r===s.view[r2],borderLeft:c===c1,borderRight:c===c2});});
+    const borders=type=>selected((cells,fmt,r,c,s)=>{const vr=s.view.indexOf(r),cols=s.cols,at=cols.indexOf(c),key=r+':'+c,old=fmt.styles[key]||{},has=(row,col)=>D.selectedCell(ranges(s),row,col);fmt.styles[key]={...old,border:type,borderTop:null,borderBottom:null,borderLeft:null,borderRight:null};if(type==='outline')Object.assign(fmt.styles[key],{border:'none',borderTop:!has(vr-1,c),borderBottom:!has(vr+1,c),borderLeft:!has(vr,cols[at-1]??-1),borderRight:!has(vr,cols[at+1]??D.MAX_COLS)});});
     menu(font,'sheet-border-menu','حدود ▾','Borders ▾',['all','outline','none','top','bottom','left','right'].map((v,i)=>[v,['كل الحدود','حدود خارجية','بدون حدود','علوي','سفلي','يسار','يمين'][i],['All borders','Outside borders','No borders','Top','Bottom','Left','Right'][i],()=>borders(v)]));
     const align=group('sheet-excel-alignment','المحاذاة','Alignment');align.append($('sheet-align-right').parentElement);$('sheet-wrap').remove();
     const merge=mode=>{
-      const s=state();if(s.filtered){h.message(tr('امسح الفلاتر والفرز قبل الدمج.','Clear filters and sorting before merging.'),true);return;}const [r1,r2,c1,c2]=s.bounds,a=s.view[r1],b=s.view[r2];
+      const s=state();if(ranges(s).length>1){h.message(tr('اختر منطقة واحدة متجاورة للدمج.','Select one contiguous range to merge.'),true);return;}if(s.filtered){h.message(tr('امسح الفلاتر والفرز قبل الدمج.','Clear filters and sorting before merging.'),true);return;}const [r1,r2,c1,c2]=s.bounds,a=s.view[r1],b=s.view[r2];
       if(mode!=='unmerge'&&r1===r2&&c1===c2)return;
       const occupied=rows(s).some(r=>columns(s).some(c=>(r!==a||c!==c1)&&s.cells[r]?.[c]));if(mode!=='unmerge'&&occupied&&!confirm(tr('الدمج يحتفظ بقيمة أول خلية فقط. متابعة؟ يمكنك التراجع.','Merge keeps only the first cell value. Continue? You can undo.')))return;
       mutate((cells,fmt,_,rowAt)=>{for(const [key,v]of Object.entries(fmt.styles)){const [r,c]=key.split(':').map(Number);if(r<=b&&(r+(v.mergeRows||1)-1)>=a&&c<=c2&&(c+(v.mergeCols||1)-1)>=c1){delete v.mergeRows;delete v.mergeCols;}}

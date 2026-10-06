@@ -1,5 +1,5 @@
 (() => {
-  const ORIGIN='https://ibta-ops.pages.dev';
+  const ORIGIN='https://trainf.vercel.app';
   const post=data=>window.postMessage({channel:'IBTA_WEB_EXTENSION',...data},ORIGIN);
   window.addEventListener('message',async event=>{
     if(event.source!==window||event.origin!==ORIGIN||event.data?.channel!=='IBTA_WEB_APP')return;

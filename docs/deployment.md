@@ -1,65 +1,61 @@
-# TrainFlow deployment and maintenance
+# Deployment and maintenance
 
-## Next.js deployment with the classic UI
+Updated 6 October 2026. The production workspace is [TrainFlow on Vercel](https://trainf.vercel.app/).
 
-Vercel uses `framework: nextjs`, `pnpm install --frozen-lockfile`, `npm run build`, and `.next` output. The build generates the classic UI and its versioned assets before compiling the TypeScript/React entry point. Generated `public/workspace` assets and `generated/classic-ui.ts` are excluded from Git and regenerated for every build.
+## Local development
 
-Run `pnpm dev` for Next.js development, or `pnpm build` followed by `pnpm start` for production review. After building, run `pnpm test:next` to check the original layout, trainee data operations, file assets, refresh preferences and API protection using synthetic records. The API route forwards to `server/worker.mjs`; database ownership and permissions continue to be enforced by the existing project and policies.
+Use Node.js 20+ and pnpm 10. CI uses Node.js 22. Install from the checked-in lockfile:
 
-The Next workspace uses `/keycodes`, `/prometric`, `/vouchers`, `/inventory`, `/trainees` and `/settings` URLs. Settings sections use `?tab=reports` (or the selected section). The TypeScript navigation bridge preserves the mounted sheet while updating Next history; direct URLs take priority over saved page preferences, and browser Back/Forward restores the matching panel.
-
-The sidebar stays on the right in both languages. Its arrow button switches between full labels and an icons-only rail, with page names available as tooltips; the header menu button still opens or closes it. Visibility and compact preferences are saved separately for this browser. On mobile the full sidebar dismisses after choosing a destination, while the icon rail stays available. Selecting sheet cells and pressing Ctrl/Cmd+C (or Copy in the context menu) writes plain text and an HTML table to the system clipboard for pasting into other applications.
-
-`pnpm build:cloudflare` retains the original static Pages build described below. Changing the web framework does not create a new Supabase project or replace the existing records.
-
-## Local workspace
-
-Use Node.js 20 or newer and pnpm. The local entry file is `trainflow.html`.
-
-```sh
+~~~sh
 pnpm install --frozen-lockfile
-pnpm test
-pnpm test:browser
-pnpm build
-```
+pnpm dev
+~~~
 
-For interface review using synthetic records:
+For production review, run pnpm test, pnpm build, pnpm test:next, then pnpm start. pnpm build first packages the original HTML/CSS/JavaScript into public/workspace and creates generated/classic-ui.ts, then builds Next.js with type checking. Commit source files rather than generated directories.
 
-```sh
-node tools/design-preview.cjs
-```
+The synthetic preview is node tools/design-preview.cjs at http://127.0.0.1:4174. It replaces the cloud data client and cannot verify real authentication, database writes or external uploads. A static server does not implement /api/data.
 
-Open `http://127.0.0.1:4174`. This preview deliberately replaces production data calls. A plain file/static server does not implement `/api/data`; use the deployed site or a Cloudflare runtime to exercise the production API.
+## Vercel configuration
 
-## GitHub and production
-
-Repository: [salahmostava-sys/trainflow](https://github.com/salahmostava-sys/trainflow). The default and production branch is `main`. GitHub Actions runs the unit suites and build. Cloudflare Pages uses its Git integration to publish pushes to `main`.
-
-| Cloudflare setting | Value |
+| Setting | Value |
 | --- | --- |
-| Project name | `trainflow` |
-| Production hostname | `ibta-ops.pages.dev` |
-| Build command | `node tools/build-site.cjs` |
-| Output directory | `dist` |
-| API runtime | Pages advanced-mode `_worker.js` |
-| Worker routes | `/api/*` |
+| Repository | salahmostava-sys/Trainflow |
+| Production branch | main |
+| Framework | Next.js |
+| Build command | pnpm build |
+| Install | pnpm install --frozen-lockfile |
+| Production address | https://trainf.vercel.app/ |
+| API health | /api/health |
 
-The hostname predates the product rename. Cloudflare project renames preserve hostnames; the existing URL is kept so authentication callbacks and extension origin checks continue to work.
+vercel.json selects the Next deployment. The TypeScript API adapter calls server/worker.mjs and preserves the existing user JWT and database authorization. Supabase URL and publishable-key overrides may be configured as SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY. No service-role key is needed by this API.
 
-Optional runtime variables are `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY`. The existing public defaults target the current project. Never put a service-role key in browser assets. `dist`, browser test artifacts, dependency folders and backups are excluded from Git.
+The URLs /trainees, /keycodes, /prometric, /vouchers, /inventory and /settings are directly addressable. Settings sections use a tab query parameter, for example /settings?tab=reports. The native History bridge preserves the mounted classic workspace during navigation; Back/Forward restores the panel without remounting the sheet.
 
-## Verify a deployment
+The sidebar stays on the right in both languages, supports a 60 px compact rail and can be fully closed. Its opener remains visible outside the closed sidebar. The account popup is positioned outside the sidebar's overflow and clamped to the viewport.
 
-1. Check that the Pages deployment targets the intended Git commit and has completed successfully.
-2. Open the production login screen and verify the TrainFlow title in Arabic and English.
-3. Request `/api/health` and confirm `app: "TrainFlow"` and `runtime: "javascript-server"`.
-4. Check that both TrainFlow extension download URLs return ZIP files.
-5. With an approved test account, verify the relevant authenticated workflow before declaring a data-path change validated.
+## Verify the published version
 
-After updating either extension, extract its ZIP into the same permanent folder, reload it in `chrome://extensions` and reload the TrainFlow/target website tabs. Existing message channels and extension-local storage remain compatible.
+1. Check the GitHub commit and Vercel deployment status; a local passing build does not prove publication.
+2. Open /api/health. A Next deployment identifies runtime as nextjs.
+3. Verify direct navigation, refresh and Back/Forward on the six page URLs.
+4. Check the sidebar in full, compact and closed modes, including the account popup on mobile.
+5. Use synthetic data for UI regression checks; test a real signed-in account separately when live writes are required.
+6. Confirm both extension ZIPs download from Settings → Extensions. Reinstall/reload existing unpacked extensions after an update.
+
+The selection/export browser suite checks additive selections, rich clipboard MIME types and the actual colors inside downloaded XLSX files. External Google/Prometric/WhatsApp actions need their own configured test accounts and are not exercised by that suite.
+
+## Retire the former Cloudflare address
+
+Application links, extension host permissions, bridges and test fixtures now use the Vercel production origin. Prometric 4.1.3 and WhatsApp Web 1.0.4 no longer grant access to the former Cloudflare origin.
+
+This repository change does not delete a domain or a project from a Cloudflare account. Use the owning account's hosting controls to disable/remove the former address or delete its retired hosting project, as appropriate. Account access is required; no remote deletion is recorded by this change. Update Supabase Auth Site URL and allowed confirmation/recovery redirects to the intended Vercel origin in the existing project. Verify email redirects before removing an older callback address.
+
+pnpm build:cloudflare remains a compatibility/static packaging helper that writes dist and a worker. It is not the active Vercel deployment command. Keeping the helper does not reinstate extension access to the retired domain.
 
 ## Backups and rollback
 
-Export a private JSON application backup from Settings before operational data changes. Current exports use `trainflow-backup`; restore also supports existing `ibta-ops-backup` files. Application backups contain codes, shared settings, stock and trainee sheets; Auth accounts are separate. Keep database backups as well.
+Download a private administrator backup before operational restores. Auth accounts are separate from app JSON exports, and frontend rollback does not restore database contents.
 
-For a frontend issue, roll back the deployment in Cloudflare Pages or revert the faulty commit and redeploy. Do not rerun `database.sql` against the provisioned project. Apply database migrations individually after reviewing their policy and function changes.
+For a frontend regression, roll back the Vercel deployment or revert the faulty commit and let production redeploy. Review and apply database migrations individually; do not rerun database.sql against the existing project. A frontend rollback does not reverse SQL changes or external report uploads.
+
+See [architecture](../ARCHITECTURE.md), [operations](operations-guide.md) and [server boundaries](javascript-server.md).

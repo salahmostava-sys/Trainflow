@@ -8,7 +8,7 @@ const next = process.argv.includes('--next');
 const output = path.join(root, next ? 'public/workspace' : 'dist');
 fs.mkdirSync(output, { recursive: true });
 let html=fs.readFileSync(path.join(root,'trainflow.html'),'utf8');
-const files=['prometric-core.js','prometric-registration.js','certificate-name.js','cloud.js','ops-ui.js','inventory-delivery.js','trainees.js','trainees-excel.js','trainees-core.js','trainees-xlsx.js','trainees-files.js','trainees.css','trainee-reports.js','session-policy.js'];
+const files=['prometric-core.js','prometric-registration.js','certificate-name.js','cloud.js','ops-ui.js','inventory-delivery.js','trainees.js','trainees-excel.js','trainees-core.js','trainees-xlsx.js','trainees-files.js','trainees.css','trainee-reports.js','session-policy.js','codes-export.js'];
 const vendor=fs.readFileSync(require.resolve('exceljs/dist/exceljs.min.js'));
 fs.writeFileSync(path.join(output,'exceljs-4.4.0.min.js'),vendor);
 fs.copyFileSync(require.resolve('exceljs/LICENSE'),path.join(output,'exceljs-LICENSE.txt'));
@@ -32,9 +32,11 @@ if(!next){
 const JSZip=require(require.resolve('jszip',{paths:[path.dirname(require.resolve('exceljs'))]}));
 const prometricZip=new JSZip();
 for(const file of fs.readdirSync(path.join(root,'extension/prometric'))){let bytes=fs.readFileSync(path.join(root,'extension/prometric',file));if(/\.(?:js|json|html|css|md)$/.test(file)||file==='LICENSE')bytes=Buffer.from(bytes.toString('utf8').replace(/\r\n/g,'\n'));if(file.endsWith('.js'))new Script(bytes.toString('utf8'),{filename:'prometric/'+file});prometricZip.file(file,bytes,{date:new Date('2026-01-01T00:00:00Z')});}
-prometricZip.generateAsync({type:'nodebuffer',compression:'DEFLATE'}).then(prometricBytes=>{
+prometricZip.generateAsync({type:'nodebuffer',compression:'DEFLATE'}).then(async prometricBytes=>{
   fs.writeFileSync(path.join(output,'trainflow-prometric.zip'),prometricBytes);
   fs.writeFileSync(path.join(output,'ibta-prometric.zip'),prometricBytes);
+  const whatsappZip=new JSZip();for(const file of fs.readdirSync(path.join(root,'extension/whatsapp-web'))){const bytes=fs.readFileSync(path.join(root,'extension/whatsapp-web',file));if(file.endsWith('.js'))new Script(bytes.toString('utf8'),{filename:'whatsapp/'+file});whatsappZip.file(file,bytes,{date:new Date('2026-01-01T00:00:00Z')});}
+  fs.writeFileSync(path.join(output,'trainflow-whatsapp-web.zip'),await whatsappZip.generateAsync({type:'nodebuffer',compression:'DEFLATE'}));
   html=html.replaceAll('"trainflow-prometric.zip"','"trainflow-prometric.zip?v='+createHash('sha256').update(prometricBytes).digest('hex').slice(0,12)+'"');
   fs.writeFileSync(path.join(output,'index.html'),html);
   if(next){
@@ -51,4 +53,3 @@ prometricZip.generateAsync({type:'nodebuffer',compression:'DEFLATE'}).then(prome
   }
   console.log('Prometric extension package ready');
 }).catch(error=>{console.error(error.message);process.exitCode=1;});
-

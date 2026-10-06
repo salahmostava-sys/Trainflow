@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "TrainFlow — WhatsApp daily inventory",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Send your TrainFlow inventory report through your logged-in WhatsApp Web at your chosen Saudi time.",
   "minimum_chrome_version": "120",
   "permissions": [
@@ -9,7 +9,7 @@
     "storage"
   ],
   "host_permissions": [
-    "https://ibta-ops.pages.dev/*",
+    "https://trainf.vercel.app/*",
     "https://web.whatsapp.com/*"
   ],
   "background": {
@@ -22,7 +22,7 @@
   "content_scripts": [
     {
       "matches": [
-        "https://ibta-ops.pages.dev/*"
+        "https://trainf.vercel.app/*"
       ],
       "js": [
         "bridge.js"

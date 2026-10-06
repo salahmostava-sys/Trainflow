@@ -1,5 +1,5 @@
 importScripts('schedule.js');
-const SITE='https://ibta-ops.pages.dev/',WA='https://web.whatsapp.com/';
+const SITE='https://trainf.vercel.app/',WA='https://web.whatsapp.com/';
 let chain=Promise.resolve();
 const serial=task=>{const work=chain.then(task);chain=work.catch(()=>{});return work;};
 const noSendErrors=new Set(['FRESH_REPORT_REQUIRED','WHATSAPP_OPEN_FAILED','WHATSAPP_NOT_READY','MESSAGE_MISMATCH']);

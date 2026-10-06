@@ -1,8 +1,14 @@
-# Prometric Auto Register — TrainFlow 4.1.2
+# Prometric Auto Register — TrainFlow 4.1.3
 
 Integrated from the user's Prometric Auto Register 4.0 source (Salah Mostafa,
 ISC license). Its original popup, registration steps, generation pattern,
 address defaults and import/export tools are retained.
+
+Production origin: **https://trainf.vercel.app/**. Updated 6 October 2026. This version removes the former Cloudflare origin from host permissions and the page bridge.
+
+## Update an installed unpacked extension
+
+Download the new ZIP from **Settings → Extensions**. Replace its files inside the same permanent folder you previously loaded, then press **Reload ↻** in `chrome://extensions`. Reload TrainFlow and the Prometric tabs afterward. Updating once grants the extension access to the Vercel origin; ordinary website updates do not require reinstalling it. Keeping the same folder normally retains its extension ID and local settings.
 
 ## Install in Google Chrome
 
@@ -51,3 +57,11 @@ to the extension. No new database permissions or public endpoints are introduced
 
 Browser tests use an isolated Chrome/Edge profile and local Prometric fixtures;
 they do not register real accounts.
+
+## Selection and updates
+
+Download the current ZIP from **Settings → Extensions** or the registration dialog. Replace/reload the unpacked extension, then reload the Vercel page and Prometric tabs. A site refresh alone cannot update an installed unpacked extension.
+
+Drag/Shift selects adjacent rows; Ctrl/Cmd selects separate cell or column areas. Registration collects each selected visible-view row once, including rows covered by separate selections. It does not include unselected rows between those areas. The preview remains the final check before creating accounts. Existing credentials are never replaced automatically.
+
+The Trust boundary remains the exact Vercel origin, the owning extension ID and its dedicated registration tab. A migrated frontend does not reset the same private sheet or pending result ownership. See the [operations guide](../../docs/operations-guide.md) and [deployment guide](../../docs/deployment.md).
