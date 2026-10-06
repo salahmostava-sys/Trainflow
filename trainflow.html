@@ -603,15 +603,13 @@ if(window.history)window.history.scrollRestoration='manual';
   }
   .kc-remove-cat-btn:hover{background:#FDEBEC; color:var(--danger); border-color:#F6C9CB;}
   .kc-drag-handle{
-    width:90px; flex:none; display:flex; align-items:center; justify-content:center;gap:4px;
-    cursor:grab; color:var(--muted); font-size:14px; user-select:none; letter-spacing:-1px;
+    width:32px; flex:none; display:flex; align-items:center; justify-content:center;
+    cursor:grab; color:var(--muted); font-size:14px; user-select:none;
   }
   .kc-drag-handle:active{cursor:grabbing;}
-  .kc-col-drag{width:90px; flex:none;}
-  .kc-exam-order{width:28px;min-height:32px;padding:0;border:1px solid var(--border);border-radius:5px;background:var(--surface);color:var(--text);cursor:pointer;}
-  .kc-exam-order:disabled{opacity:.4;cursor:default;}
+  .kc-col-drag{width:32px; flex:none; text-align:center;}
   .copy-code-btn{display:block;width:100%;border:0;padding:0;background:transparent;color:inherit;font:inherit;text-align:inherit;overflow-wrap:anywhere;cursor:pointer;}
-  .copy-code-btn:focus-visible,.kc-exam-order:focus-visible,.cred-card[type=button]:focus-visible{outline:2px solid var(--blue);outline-offset:3px;border-radius:4px;}
+  .copy-code-btn:focus-visible,.cred-card[type=button]:focus-visible{outline:2px solid var(--blue);outline-offset:3px;border-radius:4px;}
   .cred-card[type=button]{display:block;width:100%;text-align:start;color:var(--text);font:inherit;}
   .cred-card[type=button] .cred-label,.cred-card[type=button] .cred-value{display:block;}
   .kc-row.dragging{opacity:.4;}
@@ -631,14 +629,15 @@ if(window.history)window.history.scrollRestoration='manual';
   @media(max-width:600px){.kc-add-exam-fields{grid-template-columns:repeat(2,minmax(0,1fr));}}
 
   /* ---- Prometric ---- */
+  #panel-prometric{max-width:560px;}
   .cred-card{
     background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg);
-    padding:18px; margin-bottom:14px; cursor:pointer; transition:border-color .15s, box-shadow .15s;
+    padding:14px 18px; margin-bottom:12px; cursor:pointer; transition:border-color .15s, box-shadow .15s;
     box-shadow:var(--shadow);
   }
   .cred-card:hover{border-color:var(--blue);}
-  .cred-label{font-size:14px; color:var(--muted); margin-bottom:7px; font-weight:600;}
-  .cred-value,.resource-value{font-family:inherit;font-size:16px;font-weight:600;line-height:1.6;word-break:break-all;direction:ltr;unicode-bidi:plaintext;text-align:start;}
+  .cred-label{font-size:13px; color:var(--muted); margin-bottom:5px; font-weight:600;}
+  .cred-value,.resource-value{font-family:inherit;font-size:16px;font-weight:600;line-height:1.5;word-break:break-all;direction:ltr;unicode-bidi:plaintext;text-align:start;}
   .resource-card{cursor:default;}
   .resource-card:hover{border-color:var(--border);}
   .resource-value{min-width:0;flex:1 1 250px;}
@@ -762,7 +761,7 @@ if(window.history)window.history.scrollRestoration='manual';
   .code-history-hint{font-size:12px;color:var(--muted);margin:8px 0;cursor:pointer;}
   .code-history-hint:hover{color:var(--blue-600);text-decoration:underline;}
   .code-sheet-head{
-    display:flex; align-items:center; background:var(--surface-2); min-width:480px;position:sticky;top:0;z-index:2;
+    display:flex; align-items:center; background:var(--surface-2); min-width:740px;position:sticky;top:0;z-index:2;
     border-bottom:1px solid var(--border); font-size:12.5px; font-weight:700;
     color:var(--muted); letter-spacing:.2px;
   }
@@ -770,14 +769,15 @@ if(window.history)window.history.scrollRestoration='manual';
     padding:5px 8px; border-inline-start:1px solid var(--border);
   }
   .code-sheet-head > div:first-child, .code-row > div:first-child{border-inline-start:none;}
-  .col-check{width:30px; flex:none; text-align:center; display:flex; align-items:center; justify-content:center;}
-  .col-n{width:30px; flex:none; text-align:center;}
-  .col-code{width:182px; flex:none;}         /* sized to fit the code text exactly */
-  .col-date{width:150px; flex:none;}          /* date and copy time on one line */
-  .col-notes{flex:1; min-width:70px;}        /* takes whatever space is left */
-  .col-actions{width:96px; flex:none; text-align:center;}  /* room for two larger action buttons */
+  .col-check{width:28px; flex:none; text-align:center; display:flex; align-items:center; justify-content:center;}
+  .col-n{width:28px; flex:none; text-align:center;}
+  .col-code{width:155px; flex:none;}         /* sized to fit the code text exactly */
+  .col-date{width:125px; flex:none;}          /* date and copy time on one line */
+  .col-trainee-name{width:160px; flex:0 0 160px;} /* trainee name placed before notes */
+  .col-notes{width:180px; flex:0 0 180px;}        /* reduced notes width */
+  .col-actions{width:70px; flex:none; text-align:center;}  /* compact action buttons */
 
-  .code-list{display:flex; flex-direction:column; min-width:480px;}
+  .code-list{display:flex; flex-direction:column; min-width:740px;}
   .code-row{
     display:flex; align-items:center; cursor:pointer;
     border-bottom:1px solid var(--border); transition:background .1s; font-size:14px; min-height:32px;
@@ -799,6 +799,12 @@ if(window.history)window.history.scrollRestoration='manual';
   .code-row.used{background:var(--blue-50);}
   .code-row.used:nth-child(even){background:#E4EFFF;}
   .code-row.used .col-code{color:var(--blue-600);}
+  .code-row.used .col-trainee-name input{color:#ffffff !important;}
+  .code-row.used .col-trainee-name input::placeholder{color:rgba(255,255,255,0.75) !important;}
+  .code-row.used .col-trainee-name input:focus{background:rgba(0,0,0,0.2) !important;border-color:rgba(255,255,255,0.8) !important;color:#ffffff !important;}
+  .code-row.used .col-notes input{color:#ffffff !important;}
+  .code-row.used .col-notes input::placeholder{color:rgba(255,255,255,0.75) !important;}
+  .code-row.used .col-notes input:focus{background:rgba(0,0,0,0.2) !important;border-color:rgba(255,255,255,0.8) !important;color:#ffffff !important;}
   .code-row .col-actions{display:flex; align-items:center; justify-content:center; gap:4px; padding:3px 4px;}
   .icon-btn{
     width:22px; height:22px; border-radius:6px; border:1px solid var(--border); background:var(--surface);
@@ -844,9 +850,9 @@ if(window.history)window.history.scrollRestoration='manual';
   .icon-btn:hover{background:var(--blue-100); color:var(--blue-600); border-color:var(--blue-100);}
   .icon-btn.danger:hover{background:#FDEBEC; color:var(--danger); border-color:#F6C9CB;}
   .icon-btn svg,.kc-remove-cat-btn svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
-  .code-sheet .code-row .col-actions{gap:6px;padding:3px 4px;}
-  .code-sheet .code-row .icon-btn{width:36px;height:36px;border-radius:7px;font-size:22px;}
-  .code-sheet .code-row .icon-btn svg{width:20px;height:20px;}
+  .code-sheet .code-row .col-actions{gap:4px;padding:2px 4px;}
+  .code-sheet .code-row .icon-btn{width:26px;height:26px;border-radius:6px;font-size:14px;}
+  .code-sheet .code-row .icon-btn svg{width:14px;height:14px;}
   #prometric-login-card{cursor:pointer;}
   #prometric-login-card:hover{border-color:var(--blue-600);}
   .delete-dialog{border:1px solid var(--border);border-radius:18px;padding:24px;width:min(390px,calc(100vw - 32px));box-shadow:0 20px 60px #10295735;background:var(--surface);color:var(--text);}
@@ -1121,8 +1127,8 @@ if(window.history)window.history.scrollRestoration='manual';
           <div class="col-n">#</div>
           <div class="col-code" data-i18n="colCode">Code</div>
           <div class="col-date" data-i18n="colDate">Date</div>
-          <div class="col-notes" data-i18n="colNotes">Notes</div>
           <div class="col-trainee-name" data-i18n="colTraineeName">Trainee name</div>
+          <div class="col-notes" data-i18n="colNotes">Notes</div>
           <div class="col-actions"></div>
         </div>
         <div class="code-list" id="code-grid"></div>
@@ -2678,14 +2684,6 @@ function renderKeycodes(){
       const handle = document.createElement('div');
       handle.className = 'kc-drag-handle';
       handle.textContent = '⋮⋮';
-      for(const [step,symbol,label] of [[-1,'▲','moveUp'],[1,'▼','moveDown']]){
-        const orderButton=document.createElement('button');
-        orderButton.type='button';orderButton.className='kc-exam-order';orderButton.textContent=symbol;
-        orderButton.setAttribute('aria-label',t(label)+': '+item.title);
-        orderButton.disabled=step<0?item===items[0]:item===items[items.length-1];
-        orderButton.addEventListener('click',async event=>{event.stopPropagation();await moveKeycode(cat,item.code,step);});
-        handle.appendChild(orderButton);
-      }
       handle.draggable = true;
       handle.addEventListener('dragstart', async (e)=>{
         if(e.target.closest('button')){e.preventDefault();return;}
@@ -3045,6 +3043,7 @@ function renderCodeGrid(){
       const dayColor = dayColors[used];
       const fg = getContrastText(dayColor);
       row.style.background = dayColor;
+      n.style.color = fg;
       c.style.textDecoration = 'line-through';
       c.style.textDecorationColor = fg;
       c.style.color = fg;
@@ -3114,8 +3113,8 @@ function renderCodeGrid(){
     row.appendChild(n);
     row.appendChild(c);
     row.appendChild(d);
-    row.appendChild(notesCell);
     row.appendChild(VoucherNames.cell(code));
+    row.appendChild(notesCell);
     row.appendChild(actions);
     grid.appendChild(row);
   });

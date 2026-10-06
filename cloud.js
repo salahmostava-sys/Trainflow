@@ -84,6 +84,7 @@ const Cloud = (() => {
     if(/invalid login credentials|invalid credentials/i.test(raw) || error?.code==='invalid_credentials') return t('authInvalidCredentials');
     if(/email not confirmed/i.test(raw) || error?.code==='email_not_confirmed') return t('authEmailNotConfirmed');
     if(/email rate limit|rate limit exceeded/i.test(raw) || error?.code==='over_email_send_rate_limit') return t('authEmailLimit');
+    if(/permission denied/i.test(raw)) return currentLang==='ar'?'انتهت صلاحية الجلسة أو الحساب غير مصرح له بجدول الأكواد. يرجى تسجيل الدخول مجددًا.':'Session expired or account not authorized for codes table. Please sign in again.';
     if(/user already registered/i.test(raw) || error?.code==='user_already_exists') return t('authAlreadyRegistered');
     return currentLang==='ar' && !/[\u0600-\u06ff]/.test(raw) ? t('genericError') : raw;
   }

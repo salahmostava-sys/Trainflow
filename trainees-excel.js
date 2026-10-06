@@ -67,7 +67,7 @@ const TraineeExcel=(()=>{
       action('sheet-sort-menu-ascending','تصاعدي A → Z','Sort A → Z',()=>h.sort(state().cursor.c,1)),action('sheet-sort-menu-descending','تنازلي Z → A','Sort Z → A',()=>h.sort(state().cursor.c,-1)),action('sheet-sort-menu-clear','إلغاء الفرز','Clear sort',h.resetSort),
       action('sheet-sort-menu-custom','فرز مخصص…','Custom Sort…',()=>{sortLevels.replaceChildren();addSortLevel();closeMenus();sortDialog.showModal();}),
       action('sheet-sort-menu-filter','إظهار / إخفاء الفلاتر','Filter',()=>{$('sheet-workspace').classList.toggle('sheet-filters-minimal');}),action('sheet-sort-menu-clear-filters','مسح الفلاتر','Clear',h.clearFilters),action('sheet-sort-menu-reapply','إعادة التطبيق','Reapply',h.render),
-      action('sheet-find-select-menu-all','تحديد الكل','Select all',()=>{const s=state();h.select({r:0,c:0},{r:Math.max(0,s.view.length-1),c:s.cols[s.cols.length-1]});}),action('sheet-find-select-menu-row','تحديد الصف','Select row',()=>{const s=state();h.select({r:s.cursor.r,c:0},{r:s.cursor.r,c:s.cols[s.cols.length-1]});}),action('sheet-find-select-menu-column','تحديد العمود','Select column',()=>{const s=state();h.select({r:0,c:s.cursor.c},{r:Math.max(0,s.view.length-1),c:s.cursor.c});})
+      action('sheet-find-select-menu-all','تحديد الكل','Select all',()=>h.selectAll()),action('sheet-find-select-menu-row','تحديد الصف','Select row',()=>{const s=state();h.select({r:s.cursor.r,c:0},{r:s.cursor.r,c:s.cols[s.cols.length-1]});}),action('sheet-find-select-menu-column','تحديد العمود','Select column',()=>{const s=state();h.select({r:0,c:s.cursor.c},{r:Math.max(0,s.view.length-1),c:s.cursor.c});})
     ]);
     const cellsGroup=$('sheet-add-col').closest('.sheet-ribbon-group').querySelector('.sheet-ribbon-actions');
     const rowHeight=()=>{const n=Number(prompt(tr('ارتفاع الصف (20–400 بكسل):','Row height (20–400 px):'),String(style().height||28)));if(!Number.isInteger(n)||n<20||n>400)return;const s=state();mutate((cells,fmt)=>{const ids=new Set(rows(s));for(const [key,v]of Object.entries(fmt.styles))if(ids.has(Number(key.split(':')[0])))delete v.height;for(const r of ids){const c=s.cols[0];fmt.styles[r+':'+c]={...fmt.styles[r+':'+c],height:n};}});};
@@ -80,7 +80,7 @@ const TraineeExcel=(()=>{
       ...[['hide-sheet','إخفاء الشيت','Hide Sheet','hide'],['show-sheet','إظهار شيت…','Unhide Sheet…','show'],['rename-sheet','إعادة تسمية الشيت…','Rename Sheet…','rename'],['move-sheet','نقل أو نسخ الشيت…','Move or Copy Sheet…','move'],['tab-color','لون التبويب…','Tab Color…','color']].map(([key,ar,en,action])=>[key,ar,en,()=>{closeMenus();h.worksheet(action);}])
     ]);
     const toolbar=$('sheet-workspace').querySelector('.sheet-tools'),essential=toolbar.querySelector('.sheet-essential-tools .sheet-ribbon-actions');
-    essential.append($('sheet-undo'),$('sheet-redo'));
+    essential.append($('sheet-select-all'),$('sheet-undo'),$('sheet-redo'));
     const viewBody=group('sheet-view-tools','عرض الجدول','View');
     const columnsDialog=node('dialog',undefined,{id:'sheet-columns-dialog',class:'sheet-file-dialog'}),columnBox=$('sheet-columns'),columnTitle=$('sheet-columns-title');
     const columnsButton=node('button',undefined,{id:'sheet-columns-title',type:'button'});columnsButton.textContent=columnTitle.textContent;

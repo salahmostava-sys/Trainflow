@@ -250,7 +250,7 @@ const Trainees=(()=>{
         case 'delete-left':deleteSelectedCells('left');break;
         case 'delete-right':deleteSelectedCells('right');break;
         case 'clear-format':formatSelection(null);break;
-        case 'select-all':extraSelections=[];anchor={r:0,c:0};cursor={r:Math.max(0,view.length-1),c:colCount()-1};paint();break;
+        case 'select-all':selectAll();break;
       }
     });
     document.addEventListener('pointerdown',e=>{if(!e.target.closest('#sheet-context-menu'))closeContextMenu();});
@@ -465,7 +465,7 @@ const Trainees=(()=>{
     $('panel-trainees').innerHTML=`
       <div class="sheet-heading"><div><h2 id="sheet-title"></h2><p id="sheet-subtitle"></p></div></div>
       <div id="sheet-workspace" class="sheet-card">
-        <div class="sheet-tools"><button type="button" id="sheet-add" class="sheet-primary"></button><button type="button" id="sheet-delete"></button><div class="sheet-add-col-wrap"><button type="button" id="sheet-add-col" class="sheet-primary"></button><div id="sheet-add-col-popover" class="sheet-add-col-popover" hidden></div></div><button type="button" id="sheet-find-btn"></button><button type="button" id="sheet-undo"></button><button type="button" id="sheet-redo"></button><button type="button" id="sheet-copy"></button><button type="button" id="sheet-save"></button><button type="button" id="sheet-reload"></button><span class="sheet-status" id="sheet-status" role="status" aria-live="polite"></span></div>
+        <div class="sheet-tools"><button type="button" id="sheet-add" class="sheet-primary"></button><button type="button" id="sheet-delete"></button><div class="sheet-add-col-wrap"><button type="button" id="sheet-add-col" class="sheet-primary"></button><div id="sheet-add-col-popover" class="sheet-add-col-popover" hidden></div></div><button type="button" id="sheet-find-btn"></button><button type="button" id="sheet-select-all"></button><button type="button" id="sheet-undo"></button><button type="button" id="sheet-redo"></button><button type="button" id="sheet-copy"></button><button type="button" id="sheet-save"></button><button type="button" id="sheet-reload"></button><span class="sheet-status" id="sheet-status" role="status" aria-live="polite"></span></div>
         <div class="sheet-format-tools">
           <details id="sheet-columns"><summary id="sheet-columns-title"></summary><div id="sheet-column-options"></div></details>
           <button type="button" id="sheet-font-minus">A−</button><output id="sheet-font-size"></output><button type="button" id="sheet-font-plus">A+</button>
@@ -493,7 +493,7 @@ const Trainees=(()=>{
       <div id="sheet-code-workspace" hidden><div class="sheet-code-tools" id="sheet-code-admin" hidden><button type="button" id="sheet-owned"></button><button type="button" id="sheet-pool"></button><button type="button" id="sheet-assign" class="sheet-primary"></button></div><div class="sheet-code-tools"><input id="sheet-code-search" type="search"><button type="button" id="sheet-code-refresh"></button><span id="sheet-code-count"></span></div><p class="sheet-notice" id="sheet-code-notice"></p><div class="sheet-card sheet-code-list" id="sheet-code-list"></div><p id="sheet-code-status" role="status"></p></div>`;
     const toolbar=$('sheet-workspace').querySelector('.sheet-tools');
     toolbar.append(node('button',undefined,{id:'sheet-delete-col',type:'button'}));
-    for(const [label,ids] of [['الحافظة / Clipboard',['sheet-copy','sheet-undo','sheet-redo']],['الصفوف والأعمدة / Rows & columns',['sheet-add','sheet-delete','sheet-add-col','sheet-delete-col']],['تحرير وحفظ / Edit & save',['sheet-find-btn','sheet-save','sheet-reload']]]){
+    for(const [label,ids] of [['الحافظة / Clipboard',['sheet-select-all','sheet-copy','sheet-undo','sheet-redo']],['الصفوف والأعمدة / Rows & columns',['sheet-add','sheet-delete','sheet-add-col','sheet-delete-col']],['تحرير وحفظ / Edit & save',['sheet-find-btn','sheet-save','sheet-reload']]]){
       const group=node('div',undefined,{class:'sheet-ribbon-group'}),actions=node('div',undefined,{class:'sheet-ribbon-actions'});
       for(const id of ids){const el=$(id);actions.append(id==='sheet-add-col'?el.parentElement:el);}
       const caption=node('small');caption.dataset.ar=label.split(' / ')[0];caption.dataset.en=label.split(' / ')[1];caption.textContent=tr(caption.dataset.ar,caption.dataset.en);
@@ -551,6 +551,7 @@ const Trainees=(()=>{
     $('sheet-selection-size').onchange=()=>formatSelection({size:Number($('sheet-selection-size').value)});
     for(let size=10;size<=32;size++)$('sheet-selection-size').append(node('option',String(size),{value:size}));
     $('sheet-undo').onclick=()=>undo(false);$('sheet-redo').onclick=()=>undo(true);
+    $('sheet-select-all').onclick=()=>selectAll();
     $('sheet-copy').onclick=async()=>{commitEdit();if(await copyText(D.tsv(cells)))message(()=>tr('تم نسخ الجدول بالكامل','Entire sheet copied'));};
     ['sheet-search','sheet-org','sheet-date','sheet-result'].forEach(id=>$(id).addEventListener('input',()=>{commitEdit();extraSelections=[];anchor=cursor={r:0,c:0};render();}));
     $('sheet-duplicates-only').onchange=()=>{commitEdit();extraSelections=[];anchor=cursor={r:0,c:0};render();};
@@ -582,6 +583,18 @@ const Trainees=(()=>{
     grid.addEventListener('dblclick',e=>{clearTimeout(detailTimer);hideDuplicateHint();const td=e.target.closest('td[data-col]');if(td&&!(+td.dataset.col===3&&cells[view[+td.dataset.v]]?.[3]))beginEdit(td);});
     grid.addEventListener('keydown',keyDown);grid.addEventListener('paste',paste);
     document.addEventListener('keydown',handleUndoShortcut);
+    document.addEventListener('keydown',e=>{
+      if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='a'){
+        if(e.defaultPrevented||editing)return;
+        const target=e.target;
+        if(target&&(['INPUT','TEXTAREA','SELECT'].includes(target.tagName)||target.isContentEditable))return;
+        const panel=$('panel-trainees');
+        if(panel&&panel.classList.contains('active')&&!$('sheet-workspace')?.hidden){
+          e.preventDefault();
+          selectAll();
+        }
+      }
+    });
     document.addEventListener('keydown',e=>{if(e.key==='Escape'&&expandedView&&!e.defaultPrevented&&!editing&&!document.querySelector('dialog[open]')&&$('sheet-context-menu')?.hidden!==false)setExpandedView(false);});
     grid.addEventListener('copy',e=>{if(editing)return;e.preventDefault();e.clipboardData.setData('text/plain',selectionText());e.clipboardData.setData('text/html',selectionHtml());});
     grid.addEventListener('cut',e=>{if(editing)return;e.preventDefault();e.clipboardData.setData('text/plain',selectionText());e.clipboardData.setData('text/html',selectionHtml());clearSelection();});
@@ -594,6 +607,8 @@ const Trainees=(()=>{
         if(!isSelected(vr,vc))selectCell(vr,vc);
       }else if(header){
         const c=+header.dataset.col;if(!isSelected(0,c)||!isSelected(Math.max(0,view.length-1),c))selectColumn(c,e);
+      }else if(th&&th.closest('thead')){
+        selectAll();
       }else if(th&&th.parentElement){
         const firstTd=th.parentElement.querySelector('td[data-col]');
         if(firstTd){
@@ -617,7 +632,7 @@ const Trainees=(()=>{
       insertRow,addColumn,editColumns,deleteSelectedRows,deleteSelectedCells,clearSelection,openFindDialog,
       worksheet:(action)=>sheetTools?.open(action),
       newSheet:async(next,fmt)=>{if(!await worksheetAction('create'))return false;change(next,true,fmt);clearFilters();render();focusCell(0,0);return await flush();},
-      select:(a,b)=>{commitEdit();extraSelections=[];anchor=a;cursor=b;paint();},
+      select:(a,b)=>{commitEdit();extraSelections=[];anchor=a;cursor=b;paint();},selectAll:()=>selectAll(),
       flush,sort:(column,direction)=>{commitEdit();sortRules=[];sortCol=column;sortDir=direction;render();},customSort:rules=>{commitEdit();sortRules=rules;sortCol=-1;render();},
       resetSort:()=>{sortRules=[];sortCol=-1;render();},clearFilters:()=>{clearFilters();render();},setColumnWidth,saveColumnWidths,resetColumnWidth});
     if(typeof TraineePrometric!=='undefined')prometricTools=TraineePrometric.mount({D,$,tr,node,button,
@@ -706,7 +721,7 @@ const Trainees=(()=>{
       'sheet-local-note':['التنسيق يُحفظ مع الجدول؛ الزوم وتثبيت الأعمدة وعرضها تفضيلات لهذا الجهاز.','Formatting is saved with the sheet; zoom, frozen columns and widths are preferences for this device.'],'sheet-value-label':['قيمة','Value'],'sheet-add':['+ إضافة صف','+ Add row'],'sheet-wrap':['التفاف النص','Wrap text'],'sheet-freeze':['تثبيت أول عمود','Freeze first column'],
       'sheet-add-prefix':['إضافة','Add'],'sheet-add-suffix':['صف في الأسفل','more rows at bottom'],'sheet-add-bulk-btn':['+ إضافة','+ Add'],
       'sheet-delete':['حذف صف','Delete row'],'sheet-add-col':['+ إضافة عمود','+ Add column'],'sheet-delete-col':['حذف عمود','Delete column'],'sheet-undo':['تراجع','Undo'],'sheet-redo':['إعادة','Redo'],
-      'sheet-copy':['نسخ الجدول','Copy sheet'],'sheet-save':['حفظ الآن','Save now'],'sheet-reload':['إعادة تحميل','Reload'],'sheet-clear-filters':['مسح الفلاتر','Clear filters'],
+      'sheet-select-all':['تحديد الكل','Select all'],'sheet-copy':['نسخ الجدول','Copy sheet'],'sheet-save':['حفظ الآن','Save now'],'sheet-reload':['إعادة تحميل','Reload'],'sheet-clear-filters':['مسح الفلاتر','Clear filters'],
       'sheet-help':['للكتابة: انقر مرتين أو ابدأ الكتابة · اسحب أو Shift + نقر لتحديد نطاق · Ctrl+C / Ctrl+V · Tab والأسهم للتنقل','Double-click or type to edit · Drag or Shift+click selects a range · Ctrl+C / Ctrl+V · Tab and arrow navigation'],
       'sheet-owned':['أكواد المستخدم','User codes'],'sheet-pool':['المخزون غير المخصص','Unassigned stock'],'sheet-code-refresh':['تحديث الأكواد','Refresh codes']
       ,'sheet-columns-title':['إظهار / إخفاء الأعمدة','Show / hide columns'],'sheet-fill-label':['لون الخلية','Cell fill'],'sheet-text-color-label':['لون الخط','Text color'],
@@ -731,6 +746,7 @@ const Trainees=(()=>{
     $('sheet-align-right')&&($('sheet-align-right').title=tr('محاذاة لليمين','Align right'));
     $('sheet-align-center')&&($('sheet-align-center').title=tr('توسيط','Align center'));
     $('sheet-align-left')&&($('sheet-align-left').title=tr('محاذاة لليسار','Align left'));
+    if($('sheet-select-all'))$('sheet-select-all').title=tr('تحديد الجدول بالكامل (Ctrl+A)','Select entire sheet (Ctrl+A)');
     if($('sheet-copy'))$('sheet-copy').title=tr('نسخ كل الأعمدة بما فيها المخفية','Copy every column, including hidden columns');
     updateContextMenuTranslations();
     excelTools?.translate();
@@ -816,7 +832,18 @@ const Trainees=(()=>{
     const grid=$('sheet-grid'),thead=grid.querySelector('thead'),tbody=grid.querySelector('tbody');
     const nextHeadersKey=JSON.stringify([currentLang,cols,allLabels()]);
     if(headersKey!==nextHeadersKey){headersKey=nextHeadersKey;thead.replaceChildren();
-    const header=node('tr');header.append(node('th','#',{class:'sheet-rownum'}));
+    const header=node('tr');
+    const cornerTh=node('th',undefined,{class:'sheet-rownum sheet-corner-cell',scope:'col'});
+    const cornerBtn=button('#',e=>{if(!skipSelectionClick&&!dragMoved)selectAll();skipSelectionClick=false;dragMoved=false;});
+    cornerBtn.id='sheet-select-all-corner';
+    cornerBtn.className='sheet-select-all-btn';
+    cornerBtn.innerHTML='<span class="sheet-corner-hash">#</span><span class="sheet-corner-triangle">◢</span>';
+    cornerBtn.title=tr('تحديد الجدول بالكامل (Ctrl+A)','Select all (Ctrl+A)');
+    cornerBtn.setAttribute('aria-label',tr('تحديد الكل','Select all'));
+    cornerBtn.addEventListener('pointerdown',e=>{if(e.button!==0||e.pointerType==='touch')return;e.preventDefault();selectAll();});
+    cornerTh.append(cornerBtn);
+    cornerTh.onclick=e=>{if(e.target!==cornerBtn)cornerBtn.click();};
+    header.append(cornerTh);
     labels.forEach((pair,c)=>{
       if(!cols.includes(c))return;
       const th=node('th',undefined,{scope:'col','data-col':c});if(c>=baseLabels.length)th.style.setProperty('--col-w','calc(var(--col-w-'+c+',160px) * var(--sheet-zoom,1))');
@@ -1138,6 +1165,16 @@ const Trainees=(()=>{
   }
   function selectColumn(c,e){startSelection({r:Math.max(0,view.length-1),c},{r:0,c},e.shiftKey,e.ctrlKey||e.metaKey,'column');$('sheet-grid').querySelector(`td[data-v="0"][data-col="${c}"]`)?.focus();}
   function selectRow(r,e){startSelection({r,c:0},{r,c:colCount()-1},e.shiftKey,e.ctrlKey||e.metaKey,'row');}
+  function selectAll(){
+    if(!loaded||!view.length)return;
+    commitEdit();
+    extraSelections=[];
+    const cols=visibleCols();
+    if(!cols.length)return;
+    startSelection({r:0,c:cols[0]},{r:Math.max(0,view.length-1),c:cols[cols.length-1]},false,false,'all');
+    $('sheet-grid').querySelector(`td[data-v="0"][data-col="${cols[0]}"]`)?.focus();
+    message(()=>tr('تم تحديد الجدول بالكامل','Entire sheet selected'));
+  }
   function paint(){
     if($('sheet-data-tools'))$('sheet-data-tools').hidden=Cloud.role()!=='admin';
     const ranges=selectionRanges(),[r1,r2,c1,c2]=bounds();
@@ -1162,6 +1199,14 @@ const Trainees=(()=>{
     $('sheet-grid').setAttribute('aria-multiselectable','true');
     $('sheet-grid').querySelectorAll('thead th[data-col]').forEach(th=>th.classList.toggle('sheet-active-header',selectedCols.includes(+th.dataset.col)));
     $('sheet-grid').querySelectorAll('th[data-rowv]').forEach(th=>{th.classList.toggle('sheet-focus-row-header',+th.dataset.rowv===cursor.r);th.classList.toggle('sheet-selected-row-header',ranges.some(([a,b])=>+th.dataset.rowv>=a&&+th.dataset.rowv<=b));});
+    const isAll=ranges.length===1&&ranges[0][0]===0&&ranges[0][1]===Math.max(0,view.length-1)&&selectedCols.length===cols.length;
+    const cornerBtn=$('sheet-select-all-corner');
+    if(cornerBtn){
+      cornerBtn.classList.toggle('sheet-corner-selected',isAll);
+      cornerBtn.parentElement?.classList.toggle('sheet-active-header',isAll);
+      cornerBtn.setAttribute('aria-pressed',String(isAll));
+    }
+    $('sheet-select-all')?.setAttribute('aria-pressed',String(isAll));
     const style=formatting.styles[(view[cursor.r]??0)+':'+cursor.c]||{};
     $('sheet-bold').setAttribute('aria-pressed',String(!!style.bold));$('sheet-selection-size').value=String(style.size||formatting.fontSize);
     $('sheet-fill').value=style.bg||'#ffffff';$('sheet-text-color').value=style.color||'#16324f';
@@ -1318,7 +1363,7 @@ const Trainees=(()=>{
     if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'){e.preventDefault();undo(e.shiftKey);return;}
     if((e.ctrlKey||e.metaKey)&&(e.code==='KeyC'||e.key.toLowerCase()==='c')){e.preventDefault();void copySelection();return;}
     if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='y'){e.preventDefault();undo(true);return;}
-    if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='a'){e.preventDefault();extraSelections=[];anchor={r:0,c:0};cursor={r:Math.max(0,view.length-1),c:colCount()-1};paint();return;}
+    if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='a'){e.preventDefault();selectAll();return;}
     if((e.ctrlKey||e.metaKey)&&(e.key.toLowerCase()==='f'||e.key.toLowerCase()==='h')){e.preventDefault();openFindDialog(e.key.toLowerCase()==='h');return;}
     const sign=formatting.direction==='rtl'?-1:1,cols=visibleCols();
     const moves={ArrowDown:[1,0],ArrowUp:[-1,0],ArrowRight:[0,sign],ArrowLeft:[0,-sign]};

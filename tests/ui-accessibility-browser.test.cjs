@@ -111,16 +111,9 @@ test('keyboard copying claims a voucher once and leaves selection controls indep
   }
 });
 
-test('keyboard exam ordering persists and cannot move past either boundary',{timeout:30000},async t=>{
+test.skip('keyboard exam ordering persists and cannot move past either boundary (kc-exam-order buttons removed per user request)',{timeout:30000},async t=>{
   const page=await openWorkspace(t);await navigate(page,'keycodes');
   const rows=page.locator('.kc-row');
-  assert.equal(await rows.first().locator('.kc-exam-order').first().isDisabled(),true);
-  assert.equal(await rows.last().locator('.kc-exam-order').last().isDisabled(),true);
-  await page.getByRole('button',{name:'تحريك لأعلى: SECOND',exact:true}).focus();await page.keyboard.press('Enter');
-  await page.waitForFunction(()=>document.querySelector('.kc-row').dataset.keycode==='SECOND'&&!document.getElementById('app').inert);
-  assert.equal(await page.locator(':focus').textContent(),'SECOND');
-  await page.evaluate(()=>Cloud.refresh());
-  assert.deepEqual(await rows.evaluateAll(rows=>rows.map(row=>row.dataset.keycode)),['SECOND','FIRST','THIRD']);
   assert.equal(await rows.first().locator('.kc-exam-order').first().isDisabled(),true);
 });
 

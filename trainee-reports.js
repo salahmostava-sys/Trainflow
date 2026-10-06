@@ -35,7 +35,7 @@ const TraineeReports=(()=>{
     guide.append(label('p','التاريخ يعتمد على وقت استخدام الفاوتشر بتوقيت السعودية. تقرير الناجحين يشمل نتيجة ناجح فقط. اليوزر والباسورد وAnyDesk لا تُرسل. جرّب أول مرة على نسخة من التقريرين.','Report dates use voucher usage time in Saudi Arabia. Successful-trainee reports include passed results only. Usernames, passwords and AnyDesk are excluded. Test first using copies of the reports.'));const docs=label('a','شرح Google الرسمي لنشر Web app','Google’s official Web app deployment guide');docs.href='https://developers.google.com/apps-script/guides/web';docs.target='_blank';docs.rel='noopener noreferrer';guide.append(docs);root.append(guide);translate();
   }
   const day=value=>{if(!value)return '';const d=new Date(value);return Number.isNaN(+d)?'':new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Riyadh',year:'numeric',month:'2-digit',day:'2-digit'}).format(d);};
-  function previewReport(rows,date,missing){
+  function previewReport(rows,date,missing,doUpload){
     document.getElementById('sheet-report-preview')?.remove();
     const dialog=document.createElement('dialog');dialog.id='sheet-report-preview';dialog.className='sheet-report-preview';dialog.dir=currentLang==='ar'?'rtl':'ltr';dialog.setAttribute('aria-labelledby','sheet-report-preview-title');
     const header=document.createElement('div');header.className='sheet-report-preview-header';const title=label('h2','معاينة تقرير Google Sheets','Google Sheets report preview');title.id='sheet-report-preview-title';const close=label('button','إغلاق','Close');close.type='button';close.className='sheet-report-preview-close';close.onclick=()=>dialog.close();header.append(title,close);
@@ -45,51 +45,87 @@ const TraineeReports=(()=>{
     warning.textContent=[duplicates?tr('يوجد فاوتشر مكرر في أكثر من صف؛ صحح التكرار قبل الرفع.','A voucher appears in multiple rows; correct duplicates before uploading.'):'',missing?tr('فاوتشرات مستخدمة بدون بيانات متدرب: ','Used vouchers without trainee data: ')+missing:''].filter(Boolean).join(' ');warning.hidden=!warning.textContent;
     const tabs=document.createElement('div');tabs.className='sheet-report-preview-tabs';tabs.setAttribute('role','group');tabs.setAttribute('aria-label',tr('نوع التقرير','Report type'));const tabButtons={};let kind='operations',page=0;const pageSize=50;
     for(const [value,ar,en]of [['operations','تقرير العمليات','Operations report'],['success','تقرير الناجحين','Successful trainees report']]){const button=label('button',ar,en);button.type='button';button.dataset.reportKind=value;button.onclick=()=>{kind=value;page=0;render();};tabButtons[value]=button;tabs.append(button);}
+    const uploadBtn=document.createElement('button');uploadBtn.type='button';uploadBtn.className='sheet-primary sheet-report-upload-btn';uploadBtn.style.marginInlineStart='auto';tabs.append(uploadBtn);
+    const dialogStatus=document.createElement('p');dialogStatus.className='sheet-report-preview-status ops-status';dialogStatus.setAttribute('role','status');dialogStatus.setAttribute('aria-live','polite');dialogStatus.hidden=true;
     const empty=label('p','لا توجد بيانات لهذا التقرير في التاريخ المختار.','No records for this report on the selected date.');empty.className='sheet-report-preview-empty';empty.setAttribute('role','status');
     const viewport=document.createElement('div');viewport.className='sheet-report-preview-table';viewport.tabIndex=0;viewport.setAttribute('role','region');viewport.setAttribute('aria-label',tr('بيانات التقرير','Report data'));const table=document.createElement('table'),caption=document.createElement('caption'),thead=document.createElement('thead'),tbody=document.createElement('tbody');table.append(caption,thead,tbody);viewport.append(table);
-    const footer=document.createElement('div');footer.className='sheet-report-preview-footer';const previous=label('button','السابق','Previous'),next=label('button','التالي','Next'),count=document.createElement('span');for(const button of [previous,next])button.type='button';count.setAttribute('aria-live','polite');previous.onclick=()=>{page--;render();};next.onclick=()=>{page++;render();};footer.append(previous,count,next);
+    const footer=document.createElement('div');footer.className='sheet-report-preview-footer';const previous=label('button','السابق','Previous'),next=label('button','التالي','Next'),count=document.createElement('span');for(const button of [previous,next])button.type='button';count.setAttribute('aria-live','polite');previous.onclick=()=>{page--;render();};next.onclick=()=>{page++;render();};
+    const footerUpload=document.createElement('button');footerUpload.type='button';footerUpload.className='sheet-primary sheet-report-upload-btn';
+    footer.append(previous,count,next,footerUpload);
     function render(){
       const records=kind==='success'?rows.filter(row=>row[11]==='ناجح'):rows,columns=reportColumns[kind];for(const [value,button]of Object.entries(tabButtons))button.setAttribute('aria-pressed',String(value===kind));
       caption.textContent=tabButtons[kind].textContent;thead.replaceChildren();tbody.replaceChildren();const headings=document.createElement('tr');for(const [heading]of columns){const th=document.createElement('th');th.scope='col';th.textContent=heading;headings.append(th);}thead.append(headings);
       for(const row of records.slice(page*pageSize,(page+1)*pageSize)){const record=document.createElement('tr');for(const [,index]of columns){const cell=document.createElement('td');cell.textContent=index===null?date.split('-').reverse().join('/'):String(row[index]||'');cell.dir='auto';record.append(cell);}tbody.append(record);}
       empty.hidden=records.length>0;viewport.hidden=!records.length;footer.hidden=!records.length;previous.disabled=page===0;next.disabled=(page+1)*pageSize>=records.length;count.textContent=tr('الصفوف: ','Rows: ')+(page*pageSize+1)+'–'+Math.min((page+1)*pageSize,records.length)+tr(' من ',' of ')+records.length;viewport.scrollTop=0;
+      const uploadText=kind==='operations'?tr('رفع تقرير العمليات','Upload operations report'):tr('رفع تقرير الناجحين','Upload successful trainees');
+      uploadBtn.textContent=footerUpload.textContent=uploadText;
+      uploadBtn.dataset.action=footerUpload.dataset.action=kind;
+      const canUpload=records.length>0&&typeof doUpload==='function';
+      uploadBtn.disabled=footerUpload.disabled=!canUpload;
     }
-    dialog.append(header,info,tabs,note,warning,empty,viewport,footer);dialog.addEventListener('close',()=>dialog.remove(),{once:true});dialog.addEventListener('click',event=>{if(event.target===dialog){const rect=dialog.getBoundingClientRect();if(event.clientX<rect.left||event.clientX>rect.right||event.clientY<rect.top||event.clientY>rect.bottom)dialog.close();}});document.body.append(dialog);render();dialog.showModal();
+    const runUpload=async()=>{
+      if(typeof doUpload!=='function')return;
+      uploadBtn.disabled=footerUpload.disabled=true;
+      dialogStatus.hidden=false;dialogStatus.style.color='';
+      try{
+        await doUpload(kind,(msg,isError)=>{
+          dialogStatus.textContent=msg;
+          if(isError)dialogStatus.style.color='#b42318';
+          else dialogStatus.style.color='#15803d';
+        });
+      }finally{
+        render();
+      }
+    };
+    uploadBtn.onclick=footerUpload.onclick=runUpload;
+    dialog.append(header,info,tabs,dialogStatus,note,warning,empty,viewport,footer);dialog.addEventListener('close',()=>dialog.remove(),{once:true});dialog.addEventListener('click',event=>{if(event.target===dialog){const rect=dialog.getBoundingClientRect();if(event.clientX<rect.left||event.clientX>rect.right||event.clientY<rect.top||event.clientY>rect.bottom)dialog.close();}});document.body.append(dialog);render();dialog.showModal();
   }
   function mount(host,source,save){
     setupSettings();const panel=document.createElement('section');panel.dir='rtl';panel.className='sheet-tools sheet-report-panel';
-    panel.innerHTML='<div class="sheet-report-actions"><strong></strong><button type="button" data-action="date"></button><button type="button" data-action="preview"></button><button type="button" data-action="operations"></button><button type="button" data-action="success"></button><button type="button" data-action="settings"></button></div><span class="sheet-report-state"></span><div popover="auto" class="sheet-report-date-picker"><label><span></span><input type="date" data-field="date"></label><button type="button" data-action="apply-date"></button></div><p role="status" aria-live="polite"></p>';
+    panel.innerHTML='<div class="sheet-report-actions"><strong></strong><button type="button" data-action="date"></button><button type="button" data-action="preview"></button></div><span class="sheet-report-state"></span><div popover="auto" class="sheet-report-date-picker"><label><span></span><input type="date" data-field="date"></label><button type="button" data-action="apply-date"></button></div><p role="status" aria-live="polite"></p>';
     host.prepend(panel);panels.add(panel);const actions=panel.querySelector('.sheet-report-actions'),toolbar=host.querySelector('.sheet-ribbon-top .sheet-ribbon-actions'),traineeActions=['sheet-certificate-open','sheet-prometric-open'].map(id=>document.getElementById(id)).filter(Boolean);
     panel.syncExpanded=active=>{const target=active?toolbar:actions;if(target)traineeActions.forEach(button=>target.append(button));};panel.syncExpanded(host.classList.contains('sheet-expanded-view'));
     const field=name=>panel.querySelector('[data-field="'+name+'"]')||document.getElementById('settings-report-'+name),status=panel.querySelector('p');
     const title=panel.querySelector('strong');title.dataset.ar='تقارير جوجل اليومية';title.dataset.en='Daily Google reports';
-    let busy=false;const ready=panel.querySelector('.sheet-report-state'),dateButton=panel.querySelector('[data-action="date"]'),picker=panel.querySelector('[popover]');dateButton.popoverTargetElement=picker;field('date').onchange=()=>{panel.updateReady();picker.hidePopover();};panel.querySelector('[data-action="apply-date"]').onclick=()=>picker.hidePopover();panel.querySelector('[data-action="settings"]').onclick=openSettings;
-    panel.updateReady=()=>{const prefs=preferences(),bridge=bridgeUrl(prefs.bridge);let count=0;for(const kind of ['operations','success']){const enabled=bridge&&sheetUrl(prefs[kind]);panel.querySelector('[data-action="'+kind+'"]').disabled=busy||!enabled;if(enabled)count++;}dateButton.textContent=tr('تاريخ التقرير: ','Report date: ')+field('date').value.split('-').reverse().join('/');ready.textContent=count===2?tr('جاهز للرفع','Ready to upload'):count===1?tr('تقرير واحد جاهز','One report ready'):tr('غير مربوط — افتح إعدادات التقارير','Not connected — open Report settings');};
-    const actionLabels={preview:['معاينة التقرير','Preview report'],operations:['رفع تقرير العمليات','Upload operations report'],success:['رفع تقرير الناجحين','Upload successful trainees'],settings:['إعدادات التقارير','Report settings'],'apply-date':['اختيار التاريخ','Choose date']};
-    for(const [action,pair] of Object.entries(actionLabels)){const button=panel.querySelector('[data-action="'+action+'"]');button.dataset.ar=pair[0];button.dataset.en=pair[1];}
+    let busy=false;const ready=panel.querySelector('.sheet-report-state'),dateButton=panel.querySelector('[data-action="date"]'),picker=panel.querySelector('[popover]');dateButton.popoverTargetElement=picker;field('date').onchange=()=>{panel.updateReady();picker.hidePopover();};panel.querySelector('[data-action="apply-date"]').onclick=()=>picker.hidePopover();
+    panel.updateReady=()=>{
+      dateButton.textContent=tr('تاريخ التقرير: ','Report date: ')+field('date').value.split('-').reverse().join('/');
+      const prefs=preferences(),bridge=bridgeUrl(prefs.bridge);
+      const readyOps=bridge&&sheetUrl(prefs.operations),readySucc=bridge&&sheetUrl(prefs.success);
+      const count=(readyOps?1:0)+(readySucc?1:0);
+      ready.textContent=count===2?tr('جاهز للرفع من المعاينة','Ready to upload from preview'):count===1?tr('تقرير واحد جاهز','One report ready'):tr('غير مربوط — اضبط الروابط في الإعدادات','Not connected — configure in Settings');
+    };
+    const actionLabels={preview:['معاينة التقرير','Preview report'],'apply-date':['اختيار التاريخ','Choose date']};
+    for(const [action,pair] of Object.entries(actionLabels)){const button=panel.querySelector('[data-action="'+action+'"]');if(button){button.dataset.ar=pair[0];button.dataset.en=pair[1];}}
     const fieldLabels={date:['تاريخ التقرير','Report date']};
     for(const [name,pair] of Object.entries(fieldLabels)){const label=field(name).parentElement;label.firstChild.textContent='';const text=document.createElement('span');text.dataset.ar=pair[0];text.dataset.en=pair[1];label.prepend(text);}
     field('date').value=day(new Date());
     translate();
-    panel.addEventListener('click',async e=>{
-      const action=e.target.dataset.action;if(!['preview','operations','success'].includes(action)||busy)return;
+    async function doUpload(action,onStatus){
       const prefs=preferences();
+      const {owner,rows}=source(),date=field('date').value;
+      if(!owner||!date){const msg=tr('اختر المستخدم والتاريخ أولًا.','Choose the user and date first.');if(onStatus)onStatus(msg,true);status.textContent=msg;return;}
+      let bridge;try{bridge=new URL(prefs.bridge);if(bridge.origin!=='https://script.google.com'||!/^\/macros\/s\/[^/]+\/exec$/.test(bridge.pathname))throw Error();if(!sheetUrl(prefs[action]))throw Error();}catch{const msg=tr('أضف الروابط من الإعدادات ← تقارير جوجل أولًا.','Add links in Settings → Google reports first.');if(onStatus)onStatus(msg,true);status.textContent=msg;return;}
+      const target='ibta_report_'+Date.now(),tab=window.open('about:blank',target);if(!tab){const msg=tr('اسمح بفتح نافذة التقرير ثم حاول مجددًا.','Allow the report popup and retry.');if(onStatus)onStatus(msg,true);status.textContent=msg;return;}
+      busy=true;panel.updateReady();
+      if(onStatus)onStatus(tr('جارٍ تجهيز وحفظ البيانات…','Preparing and saving data…'));
+      try{if(!await save())throw Error(tr('تعذر حفظ الجدول. حاول مرة أخرى.','Could not save the sheet. Please retry.'));const session=await Cloud.reportSession();
+        const form=document.createElement('form');form.method='POST';form.action=bridge.href;form.target=target;
+        const payload={token:session.token,owner,date,kind:action,destination:prefs[action]};
+        const input=document.createElement('input');input.type='hidden';input.name='payload';input.value=JSON.stringify(payload);form.append(input);document.body.append(form);form.submit();form.remove();
+        const doneMsg=tr('تم إرسال التقرير — راجع نتيجة الرفع في نافذة جوجل.','Report submitted — Check upload result in Google window.');
+        if(onStatus)onStatus(doneMsg);status.textContent=doneMsg;
+      }catch(error){tab.close();const err=error.message||tr('تعذر تجهيز التقرير.','Could not prepare the report.');if(onStatus)onStatus(err,true);status.textContent=err;}finally{busy=false;panel.updateReady();}
+    }
+    panel.addEventListener('click',async e=>{
+      const action=e.target.dataset.action;if(action!=='preview'||busy)return;
       const {owner,rows}=source(),date=field('date').value;
       if(!owner||!date){status.textContent=tr('اختر المستخدم والتاريخ أولًا.','Choose the user and date first.');return;}
       const codes=Cloud.codeSnapshot().filter(c=>c.owner_id===owner&&(c.used_at?day(c.used_at):String(c.used_on||'').split('/').reverse().join('-'))===date),map=new Map(codes.map(c=>[c.code.trim().toUpperCase(),c]));
       const matched=rows.filter(r=>map.has((r[0]||'').trim().toUpperCase()));
       const vouchers=new Set(matched.map(r=>(r[0]||'').trim().toUpperCase()));
       status.textContent=tr('المحاولات: ','Attempts: ')+matched.length+tr(' — الناجحون: ',' — Passed: ')+matched.filter(r=>r[11]==='ناجح').length+tr(' — بدون نتيجة: ',' — No result: ')+matched.filter(r=>!r[11]).length+tr(' — أكواد بدون متدرب: ',' — Vouchers without trainee: ')+codes.filter(c=>!vouchers.has(c.code.trim().toUpperCase())).length;
-      if(action==='preview'){previewReport(matched,date,codes.filter(c=>!vouchers.has(c.code.trim().toUpperCase())).length);return;}
-      let bridge;try{bridge=new URL(prefs.bridge);if(bridge.origin!=='https://script.google.com'||!/^\/macros\/s\/[^/]+\/exec$/.test(bridge.pathname))throw Error();if(!sheetUrl(prefs[action]))throw Error();}catch{status.textContent=tr('أضف الروابط من الإعدادات ← تقارير جوجل أولًا.','Add links in Settings → Google reports first.');return;}
-      // Open before asynchronous saving to avoid popup blocking. The token travels in POST, never in a URL.
-      const target='ibta_report_'+Date.now(),tab=window.open('about:blank',target);if(!tab){status.textContent=tr('اسمح بفتح نافذة التقرير ثم حاول مجددًا.','Allow the report popup and retry.');return;}
-      busy=true;panel.updateReady();
-      try{if(!await save())throw Error(tr('تعذر حفظ الجدول. حاول مرة أخرى.','Could not save the sheet. Please retry.'));const session=await Cloud.reportSession();
-        const form=document.createElement('form');form.method='POST';form.action=bridge.href;form.target=target;
-        const payload={token:session.token,owner,date,kind:action,destination:prefs[action]};
-        const input=document.createElement('input');input.type='hidden';input.name='payload';input.value=JSON.stringify(payload);form.append(input);document.body.append(form);form.submit();form.remove();status.textContent+=tr(' — راجع نتيجة الرفع في نافذة جوجل.',' — Check the upload result in the Google window.');
-      }catch(error){tab.close();status.textContent=error.message||tr('تعذر تجهيز التقرير.','Could not prepare the report.');}finally{busy=false;panel.updateReady();}
+      previewReport(matched,date,codes.filter(c=>!vouchers.has(c.code.trim().toUpperCase())).length,doUpload);
     });
   }
   setupSettings();return {mount,day,translate,syncExpanded(active){panels.forEach(panel=>panel.syncExpanded?.(active));}};
