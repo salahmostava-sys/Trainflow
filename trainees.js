@@ -1045,7 +1045,7 @@ const Trainees=(()=>{
       const codeValue=dl.lastElementChild;
       labels.forEach((pair,c)=>{if(c===0||c>=baseLabels.length&&!row[c]&&!formatting.headers[c])return;appendDetailField(dl,row,pair,c,false);});
       $('sheet-trainee-record').replaceChildren(dl);
-      if(prometricTools&&!row[9]?.trim()&&!row[10]?.trim())$('sheet-trainee-record').append(button(tr('إنشاء حساب Prometric','Create Prometric account'),()=>{closeTraineeDetails();prometricTools.open([index]);},'sheet-primary sheet-create-prometric'));
+      if(prometricTools){const hasAccount=!!(row[9]?.trim()||row[10]?.trim());$('sheet-trainee-record').append(button(hasAccount?tr('خيارات حساب Prometric','Prometric account options'):tr('إنشاء حساب Prometric','Create Prometric account'),()=>{closeTraineeDetails();prometricTools.open([index]);},'sheet-primary sheet-create-prometric'));}
       const refreshRecord=()=>{if(dialog.open&&activeIndex===index&&activeEpoch===epoch)show(index);};
       const exam=D.courseKeycode(row[7],DEFAULT_KEYCODES),category=exam&&(state.keycodeOverrides?.[exam.code]||exam.category),codeCategory=category&&getLinkedCodesCat(category);
       const action=button('Get',async()=>{

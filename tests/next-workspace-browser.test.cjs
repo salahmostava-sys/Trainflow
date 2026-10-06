@@ -13,12 +13,12 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=r
     await page.route('**/workspace/cloud.js*',route=>route.fulfill({contentType:'text/javascript',body:mock}));
     await page.route('https://cdn.jsdelivr.net/**',route=>route.fulfill({contentType:'text/javascript',body:'window.supabase={};'}));
     await page.goto('http://localhost:'+port);await reference.goto('http://127.0.0.1:'+previewPort);
-    for(const target of [page,reference]){try{await target.locator('#app').waitFor({state:'visible'});}catch(error){console.error({url:target.url(),errors,authMessage:await target.locator('#auth-message').textContent()});throw error;}await target.locator('#trainees-tab').click();await target.waitForFunction(()=>document.getElementById('sheet-status').textContent==='تم الحفظ');await target.evaluate(()=>document.fonts.ready);}
+    for(const target of [page,reference]){try{await target.locator('#app').waitFor({state:'visible'});}catch(error){console.error({url:target.url(),errors,authMessage:await target.locator('#auth-message').textContent()});throw error;}await target.locator('#trainees-tab').click();await target.waitForFunction(()=>document.getElementById('sheet-status').textContent==='تم الحفظ'&&document.getElementById('sheet-ribbon-panel-all'));await target.evaluate(()=>document.fonts.ready);}
     await page.waitForURL('**/trainees');
     assert.equal(await page.locator('iframe').count(),0,'Original UI runs directly in the TypeScript/React page, preserving extension access');
     assert.equal(await page.locator('nav.tabs button').count(),6);assert.equal(await page.locator('aside').count(),await reference.locator('aside').count(),'Sidebar and sheet allocation panels match the original runtime');
     const geometry=target=>target.evaluate(()=>['nav.tabs','#sheet-workspace','#sheet-grid','#sheet-search'].map(selector=>{const el=document.querySelector(selector),rect=el.getBoundingClientRect();return {selector,x:Math.round(rect.x),y:Math.round(rect.y),width:Math.round(rect.width),font:getComputedStyle(el).fontFamily};}));
-    assert.deepEqual(await geometry(page),await geometry(reference),'Layout geometry and fonts match the original UI');
+    const pageGeometry=await geometry(page),referenceGeometry=await geometry(reference);assert.deepEqual(pageGeometry,referenceGeometry,'Layout geometry and fonts match the original UI');
     await page.evaluate(()=>{const row=Array(13).fill('');row[0]='EXISTING-VOUCHER';row[1]='existing@example.invalid';row[3]='EXISTING TRAINEE';row[7]='CBP-L';previewSheets.set('demo-admin',{cells:[row],version:0});});
     await page.locator('#sheet-reload').click();await page.waitForFunction(()=>document.getElementById('sheet-status').textContent==='تم الحفظ');
     assert.equal(await page.locator('td[data-v="0"][data-col="0"]').textContent(),'EXISTING-VOUCHER');

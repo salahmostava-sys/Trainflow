@@ -11,7 +11,8 @@ The audit preserves the Next.js/TypeScript runtime, existing data, TF branding a
 | Row size selection had no effect and row estimates drifted | Control and final CSS used different variables and units | Apply the chosen point size to the rendered pixel height and use the same units for virtualization |
 | Expanded sheet controls were covered; selection header disappeared at distant rows | Sidebar stacked above the full-screen sheet; new corner rule replaced sticky positioning | Hide the sidebar only during expanded view; retain sticky header and preserve visible row anchor |
 | Closing an Excel menu also closed the sidebar | Both handlers consumed the same Escape key | Keep sidebar state when a command popover or expanded sheet handles Escape |
-| Names/notes unreadable on pale voucher fills | Used rows forced white text regardless of fill | Inherit calculated contrasting foreground; use normal text on the white editing surface |
+| Names/notes unreadable on voucher fills | Used rows forced white text on pale fills; notes and native placeholders also retained their own colors on dark fills | Make both inputs and placeholders inherit the calculated contrasting foreground; use dark text on the white editing surface |
+| Large blank area beyond voucher action buttons | Fixed column widths left part of wide rows unused and cell padding differed between headers and body | Share grid column sizes between header and rows; let names and notes fill available width while actions stay compact |
 | Google report source ambiguous after adding worksheets | Apps Script queried only the owner; multiple sheets yielded multiple records | Query owner and sheet ID together, retain first-sheet compatibility for old requests, fix preview date/sheet context and prevent duplicate concurrent upload clicks |
 
 ## Requested Excel menus

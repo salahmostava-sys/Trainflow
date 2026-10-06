@@ -125,9 +125,12 @@ Run `node tests/cloud.test.cjs` for frontend storage, import, inventory, and bac
 ## Prometric registration from trainee rows
 
 The trainee ribbon includes **Prometric registration** for selected rows. A single
-trainee's details also provides **Create Prometric account** when Username and
-Password are both empty. The preview skips existing credentials, invalid emails,
-incomplete English names and duplicate row identities before creation. Batches
+trainee's details provides **Prometric account options**. When a trainee will test
+again, select **Create a new account with the same details**; otherwise the saved
+username and password remain ready to use. The original credentials stay in the row
+until the new registration is confirmed and the sheet save succeeds. The preview
+skips existing credentials in the default mode, invalid emails, incomplete English
+names and duplicate row identities before creation. Batches
 support up to 5,000 selected trainees and run sequentially in one dedicated tab.
 
 Download the integrated extension from this dialog, extract it to a permanent
@@ -136,8 +139,9 @@ profile as TrainFlow. Reload both websites. The extension retains the original p
 and registration settings; a new extension instance may need those settings
 configured again. See [extension setup](../extension/prometric/README.md).
 
-Confirmed registrations write only blank Username/Password cells in the matching
-private sheet. Matching uses the trainee identity and exam rather than the old
+Confirmed registrations write blank Username/Password cells in the matching private
+sheet, or replace a selected retake's unchanged saved credentials only after its new
+account is confirmed. Matching uses the trainee identity and exam rather than the old
 row number. Unconfirmed failures require checking Prometric before retrying.
 Results remain in extension storage until a successful sheet save is acknowledged.
 Reloading reconnects the current tab; a closed tab's results can be explicitly

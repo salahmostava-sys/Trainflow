@@ -59,11 +59,17 @@ const TraineeExcel=(()=>{
     };
     const selected=(run)=>mutate((cells,fmt,s,rowAt)=>D.eachSelected(ranges(s),s.view,s.cols,(r,c)=>run(cells,fmt,r,c,s,rowAt)));
     const toggle=field=>h.formatSelection({[field]:!style()[field]});
-    const font=group('sheet-excel-font','الخط','Font'),fontName=node('select',undefined,{id:'sheet-font-family','aria-label':tr('نوع الخط','Font family')});
+    const font=group('sheet-excel-font','الخط والتنسيق','Font & Style'),fontName=node('select',undefined,{id:'sheet-font-family','aria-label':tr('نوع الخط','Font family')});
     for(const name of ['Arial','Calibri','Tahoma','Segoe UI','Times New Roman','IBM Plex Sans Arabic'])fontName.append(node('option',name,{value:name}));fontName.onchange=()=>h.formatSelection({font:fontName.value});font.append(fontName);
-    for(const id of ['sheet-selection-size','sheet-font-minus','sheet-font-size','sheet-font-plus','sheet-bold','sheet-fill','sheet-text-color']){const el=$(id);font.append(el.closest('label')||el);}
+    font.append($('sheet-selection-size').closest('label')||$('sheet-selection-size'));
+    font.append($('sheet-font-minus'),$('sheet-font-size'),$('sheet-font-plus'));
     $('sheet-font-minus').onclick=()=>h.formatSelection({size:Math.max(10,(style().size||state().formatting.fontSize)-1)});$('sheet-font-plus').onclick=()=>h.formatSelection({size:Math.min(32,(style().size||state().formatting.fontSize)+1)});
-    font.append(action('sheet-italic','I','I',()=>toggle('italic')),action('sheet-underline','U','U',()=>toggle('underline')),action('sheet-strike','شطب','Strike',()=>toggle('strike')));
+    const styleGroup=node('div',undefined,{class:'sheet-style-group'});
+    styleGroup.append($('sheet-bold'),action('sheet-italic','I','I',()=>toggle('italic')),action('sheet-underline','U','U',()=>toggle('underline')),action('sheet-strike','شطب','Strike',()=>toggle('strike')));
+    font.append(styleGroup);
+    const colorGroup=node('div',undefined,{class:'sheet-color-group'});
+    colorGroup.append($('sheet-fill').closest('label')||$('sheet-fill'),$('sheet-text-color').closest('label')||$('sheet-text-color'));
+    font.append(colorGroup);
     const borderEditor=TraineeBorders.mount(h);
     const borders=type=>selected((cells,fmt,r,c,s)=>{const vr=s.view.indexOf(r),cols=s.cols,at=cols.indexOf(c),key=r+':'+c,old=fmt.styles[key]||{},has=(row,col)=>D.selectedCell(ranges(s),row,col);fmt.styles[key]={...old,border:type,borderTop:null,borderBottom:null,borderLeft:null,borderRight:null};delete fmt.styles[key].borders;if(type==='outline')Object.assign(fmt.styles[key],{border:'none',borderTop:!has(vr-1,c),borderBottom:!has(vr+1,c),borderLeft:!has(vr,cols[at-1]??-1),borderRight:!has(vr,cols[at+1]??D.MAX_COLS)});});
     menu(font,'sheet-border-menu','حدود ▾','Borders ▾',[...['all','outline','none','top','bottom','left','right'].map((v,i)=>[v,['كل الحدود','حدود خارجية','بدون حدود','علوي','سفلي','يسار','يمين'][i],['All borders','Outside borders','No borders','Top','Bottom','Left','Right'][i],()=>borders(v)]),['format','تنسيق الحدود…','Format borders…',()=>{closeMenus();borderEditor.open();}]]);
@@ -121,10 +127,13 @@ const TraineeExcel=(()=>{
     dropdown(cellsGroup,'sheet-delete-menu','حذف','Delete',[
       action('sheet-delete-cells','حذف خلايا…','Delete Cells…',()=>shift(false)),action('sheet-delete','حذف الصفوف','Delete Sheet Rows',h.deleteSelectedRows),action('sheet-delete-col','حذف الأعمدة','Delete Sheet Columns',()=>h.editColumns('delete')),action('sheet-delete-sheet','حذف الشيت…','Delete Sheet…',()=>{closeMenus();h.worksheet('delete');})]);
     $('sheet-more-tools').remove();
+    const makeDivider=()=>node('span',undefined,{class:'sheet-ribbon-divider','aria-hidden':'true'});
     const top=node('div',undefined,{class:'sheet-ribbon-top'}),panel=node('div',undefined,{id:'sheet-ribbon-panel-all',class:'sheet-ribbon-panel sheet-unified-ribbon',role:'region','aria-label':'أدوات الجدول / Sheet tools'}),commands=node('div',undefined,{class:'sheet-ribbon-command-row'}),formats=node('div',undefined,{class:'sheet-ribbon-format-row'});
     top.append(essential,$('sheet-status'));toolbar.prepend(top);
     for(const id of ['sheet-insert-menu','sheet-delete-menu','sheet-cell-format-menu','sheet-merge-menu','sheet-border-menu','sheet-sort-menu'])commands.append($(id));
-    formats.append(font.parentElement,align.parentElement,viewBody.parentElement);panel.append(commands,formats);toolbar.append(panel);
+    commands.append(makeDivider(),align.parentElement);
+    formats.append(font.parentElement,makeDivider(),viewBody.parentElement);
+    panel.append(commands,formats);toolbar.append(panel);
     let ribbonOpen=true;try{ribbonOpen=JSON.parse(localStorage.getItem('ibta_sheet_ribbon')||'{}').open!==false;}catch{}
     const ribbonToggle=node('button',undefined,{id:'sheet-ribbon-toggle',type:'button','aria-controls':panel.id});top.insertBefore(ribbonToggle,$('sheet-status'));
     const syncRibbon=()=>{const s=state(),open=s.expandedView?$('sheet-workspace').classList.contains('sheet-expanded-tools'):ribbonOpen;panel.hidden=!open;ribbonToggle.setAttribute('aria-expanded',String(open));text(ribbonToggle,open?'إخفاء أدوات الجدول ▴':'إظهار أدوات الجدول ▾',open?'Hide sheet tools ▴':'Show sheet tools ▾');};
@@ -133,6 +142,21 @@ const TraineeExcel=(()=>{
     tools.remove();toolbar.classList.add('sheet-clean-toolbar');
     const files=TraineeFiles.mount({...h,host:essential,text,action});
     essential.prepend(ribbonToggle);
+    essential.replaceChildren(
+      ribbonToggle,
+      makeDivider(),
+      $('sheet-undo'),
+      $('sheet-redo'),
+      makeDivider(),
+      $('sheet-xlsx-import'),
+      $('sheet-xlsx-export'),
+      makeDivider(),
+      $('sheet-find-btn'),
+      $('sheet-select-all'),
+      makeDivider(),
+      $('sheet-save'),
+      $('sheet-reload')
+    );
     return {syncRibbon,closeFiles(){closeMenus();columnsDialog.close();borderEditor.close();sortDialog.close();shiftDialog.close();files.close();},translate(){closeMenus();files.translate();borderEditor.translate();syncRibbon();for(const el of document.querySelectorAll('[data-excel-ar]'))paintLabel(el);},paint(s){const current=state();$('sheet-sort-menu-clear-filters').disabled=!current.filtered;$('sheet-sort-menu-reapply').disabled=!current.filtered;$('sheet-sort-menu-filter').setAttribute('aria-pressed',String(!$('sheet-workspace').classList.contains('sheet-filters-minimal')));for(const key of ['top','middle','bottom'])$('sheet-valign-'+key).setAttribute('aria-pressed',String((s.valign||'middle')===key));$('sheet-wrap-text').setAttribute('aria-pressed',String(s.wrap??current.wrap));fontName.value=s.font||'IBM Plex Sans Arabic';const size=s.size||state().formatting.fontSize;$('sheet-font-size').textContent=size+' px';$('sheet-font-minus').disabled=size<=10;$('sheet-font-plus').disabled=size>=32;for(const field of ['italic','underline','strike'])$('sheet-'+field).setAttribute('aria-pressed',String(!!s[field]));}};
   }
   return {mount};

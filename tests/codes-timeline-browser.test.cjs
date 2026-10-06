@@ -30,6 +30,26 @@ const {spawn}=require('node:child_process');
     assert.equal((await geometry()).scroll,0,'refresh preserves history reading position');
     await setup('small');g=await geometry();assert.ok(g.scroll>0);assert.ok(Math.abs(g.delta)<2,'small lists also conceal history');
     await setup('past');g=await geometry();assert.ok(g.scroll>0);assert.ok(Math.abs(g.delta)<2,'latest past day is the fallback');
+    // Headers and every row fill the table, including the actions column, in either language.
+    for(const language of ['ar','en']){
+      if(await page.evaluate(()=>currentLang)!==language){if(!await page.locator('#lang-btn').isVisible())await page.locator('#sidebar-toggle').click();await page.locator('#lang-btn').click();}
+      await setup('mixed');await page.evaluate(()=>{state.dateColors[todayStr()]='#0070c0';state.dateColors['01/01/2020']='#ffff00';state.voucherNames={TODAY:'TRAINING STUDENT',OLD:'LIGHT ROW STUDENT'};state.codeNotes={TODAY:'Readable blue row note',OLD:'Readable yellow row note'};renderCodeGrid();});
+      const columns=await page.locator('#code-sheet-viewport').evaluate(el=>{const head=[...el.querySelector('.code-sheet-head').children],row=el.querySelector('.code-row[data-code="TODAY"]');return {head:head.map(cell=>({left:cell.getBoundingClientRect().left,width:cell.getBoundingClientRect().width})),row:[...row.children].map(cell=>({left:cell.getBoundingClientRect().left,width:cell.getBoundingClientRect().width})),width:row.getBoundingClientRect().width};});
+      assert.deepEqual(columns.head,columns.row,'Header and body columns align in '+language);assert.ok(Math.abs(columns.row.reduce((n,c)=>n+c.width,0)-columns.width)<1,'All row width belongs to columns');assert.ok(columns.row[6].width<=90,'Actions keep a compact column');
+      await page.mouse.move(0,0);const colors=await page.locator('.code-row[data-code="TODAY"]').evaluate(row=>[...row.querySelectorAll('.col-trainee-name input,.col-notes input')].map(el=>({text:getComputedStyle(el).color,placeholder:getComputedStyle(el,'::placeholder').color})));
+      assert.ok(colors.every(c=>c.text==='rgb(255, 255, 255)'&&c.placeholder===c.text),'Used blue rows keep white names/notes/placeholders');
+      const light=await page.locator('.code-row[data-code="OLD"] .col-notes input').evaluate(el=>getComputedStyle(el).color);assert.equal(light,'rgb(26, 26, 26)','Pale fills keep dark input text');
+      const note=page.locator('.code-row[data-code="TODAY"] .col-notes input');await note.focus();assert.equal(await note.evaluate(el=>getComputedStyle(el).color),'rgb(15, 27, 46)','White editing surface uses dark text');assert.equal(await note.inputValue(),'Readable blue row note');await note.evaluate(el=>el.blur());await page.mouse.move(0,0);
+      await page.locator('.code-sheet').screenshot({path:path.join(__dirname,'../artifacts/voucher-format-'+language+'.png')});
+    }
+    // Voucher widths can be changed without touching vouchers; keyboard and drag remain available in LTR.
+    if(await page.evaluate(()=>currentLang)!=='en')await page.locator('#lang-btn').click();
+    await setup('mixed');const handle=page.locator('.code-sheet-head .voucher-col-resizer').nth(2),before=await handle.evaluate(el=>el.parentElement.getBoundingClientRect().width);
+    await handle.focus();await page.keyboard.press('ArrowRight');assert.ok(await handle.evaluate(el=>el.parentElement.getBoundingClientRect().width)>before,'Keyboard resizes a voucher column');
+    const box=await handle.boundingBox();await page.mouse.move(box.x+box.width/2,box.y+box.height/2);await page.mouse.down();await page.mouse.move(box.x+box.width/2+45,box.y+box.height/2);await page.mouse.up();const dragged=await handle.evaluate(el=>el.parentElement.getBoundingClientRect().width);assert.ok(dragged>before+40,'Dragging resizes a voucher column');
+    await handle.dblclick();const fitted=await handle.evaluate(el=>el.parentElement.getBoundingClientRect().width);assert.ok(fitted<dragged,'Double click fits the column to its content');
+    await page.reload();await setup('mixed');assert.equal(Math.round(await page.locator('.code-sheet-head').locator('.voucher-col-resizer').nth(2).evaluate(el=>el.parentElement.getBoundingClientRect().width)),Math.round(fitted),'Voucher width preference survives reload');
+    const afterResize=await page.locator('#code-sheet-viewport').evaluate(el=>{const head=[...el.querySelector('.code-sheet-head').children],row=el.querySelector('.code-row');return {head:head.map(cell=>cell.getBoundingClientRect().width),row:[...row.children].map(cell=>cell.getBoundingClientRect().width)};});assert.deepEqual(afterResize.head,afterResize.row,'Resized header and voucher row remain aligned');
     await page.setViewportSize({width:390,height:844});await setup('mixed');g=await geometry();assert.ok(Math.abs(g.delta)<2,'mobile current day position');
     await setup('empty');assert.equal((await geometry()).scroll,0);
     assert.deepEqual(errors,[]);console.log('Codes timeline browser tests passed');

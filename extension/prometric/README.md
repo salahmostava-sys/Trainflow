@@ -1,4 +1,4 @@
-# Prometric Auto Register — TrainFlow 4.1.3
+# Prometric Auto Register — TrainFlow 4.1.4
 
 Integrated from the user's Prometric Auto Register 4.0 source (Salah Mostafa,
 ISC license). Its original popup, registration steps, generation pattern,
@@ -19,7 +19,10 @@ Download the new ZIP from **Settings → Extensions**. Replace its files inside 
 5. Reload TrainFlow and any Prometric tabs in the same Chrome profile.
 6. In TrainFlow's trainee sheet, select rows and click **Prometric registration**,
    review the ready/skipped rows, then click **Create accounts**. A single trainee's
-   detail dialog also has **Create Prometric account** when both login fields are empty.
+   detail dialog also has **Prometric account options**. For a trainee who is testing
+   again, choose either the saved account or **Create a new account with the same
+   details**. The old username and password stay in the sheet until the new account
+   is confirmed and the sheet save succeeds.
 
 Keep the TrainFlow tab available until results are saved. After a reload, pending
 results reconnect to the same tab's session. If that tab was closed, open the same
@@ -35,8 +38,10 @@ Popup controls report a failed extension command instead of claiming it started,
 paused or cleared a registration. Unsaved TrainFlow results must be saved or
 reviewed before the popup can start another registration.
 Review results manually when a row changed, was removed, has duplicate identity
-data or already contains different credentials. TrainFlow never overwrites existing
-Username/Password automatically. For changed/duplicate rows, copy the credentials
+data or has credentials changed after a retake was started. TrainFlow never
+overwrites existing Username/Password automatically; replacement is available only
+after explicitly choosing a new account for that same trainee and only while the
+saved credentials remain unchanged. For changed/duplicate rows, copy the credentials
 for manual review and use Reviewed — do not write to release that result without
 claiming it was saved to the sheet. The extension's original History panel provides
 a separate local copy of completed registrations.
@@ -62,6 +67,6 @@ they do not register real accounts.
 
 Download the current ZIP from **Settings → Extensions** or the registration dialog. Replace/reload the unpacked extension, then reload the Vercel page and Prometric tabs. A site refresh alone cannot update an installed unpacked extension.
 
-Drag/Shift selects adjacent rows; Ctrl/Cmd selects separate cell or column areas. Registration collects each selected visible-view row once, including rows covered by separate selections. It does not include unselected rows between those areas. The preview remains the final check before creating accounts. Existing credentials are never replaced automatically.
+Drag/Shift selects adjacent rows; Ctrl/Cmd selects separate cell or column areas. Registration collects each selected visible-view row once, including rows covered by separate selections. It does not include unselected rows between those areas. The preview remains the final check before creating accounts. Existing credentials are never replaced automatically; the explicit retake option requires extension 4.1.4 or later.
 
 The Trust boundary remains the exact Vercel origin, the owning extension ID and its dedicated registration tab. A migrated frontend does not reset the same private sheet or pending result ownership. See the [operations guide](../../docs/operations-guide.md) and [deployment guide](../../docs/deployment.md).

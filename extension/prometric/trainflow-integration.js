@@ -6,7 +6,7 @@ const IbtaRegistration=(()=>{
   const same=(run,payload)=>run&&run.owner===payload.owner&&run.client===payload.client;
   async function status(payload){
     const {ibtaRun:run,isRunning,singleRunning}=await chrome.storage.local.get(['ibtaRun','isRunning','singleRunning']);
-    return {ok:true,version:chrome.runtime.getManifest().version,busy:!!(isRunning||singleRunning||run?.items.some(i=>['pending','done'].includes(i.status))),recoverable:!!(run&&run.owner===payload.owner&&run.client!==payload.client),run:same(run,payload)?run:null};
+    return {ok:true,version:chrome.runtime.getManifest().version,capabilities:{retake:true},busy:!!(isRunning||singleRunning||run?.items.some(i=>['pending','done'].includes(i.status))),recoverable:!!(run&&run.owner===payload.owner&&run.client!==payload.client),run:same(run,payload)?run:null};
   }
   async function notify(run){try{await chrome.tabs.sendMessage(run.tab,{action:'ibtaChanged'},{frameId:0});}catch{}}
   async function request(payload,sender){
@@ -23,7 +23,10 @@ const IbtaRegistration=(()=>{
       if(!Array.isArray(payload.items)||!payload.items.length||payload.items.length>MAX)throw Error('INVALID_ROWS');
       const seen=new Set(),items=payload.items.map(i=>{
         if(!i||!str(i.id,80)||seen.has(i.id)||!str(i.name,300)||!/[A-Za-z]/.test(i.name)||!str(i.email,320)||!isValidEmail(i.email)||!str(i.fingerprint,12000)||!Number.isInteger(i.row)||i.row<0||i.row>=1000000)throw Error('INVALID_ROWS');
-        seen.add(i.id);return {id:i.id,row:i.row,name:i.name,email:i.email,fingerprint:i.fingerprint,status:'pending'};
+        const retake=i.replaceExisting===true;
+        if(retake&&(!str(i.previousCredentials,64)||!/^[a-f0-9]{64}$/.test(i.previousCredentials)))throw Error('INVALID_ROWS');
+        if(!retake&&('previousCredentials' in i||'replaceExisting' in i))throw Error('INVALID_ROWS');
+        seen.add(i.id);return {id:i.id,row:i.row,name:i.name,email:i.email,fingerprint:i.fingerprint,replaceExisting:retake,previousCredentials:retake?i.previousCredentials:undefined,status:'pending'};
       });
       run={id:crypto.randomUUID(),owner:payload.owner,client:payload.client,tab:sender.tab.id,created:new Date().toISOString(),items};
       const defaults=await chrome.storage.local.get(['defAddress','defCity','defState','defPostal','defCountry']);
