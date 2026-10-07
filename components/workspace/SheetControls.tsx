@@ -5,17 +5,24 @@ interface ColumnChoice {
   label: string;
   checked: boolean;
   disabled: boolean;
+  width?: number;
 }
 export function ColumnChoices({
   columns,
   showAll,
   toggle,
   showLabel,
+  widthLabel,
+  autoLabel,
+  setWidth,
 }: {
   columns: ColumnChoice[];
   showAll(): void;
   toggle(column: number, visible: boolean): void;
   showLabel: string;
+  widthLabel: string;
+  autoLabel: string;
+  setWidth(column: number, width: number | null): void;
 }) {
   return (
     <>
@@ -23,18 +30,43 @@ export function ColumnChoices({
         {showLabel}
       </button>
       {columns.map((choice) => (
-        <label key={choice.column}>
+        <div className="sheet-column-choice" key={choice.column}>
+          <label>
+            <input
+              type="checkbox"
+              data-column-toggle={choice.column}
+              checked={choice.checked}
+              disabled={choice.disabled}
+              onChange={(event) =>
+                toggle(choice.column, event.currentTarget.checked)
+              }
+            />
+            <span>{choice.label}</span>
+          </label>
           <input
-            type="checkbox"
-            data-column-toggle={choice.column}
-            checked={choice.checked}
-            disabled={choice.disabled}
-            onChange={(event) =>
-              toggle(choice.column, event.currentTarget.checked)
-            }
+            key={choice.width ?? "auto"}
+            type="number"
+            min={40}
+            max={800}
+            step={1}
+            data-column-width={choice.column}
+            aria-label={widthLabel + " · " + choice.label}
+            placeholder={autoLabel}
+            defaultValue={choice.width ?? ""}
+            onBlur={(event) => {
+              const input = event.currentTarget;
+              if (!input.reportValidity()) return;
+              const width = input.value === "" ? null : input.valueAsNumber;
+              if (width !== (choice.width ?? null)) setWidth(choice.column, width);
+            }}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                event.currentTarget.blur();
+              }
+            }}
           />
-          <span>{choice.label}</span>
-        </label>
+        </div>
       ))}
     </>
   );

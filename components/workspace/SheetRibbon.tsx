@@ -383,7 +383,7 @@ export function SheetRibbon() {
                 </select>
               </label>
               <button id="sheet-columns-title" type="button">
-                {"إظهار / إخفاء الأعمدة"}
+                {"عرض وإظهار الأعمدة"}
               </button>
               <button type="button" id="sheet-freeze" aria-pressed="false">
                 {"تثبيت أول عمود"}

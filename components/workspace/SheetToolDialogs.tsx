@@ -932,9 +932,13 @@ export function SheetToolDialogs() {
       </dialog>
       <dialog id="sheet-columns-dialog" className="sheet-file-dialog">
         <h3
-          data-excel-ar="الأعمدة الظاهرة"
-          data-excel-en="Visible columns"
+          data-excel-ar="عرض وإظهار الأعمدة"
+          data-excel-en="Column widths and visibility"
         ></h3>
+        <p
+          data-excel-ar="أدخل العرض بالبكسل، أو اتركه فارغًا للعرض الافتراضي. يمكنك أيضًا سحب الفاصل بين عناوين الأعمدة."
+          data-excel-en="Enter a width in pixels, or leave it blank for the default. You can also drag the boundary between column headers."
+        ></p>
         <div id="sheet-column-options"></div>
         <button
           type="button"

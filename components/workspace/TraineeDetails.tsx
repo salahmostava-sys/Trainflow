@@ -27,7 +27,6 @@ interface DetailRecordsProps {
   copyLabel: string;
   copyTitle: string;
   copy(value: string): Promise<void>;
-  account?: { label: string; open(): void };
 }
 function DetailValue({
   field,
@@ -97,15 +96,6 @@ export function DetailRecords(props: DetailRecordsProps) {
           </dl>
         </section>
       ))}
-      {props.account && (
-        <button
-          type="button"
-          className="sheet-primary sheet-create-prometric"
-          onClick={props.account.open}
-        >
-          {props.account.label}
-        </button>
-      )}
     </>
   );
 }
@@ -194,7 +184,6 @@ export function TraineeDetailDialogs() {
           <button type="button" id="sheet-detail-next">
             ›
           </button>
-          <button type="button" id="sheet-detail-edit" />
         </div>
       </dialog>
     </>

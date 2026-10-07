@@ -26,7 +26,14 @@ const {spawn}=require('node:child_process');
     assert.equal(copied,'DEMO-001\tsample@example.invalid\r\nDEMO-001\tsample@example.invalid');
     await page.keyboard.press('Delete');assert.equal(await cell(1,1).textContent(),'');
     await page.locator('#sheet-undo').click();assert.equal(await cell(1,1).textContent(),'sample@example.invalid');
-    await cell(0,2).dblclick();await page.keyboard.press('Control+a');await page.keyboard.insertText('اسم معدل');await page.keyboard.press('Tab');
+    for(const column of [1,2,3]){
+      await cell(0,column).click();assert.equal(await page.locator('#sheet-trainee-dialog').isVisible(),false,'Single click continues to select a cell');
+      await cell(0,column).dblclick();await page.locator('#sheet-trainee-dialog').waitFor({state:'visible'});
+      assert.match(await page.locator('#sheet-trainee-record').textContent(),/Demo Trainee/);
+      assert.notEqual(await cell(0,column).getAttribute('contenteditable'),'true','Double click opens details without starting an edit');
+      await page.keyboard.press('Escape');
+    }
+    await cell(0,2).click();await page.keyboard.press('F2');await page.keyboard.press('Control+a');await page.keyboard.insertText('اسم معدل');await page.keyboard.press('Tab');
     assert.equal(await cell(0,2).textContent(),'اسم معدل');
     await page.keyboard.press('Control+z');assert.equal(await cell(0,2).textContent(),'متدرب تجريبي');
     await page.locator('#sheet-redo').click();assert.equal(await cell(0,2).textContent(),'اسم معدل');
@@ -51,7 +58,7 @@ const {spawn}=require('node:child_process');
     await page.waitForFunction(()=>!Trainees.hasDraft());assert.equal(await page.evaluate(()=>previewSheets.get('demo-admin').cells[0][1]),'second@example.invalid');
     await page.evaluate(()=>window.previewDelay=0);
     // Background autosave must not interrupt typing in the next cell.
-    await paste(0,0,'DEMO-001');await cell(0,1).dblclick();
+    await paste(0,0,'DEMO-001');await cell(0,1).click();await page.keyboard.press('F2');
     await page.waitForTimeout(1100);assert.equal(await cell(0,1).getAttribute('contenteditable'),'true');
     await page.keyboard.press('Escape');await page.locator('#sheet-save').click();await page.waitForFunction(()=>!Trainees.hasDraft());
     // Formatting must persist with each owner's sheet and participate in undo.
@@ -63,6 +70,20 @@ const {spawn}=require('node:child_process');
     assert.equal(await cell(0,2).evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(255, 242, 204)');
     await page.locator('#sheet-font-plus').click();assert.equal(await page.locator('#sheet-font-size').textContent(),'21 px');assert.equal(await cell(0,2).evaluate(el=>getComputedStyle(el).fontSize),'21px');
     await page.locator('#sheet-font-minus').click();assert.equal(await cell(0,2).evaluate(el=>getComputedStyle(el).fontSize),'20px');
+    await page.locator('#sheet-columns-title').click();
+    const columnWidth=page.locator('[data-column-width="2"]');await columnWidth.fill('300');await columnWidth.press('Enter');
+    assert.ok(Math.abs((await cell(0,2).boundingBox()).width-300)<1,'Typed column width changes the actual grid');
+    await columnWidth.fill('900');await columnWidth.press('Enter');assert.ok(Math.abs((await cell(0,2).boundingBox()).width-300)<1,'An out-of-range width cannot overwrite the saved width');
+    await columnWidth.fill('');await columnWidth.press('Enter');assert.ok(Math.abs((await cell(0,2).boundingBox()).width-220)<1,'Clearing the width restores the default');
+    await columnWidth.fill('300');await columnWidth.press('Enter');await page.locator('#sheet-columns-close').click();
+    for(const direction of ['ltr','rtl']){
+      await page.locator('#sheet-direction').selectOption(direction);
+      const handle=page.locator('.sheet-col-resizer[data-resizer-col="2"]');await handle.scrollIntoViewIfNeeded();
+      const before=(await cell(0,2).boundingBox()).width,grip=await handle.boundingBox();
+      await page.mouse.move(grip.x+grip.width/2,grip.y+grip.height/2);await page.mouse.down();await page.mouse.move(grip.x+grip.width/2+(direction==='rtl'?-30:30),grip.y+grip.height/2);await page.mouse.up();
+      assert.ok(Math.abs((await cell(0,2).boundingBox()).width-before-30)<1,'Dragging resizes the column in '+direction+' direction');
+    }
+    await page.locator('#sheet-columns-title').click();await columnWidth.fill('300');await columnWidth.press('Enter');await page.locator('#sheet-columns-close').click();
     await page.locator('#sheet-direction').selectOption('rtl');
     assert.equal(await page.locator('.sheet-scroll').evaluate(el=>getComputedStyle(el).direction),'rtl');
     await page.locator('#sheet-columns-title').click();await page.locator('[data-column-toggle="1"]').uncheck();await page.locator('#sheet-columns-close').click();
@@ -72,6 +93,7 @@ const {spawn}=require('node:child_process');
     await page.locator('#sheet-save').click();await page.waitForFunction(()=>!Trainees.hasDraft());await page.locator('#sheet-reload').click();
     await page.waitForFunction(()=>!document.getElementById('sheet-workspace').inert);
     assert.equal(await cell(0,1).count(),0);assert.equal(await cell(0,2).evaluate(el=>getComputedStyle(el).fontSize),'20px');
+    assert.ok(Math.abs((await cell(0,2).boundingBox()).width-300)<1,'Column widths survive saving and reloading');
     assert.equal(await page.locator('#sheet-direction').inputValue(),'rtl');
     await paste(0,0,'DEMO-001\tلصق مع عمود مخفي');assert.equal(await cell(0,2).textContent(),'لصق مع عمود مخفي');
     await page.locator('#sheet-save').click();await page.waitForFunction(()=>!Trainees.hasDraft());
@@ -84,6 +106,7 @@ const {spawn}=require('node:child_process');
     await worksheets.switchTo('demo-user');
 
     assert.equal(await cell(0,1).count(),1);assert.equal(await page.locator('#sheet-direction').inputValue(),'ltr');
+    assert.ok(Math.abs((await cell(0,2).boundingBox()).width-220)<1,'A different owner keeps its own column widths');
     await worksheets.switchTo('demo-admin');
 
     assert.equal(await cell(0,1).count(),0);assert.equal(await page.locator('#sheet-direction').inputValue(),'rtl');
@@ -115,10 +138,11 @@ const {spawn}=require('node:child_process');
     await cell(1,4).dblclick();await page.keyboard.press('Control+a');await page.keyboard.insertText('9999999999');await page.keyboard.press('Tab');
     assert.equal(await page.locator('.sheet-duplicate-badge').count(),0,'Resolving a duplicate clears both marks');
     await page.locator('#sheet-undo').click();assert.equal(await page.locator('.sheet-duplicate-badge').count(),2);
-    // The detail dialog remains usable on mobile and has an explicit edit action.
+    // Removing the ID shortcut keeps details readable and ID editing available in the grid.
     await page.setViewportSize({width:390,height:844});if(await page.locator('#sidebar-backdrop').isVisible())await page.locator('#sidebar-backdrop').click({position:{x:10,y:10}});await cell(0,4).click();await page.locator('#sheet-duplicate-dialog').waitFor({state:'visible'});
     assert.ok(await page.locator('#sheet-duplicate-dialog').evaluate(el=>el.scrollWidth<=el.clientWidth+1),'Mobile details must not overflow horizontally');
-    await page.locator('#sheet-detail-edit').click();assert.equal(await cell(0,4).getAttribute('contenteditable'),'true');await page.keyboard.press('Escape');
+    assert.equal(await page.locator('#sheet-detail-edit').count(),0);assert.equal(await page.locator('#sheet-duplicate-dialog .sheet-detail-footer').isVisible(),false,'An unneeded footer leaves no empty divider');
+    await page.keyboard.press('Escape');await cell(0,4).click();await page.keyboard.press('F2');assert.equal(await cell(0,4).getAttribute('contenteditable'),'true');await page.keyboard.press('Escape');
     await page.setViewportSize({width:1500,height:1000});
     await page.locator('#sheet-save').click();await page.waitForFunction(()=>!Trainees.hasDraft());
     await page.screenshot({path:path.join(__dirname,'../dist/trainees-preview.png'),fullPage:true});

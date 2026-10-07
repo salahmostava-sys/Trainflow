@@ -75,7 +75,7 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),path
     await paste(0,2,'First');await paste(0,2,'Second');
     await arabicShortcut('KeyZ','ئ');assert.equal(await cell(0,2).textContent(),'First','Ctrl+Z works with Arabic keyboard layout');
     await arabicShortcut('KeyZ','ئ',true);assert.equal(await cell(0,2).textContent(),'Second');
-    await cell(0,2).dblclick();await page.keyboard.press('Control+a');await page.keyboard.insertText('Third');
+    await cell(0,2).click();await page.keyboard.press('F2');await page.keyboard.press('Control+a');await page.keyboard.insertText('Third');
     await arabicShortcut('KeyZ','ئ');assert.equal(await cell(0,2).textContent(),'Second','Undo works during cell editing');
     await arabicShortcut('KeyY','غ');assert.equal(await cell(0,2).textContent(),'Third','The undone cell edit remains available for redo');
     await page.locator('#sheet-bold').focus();await arabicShortcut('KeyZ','ئ');assert.equal(await cell(0,2).textContent(),'Second','Undo also works when the toolbar has focus');
@@ -150,14 +150,16 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),path
     assert.equal(await page.locator('.sheet-get-exam-code').count(),0,'An existing code has no allocation or replacement button');
     assert.ok((await page.locator('#sheet-trainee-title').textContent()).endsWith('Trainee'));
     const details=await page.locator('#sheet-trainee-record').textContent();assert.match(details,/hidden@example.invalid/);assert.match(details,/demo-password/);assert.match(details,/EXTRA-AZ/);
+    assert.equal(await page.locator('#sheet-trainee-dialog').getByRole('button',{name:/خيارات حساب Prometric|إنشاء حساب Prometric|Prometric account options|Create Prometric account/}).count(),0,'The account shortcut is removed while account fields remain available');
     for(const viewport of [{width:1366,height:768},{width:1280,height:720},{width:1024,height:600}]){
       await page.setViewportSize(viewport);
-      const fit=await page.locator('#sheet-trainee-dialog').evaluate(el=>{const rect=el.getBoundingClientRect();return {noVerticalScroll:el.scrollHeight<=el.clientHeight+1,noHorizontalScroll:el.scrollWidth<=el.clientWidth+1,inside:rect.top>=0&&rect.bottom<=innerHeight,allFields:[...el.querySelectorAll('dt,dd')].every(field=>{const box=field.getBoundingClientRect();return box.top>=rect.top&&box.bottom<=rect.bottom;})};});
-      assert.deepEqual(fit,{noVerticalScroll:true,noHorizontalScroll:true,inside:true,allFields:true},'All trainee details fit without scrolling at '+JSON.stringify(viewport));
-      const rows=await page.locator('#sheet-trainee-record dd').evaluateAll(fields=>fields.map(field=>({left:field.getBoundingClientRect().left,top:field.getBoundingClientRect().top})));
-      assert.ok(rows.every((row,index)=>Math.abs(row.left-rows[0].left)<1&&(!index||row.top>rows[index-1].top)),'Every field appears in one vertical column');
+      // Roomier rows may scroll on short screens, but every field must remain reachable.
+      const fit=await page.locator('#sheet-trainee-dialog').evaluate(el=>{const rect=el.getBoundingClientRect();const allFields=[...el.querySelectorAll('dt,dd')].every(field=>{field.scrollIntoView({block:'center'});const box=field.getBoundingClientRect();return box.top>=rect.top&&box.bottom<=rect.bottom;});el.scrollTop=0;return {noHorizontalScroll:el.scrollWidth<=el.clientWidth+1,inside:rect.top>=0&&rect.bottom<=innerHeight,allFields};});
+      assert.deepEqual(fit,{noHorizontalScroll:true,inside:true,allFields:true},'All trainee details remain reachable at '+JSON.stringify(viewport));
+      const rows=await page.locator('#sheet-trainee-record dd').evaluateAll(fields=>fields.map(field=>({left:field.getBoundingClientRect().left,top:field.getBoundingClientRect().top,bottom:field.getBoundingClientRect().bottom})));
+      assert.ok(rows.every((row,index)=>Math.abs(row.left-rows[0].left)<1&&(!index||row.top-rows[index-1].bottom>=9.5)),'Every field has readable vertical spacing in one column');
     }
-    await page.screenshot({path:path.join(__dirname,'../artifacts/trainee-details-fit.png')});await page.setViewportSize({width:1500,height:1000});
+    await page.screenshot({path:path.join(__dirname,'../artifacts/trainee-details-fit.png')});await page.setViewportSize({width:1500,height:1000});await page.screenshot({path:path.join(__dirname,'../artifacts/trainee-details-roomy.png')});
     assert.match(details,/كي كود/);assert.match(details,/LIVE-SALES-AR/);assert.doesNotMatch(details,/LIVE-SALES-EN/);
     assert.match(details,/محترف الأعمال المعتمد في المبيعات CBP-S/);
     assert.equal(await page.locator('#sheet-trainee-record .sheet-detail-category').textContent(),'فئة المراجعة','Shows the effective category, including overrides and display labels');
@@ -189,7 +191,7 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),path
     await page.mouse.click(10,10);await page.locator('#sheet-trainee-dialog').waitFor({state:'hidden'});
     await page.evaluate(()=>document.getElementById('sheet-grid').parentElement.scrollTop=0);await cell(0,3).waitFor({state:'visible'});await cell(0,3).dblclick();
     await page.keyboard.press('Escape');await cell(0,0).click();await page.keyboard.press('Delete');await cell(0,3).dblclick();
-    await page.setViewportSize({width:1366,height:768});assert.equal(await page.locator('#sheet-trainee-dialog').evaluate(el=>el.scrollHeight<=el.clientHeight+1),true,'Empty Code field and allocation action fit without scrolling');assert.equal(await page.locator('.sheet-get-exam-code').isVisible(),true);await page.setViewportSize({width:1500,height:1000});
+    await page.setViewportSize({width:1366,height:768});assert.equal(await page.locator('#sheet-trainee-dialog').evaluate(el=>el.scrollWidth<=el.clientWidth+1),true,'Empty Code field and allocation action do not cause horizontal scrolling');assert.equal(await page.locator('.sheet-get-exam-code').isVisible(),true);await page.setViewportSize({width:1500,height:1000});
     assert.equal(await page.locator('.sheet-get-exam-code').textContent(),'Get');assert.deepEqual(await page.locator('.sheet-get-exam-code').evaluate(el=>({parent:el.parentElement.tagName,label:el.parentElement.previousElementSibling.textContent})),{parent:'DD',label:'الكود'},'Get appears inside the Code field');assert.equal(await page.locator('#sheet-trainee-record>.sheet-get-exam-code').count(),0);await page.screenshot({path:path.join(__dirname,'../artifacts/trainee-inline-get.png')});
     await page.evaluate(()=>{
       window.claimCount=0;Cloud.claimTraineeCode=async(category,targetOwner,traineeName)=>{if(category!=='Review-category'||targetOwner!=='demo-admin')throw Error('Wrong category or owner');window.claimedTraineeName=traineeName;window.claimCount++;previewCodes.push({code:'ALLOCATED-DEMO',category,owner_id:targetOwner,trainee_name:traineeName,used_on:'04/10/2026',version:2});Trainees.translate();window.previewSaveError='NETWORK';return 'ALLOCATED-DEMO';};
@@ -209,7 +211,9 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),path
     const full=await page.locator('#sheet-trainee-dialog').evaluate(el=>{const rect=el.getBoundingClientRect();return {x:rect.x,y:rect.y,width:rect.width,height:rect.height};});
     assert.deepEqual(full,{x:0,y:0,width:390,height:844},'Mobile detail dialog fills the viewport');
     assert.equal(await page.locator('#sheet-trainee-record dd').first().evaluate(el=>getComputedStyle(el).fontSize),'16px');
+    assert.ok(await page.locator('#sheet-trainee-record dl').evaluate(el=>parseFloat(getComputedStyle(el).rowGap)>=12),'Mobile details retain room between rows');
     await page.locator('#sheet-trainee-record button[aria-label="نسخ Prometric Password"]').click();assert.equal(await page.evaluate(()=>window.detailCopied),'demo-prometric-password');
+    await page.screenshot({path:path.join(__dirname,'../artifacts/trainee-details-mobile.png')});
     await page.locator('#sheet-trainee-dialog .sheet-detail-close').click();
     await page.setViewportSize({width:1500,height:1000});await page.locator('#sheet-save').click();await page.waitForFunction(()=>!Trainees.hasDraft());
     await page.evaluate(()=>Trainees.reset());

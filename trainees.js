@@ -98,7 +98,7 @@ const Trainees=(()=>{
     const first=visibleCols()[0];grid.querySelectorAll('[data-col="'+first+'"]').forEach(el=>el.classList.add('sheet-frozen-cell'));
     for(const key of ['freeze'])$('sheet-'+key)?.setAttribute('aria-pressed',String(excelView[key]));
   }
-  let hoverTimer,hoverHideTimer,detailTimer,hoverCell=null,detailKey='',detailPage=0,detailSource=-1;
+  let hoverTimer,hoverHideTimer,detailTimer,hoverCell=null,detailKey='',detailPage=0;
   let colWidths={};
   try{colWidths=JSON.parse(localStorage.getItem('ibta_trainee_col_widths')||'{}')||{};}catch{}
   const legacyWidths={...colWidths};
@@ -426,7 +426,7 @@ const Trainees=(()=>{
     resizer?.classList.add('sheet-resizing');
     function onPointerMove(moveEvent){
       const delta=(moveEvent.clientX-startX)*(isRtl?-1:1)/zoom;
-      const newWidth=Math.max(45,Math.min(600,Math.round(startWidth+delta)));
+      const newWidth=Math.max(40,Math.min(800,Math.round(startWidth+delta)));
       setColumnWidth(colIndex,newWidth);
     }
     function onPointerUp(){
@@ -543,7 +543,7 @@ const Trainees=(()=>{
     document.addEventListener('pointerup',()=>{dragging=false;rowDragging=false;columnDragging=false;});
     document.addEventListener('pointercancel',()=>{dragging=false;rowDragging=false;columnDragging=false;skipSelectionClick=false;});
     grid.addEventListener('click',e=>{clearTimeout(detailTimer);if(e.target.closest('select'))return;const skip=skipSelectionClick;skipSelectionClick=false;if(dragMoved){dragMoved=false;return;}const td=e.target.closest('td[data-col]');if(!td||editing?.el===td)return;if(!skip)selectCell(+td.dataset.v,+td.dataset.col,e.shiftKey,e.ctrlKey||e.metaKey);if(!e.shiftKey&&!e.ctrlKey&&!e.metaKey&&td.classList.contains('sheet-id-duplicate')){const index=view[+td.dataset.v],token=epoch;detailTimer=setTimeout(()=>{if(token===epoch&&td.isConnected&&!editing)openDuplicateDetails(index);},250);}});
-    grid.addEventListener('dblclick',e=>{clearTimeout(detailTimer);hideDuplicateHint();const td=e.target.closest('td[data-col]');if(td&&!(+td.dataset.col===3&&cells[view[+td.dataset.v]]?.[3]))beginEdit(td);});
+    grid.addEventListener('dblclick',e=>{clearTimeout(detailTimer);hideDuplicateHint();const td=e.target.closest('td[data-col]');if(td&&!isTraineeDetailCell(td))beginEdit(td);});
     grid.addEventListener('keydown',keyDown);grid.addEventListener('paste',paste);
     document.addEventListener('keydown',handleUndoShortcut);
     document.addEventListener('keydown',e=>{
@@ -638,7 +638,7 @@ const Trainees=(()=>{
       'sheet-select-all':['تحديد الكل','Select all'],'sheet-copy':['نسخ الجدول','Copy sheet'],'sheet-save':['حفظ الآن','Save now'],'sheet-reload':['إعادة تحميل','Reload'],'sheet-clear-filters':['مسح الفلاتر','Clear filters'],
       'sheet-help':['للكتابة: انقر مرتين أو ابدأ الكتابة · اسحب أو Shift + نقر لتحديد نطاق · Ctrl+C / Ctrl+V · Tab والأسهم للتنقل','Double-click or type to edit · Drag or Shift+click selects a range · Ctrl+C / Ctrl+V · Tab and arrow navigation'],
       'sheet-owned':['أكواد المستخدم','User codes'],'sheet-pool':['المخزون غير المخصص','Unassigned stock'],'sheet-code-refresh':['تحديث الأكواد','Refresh codes']
-      ,'sheet-columns-title':['إظهار / إخفاء الأعمدة','Show / hide columns'],'sheet-fill-label':['لون الخلية','Cell fill'],'sheet-text-color-label':['لون الخط','Text color'],
+      ,'sheet-columns-title':['عرض وإظهار الأعمدة','Column widths and visibility'],'sheet-fill-label':['لون الخلية','Cell fill'],'sheet-text-color-label':['لون الخط','Text color'],
       'sheet-clear-format':['مسح التنسيق','Clear formatting'],'sheet-direction-label':['الاتجاه','Direction'],'sheet-selection-size-label':['حجم المحدد','Selection size'],
       'sheet-duplicates-label':['الإقامات المكررة فقط','Duplicate IDs only'],
       'sheet-find-btn':['🔍 بحث واستبدال','🔍 Find & Replace'],
@@ -778,7 +778,7 @@ const Trainees=(()=>{
       headersKey=nextHeadersKey;
       window.WorkspaceViews.headers(thead,{
         selectLabel:tr('تحديد الكل','Select all'),selectTitle:tr('تحديد الجدول بالكامل (Ctrl+A)','Select all (Ctrl+A)'),
-        resizeTitle:tr('اسحب لتعديل عرض العمود · انقر مرتين للضبط التلقائي','Drag to resize · Double click to reset'),
+        resizeTitle:tr('اسحب لتعديل عرض العمود · انقر مرتين لاستعادة العرض الافتراضي','Drag to resize · Double click to reset'),
         onSelectAll:()=>{if(!skipSelectionClick&&!dragMoved)selectAll();skipSelectionClick=false;dragMoved=false;},
         onPointerDown:e=>{if(e.button!==0||e.pointerType==='touch')return;e.preventDefault();selectAll();},
         columns:cols.map(c=>{const pair=labels[c];return {
@@ -935,15 +935,16 @@ const Trainees=(()=>{
   }
   const detailViewProps=()=>({copyLabel:tr('نسخ ','Copy '),copyTitle:tr('اضغط لنسخ ','Click to copy '),copy:async value=>{if(await copyText(value))showToast(tr('تم النسخ','Copied'));else showToast(tr('تعذر النسخ. حاول مرة أخرى.','Could not copy. Please retry.'));}});
   function closeTraineeDetails(){clearTimeout(traineeHoverTimer);const dialog=$('sheet-trainee-dialog');if(dialog?.open)dialog.close();}
+  const isTraineeDetailCell=td=>[1,2,3].includes(+td.dataset.col)&&!!cells[view[+td.dataset.v]]?.[+td.dataset.col]?.trim();
   function initTraineeDetails(){
     let activeIndex=null,activeEpoch=null;
     const dialog=$('sheet-trainee-dialog'),close=dialog.querySelector('.sheet-detail-close');close.onclick=closeTraineeDetails;close.setAttribute('aria-label',tr('إغلاق','Close'));
     dialog.addEventListener('close',()=>{if(dialog.open)return;activeIndex=activeEpoch=null;window.WorkspaceViews.clear($('sheet-trainee-record'));$('sheet-trainee-title').textContent='';});
     const show=index=>{
       if(!loaded||editing||dragging)return;
-      const row=cells[index];if(!row?.[3])return;activeIndex=index;activeEpoch=epoch;
+      const row=cells[index],name=row?.[3]?.trim()||row?.[2]?.trim()||row?.[1]?.trim();if(!name)return;activeIndex=index;activeEpoch=epoch;
       hideDuplicateHint();dialog.dir=currentLang==='ar'?'rtl':'ltr';
-      $('sheet-trainee-title').textContent=tr('بيانات المتدرب — ','Trainee details — ')+row[3];
+      $('sheet-trainee-title').textContent=tr('بيانات المتدرب — ','Trainee details — ')+name;
       const fields=detailFields(row,false),voucher=fields[0],loginDisplay=PROMETRIC_LOGIN_URL.replace(/(\/Login).+$/i,'$1…');
       fields.unshift({label:'Prometric login link',value:PROMETRIC_LOGIN_URL,display:loginDisplay,className:'sheet-detail-login',direction:'ltr',empty:tr('غير محدد','Not configured')},detailKeycode(D.courseKeycode(row[7],DEFAULT_KEYCODES)),...[['Prometric Account',PROMETRIC_ACCOUNT],['Prometric Password',PROMETRIC_PASSWORD]].map(([label,value])=>({label,value,direction:'ltr',empty:tr('غير محدد','Not configured')})));
       const refreshRecord=()=>{if(dialog.open&&activeIndex===index&&activeEpoch===epoch)show(index);};
@@ -969,19 +970,17 @@ const Trainees=(()=>{
         }catch(error){if(token===epoch&&owner===selectedOwner&&cells[index]?.[0]?.trim())refreshRecord();showToast(error.message||tr('تعذر جلب الكود','Could not get code'));}finally{action.disabled=!codeCategory;}
       };
       if(!row[0]?.trim())voucher.action={label:'Get',ariaLabel:tr('جلب كود الاختبار','Get exam code'),disabled:!codeCategory,title:codeCategory?displayCatName(category):tr('لا توجد فئة اختبار مطابقة','No matching exam category'),run:claim};
-      const hasAccount=!!(row[9]?.trim()||row[10]?.trim());
-      window.WorkspaceViews.detailRecords($('sheet-trainee-record'),{...detailViewProps(),records:[{fields}],account:prometricTools?{label:hasAccount?tr('خيارات حساب Prometric','Prometric account options'):tr('إنشاء حساب Prometric','Create Prometric account'),open:()=>{closeTraineeDetails();prometricTools.open([index]);}}:undefined});
+      window.WorkspaceViews.detailRecords($('sheet-trainee-record'),{...detailViewProps(),records:[{fields}]});
       if(!dialog.open)dialog.show();
     };
     const grid=$('sheet-grid');
-    grid.addEventListener('dblclick',e=>{const td=e.target.closest('td[data-col="3"]');if(td){commitEdit();show(view[+td.dataset.v]);}});
+    grid.addEventListener('dblclick',e=>{const td=e.target.closest('td[data-col]');if(td&&isTraineeDetailCell(td)){commitEdit();show(view[+td.dataset.v]);}});
     document.addEventListener('pointerdown',e=>{clearTimeout(traineeHoverTimer);if(dialog.open&&!dialog.contains(e.target))closeTraineeDetails();});
     document.addEventListener('keydown',e=>{if(e.key==='Escape')closeTraineeDetails();});
   }
   function initDuplicateDetails(){
     const hint=$('sheet-duplicate-hint'),dialog=$('sheet-duplicate-dialog'),close=dialog.querySelector('.sheet-detail-close');close.onclick=()=>dialog.close();close.setAttribute('aria-label',tr('إغلاق','Close'));
     $('sheet-detail-prev').onclick=()=>{detailPage--;renderDuplicateDetails();};$('sheet-detail-next').onclick=()=>{detailPage++;renderDuplicateDetails();};
-    $('sheet-detail-edit').onclick=()=>{const index=detailSource;dialog.close();clearFilters();render();focusCell(index,4);const td=$('sheet-grid').querySelector(`td[data-v="${index}"][data-col="4"]`);if(td)beginEdit(td);};
     dialog.addEventListener('click',e=>{if(e.target===dialog){const rect=dialog.getBoundingClientRect();if(e.clientX<rect.left||e.clientX>rect.right||e.clientY<rect.top||e.clientY>rect.bottom)dialog.close();}});
     dialog.addEventListener('close',()=>{detailKey='';window.WorkspaceViews.clear($('sheet-duplicate-records'));$('sheet-duplicate-title').textContent='';$('sheet-duplicate-description').textContent='';dialog.style.width='';});
     const grid=$('sheet-grid');
@@ -1012,7 +1011,7 @@ const Trainees=(()=>{
   }
   function openDuplicateDetails(index){
     commitEdit();clearTimeout(detailTimer);hideDuplicateHint();const key=D.idKey(cells[index]?.[4]||'');if(!duplicateIds.has(key))return;
-    detailKey=key;detailPage=0;detailSource=index;renderDuplicateDetails();if(!$('sheet-duplicate-dialog').open)$('sheet-duplicate-dialog').showModal();
+    detailKey=key;detailPage=0;renderDuplicateDetails();if(!$('sheet-duplicate-dialog').open)$('sheet-duplicate-dialog').showModal();
   }
   function renderDuplicateDetails(){
     const matches=duplicateIds.get(detailKey)||[];if(!matches.length){closeDuplicateDetails();return;}
@@ -1029,18 +1028,19 @@ const Trainees=(()=>{
     $('sheet-detail-page').style.display=hasPages?'':'none';
     $('sheet-detail-prev').style.display=hasPages?'':'none';
     $('sheet-detail-next').style.display=hasPages?'':'none';
+    $('sheet-duplicate-dialog').querySelector('.sheet-detail-footer').hidden=!hasPages;
     if(hasPages){
       $('sheet-detail-page').textContent=(detailPage+1)+' / '+pageCount;
       $('sheet-detail-prev').disabled=detailPage===0;$('sheet-detail-next').disabled=(detailPage+1)*50>=count;
       $('sheet-detail-prev').setAttribute('aria-label',tr('السابق','Previous'));$('sheet-detail-next').setAttribute('aria-label',tr('التالي','Next'));
     }
-    $('sheet-detail-edit').textContent=tr('تعديل رقم الهوية','Edit ID');
   }
   function renderColumnOptions(){
-    const key=JSON.stringify([currentLang,allLabels(),formatting.hidden]);if(columnOptionsKey===key)return;columnOptionsKey=key;
-    window.WorkspaceViews.columnChoices($('sheet-column-options'),{showLabel:tr('إظهار الكل','Show all'),
+    const key=JSON.stringify([currentLang,allLabels(),formatting.hidden,formatting.widths]);if(columnOptionsKey===key)return;columnOptionsKey=key;
+    window.WorkspaceViews.columnChoices($('sheet-column-options'),{showLabel:tr('إظهار الكل','Show all'),widthLabel:tr('عرض العمود بالبكسل','Column width in pixels'),autoLabel:tr('تلقائي','Auto'),
       showAll:()=>{commitEdit();const next=D.format(formatting);next.hidden=[];change(cells,true,next);},
-      columns:labels.map((pair,column)=>({column,label:tr(...pair),checked:!formatting.hidden.includes(column),disabled:!formatting.hidden.includes(column)&&visibleCols().length===1})),
+      columns:labels.map((pair,column)=>({column,label:tr(...pair),width:formatting.widths?.[column],checked:!formatting.hidden.includes(column),disabled:!formatting.hidden.includes(column)&&visibleCols().length===1})),
+      setWidth:(column,width)=>{commitEdit();if(width===null)resetColumnWidth(column);else{setColumnWidth(column,width);saveColumnWidths();}},
       toggle:(column,visible)=>{commitEdit();const next=D.format(formatting);next.hidden=visible?next.hidden.filter(index=>index!==column):[...next.hidden,column];change(cells,true,next);}});
   }
   function adjustFont(delta){commitEdit();const next=D.format(formatting);next.fontSize=Math.max(10,Math.min(32,next.fontSize+delta));change(cells,true,next);}
