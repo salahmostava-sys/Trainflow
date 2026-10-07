@@ -162,7 +162,7 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),path
       assert.ok(rows.every((row,index)=>Math.abs(row.left-rows[0].left)<1&&(!index||row.top-rows[index-1].bottom>=9.5)),'Every field has readable vertical spacing in one column');
     }
     await page.screenshot({path:path.join(__dirname,'../artifacts/trainee-details-fit.png')});await page.setViewportSize({width:1500,height:1000});await page.screenshot({path:path.join(__dirname,'../artifacts/trainee-details-roomy.png')});
-    assert.match(details,/كي كود/);assert.match(details,/LIVE-SALES-AR/);assert.doesNotMatch(details,/LIVE-SALES-EN/);
+    assert.match(details,/Key Code/);assert.match(details,/LIVE-SALES-AR/);assert.doesNotMatch(details,/LIVE-SALES-EN/);
     assert.match(details,/محترف الأعمال المعتمد في المبيعات CBP-S/);
     assert.equal(await page.locator('#sheet-trainee-record .sheet-detail-category').textContent(),'فئة المراجعة','Shows the effective category, including overrides and display labels');
     assert.equal(await page.locator('#sheet-trainee-record .sheet-detail-category').evaluate(el=>el.parentElement.tagName),'DD','Category has its own field');

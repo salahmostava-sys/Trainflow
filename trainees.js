@@ -248,6 +248,7 @@ const Trainees=(()=>{
         case 'insert-below':insertRow('below');break;
         case 'insert-1000':addBulkRows(1000);break;
         case 'delete-row':deleteSelectedRows();break;
+        case 'row-height':await excelTools.rowHeight();break;
         case 'insert-column-left':editColumns('left');break;
         case 'insert-column-right':editColumns('right');break;
         case 'delete-column':editColumns('delete');break;
@@ -314,6 +315,7 @@ const Trainees=(()=>{
       'insert-above':tr('إدراج صف لأعلى','Insert row above'),'insert-below':tr('إدراج صف لأسفل','Insert row below'),
       'insert-1000':tr('إدراج 1000 صف في الأسفل','Insert 1,000 rows at bottom'),
       'delete-row':tr('حذف الصف','Delete row'),'clear-contents':tr('مسح المحتويات','Clear contents'),
+      'row-height':tr('ارتفاع الصف…','Row Height…'),
       'clear-format':tr('مسح التنسيق','Clear formatting'),
       'insert-column-left':tr('إضافة عمود على اليسار','Insert column left'),
       'insert-column-right':tr('إضافة عمود على اليمين','Insert column right'),
@@ -588,12 +590,9 @@ const Trainees=(()=>{
         const c=+header.dataset.col;if(!isSelected(0,c)||!isSelected(Math.max(0,view.length-1),c))selectColumn(c,e);
       }else if(th&&th.closest('thead')){
         selectAll();
-      }else if(th&&th.parentElement){
-        const firstTd=th.parentElement.querySelector('td[data-col]');
-        if(firstTd){
-          const vr=+firstTd.dataset.v;
-          if(!isSelected(vr,0)||!isSelected(vr,colCount()-1))selectRow(vr,e);
-        }
+      }else if(th&&th.dataset.rowv!==undefined){
+        const vr=+th.dataset.rowv;
+        if(!isSelected(vr,0)||!isSelected(vr,colCount()-1))selectRow(vr,e);
       }
       openContextMenu(e.clientX,e.clientY);
     });
@@ -924,7 +923,7 @@ const Trainees=(()=>{
     const duplicates=column===4&&duplicateIds.get(D.idKey(raw));if(duplicates)classes.push('sheet-id-duplicate');
     if(column===11&&['ناجح','راسب','لم يدخل'].includes(raw))classes.push(raw==='ناجح'?'sheet-result-pass':raw==='راسب'?'sheet-result-fail':'sheet-result-absent');
     return {raw,text:raw.startsWith('=')?String(D.formulaValue(cells,index,column,formulaCache)):raw,style,textStyle,className:classes.join(' '),align,
-      duplicateLabel:duplicates?tr('مكرر ×','Duplicate ×')+duplicates.length:undefined,
+      duplicateLabel:duplicates?duplicates.length+'×':undefined,
       resultLabel:tr('النتيجة للصف ','Result for row ')+(index+1),
       onResultChange:(selected,td)=>{const v=+td.dataset.v;extraSelections=[];cursor=anchor={r:v,c:11};change(D.paste(cells,[[selected]],index,11));},
       onResultPointerDown:(e,td)=>{e.stopPropagation();if(e.shiftKey||e.ctrlKey||e.metaKey){e.preventDefault();dragging=true;dragMoved=false;skipSelectionClick=true;selectCell(+td.dataset.v,11,e.shiftKey,e.ctrlKey||e.metaKey);}},
@@ -935,14 +934,14 @@ const Trainees=(()=>{
   function decorateCell(td,index,column){window.WorkspaceViews.refreshCell(td,cellView(index,column));}
   let traineeHoverTimer;
   const detailResult=value=>value==='ناجح'?'pass':value==='راسب'?'fail':value==='لم يدخل'?'absent':'';
-  const detailKeycode=keycode=>({label:tr('كي كود','Keycode'),value:keycode?.code||'',empty:tr('لا يوجد كي كود مطابق','No matching keycode'),className:'sheet-detail-keycode',direction:'ltr'});
+  const detailKeycode=keycode=>({label:'Key Code',value:keycode?.code||'',empty:tr('لا يوجد Key Code مطابق','No matching Key Code'),className:'sheet-detail-keycode',direction:'ltr'});
   function detailFields(row,includeKeycode=true){
     const fields=[];
     labels.forEach((pair,column)=>{
       if(column>=baseLabels.length&&!row[column]&&!formatting.headers[column])return;
       const keycode=column===7?D.courseKeycode(row[column],DEFAULT_KEYCODES):null;
       const field={label:column===7?tr('الدورة','Course'):tr(...pair),copyName:tr(...pair),value:row[column]||'',className:({7:'sheet-detail-course',9:'sheet-detail-username',10:'sheet-detail-password',11:'sheet-detail-result'})[column]||'',result:column===11?detailResult(row[column]):undefined};
-      if(column===7&&!keycode)field.note=tr('لا يوجد كي كود مطابق','No matching keycode');
+      if(column===7&&!keycode)field.note=tr('لا يوجد Key Code مطابق','No matching Key Code');
       fields.push(field);
       if(column===7&&keycode){
         if(includeKeycode)fields.push(detailKeycode(keycode));

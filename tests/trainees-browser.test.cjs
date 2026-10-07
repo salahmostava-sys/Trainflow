@@ -132,7 +132,7 @@ const {spawn}=require('node:child_process');
     assert.match(await page.locator('#sheet-duplicate-records').textContent(),/001234567/);
     await page.screenshot({path:path.join(__dirname,'../dist/trainees-duplicate-dialog.png'),fullPage:true});
     await page.keyboard.press('Escape');await page.locator('#sheet-duplicate-dialog').waitFor({state:'hidden'});
-    await page.locator('#sheet-search').fill('ثانٍ');assert.match(await cell(0,4).textContent(),/مكرر ×2/);
+    await page.locator('#sheet-search').fill('ثانٍ');assert.match(await cell(0,4).textContent(),/2×/);assert.doesNotMatch(await cell(0,4).textContent(),/مكرر/);
     await page.locator('#sheet-clear-filters').click();await page.locator('#sheet-duplicates-only').check();
     assert.equal(await page.locator('#sheet-grid tbody tr').count(),2);await page.locator('#sheet-duplicates-only').uncheck();
     await cell(1,4).dblclick();await page.keyboard.press('Control+a');await page.keyboard.insertText('9999999999');await page.keyboard.press('Tab');

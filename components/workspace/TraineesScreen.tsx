@@ -209,6 +209,12 @@ export function TraineesScreen({ active = false }: { active?: boolean }) {
             <span className="sheet-menu-label"></span>
           </span>
         </button>
+        <button type="button" data-action="row-height">
+          <span>
+            {"↕ "}
+            <span className="sheet-menu-label"></span>
+          </span>
+        </button>
         <button type="button" data-action="insert-column-left">
           <span>
             {"← "}

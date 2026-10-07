@@ -28,7 +28,7 @@
 .sheet-col-resizer{position:absolute;top:0;bottom:0;inset-inline-end:-5px;width:11px;cursor:col-resize;z-index:10;touch-action:none;user-select:none}
 .sheet-col-resizer::after{content:'';position:absolute;top:25%;bottom:25%;inset-inline-start:5px;width:1px;background:#94a3b8}
 .sheet-col-resizer:hover::after,.sheet-col-resizer.sheet-resizing::after{top:0;bottom:0;width:2px;background:var(--blue)}
-.sheet-row-resizer{position:absolute;bottom:0;inset-inline:0;height:9px;cursor:row-resize;z-index:3;touch-action:none;user-select:none}
+.sheet-row-resizer{position:absolute;bottom:0;inset-inline:0;height:6px;cursor:row-resize;z-index:3;touch-action:none;user-select:none}
 .sheet-row-resizer::after{content:'';position:absolute;bottom:0;inset-inline:25%;height:1px;background:#94a3b8}
 .sheet-row-resizer:hover::after{inset-inline:0;height:2px;background:var(--blue)}
 
@@ -208,8 +208,8 @@
 .sheet-trainee-dialog .sheet-detail-record button.sheet-get-exam-code:focus-visible{outline:2px solid var(--blue);outline-offset:3px}
 .sheet-trainee-dialog .sheet-detail-record button.sheet-get-exam-code[hidden]{display:none}
 #sheet-workspace .sheet-grid tbody tr,#sheet-workspace .sheet-grid tbody td,#sheet-workspace .sheet-grid tbody th.sheet-rownum{height:var(--custom-row-height,calc(var(--sheet-row-height,20px) * var(--sheet-zoom,1)))!important;min-height:var(--custom-row-height,calc(var(--sheet-row-height,20px) * var(--sheet-zoom,1)))!important;max-height:var(--custom-row-height,calc(var(--sheet-row-height,20px) * var(--sheet-zoom,1)))!important;line-height:1.2!important}
-#sheet-workspace .sheet-grid tbody th.sheet-rownum button{display:block;height:100%!important;min-height:0!important;line-height:1.2!important;border:0!important;box-sizing:border-box;font-size:calc(11px * var(--sheet-zoom,1))!important}
-@media(pointer:coarse){#sheet-workspace .sheet-grid tbody th.sheet-rownum button{min-height:44px!important}}
+#sheet-workspace .sheet-grid tbody th.sheet-rownum button{display:block;height:calc(var(--custom-row-height,calc(var(--sheet-row-height,20px) * var(--sheet-zoom,1))) - 1px)!important;min-height:0!important;line-height:1.2!important;border:0!important;box-sizing:border-box;font-size:calc(11px * var(--sheet-zoom,1))!important}
+@media(pointer:coarse){#sheet-workspace .sheet-grid tbody th.sheet-rownum button{min-height:44px!important}.sheet-row-resizer{height:9px}}
 #sheet-workspace .sheet-grid tbody td{padding:0 calc(6px * var(--sheet-zoom,1))!important}
 #panel-trainees #sheet-workspace .sheet-result-select{min-height:0!important;font-size:calc(11px * var(--sheet-zoom,1))!important;line-height:1.2!important}
 .sheet-zoom-tools{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-inline-start:auto;color:var(--text)}

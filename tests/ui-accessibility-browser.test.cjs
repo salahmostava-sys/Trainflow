@@ -235,8 +235,10 @@ test('numeric prompts expose a localized label and announce validation without l
   const page=await openWorkspace(t);
   await page.evaluate(()=>{window.__IBTA_TEST_AUTOMATION__=false;});
   for(const [label,error] of [['ارتفاع الصف','الحد الأدنى هو 20'],['Row Height','Minimum value is 20']]){
-    await page.locator('#sheet-cell-format-menu').click();
-    await page.locator('#sheet-cell-format-menu-row-height').click();
+    await page.locator('th[data-rowv="0"] button').click({button:'right'});
+    const action=page.locator('#sheet-context-menu [data-action="row-height"]');
+    assert.equal(await action.locator('.sheet-menu-label').textContent(),label+'…');
+    await action.click();
     const input=page.getByRole('spinbutton',{name:label,exact:true});
     await input.fill('10');await page.locator('#app-modal-confirm').click();
     assert.equal(await input.inputValue(),'10');assert.equal(await input.getAttribute('aria-invalid'),'true');
