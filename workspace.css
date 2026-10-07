@@ -756,6 +756,7 @@
   /* Spreadsheet-style grid: columns sized to their own content */
   .code-sheet{
     --voucher-columns:32px 38px 172px 148px 240px 220px 80px;
+    --voucher-fit-columns:minmax(24px,32fr) minmax(28px,38fr) minmax(0,172fr) minmax(0,148fr) minmax(0,240fr) minmax(0,220fr) minmax(80px,80fr);
     --voucher-min-width:930px;
     width:min(100%,var(--voucher-table-width,930px));
     border:1px solid var(--border); border-radius:var(--radius-md); overflow:hidden;
@@ -797,6 +798,12 @@
     border-bottom:1px solid var(--border); transition:background .1s; font-size:14px; min-height:32px;
   }
   .code-row:last-child{border-bottom:none;}
+  @media(min-width:701px){
+    .code-sheet-head,.code-list{min-width:0;width:100%;}
+    .code-sheet-head,.code-row{grid-template-columns:var(--voucher-fit-columns);}
+    .code-row .col-code,.code-row .col-date{white-space:normal;overflow-wrap:anywhere;}
+    .code-sheet-head>div:last-child .voucher-col-resizer{inset-inline-end:0;}
+  }
   .code-row:nth-child(even){background:#ffffff;}
   .code-row:hover{background:var(--blue-50);}
   .code-row .col-n{color:var(--muted); font-family:var(--mono); font-size:12.5px;}

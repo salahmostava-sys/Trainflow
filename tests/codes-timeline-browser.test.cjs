@@ -37,6 +37,7 @@ const {spawn}=require('node:child_process');
       const columns=await page.locator('#code-sheet-viewport').evaluate(el=>{const head=[...el.querySelector('.code-sheet-head').children],row=el.querySelector('.code-row[data-code="TODAY"]');return {head:head.map(cell=>({left:cell.getBoundingClientRect().left,width:cell.getBoundingClientRect().width})),row:[...row.children].map(cell=>({left:cell.getBoundingClientRect().left,width:cell.getBoundingClientRect().width})),width:row.getBoundingClientRect().width};});
       assert.deepEqual(columns.head,columns.row,'Header and body columns align in '+language);assert.ok(Math.abs(columns.row.reduce((n,c)=>n+c.width,0)-columns.width)<1,'All row width belongs to columns');assert.ok(columns.row[6].width<=90,'Actions keep a compact column');
       assert.ok(columns.row[4].width<=240&&columns.row[5].width<=220,'Trainee and notes columns avoid excess empty space');
+      assert.ok(await page.locator('#code-sheet-viewport').evaluate(el=>el.scrollWidth<=el.clientWidth),'Desktop vouchers do not need a bottom horizontal scrollbar in '+language);
       await page.mouse.move(0,0);const colors=await page.locator('.code-row[data-code="TODAY"]').evaluate(row=>[...row.querySelectorAll('.col-trainee-name input,.col-notes input')].map(el=>({text:getComputedStyle(el).color,placeholder:getComputedStyle(el,'::placeholder').color})));
       assert.ok(colors.every(c=>c.text==='rgb(255, 255, 255)'&&c.placeholder===c.text),'Used blue rows keep white names/notes/placeholders');
       const light=await page.locator('.code-row[data-code="OLD"] .col-notes input').evaluate(el=>getComputedStyle(el).color);assert.equal(light,'rgb(26, 26, 26)','Pale fills keep dark input text');
@@ -51,6 +52,14 @@ const {spawn}=require('node:child_process');
     await handle.dblclick();const fitted=await handle.evaluate(el=>el.parentElement.getBoundingClientRect().width);assert.ok(fitted<dragged,'Double click fits the column to its content');
     await page.reload();await setup('mixed');assert.equal(Math.round(await page.locator('.code-sheet-head').locator('.voucher-col-resizer').nth(2).evaluate(el=>el.parentElement.getBoundingClientRect().width)),Math.round(fitted),'Voucher width preference survives reload');
     const afterResize=await page.locator('#code-sheet-viewport').evaluate(el=>{const head=[...el.querySelector('.code-sheet-head').children],row=el.querySelector('.code-row');return {head:head.map(cell=>cell.getBoundingClientRect().width),row:[...row.children].map(cell=>cell.getBoundingClientRect().width)};});assert.deepEqual(afterResize.head,afterResize.row,'Resized header and voucher row remain aligned');
+    for(const width of [1024,800,1400]){
+      await page.setViewportSize({width,height:1000});await setup('mixed');
+      assert.ok(await page.locator('#code-sheet-viewport').evaluate(el=>el.scrollWidth<=el.clientWidth),'Resized columns fit the available desktop width at '+width);
+    }
+    const actionsHandle=page.locator('.code-sheet-head .voucher-col-resizer').nth(6);
+    await actionsHandle.focus();await page.keyboard.press('End');
+    assert.ok(await page.locator('#code-sheet-viewport').evaluate(el=>el.scrollWidth<=el.clientWidth),'A large saved action-column width still fits the table');
+    await actionsHandle.dblclick();
     await page.setViewportSize({width:390,height:844});await setup('mixed');g=await geometry();assert.ok(Math.abs(g.delta)<2,'mobile current day position');
     await setup('empty');assert.equal((await geometry()).scroll,0);
     assert.deepEqual(errors,[]);console.log('Codes timeline browser tests passed');

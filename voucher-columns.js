@@ -8,7 +8,12 @@ const VoucherColumns=(()=>{
   const clamp=(i,width)=>Math.max(i===6&&matchMedia('(max-width:700px)').matches?90:minimum[i],Math.min(maximum,Math.round(width)));
   const persist=()=>{try{localStorage.setItem(key,JSON.stringify(widths));}catch{}};
   function sync(){[...head.children].forEach((cell,i)=>{const control=cell.querySelector('.voucher-col-resizer');if(control)control.setAttribute('aria-valuenow',String(Math.round(cell.getBoundingClientRect().width)||widths[i]||defaults()[i]||180));});}
-  function apply(){const base=defaults(),tracks=base.map((value,i)=>widths[i]===undefined?value:clamp(i,widths[i])),tableWidth=tracks.reduce((total,width)=>total+width,0)+'px';sheet.style.setProperty('--voucher-columns',tracks.map(width=>width+'px').join(' '));sheet.style.setProperty('--voucher-min-width',tableWidth);sheet.style.setProperty('--voucher-table-width',tableWidth);sync();}
+  function apply(){
+    const base=defaults(),tracks=base.map((value,i)=>widths[i]===undefined?value:clamp(i,widths[i])),tableWidth=tracks.reduce((total,width)=>total+width,0)+'px';
+    sheet.style.setProperty('--voucher-columns',tracks.map(width=>width+'px').join(' '));
+    sheet.style.setProperty('--voucher-fit-columns',tracks.map((width,i)=>'minmax('+(i<2||i===6?minimum[i]:0)+'px,'+width+'fr)').join(' '));
+    sheet.style.setProperty('--voucher-min-width',tableWidth);sheet.style.setProperty('--voucher-table-width',tableWidth);sync();
+  }
   function set(i,width){widths[i]=clamp(i,width);apply();persist();}
   function autofit(i){if(i<2||i===6){set(i,defaults()[i]);return;}const canvas=document.createElement('canvas'),context=canvas.getContext('2d');let width=minimum[i];const measure=(el,value)=>{const css=getComputedStyle(el);context.font=css.font||css.fontSize+' '+css.fontFamily;width=Math.max(width,context.measureText(value).width+32);};measure(head.children[i],head.children[i].textContent.trim());document.querySelectorAll('#code-grid .code-row').forEach(row=>{const cell=row.children[i],input=cell.querySelector('input');measure(input||cell,input?input.value:cell.textContent);});set(i,width);}
   function translate(){
