@@ -2,19 +2,15 @@
 const Cloud = (() => {
   const SUPABASE_URL = 'https://xaeffreqwtozsgqajzpc.supabase.co';
   const KEY = 'sb_publishable_TB0SB3SNFP1ygpRvMoeSGg_s8o0mHeO';
-  async function serverFetch(input,init){
-    const url=new URL(typeof input==='string'?input:input.url);
-    if(url.origin===SUPABASE_URL&&url.pathname.startsWith('/rest/v1/')){
-      const target='/api/data/'+url.pathname.slice('/rest/v1/'.length)+url.search;
-      try{
-        const req=typeof input==='string'?target:new Request(new URL(target,location.origin),input);
-        const res=await fetch(req,init);
-        if(res.status!==404&&res.status!==405&&res.status!==502&&res.status!==503)return res;
-      }catch{}
-    }
-    return fetch(input,init);
+  async function serverFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+    const url = new URL(input instanceof Request ? input.url : String(input), location.origin);
+    if (url.origin !== SUPABASE_URL || !url.pathname.startsWith('/rest/v1/')) return fetch(input, init);
+    const target = new URL('/api/data/' + url.pathname.slice('/rest/v1/'.length) + url.search, location.origin);
+    // Fail closed: API errors must never retry a write through direct PostgREST.
+    return fetch(input instanceof Request ? new Request(target, input) : target, init);
   }
-  let client, rows = new Map(), stock = new Map(), config, user, role, busy = false, ready = false;
+  let client: CloudClient, config: { id: number; version: number; payload: CloudSettings }, user: CloudUser, role: CloudRole;
+  let rows = new Map<string, CloudCode>(), stock = new Map<string, number>(), busy = false, ready = false;
   let sessionDeadline=0,sessionTimer,endingSession=false,retainedDraftUser='';
   const dailyMessage=()=>currentLang==='ar'?'انتهت الجلسة الساعة 5 مساءً بتوقيت السعودية. سجّل الدخول من جديد.':'Your session ended at 5 PM Saudi time. Please sign in again.';
   async function endDailySession(){
@@ -41,11 +37,11 @@ const Cloud = (() => {
   let statusKey = '', statusArgs = [], statusError = false, authStatusKey = 'authAccessHelp', authStatusArgs = [];
   let profileStatusKey='',profileStatusError=false;
   const BACKGROUND_REFRESH_MS = 120000;
-  const $ = id => document.getElementById(id);
+  const $ = <T extends HTMLElement = HTMLInputElement>(id: string): T => document.getElementById(id) as T;
   const clone = value => JSON.parse(JSON.stringify(value));
   const same = (a,b) => JSON.stringify(a) === JSON.stringify(b);
   const accountName = () => typeof user?.user_metadata?.full_name==='string' ? user.user_metadata.full_name.trim() : '';
-  function validHttpsUrl(value,domain){
+  function validHttpsUrl(value: string,domain: string){
     try{
       const url=new URL(value);
       return url.protocol==='https:' && !url.username && !url.password &&
@@ -56,8 +52,8 @@ const Cloud = (() => {
     $('cloud-status').textContent = text;
     $('cloud-status').style.color = error ? '#b42318' : '';
   }
-  function translated(key, ...args){
-    const value=t(key);
+  function translated(key: string, ...args: unknown[]): string{
+    const value=t(key) as string | ((...values: unknown[]) => string);
     return typeof value==='function' ? value(...args) : value;
   }
   function errorText(error){
@@ -116,7 +112,7 @@ const Cloud = (() => {
     renderStatus();
     setAuthStatus(authStatusKey,...authStatusArgs);
   }
-  function lock(value){
+  function lock(value: boolean){
     busy = value;
     $('app').inert = value;
     $('cloud-tools').inert = value;
@@ -135,7 +131,7 @@ const Cloud = (() => {
       if(data.length<1000) return result;
     }
   }
-  function sortCategories(cats){
+  function sortCategories(cats: string[]){
     if(typeof window!=='undefined' && typeof window.sortCategories==='function') return window.sortCategories(cats);
     if(typeof globalThis!=='undefined' && typeof globalThis.sortCategories==='function') return globalThis.sortCategories(cats);
     if(!Array.isArray(cats))return [];
@@ -154,7 +150,7 @@ const Cloud = (() => {
   }
   function project(){
     const p=config.payload;
-    let prefs={};
+    let prefs: { uiLang?: string }={};
     try{prefs=JSON.parse(localStorage.getItem('ibta_ui_preferences') || '{}') || {};}catch{}
     state={usedCodes:{},codeUseTimes:{},codesByCategory:{},codeNotes:{},categoryLabels:clone(p.categoryLabels || {}),keycodeOverrides:clone(p.keycodeOverrides || {}),
       keycodeOrder:clone(p.keycodeOrder || {}),categoryOrder:sortCategories(p.categoryOrder),dateColors:clone(p.dateColors || {}),
@@ -190,7 +186,7 @@ const Cloud = (() => {
   }
   function decorate(){
     const admin=role==='admin';
-    document.querySelectorAll('.kc-remove-cat-btn,.kc-order-btn,.kc-col-cat select,.kc-drag-handle,.kc-add-exam,.add-box,#bulk-delete-btn,#reset-btn,.icon-btn.danger').forEach(el=>{
+    document.querySelectorAll<HTMLElement>('.kc-remove-cat-btn,.kc-order-btn,.kc-col-cat select,.kc-drag-handle,.kc-add-exam,.add-box,#bulk-delete-btn,#reset-btn,.icon-btn.danger').forEach(el=>{
       el.hidden=!admin;
     });
     $('admin-tools').hidden=!admin;
@@ -203,8 +199,8 @@ const Cloud = (() => {
     $('code-bulk-tools').hidden=!admin;
     $('reset-tools').hidden=!admin;
     $('inventory-admin').hidden=!admin;
-    document.querySelectorAll('.col-notes input').forEach(el=>{el.disabled=role==='copy_only';});
-    document.querySelectorAll('.code-unmark-btn').forEach(el=>{el.hidden=role==='copy_only';});
+    document.querySelectorAll<HTMLInputElement>('.col-notes input').forEach(el=>{el.disabled=role==='copy_only';});
+    document.querySelectorAll<HTMLElement>('.code-unmark-btn').forEach(el=>{el.hidden=role==='copy_only';});
     if(!admin && ($('settings-tab-data').getAttribute('aria-selected')==='true' || $('settings-tab-prometric').getAttribute('aria-selected')==='true' || $('settings-tab-inventory').getAttribute('aria-selected')==='true')) activateSettingsTab('profile');
     translateUi();
   }
@@ -251,7 +247,7 @@ const Cloud = (() => {
       fail(error); return false;
     }finally{lock(false);}
   }
-  async function copyCode(code){
+  async function copyCode(code: string){
     if(!ready || busy) return false;
     lock(true);
     try{
@@ -276,7 +272,7 @@ const Cloud = (() => {
       fail(error);return false;
     }finally{lock(false);}
   }
-  async function editCode(oldCode,newCode,category,usedOn,notes){
+  async function editCode(oldCode: string,newCode: string,category: string,usedOn: string,notes: string){
     if(!ready || busy || role!=='admin') return false;
     const prior=rows.get(oldCode);
     if(!prior) return false;
@@ -294,7 +290,7 @@ const Cloud = (() => {
     }catch(error){try{await load();}catch{}fail(error);return false;}
     finally{lock(false);}
   }
-  async function claimTraineeCode(category,targetOwner){
+  async function claimTraineeCode(category: string,targetOwner: string){
     if(!ready||busy)throw Error('BUSY');lock(true);
     try{
       await load();
@@ -323,7 +319,7 @@ const Cloud = (() => {
   }
   function hasDraftInput(){
     if(typeof Trainees!=='undefined' && Trainees.hasDraft())return true;
-    if($('edit-dialog')?.open) return true;
+    if($<HTMLDialogElement>('edit-dialog')?.open) return true;
     if($('profile-name').value!==accountName() ||
        $('profile-email').value!==(user?.email || '') ||
        $('profile-current-password').value || $('profile-new-password').value || $('profile-confirm-password').value) return true;
@@ -334,7 +330,7 @@ const Cloud = (() => {
         ['settings-zoom-link',p.links?.zoom || ''],['settings-prometric-link',p.links?.prometric || '']];
       if(shared.some(([id,value])=>$(id) && $(id).value!==value)) return true;
     }
-    return [...document.querySelectorAll('.kc-add-cat-input, .add-box textarea')]
+    return [...document.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>('.kc-add-cat-input, .add-box textarea')]
       .some(input => input.value.trim());
   }
   async function savePrometricSettings(event){
@@ -405,14 +401,15 @@ const Cloud = (() => {
     if(newPassword!==confirm){profileMessage('profilePasswordMismatch');return;}
     lock(true);
     try{
-      const {error}=await client.auth.updateUser({password:newPassword,current_password:current});
+      const attributes: CloudUserAttributes={password:newPassword,current_password:current};
+      const {error}=await client.auth.updateUser(attributes);
       if(error)throw error;
       $('profile-current-password').value='';$('profile-new-password').value='';$('profile-confirm-password').value='';
       profileMessage('profilePasswordSaved');
     }catch(error){profileMessage('error',error);}
     finally{lock(false);}
   }
-  async function enter(session){
+  async function enter(session: CloudSession | null){
     if(!session){ready=false;$('app').hidden=true;$('cloud-tools').hidden=true;$('sign-out').hidden=true;$('auth-box').hidden=false;return;}
     user=session.user;
     if(retainedDraftUser&&retainedDraftUser!==user.id){await client.auth.signOut({scope:'local'});throw Error(currentLang==='ar'?'ادخل بالحساب السابق لحفظ تعديلات الجدول أولًا.':'Sign in with the previous account to save your sheet edits first.');}
@@ -432,7 +429,7 @@ const Cloud = (() => {
     setStatus('dbConnected');
 
   }
-  async function authenticate(signup){
+  async function authenticate(signup: boolean){
     const email=$('auth-email').value.trim(),password=$('auth-password').value;
     setAuthStatus('authConnecting');
     $('auth-actions').inert=true;
@@ -522,7 +519,7 @@ const Cloud = (() => {
     }catch(error){fail(error);throw error;}
     finally{lock(false);}
   }
-  async function importCodes(category,codes){
+  async function importCodes(category: string,codes: string[]){
     if(!ready || role!=='admin')throw Error('IBTA_NOT_APPROVED');
     if(!Object.hasOwn(state.codesByCategory,category))throw Error('IBTA_INVALID_CATEGORY');
     lock(true);setStatus('saving');
@@ -533,7 +530,7 @@ const Cloud = (() => {
     }catch(error){fail(error);throw error;}
     finally{lock(false);}
   }
-  async function changeSupervisorStock(category,mode,quantity){
+  async function changeSupervisorStock(category: string,mode: 'opening' | 'replenishment' | 'correction',quantity: number){
     if(!ready || role!=='admin')throw Error('IBTA_NOT_APPROVED');
     if(!Object.hasOwn(state.codesByCategory,category) || !['opening','replenishment','correction'].includes(mode) ||
        !Number.isInteger(quantity) || quantity<0 || quantity>1000000)throw Error('IBTA_INVALID_STOCK_CHANGE');
@@ -545,12 +542,12 @@ const Cloud = (() => {
     }catch(error){fail(error);throw error;}
     finally{lock(false);}
   }
-  async function listMembers(){
+  async function listMembers(): Promise<CloudMember[]>{
     if(role!=='admin')return [];
     const {data,error}=await client.from('ibta_members').select('email,role,active,user_id').order('email');
     if(error)throw error;return data;
   }
-  async function updateMember(email,nextRole,active){
+  async function updateMember(email: string,nextRole: CloudRole,active: boolean){
     if(role!=='admin')throw Error('IBTA_NOT_APPROVED');
     if(!['copy_only','operator','admin'].includes(nextRole))throw Error('IBTA_INVALID_ROLE');
     const {error}=await client.from('ibta_members').update({role:nextRole,active}).eq('email',email);
@@ -599,17 +596,17 @@ const Cloud = (() => {
     }catch(e){setAuthStatus('error',e);}
     finally{$('startup-screen').hidden=true;if(!ready)$('auth-box').hidden=false;}
   }
-  async function readTrainees(owner){
+  async function readTrainees(owner: string): Promise<CloudSheet>{
     if(!ready)throw Error('AUTH_REQUIRED');
     const {data,error}=await client.from('ibta_trainee_sheets').select('cells,version,format').eq('owner_id',owner).maybeSingle();
     if(error)throw error;return data || {cells:[],version:0};
   }
-  async function saveTrainees(owner,cells,version,format){
+  async function saveTrainees(owner: string,cells: CloudCells,version: number,format: Record<string, CloudJson>): Promise<number>{
     if(!ready)throw Error('AUTH_REQUIRED');
     const {data,error}=await client.rpc('ibta_save_trainee_sheet_formatted',{target_owner:owner,new_cells:cells,expected_version:version,new_format:format});
     if(error)throw error;return data;
   }
-  async function assignCodes(owner,items){
+  async function assignCodes(owner: string | null,items: { code: string; version: number }[]){
     if(!ready||role!=='admin')throw Error('IBTA_NOT_APPROVED');
     const {error}=await client.rpc('ibta_assign_codes',{target_owner:owner,items});
     if(error)throw error;

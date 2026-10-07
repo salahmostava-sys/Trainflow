@@ -1325,4 +1325,5 @@ const Trainees=(()=>{
   function suspend(){prometricTools?.reset();certificateTools?.reset();setExpandedView(false);excelTools?.closeFiles();closeDuplicateDetails();closeContextMenu();$('sheet-find-dialog')?.close();clearTimeout(timer);}
   return {open,translate,hasDraft,flush,reset,suspend,savePosition};
 })();
+window.TRAINFLOW_ENGINE = Trainees;
 Trainees.translate();

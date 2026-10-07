@@ -1,4 +1,4 @@
-import { handleNextApi } from '../../../../server/worker.mjs';
+import { handleNextApi } from '../../../../server/api';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';

@@ -55,11 +55,12 @@ function installBoundaryFixtures(){
 }
 
 before(async()=>{
+  require('../tools/prepare-runtime.cjs');
   const assets=new Set(fs.readdirSync(root).filter(name=>/\.(js|css)$/.test(name)));
   server=http.createServer((req,res)=>{
     const name=new URL(req.url,'http://localhost').pathname.slice(1);
-    if(!name){
-      const html=fs.readFileSync(path.join(root,'trainflow.html'),'utf8').replace(/<script src="https:\/\/cdn.jsdelivr.net[^>]+><\/script>/,'<script src="supabase-test-sdk.js"></script>');
+    if(['','trainees','keycodes','prometric','vouchers','inventory','settings'].includes(name)){
+      const html=require('../tools/workspace-source.cjs').renderDocument().replace(/<script src="https:\/\/cdn.jsdelivr.net[^>]+><\/script>/,'<script src="supabase-test-sdk.js"></script>');
       res.setHeader('Content-Type','text/html; charset=utf-8');res.end(html);
     }else if(name==='supabase-test-sdk.js'){
       res.setHeader('Content-Type','text/javascript');res.end('('+installBoundaryFixtures.toString()+')();');
@@ -84,9 +85,10 @@ async function openWorkspace(t,options={}){
   return page;
 }
 async function navigate(page,panel){
-  const button=page.locator('nav.tabs button[data-tab="'+panel+'"]');
+  const button=page.locator('nav.tabs [data-tab][data-tab="'+panel+'"]');
   if(!await button.isVisible())await page.locator('#sidebar-toggle').click();
   await button.click();
+  await page.waitForFunction(()=>!document.getElementById('app').hidden&&!document.getElementById('app').classList.contains('workspace-restoring'));
 }
 
 test('keyboard copying claims a voucher once and leaves selection controls independent',{timeout:30000},async t=>{

@@ -110,7 +110,7 @@ els['inventory-message-language']=new Element();
 ctx.atob=atob;
 vm.runInContext(fs.readFileSync(path.join(__dirname,'../session-policy.js'),'utf8'),ctx);
 vm.runInContext(fs.readFileSync(path.join(__dirname,'../cloud.js'),'utf8'),ctx);
-const html=fs.readFileSync(path.join(__dirname,'../trainflow.html'),'utf8');
+const html=require('../tools/workspace-source.cjs').renderDocument({inlineRuntime:true});
 assert.match(html,/family=Cairo/);
 assert.match(html,/--ui-font:'Cairo'/);
 assert.match(html,/#auth-box\{font-family:var\(--ui-font\)/);

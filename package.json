@@ -4,14 +4,14 @@
   "private": true,
   "scripts": {
     "build": "node tools/build-site.cjs --next && next build",
-    "test": "node tests/cloud.test.cjs && node tests/trainees.test.cjs && node tests/trainees-xlsx.test.cjs && node tests/certificate-name.test.cjs && node tests/trainees-formulas.test.cjs && node tests/trainees-performance.test.cjs && node tests/sheet-delete.test.cjs && node tests/session-policy.test.cjs && node tests/google-reports.test.cjs && node tests/server.test.mjs && node tests/prometric.test.cjs && node tests/prometric-session.test.cjs && node tests/selection-export.test.cjs",
+    "test": "node tools/prepare-runtime.cjs && node tests/cloud.test.cjs && node tests/trainees.test.cjs && node tests/trainees-xlsx.test.cjs && node tests/certificate-name.test.cjs && node tests/trainees-formulas.test.cjs && node tests/trainees-performance.test.cjs && node tests/sheet-delete.test.cjs && node tests/session-policy.test.cjs && node tests/google-reports.test.cjs && node tests/server.test.mjs && node tests/prometric.test.cjs && node tests/prometric-session.test.cjs && node tests/selection-export.test.cjs",
     "test:browser": "node tests/trainees-browser.test.cjs && node tests/trainees-excel-browser.test.cjs && node tests/trainees-expanded-browser.test.cjs && node tests/codes-timeline-browser.test.cjs && node tests/workspace-position-browser.test.cjs && node tests/sheet-enhancements-browser.test.cjs && node tests/trainees-tools-browser.test.cjs && node tests/trainees-performance-browser.test.cjs && node tests/trainees-xlsx-browser.test.cjs && node tests/certificate-name-browser.test.cjs && node tests/daily-reports-browser.test.cjs && node tests/prometric-flow-browser.test.cjs && node tests/selection-export-browser.test.cjs",
     "dev": "node tools/build-site.cjs --next && next dev",
     "start": "next start",
     "lint": "next lint",
     "build:cloudflare": "node tools/build-site.cjs",
     "test:next": "node tests/next-workspace-browser.test.cjs",
-    "test:ui": "node tests/ui-accessibility-browser.test.cjs"
+    "test:ui": "node tools/prepare-runtime.cjs && node tests/ui-accessibility-browser.test.cjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.49.1",

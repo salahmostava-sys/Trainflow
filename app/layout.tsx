@@ -1,7 +1,6 @@
 import './globals.css';
 import Script from 'next/script';
-import ClassicWorkspace from '@/components/ClassicWorkspace';
-import { classicLinks, classicStyles, languageBootstrap } from '@/generated/classic-ui';
+import { languageBootstrap } from '@/generated/workspace-assets';
 
 export default function RootLayout({
   children,
@@ -13,11 +12,13 @@ export default function RootLayout({
       <head>
         <title id="doc-title">TrainFlow</title>
         <Script id="trainflow-initial-language" strategy="beforeInteractive">{languageBootstrap}</Script>
-        {classicLinks.map((attributes, index) => <link key={index} {...attributes} />)}
-        <style id="trainflow-classic-styles" dangerouslySetInnerHTML={{ __html: classicStyles }} />
+        <link rel="stylesheet" href="/workspace/workspace.css" />
+        <link rel="stylesheet" href="/workspace/trainees.css" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" />
       </head>
       <body>
-        <ClassicWorkspace />
         {children}
       </body>
     </html>
