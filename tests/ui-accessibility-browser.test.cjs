@@ -70,10 +70,62 @@ test('keyboard copying claims a voucher once and leaves selection controls indep
   }
 });
 
+test('saving a voucher name preserves the next field focus and draft after one click',{timeout:30000},async t=>{
+  const page=await openWorkspace(t);await navigate(page,'codes');
+  await page.evaluate(async()=>{
+    uiTestDatabase.codes.push({...uiTestDatabase.codes[0],code:'SECOND-VOUCHER'});await Cloud.refresh();
+    window.uiTestNameSaveGate=new Promise(resolve=>{window.uiReleaseNameSave=resolve;});
+  });
+  const first=page.getByRole('textbox',{name:'اسم المتدرب للفاوتشر UI-VOUCHER',exact:true});
+  const second=page.getByRole('textbox',{name:'اسم المتدرب للفاوتشر SECOND-VOUCHER',exact:true});
+  await first.fill('FIRST TRAINEE');await second.click();
+  assert.equal(await second.evaluate(el=>el===document.activeElement),true,'One click focuses the next name while the previous save is pending');
+  assert.equal(await page.locator('#app').evaluate(el=>el.inert),false);
+  await page.keyboard.insertText('SECOND DRAFT');
+  await page.evaluate(()=>{uiReleaseNameSave();window.uiTestNameSaveGate=null;});
+  await page.waitForFunction(()=>state.voucherNames['UI-VOUCHER']==='FIRST TRAINEE');
+  assert.equal(await second.evaluate(el=>el===document.activeElement),true);assert.equal(await second.inputValue(),'SECOND DRAFT','A save cannot replace another field draft');
+  await first.click();await page.waitForFunction(()=>state.voucherNames['SECOND-VOUCHER']==='SECOND DRAFT');
+  assert.equal(await first.evaluate(el=>el===document.activeElement),true);
+  await first.fill('EDITED FIRST');await page.keyboard.press('Tab');
+  await page.waitForFunction(()=>state.voucherNames['UI-VOUCHER']==='EDITED FIRST');
+  assert.equal(await page.getByRole('textbox',{name:'ملاحظات الكود UI-VOUCHER',exact:true}).evaluate(el=>el===document.activeElement),true,'Tab focus survives saving');
+  await page.evaluate(()=>{uiTestDatabase.nameSaveError='CONFLICT: reload required';});
+  await first.fill('REJECTED NAME');await second.click();await page.keyboard.insertText(' STILL EDITING');
+  await page.waitForFunction(()=>document.getElementById('cloud-status').textContent===t('conflict'));
+  assert.equal(await first.inputValue(),'EDITED FIRST');assert.equal(await second.evaluate(el=>el===document.activeElement),true);assert.equal(await second.inputValue(),'SECOND DRAFT STILL EDITING');
+  assert.equal(await page.evaluate(()=>uiTestDatabase.codes[0].trainee_name),'EDITED FIRST');assert.deepEqual(await page.evaluate(()=>uiTestCopies),[],'Editing names never claims or copies a voucher');
+});
+
 test.skip('keyboard exam ordering persists and cannot move past either boundary (kc-exam-order buttons removed per user request)',{timeout:30000},async t=>{
   const page=await openWorkspace(t);await navigate(page,'keycodes');
   const rows=page.locator('.kc-row');
   assert.equal(await rows.first().locator('.kc-exam-order').first().isDisabled(),true);
+});
+
+test('report destinations follow the signed-in account on a fresh browser and isolate other accounts',{timeout:30000},async t=>{
+  const page=await openWorkspace(t);await navigate(page,'settings');await page.locator('#settings-tab-reports').click();
+  const links={operations:'https://docs.google.com/spreadsheets/d/account-operations/edit',success:'https://docs.google.com/spreadsheets/d/account-success/edit',bridge:'https://script.google.com/macros/s/account-connector/exec'};
+  for(const [name,link]of Object.entries(links))await page.locator('#settings-report-'+name).fill(link);
+  await page.locator('#settings-report-save').click();await page.waitForFunction(()=>document.getElementById('settings-report-status').textContent.includes('تم حفظ'));
+  const database=await page.evaluate(()=>uiTestDatabase);assert.deepEqual(database.accountMetadata['ui-admin'].report_destinations,links);
+  for(const variant of ['same-account','other-account','legacy-browser']){
+    const otherAccount=variant==='other-account',legacyBrowser=variant==='legacy-browser';
+    const context=await browser.newContext({viewport:{width:1440,height:1000}});t.after(()=>context.close());
+    await context.route('**/*',route=>new URL(route.request().url()).origin===origin?route.continue():route.abort());
+    await context.addInitScript(({database,otherAccount,legacyBrowser,links})=>{
+      if(otherAccount){window.uiTestUser={id:'other-user',email:'other@example.invalid',user_metadata:{}};database.members.push({user_id:'other-user',email:'other@example.invalid',active:true,role:'admin'});}
+      if(legacyBrowser){delete database.accountMetadata['ui-admin'].report_destinations;localStorage.setItem('ibta_report_destinations',JSON.stringify(links));}
+      sessionStorage.setItem('test-sdk-database',JSON.stringify(database));
+    },{database,otherAccount,legacyBrowser,links});
+    const remote=await context.newPage();await remote.goto(origin+'/settings');await remote.locator('#settings-tab-reports').click();
+    if(legacyBrowser)await remote.waitForFunction(()=>uiTestDatabase.accountMetadata?.['ui-admin']?.report_destinations?.operations?.includes('account-operations'));
+    for(const [name,link]of Object.entries(links))assert.equal(await remote.locator('#settings-report-'+name).inputValue(),otherAccount?'':link,'Account settings load without local browser preferences');
+    assert.equal(await remote.evaluate(()=>localStorage.getItem('ibta_report_destinations')),null);
+  }
+  await page.evaluate(()=>{uiTestDatabase.authSaveError='NETWORK';});await page.locator('#settings-report-operations').fill('https://docs.google.com/spreadsheets/d/unsaved/edit');await page.locator('#settings-report-save').click();
+  await page.waitForFunction(()=>document.getElementById('settings-report-status').textContent.includes('تعذر'));
+  assert.equal(await page.locator('#settings-report-operations').inputValue(),'https://docs.google.com/spreadsheets/d/unsaved/edit');assert.deepEqual(await page.evaluate(()=>Cloud.reportDestinations()),links,'Failed saves preserve the last account configuration');
 });
 
 test('settings side tabs follow vertical keyboard navigation and adapt on mobile',{timeout:30000},async t=>{
@@ -136,6 +188,9 @@ test('compact operational pages remove empty width and keep inventory copying re
   await page.mouse.up();
   await page.waitForFunction(()=>uiTestCopies.length===1);
   assert.equal(await page.evaluate(()=>uiTestCopies[0]),await page.locator('#inventory-message').innerText(),'Copying retains the full inventory message');
+  await navigate(page,'trainees');await page.waitForFunction(()=>document.getElementById('sheet-status').textContent==='تم الحفظ');await page.locator('#sheet-prometric-open').click();
+  const registration=page.locator('#sheet-prometric-dialog');assert.ok((await registration.boundingBox()).width<=760,'Registration dialog has a compact desktop width');
+  await page.setViewportSize({width:390,height:844});assert.ok(await registration.evaluate(el=>{const box=el.getBoundingClientRect();return box.left>=0&&box.right<=innerWidth;}),'Registration dialog fits mobile');await page.keyboard.press('Escape');
 });
 
 test('language switching translates saved and failed status without discarding the sheet draft',{timeout:30000},async t=>{

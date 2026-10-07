@@ -53,10 +53,14 @@ export interface VoucherView {
 }
 function VoucherName({ voucher }: { voucher: VoucherView }) {
   const [busy, setBusy] = React.useState(false);
+  const savedName = React.useRef(voucher.name);
   return (
     <div
       className="col-trainee-name"
-      onClick={(event) => event.stopPropagation()}
+      onClick={(event) => {
+        event.stopPropagation();
+        event.currentTarget.querySelector("input")!.focus();
+      }}
       onPointerDown={(event) => event.stopPropagation()}
     >
       <input
@@ -66,15 +70,20 @@ function VoucherName({ voucher }: { voucher: VoucherView }) {
         defaultValue={voucher.name}
         placeholder={voucher.labels.namePlaceholder}
         aria-label={voucher.labels.name}
-        disabled={busy || voucher.readOnlyName}
+        disabled={voucher.readOnlyName}
+        readOnly={busy}
+        aria-busy={busy}
         onBlur={async (event) => {
           const input = event.currentTarget,
-            previous = voucher.name;
-          if (input.value.trim() === previous) return;
+            previous = savedName.current,
+            name = input.value.trim();
+          if (busy || name === previous) return;
           setBusy(true);
           try {
-            if (!(await voucher.saveName(input.value.trim())))
-              input.value = previous;
+            if (await voucher.saveName(name)) {
+              savedName.current = name;
+              input.value = name;
+            } else input.value = previous;
           } finally {
             setBusy(false);
           }

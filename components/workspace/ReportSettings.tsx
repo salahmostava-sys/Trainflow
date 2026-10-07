@@ -14,11 +14,11 @@ export function ReportSettings({
           {"ربط تقارير Google Sheets"}
         </h3>
         <p
-          data-ar="أضف روابط التقارير ورابط أداة الربط، ثم احفظ. الروابط محفوظة على هذا المتصفح."
-          data-en="Add the report links and connector link, then save. Links are saved in this browser."
+          data-ar="أضف روابط التقارير ورابط أداة الربط، ثم احفظ. الروابط محفوظة مع حسابك وتظهر على أي جهاز تسجّل الدخول منه."
+          data-en="Add the report links and connector link, then save. Links are saved with your account and available on any device you sign in from."
         >
           {
-            "أضف روابط التقارير ورابط أداة الربط، ثم احفظ. الروابط محفوظة على هذا المتصفح."
+            "أضف روابط التقارير ورابط أداة الربط، ثم احفظ. الروابط محفوظة مع حسابك وتظهر على أي جهاز تسجّل الدخول منه."
           }
         </p>
         <form>

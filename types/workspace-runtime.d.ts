@@ -22,6 +22,7 @@ import type {
 } from "@/lib/workspace-types";
 
 declare global {
+  var TraineeReports: { translate(): void };
   type WorkspacePanel = Panel;
   type CloudUser = User;
   type CloudSession = Session;

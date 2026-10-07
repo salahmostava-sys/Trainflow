@@ -638,30 +638,65 @@ const Cloud = (() => {
       lock(false);
     }
   }
+  async function showVoucherNameError(code: string, editingUser: string, saveError) {
+    if (!ready || user.id !== editingUser) return;
+    if (/CONFLICT/.test(saveError.message || "")) {
+      try {
+        const latest = (await allRows()).find((row) => row.code === code);
+        if (ready && user.id === editingUser && latest) {
+          rows.set(code, latest);
+          state.voucherNames[code] = latest.trainee_name || "";
+        }
+      } catch (refreshError) {
+        fail(refreshError);
+        return;
+      }
+    }
+    fail(saveError);
+  }
   async function saveVoucherName(code: string, name: string) {
     if (!ready || busy || !["admin", "operator"].includes(role)) return false;
     const prior = rows.get(code);
     if (!prior || typeof name !== "string" || name.length > 200) return false;
-    lock(true);
+    const editingUser = user.id;
     setStatus("saving");
     try {
-      const { error } = await client.rpc("ibta_set_voucher_trainee_name", {
-        target_code: code,
-        expected_version: prior.version,
-        trainee_name: name.trim(),
-      });
+      const { data: version, error } = await client.rpc(
+        "ibta_set_voucher_trainee_name",
+        { target_code: code, expected_version: prior.version, trainee_name: name.trim() },
+      );
       if (error) throw error;
-      await load();
+      if (!ready || user.id !== editingUser) return false;
+      const current = rows.get(code);
+      if (current && current.version <= version) {
+        rows.set(code, { ...current, trainee_name: name.trim(), version });
+        state.voucherNames[code] = name.trim();
+      }
       setStatus("saved");
       return true;
     } catch (error) {
-      try {
-        await load();
-      } catch {}
-      fail(error);
+      await showVoucherNameError(code, editingUser, error);
       return false;
-    } finally {
-      lock(false);
+    }
+  }
+  async function saveReportDestinations(destinations: {
+    operations: string;
+    success: string;
+    bridge: string;
+  }) {
+    if (!ready) return false;
+    const editingUser = user.id;
+    try {
+      const { data, error } = await client.auth.updateUser({
+        data: { report_destinations: destinations },
+      });
+      if (error) throw error;
+      if (!ready || user.id !== editingUser) return false;
+      user = data.user || user;
+      return true;
+    } catch (error) {
+      if (ready && user.id === editingUser) fail(error);
+      return false;
     }
   }
   async function refresh(background = false) {
@@ -885,6 +920,7 @@ const Cloud = (() => {
     role = member.data.role;
     await load();
     ready = true;
+    if (typeof TraineeReports !== "undefined") TraineeReports.translate();
     clearTimeout(sessionTimer);
     sessionTimer = setTimeout(
       () => {
@@ -1415,6 +1451,8 @@ const Cloud = (() => {
     copyCode,
     claimTraineeCode,
     saveVoucherName,
+    saveReportDestinations,
+    reportDestinations: () => ready ? user?.user_metadata?.report_destinations || null : undefined,
     editCode,
     decorate,
     refresh,

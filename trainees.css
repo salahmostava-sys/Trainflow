@@ -406,7 +406,7 @@
 .sheet-file-dialog input[type=file],.sheet-file-dialog select{font:inherit;padding:8px;border:1px solid #d7dfe8;border-radius:6px;background:#fff;max-width:100%;box-sizing:border-box}
 .sheet-file-dialog .sheet-file-checkbox{flex-direction:row;align-items:center}
 .sheet-file-dialog [hidden]{display:none!important}
-.sheet-prometric-dialog{width:min(950px,calc(100vw - 24px))}
+.sheet-prometric-dialog{width:min(760px,calc(100vw - 24px))}
 .sheet-prometric-dialog p{font-size:13px;line-height:1.65}
 .sheet-prometric-dialog .sheet-file-preview td{max-width:320px;white-space:normal;overflow-wrap:anywhere}
 .sheet-prometric-setup{border:1px solid var(--border);padding:12px;border-radius:8px;background:#fff}
