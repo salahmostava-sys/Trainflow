@@ -92,7 +92,12 @@ if(window.history)window.history.scrollRestoration='manual';
 
   #app.wrap{max-width:1600px;padding-left:16px;padding-right:264px;}
   #app.sheet-wide{max-width:none;width:100%;margin:0;box-sizing:border-box;padding-left:20px;padding-right:260px;}
-  #app:not(.sheet-wide)>section.panel{max-width:920px;margin-inline:auto;}
+  #workspace-main > section.panel:not(#panel-trainees){
+    width: 100%;
+    max-width: 1200px;
+    margin-inline: auto;
+    box-sizing: border-box;
+  }
   html[data-sidebar-size="compact"] #app.wrap{padding-right:88px;}
   html[data-sidebar-size="compact"] #app.sheet-wide{padding-right:80px;}
   html[data-sidebar="closed"] #app.wrap{padding-right:16px;}
@@ -447,7 +452,7 @@ if(window.history)window.history.scrollRestoration='manual';
   .ops-list-row span{flex:1;min-width:180px;overflow-wrap:anywhere;}
   .ops-list-row select{min-width:135px;}
   .inventory-intro{font-size:14px;color:var(--muted);line-height:1.7;margin:0 0 16px;}
-  #panel-inventory .ops-card{margin-top:0;max-width:760px;}
+  #panel-inventory .ops-card{margin-top:0;max-width:100%;width:100%;}
   .inventory-message{white-space:pre-line;line-height:1.85;font-size:14px;margin:14px 0;padding:16px 18px;border:1px solid var(--border);border-radius:12px;background:rgba(37,99,235,.08);overflow-wrap:anywhere;}
   #inventory-auto-settings fieldset{min-width:0;border:1px solid var(--border);border-radius:12px;padding:14px;margin:14px 0;}
   #inventory-auto-settings legend{padding:0 6px;font-weight:700;font-size:14px;}
@@ -629,18 +634,29 @@ if(window.history)window.history.scrollRestoration='manual';
   @media(max-width:600px){.kc-add-exam-fields{grid-template-columns:repeat(2,minmax(0,1fr));}}
 
   /* ---- Prometric ---- */
-  #panel-prometric{max-width:560px;}
+  #panel-prometric{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:16px;
+    align-items:stretch;
+  }
+  #panel-prometric.active{
+    display:grid;
+  }
   .cred-card{
     background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg);
-    padding:14px 18px; margin-bottom:12px; cursor:pointer; transition:border-color .15s, box-shadow .15s;
-    box-shadow:var(--shadow);
+    padding:16px 20px; margin-bottom:0; cursor:pointer; transition:border-color .15s, box-shadow .15s;
+    box-shadow:var(--shadow); display:flex; flex-direction:column; justify-content:center; min-height:86px;
+    text-align:start; box-sizing:border-box;
+  }
+  @media(max-width:768px){
+    #panel-prometric{grid-template-columns:1fr;}
   }
   .cred-card:hover{border-color:var(--blue);}
   .cred-label{font-size:13px; color:var(--muted); margin-bottom:5px; font-weight:600;}
   .cred-value,.resource-value{font-family:inherit;font-size:16px;font-weight:600;line-height:1.5;word-break:break-all;direction:ltr;unicode-bidi:plaintext;text-align:start;}
   .resource-card{cursor:default;}
   .resource-card:hover{border-color:var(--border);}
-  .resource-value{min-width:0;flex:1 1 250px;}
+  .resource-value{min-width:0;flex:none;}
   #prometric-login-card:focus-visible{outline:3px solid var(--blue-100);outline-offset:2px;}
   #zoom-card{display:block;color:var(--text);text-decoration:none;}
   #zoom-card[href]{cursor:pointer;}
@@ -1078,6 +1094,10 @@ if(window.history)window.history.scrollRestoration='manual';
       <div class="cred-label" data-i18n="prometricLoginLink">Prometric login link</div>
       <div class="resource-value" id="prometric-link-val"></div>
     </div>
+    <a class="cred-card resource-card" id="zoom-card" target="_blank" rel="noopener noreferrer">
+      <div class="cred-label" data-i18n="zoomMeeting">Zoom meeting</div>
+      <div class="resource-value" id="zoom-link-val"></div>
+    </a>
     <button class="cred-card" id="cred-account" type="button">
       <span class="cred-label" data-i18n="prometricAccount">Prometric Account</span>
       <span class="cred-value" id="cred-account-val"></span>
@@ -1086,10 +1106,6 @@ if(window.history)window.history.scrollRestoration='manual';
       <span class="cred-label" data-i18n="prometricPassword">Prometric Password</span>
       <span class="cred-value" id="cred-password-val"></span>
     </button>
-    <a class="cred-card resource-card" id="zoom-card" target="_blank" rel="noopener noreferrer">
-      <div class="cred-label" data-i18n="zoomMeeting">Zoom meeting</div>
-      <div class="resource-value" id="zoom-link-val"></div>
-    </a>
   </section>
 
   <!-- TAB 3: CODES -->
@@ -1373,7 +1389,7 @@ if(window.history)window.history.scrollRestoration='manual';
     <!-- PANE 5: EXTENSIONS -->
     <div class="settings-pane" id="settings-pane-extensions" role="tabpanel" aria-labelledby="settings-tab-extensions" hidden>
       <p class="settings-desc" data-i18n="extensionsIntro">Download the Chrome extensions here, then install them once in the same Chrome profile you use for this program.</p>
-      <div class="settings-extensions-grid" style="grid-template-columns:1fr;max-width:580px;">
+      <div class="settings-extensions-grid" style="grid-template-columns:1fr;">
         <section class="settings-card">
           <div class="settings-card-header">
             <div class="settings-card-icon">
