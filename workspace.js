@@ -1077,6 +1077,7 @@ function renderCodeTabs(){
       activeCategory=category;selectedCodes.clear();codeScrolledToTop=false;
       const label=document.getElementById('code-scroll-label');if(label)label.textContent=t('codeScrollToTop');
       document.getElementById('code-scroll-top-btn')?.classList.remove('active');renderCodeTabs();renderCodeGrid();
+      window.TRAINFLOW_PANEL_CHANGED?.();
     }
   });
 }

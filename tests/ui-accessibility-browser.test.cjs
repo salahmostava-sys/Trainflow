@@ -136,6 +136,16 @@ test('a failed sheet save blocks page navigation and keeps the draft editable',{
   await navigate(page,'prometric');
   await navigate(page,'trainees');
   assert.equal(await page.locator('td[data-v="0"][data-col="0"]').textContent(),'SAVE-BEFORE-NAVIGATION');
+  await page.evaluate(()=>{uiTestDatabase.saveError='CONFLICT';});
+  await cell.click();await page.keyboard.press('F2');await page.keyboard.press('Control+a');await page.keyboard.insertText('UNSAVED-HISTORY-DRAFT');await page.keyboard.press('Tab');
+  await page.goBack();
+  await page.waitForFunction(()=>location.pathname==='/trainees'&&document.getElementById('sheet-status').dataset.error==='true');
+  assert.equal(await page.locator('#panel-trainees').isVisible(),true,'Failed saves cancel Back and restore the current URL');
+  assert.equal(await cell.textContent(),'UNSAVED-HISTORY-DRAFT');
+  await page.evaluate(()=>{uiTestDatabase.saveError='';});await page.locator('#sheet-save').click();await page.waitForFunction(()=>!Trainees.hasDraft());
+  await page.goBack();await page.waitForURL('**/prometric');await page.waitForFunction(()=>document.getElementById('panel-prometric').classList.contains('active'));
+  await page.goForward();await page.waitForURL('**/trainees');await page.waitForFunction(()=>document.getElementById('panel-trainees').classList.contains('active'));
+  assert.equal(await cell.textContent(),'UNSAVED-HISTORY-DRAFT','The history stack stays usable after recovering from a failed save');
 });
 
 test('mobile sheets start with compact tools and retain an explicit expansion choice',{timeout:30000},async t=>{

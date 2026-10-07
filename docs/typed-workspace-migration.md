@@ -7,7 +7,7 @@ This change implements the supplied review against commit `93f5612`, retaining t
 - `components/workspace/*.tsx` render login, navigation, settings and the six screen hosts. Next pages render these components with their initial panel. `trainflow.html` and the raw classic HTML injection are removed.
 - `workspace.css` contains shared styles. `workspace.js` retains existing shared commands and translations for gradual conversion.
 - `client/cloud.ts` owns the typed cloud boundary; `server/api.ts` owns the typed API. `lib/workspace-types.ts` describes roles, code records, worksheets, cells, settings and the grid engine interface.
-- `client/navigation.ts` saves drafts before loading a new page document. Failed saves retain the current screen and editable data. Settings tabs use history inside their page. Grid selection/position continues to use the existing per-owner and per-sheet preferences.
+- `client/navigation.ts` saves drafts before switching panels inside the mounted workspace. Browser history retains page/settings/category URLs without reloading runtime scripts. Failed saves retain the current screen and editable data. Grid selection/position continues to use the existing per-owner and per-sheet preferences.
 - Builds compile browser assets and generate script metadata. Static/synthetic preview HTML is rendered from TSX, rather than used as maintained application source. `cloud.js`, `navigation.js`, generated metadata and packaged assets are ignored outputs.
 
 The large grid, Excel, registration and report engines remain JavaScript behind the typed boundary. This is the requested gradual migration, with their existing tests and DOM contracts preserved.
@@ -66,3 +66,11 @@ Next builds derive the script/worker/connector descriptors directly from the sou
 Cloud regression tests now use Happy DOM and the actual React components, preserving external SDK/database/clipboard fixtures. Existing behavioral assertions remain; the font check examines styles and font resources so existing Excel font choices do not become a false failure. The production-page regression verifies the retired HTML URL and compatibility redirect.
 
 Completion validation on 7 October 2026 passed: `npm test`, `npx tsc --noEmit --pretty false`, `npm run build`, `npm run test:next`, `npm run test:ui` (9 passed, 1 existing skip), all 15 `npm run test:browser` suite files, frozen lockfile validation, and `git diff --check`. Desktop/mobile screenshots were inspected. Browser regressions verify saved custom row heights, result alignment, typing a complete voucher name before saving on blur, audit-list error recovery, and the existing spreadsheet/Excel/report/Prometric behavior. No database migration or live account registration was performed; Prometric password defaults and generation are unchanged.
+
+## Navigation performance correction
+
+The earlier page adapter used `location.assign` for panel changes, which downloaded a document and reinitialized the SDK, scripts and data on every switch. Panel changes now reuse the mounted workspace and update browser history. Saving still finishes before leaving a sheet; failed saves also reverse an attempted Back/Forward transition without discarding the draft. Voucher and inventory views retain their existing data refresh, while direct URLs and browser refresh use the Next routes.
+
+A local production-build measurement with synthetic data recorded four panel changes: before, 4 document requests and 76 workspace script requests, taking 580–1518 ms each; after, no document or workspace script requests, taking 108–200 ms each. These are local fixture measurements, not production timing guarantees. The browser regression asserts that panel/history navigation makes no document/runtime-script requests and retains the mounted sheet; it also verifies failed-save history recovery.
+
+Correction validation passed on 7 October 2026: `npm test`, `npx tsc --noEmit --pretty false`, `npm run build`, `npm run test:next`, `npm run test:ui` (9 passed, 1 existing skip), and `git diff --check`. This focused change does not alter database storage, account permissions or Prometric password behavior.

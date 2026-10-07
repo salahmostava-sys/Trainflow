@@ -87,6 +87,9 @@ declare global {
   function validBackup(value: unknown): boolean;
   function sortCategories(values: string[]): string[];
   function activateSettingsTab(tab: string): void;
+  function showPanel(panel: Panel): Promise<void> | void;
+  function renderCodeTabs(): void;
+  function renderCodeGrid(): void;
   function setSidebarOpen(open: boolean, persist?: boolean): void;
   function confirmDelete(text: string): Promise<boolean>;
   interface Window {

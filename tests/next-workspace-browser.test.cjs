@@ -44,6 +44,9 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=r
     assert.equal(await page.locator('#prometric-registration-script').getAttribute('data-extension')?.then(value=>value.startsWith('/workspace/trainflow-prometric.zip')),true);
     await page.screenshot({path:path.join(root,'artifacts/next-classic-trainees.png')});
     const scriptCount=await page.locator('body > script[src*="/workspace/"]').count();
+    const navigationRequests=[];
+    const recordNavigationRequest=request=>{if(request.resourceType()==='document'||request.resourceType()==='script'&&request.url().includes('/workspace/'))navigationRequests.push(request.url());};
+    page.on('request',recordNavigationRequest);
     await page.evaluate(()=>{window.originalSheetNode=document.getElementById('panel-trainees');});
     for(const [panel,route] of [['prometric','prometric'],['codes','vouchers'],['inventory','inventory'],['keycodes','keycodes']]){
       await page.locator('nav.tabs [data-tab="'+panel+'"]').click();await page.waitForURL('**/'+route);await page.waitForFunction(()=>!document.getElementById('app').hidden&&!document.getElementById('app').classList.contains('workspace-restoring'));
@@ -55,14 +58,16 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=r
     await page.locator('#settings-tab-reports').click();await page.waitForURL('**/settings?tab=reports');
     await page.goBack();await page.waitForURL('**/settings');await page.waitForFunction(()=>!document.getElementById('app').hidden&&!document.getElementById('app').classList.contains('workspace-restoring'));await page.waitForFunction(()=>document.getElementById('settings-pane-profile').hidden===false);
     await page.goForward();await page.waitForURL('**/settings?tab=reports');await page.waitForFunction(()=>document.getElementById('settings-pane-reports').hidden===false);
-    assert.equal(await page.evaluate(()=>window.originalSheetNode===document.getElementById('panel-trainees')),false,'A different page is rendered in a new document');
+    assert.equal(await page.evaluate(()=>window.originalSheetNode===document.getElementById('panel-trainees')),true,'Panel navigation retains the mounted workspace and sheet');
+    assert.deepEqual(navigationRequests,[],'Panel and history navigation must not reload documents or workspace scripts');
+    page.off('request',recordNavigationRequest);
     assert.equal(await page.evaluate(()=>uiTestDatabase.sheets['ui-admin'].cells[0][0]),'EXISTING-VOUCHER','Page navigation retains saved trainee records at the data boundary');
     await page.reload();await page.locator('#app').waitFor({state:'visible'});assert.equal(await page.locator('#settings-pane-reports').isVisible(),true,'Settings URL restores its selected section on refresh');
     await page.goto('http://localhost:'+port+'/inventory');await page.locator('#app').waitFor({state:'visible'});assert.equal(await page.locator('#panel-inventory').evaluate(el=>el.classList.contains('active')),true,'Explicit URL overrides a conflicting saved page');
     await page.locator('#trainees-tab').click();await page.waitForURL('**/trainees');await page.waitForFunction(()=>document.getElementById('sheet-status').textContent==='تم الحفظ');
     await page.evaluate(()=>{window.originalSheetNode=document.getElementById('panel-trainees');});
     await page.locator('nav.tabs [data-tab="prometric"]').click();await page.waitForURL('**/prometric');await page.goBack();await page.waitForURL('**/trainees');await page.waitForFunction(()=>document.getElementById('panel-trainees').classList.contains('active'));
-    assert.equal(await page.locator('td[data-v="0"][data-col="0"]').textContent(),'EXISTING-VOUCHER','Returning to trainees reloads the saved record');
+    assert.equal(await page.locator('td[data-v="0"][data-col="0"]').textContent(),'EXISTING-VOUCHER','Returning to trainees preserves the saved record');
     assert.equal(await page.locator('body > script[src*="/workspace/"]').count(),scriptCount,'Navigation does not boot the original scripts twice');
     const openWidth=await page.locator('#sheet-workspace').evaluate(el=>el.getBoundingClientRect().width);
     const rightEdge=()=>page.locator('#workspace-sidebar').evaluate(el=>Math.round(window.innerWidth-el.getBoundingClientRect().right));
@@ -96,6 +101,14 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=r
     await page.locator('#trainees-tab').click();await page.waitForURL('**/trainees');await page.locator('#sidebar-compact').click();await page.locator('#sidebar-toggle').click();await page.setViewportSize({width:1366,height:900});await page.locator('#sidebar-toggle').click();
     await page.locator('#lang-btn').click();assert.equal(await page.locator('#html-root').getAttribute('lang'),'en');
     await page.reload();await page.locator('#app').waitFor({state:'visible'});await page.waitForFunction(()=>document.getElementById('sheet-status')?.textContent==='Saved');assert.equal(await page.locator('#html-root').getAttribute('lang'),'en','Refresh preserves the same language and selected sheet panel');
+    await page.evaluate(()=>{uiTestDatabase.settings.payload.codeCategories.push('Navigation-50');uiTestDatabase.codes.push({code:'HISTORY-CATEGORY-VOUCHER',category:'Navigation-50',notes:'',used_on:null,used_by:null,version:1});});
+    await page.locator('nav.tabs [data-tab="codes"]').click();await page.waitForURL('**/vouchers');await page.locator('#code-cat-tabs button').filter({hasText:'Navigation'}).waitFor();
+    await page.locator('#code-cat-tabs button').filter({hasText:'Navigation'}).click();await page.waitForURL('**/vouchers?category=Navigation-50');
+    assert.equal(await page.locator('#code-grid [data-code="HISTORY-CATEGORY-VOUCHER"]').count(),1);
+    await page.goBack();await page.waitForURL('**/vouchers');await page.waitForFunction(()=>document.getElementById('code-grid').dataset.category==='Foundation-100');
+    assert.equal(await page.locator('#code-grid [data-code="UI-VOUCHER"]').count(),1,'Back restores the previous voucher category even when its URL has no query');
+    await page.goForward();await page.waitForURL('**/vouchers?category=Navigation-50');await page.waitForFunction(()=>document.getElementById('code-grid').dataset.category==='Navigation-50');
+    assert.equal(await page.locator('#code-grid [data-code="HISTORY-CATEGORY-VOUCHER"]').count(),1,'Forward restores the selected category');
     const health=await page.request.get('http://localhost:'+port+'/api/health');assert.equal((await health.json()).runtime,'nextjs');const privateResponse=await page.request.get('http://localhost:'+port+'/api/data/ibta_codes');assert.equal(privateResponse.status(),401,'Next API keeps unauthenticated requests out of the existing database');
     const downloads=['trainflow-prometric.zip','exceljs-4.4.0.min.js','trainees-xlsx-worker.js','google-reports.gs','codes-export.js'];for(const file of downloads)assert.equal((await page.request.get('http://localhost:'+port+'/workspace/'+file)).status(),200,'Published original asset: '+file);
     for(const file of ['trainflow-whatsapp-web.zip','inventory-delivery.js'])assert.equal((await page.request.get('http://localhost:'+port+'/workspace/'+file)).status(),404,'Retired asset is unavailable: '+file);
