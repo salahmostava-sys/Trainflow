@@ -102,6 +102,7 @@ const client={
 };
 const ctx=vm.createContext({document,URL,Blob,localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v)},sessionStorage:{},window:{WorkspaceViews:views,matchMedia:()=>({matches:false}),URL:{createObjectURL(blob){backupBlobs.push(blob);return 'blob:backup-test';},revokeObjectURL(){}},supabase:{createClient:()=>client},addEventListener(name,fn){windowListeners[name]=fn;}},navigator:{clipboard:{writeText:async text=>{if(clipboardFails)throw Error('denied');events.push({name:'clipboard',text});}}},setInterval(){},setTimeout(){},clearTimeout(){},confirm:()=>true,location:{reload(){}}});
 ctx.atob=atob;
+ctx.matchMedia=domWindow.matchMedia.bind(domWindow);
 vm.runInContext(fs.readFileSync(path.join(__dirname,'../session-policy.js'),'utf8'),ctx);
 vm.runInContext(fs.readFileSync(path.join(__dirname,'../cloud.js'),'utf8'),ctx);
 assert.match(html,/family=Cairo/);

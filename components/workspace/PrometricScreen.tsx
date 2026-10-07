@@ -12,17 +12,6 @@ export function PrometricScreen({ active = false }: { active?: boolean }) {
         </div>
         <div className="resource-value" id="prometric-link-val"></div>
       </div>
-      <a
-        className="cred-card resource-card"
-        id="zoom-card"
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        <div className="cred-label" data-i18n="zoomMeeting">
-          Zoom meeting
-        </div>
-        <div className="resource-value" id="zoom-link-val"></div>
-      </a>
       <button className="cred-card" id="cred-account" type="button">
         <span className="cred-label" data-i18n="prometricAccount">
           Prometric Account
@@ -35,6 +24,17 @@ export function PrometricScreen({ active = false }: { active?: boolean }) {
         </span>
         <span className="cred-value" id="cred-password-val"></span>
       </button>
+      <a
+        className="cred-card resource-card"
+        id="zoom-card"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        <div className="cred-label" data-i18n="zoomMeeting">
+          Zoom meeting
+        </div>
+        <div className="resource-value" id="zoom-link-val"></div>
+      </a>
     </section>
   );
 }

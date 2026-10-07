@@ -76,8 +76,9 @@ test.skip('keyboard exam ordering persists and cannot move past either boundary 
   assert.equal(await rows.first().locator('.kc-exam-order').first().isDisabled(),true);
 });
 
-test('settings arrow navigation follows the visual direction in both languages',{timeout:30000},async t=>{
+test('settings side tabs follow vertical keyboard navigation and adapt on mobile',{timeout:30000},async t=>{
   const page=await openWorkspace(t);await navigate(page,'settings');
+  assert.equal(await page.locator('#settings-tabs').getAttribute('aria-orientation'),'vertical');
   for(const [language,nextKey,previousKey] of [['ar','ArrowLeft','ArrowRight'],['en','ArrowRight','ArrowLeft']]){
     if(await page.locator('html').getAttribute('lang')!==language)await page.locator('#lang-btn').click();
     await page.locator('#settings-tab-profile').click();await page.keyboard.press(nextKey);
@@ -85,7 +86,56 @@ test('settings arrow navigation follows the visual direction in both languages',
     assert.equal(await page.locator(':focus').getAttribute('id'),'settings-tab-data');
     await page.keyboard.press(previousKey);
     assert.equal(await page.locator('#settings-tab-profile').getAttribute('aria-selected'),'true');
+    await page.keyboard.press('ArrowDown');
+    assert.equal(await page.locator('#settings-tab-data').getAttribute('aria-selected'),'true');
+    await page.keyboard.press('ArrowUp');
+    assert.equal(await page.locator('#settings-tab-profile').getAttribute('aria-selected'),'true');
+    const tabs=await page.locator('#settings-tabs').boundingBox(),pane=await page.locator('#settings-pane-profile').boundingBox();
+    assert.ok(tabs.x+tabs.width<=pane.x||pane.x+pane.width<=tabs.x,'Tabs sit beside the content in '+language);
+    await page.keyboard.press('End');
+    assert.equal(await page.locator('#settings-tab-sync').getAttribute('aria-selected'),'true');
+    await page.keyboard.press('Home');
+    assert.equal(await page.locator('#settings-tab-profile').getAttribute('aria-selected'),'true');
   }
+  await page.setViewportSize({width:390,height:844});
+  await page.waitForFunction(()=>document.getElementById('settings-tabs').getAttribute('aria-orientation')==='horizontal');
+  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'Settings fit a mobile viewport');
+});
+
+test('compact operational pages remove empty width and keep inventory copying readable',{timeout:30000},async t=>{
+  const page=await openWorkspace(t);
+  await page.evaluate(async()=>{
+    uiTestDatabase.stock=[{category:'Foundation-100',remaining:10}];
+    uiTestDatabase.settings.payload.links={prometric:'https://tcnet1.prometric.com/Login.aspx?ClientNameSingleSite=preview',zoom:'https://us02web.zoom.us/j/123456789?pwd=preview'};
+    await Cloud.refresh();
+  });
+  for(const [panel,limit] of [['keycodes',920],['prometric',720],['codes',930],['inventory',680]]){
+    await navigate(page,panel);
+    const surface=page.locator(panel==='codes'?'.code-sheet':'#panel-'+panel);
+    assert.ok((await surface.boundingBox()).width<=limit+1,panel+' no longer stretches across the workspace');
+    if(panel==='prometric'){
+      let bottom=0;
+      for(const id of ['prometric-login-card','cred-account','cred-password','zoom-card']){
+        const bounds=await page.locator('#'+id).boundingBox();
+        assert.ok(bounds.y>=bottom,'Prometric cards follow login, account, password and Zoom order');bottom=bounds.y+bounds.height;
+      }
+    }
+    await page.setViewportSize({width:390,height:844});
+    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),panel+' remains within the mobile viewport');
+    await page.setViewportSize({width:1440,height:1000});
+  }
+  const copy=page.locator('#inventory-copy-message');
+  assert.equal(await copy.isEnabled(),true);
+  for(const interaction of ['normal','hover','pressed']){
+    if(interaction==='hover')await copy.hover();
+    if(interaction==='pressed')await page.mouse.down();
+    const colors=await copy.evaluate(el=>{const css=getComputedStyle(el);return [css.color,css.backgroundColor];});
+    assert.equal(colors[0],'rgb(255, 255, 255)',interaction+' text stays white');
+    assert.notEqual(colors[0],colors[1],interaction+' text differs from the background');
+  }
+  await page.mouse.up();
+  await page.waitForFunction(()=>uiTestCopies.length===1);
+  assert.equal(await page.evaluate(()=>uiTestCopies[0]),await page.locator('#inventory-message').innerText(),'Copying retains the full inventory message');
 });
 
 test('language switching translates saved and failed status without discarding the sheet draft',{timeout:30000},async t=>{

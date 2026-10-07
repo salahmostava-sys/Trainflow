@@ -26,6 +26,7 @@ export function SettingsScreen({ active = false }: { active?: boolean }) {
       <div
         className="settings-tabs"
         role="tablist"
+        aria-orientation="vertical"
         aria-label="Settings"
         id="settings-tabs"
       >

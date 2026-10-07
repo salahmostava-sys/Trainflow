@@ -746,15 +746,19 @@ function activateSettingsTab(id) {
   if (id === 'profile') updateSettingsProfileHero();
 }
 
+const settingsDesktop=matchMedia('(min-width:761px)');
+function syncSettingsTabOrientation(){document.getElementById('settings-tabs').setAttribute('aria-orientation',settingsDesktop.matches?'vertical':'horizontal');}
+syncSettingsTabOrientation();settingsDesktop.addEventListener('change',syncSettingsTabOrientation);
 SETTINGS_TAB_IDS.forEach(id => {
   const button = document.getElementById('settings-tab-' + id);
   button.addEventListener('click', () => activateSettingsTab(id));
   button.addEventListener('keydown', e => {
-    if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+    const vertical=settingsDesktop.matches;
+    if (!['ArrowRight','ArrowLeft','Home','End',...(vertical?['ArrowDown','ArrowUp']:[])].includes(e.key)) return;
     e.preventDefault();
     const visible   = SETTINGS_TAB_IDS.filter(tabId => !document.getElementById('settings-tab-' + tabId).hidden);
-    const direction = (e.key === 'ArrowRight' ? 1 : -1) * (currentLang === 'ar' ? -1 : 1);
-    const next      = visible[(visible.indexOf(id) + direction + visible.length) % visible.length];
+    const direction = e.key==='ArrowDown'?1:e.key==='ArrowUp'?-1:(e.key === 'ArrowRight' ? 1 : -1) * (currentLang === 'ar' ? -1 : 1);
+    const next      = e.key==='Home'?visible[0]:e.key==='End'?visible.at(-1):visible[(visible.indexOf(id) + direction + visible.length) % visible.length];
     activateSettingsTab(next);
     document.getElementById('settings-tab-' + next).focus();
   });

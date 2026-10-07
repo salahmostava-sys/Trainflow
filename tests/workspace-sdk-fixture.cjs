@@ -16,7 +16,7 @@ function installBoundaryFixtures(){
     from(table){
       const filters=[];
       const records=()=>{
-        const tables={ibta_settings:[db.settings],ibta_codes:db.codes,ibta_members:db.members,ibta_supervisor_stock:[],ibta_trainee_sheets:Object.entries(db.sheets).map(([owner_id,sheet])=>({owner_id,...sheet}))};
+        const tables={ibta_settings:[db.settings],ibta_codes:db.codes,ibta_members:db.members,ibta_supervisor_stock:db.stock||[],ibta_trainee_sheets:Object.entries(db.sheets).map(([owner_id,sheet])=>({owner_id,...sheet}))};
         if(!Object.hasOwn(tables,table))throw Error('Unexpected table: '+table);
         return tables[table].filter(row=>filters.every(([key,value])=>row[key]===value));
       };
