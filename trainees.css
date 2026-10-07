@@ -94,12 +94,12 @@
 .sheet-ribbon-group{padding:6px 12px;border-inline-end:1px solid #e2e8f0;display:flex;flex-direction:column;justify-content:space-between;gap:5px}
 .sheet-ribbon-actions{display:flex;align-items:center;flex-wrap:wrap;gap:6px}
 .sheet-ribbon-group small{text-align:center;color:#64748b;font-size:10px}
-#sheet-workspace .sheet-ribbon-actions button{border-radius:7px;padding:6px 10px;font-size:12.5px;font-weight:600;background:transparent;transition:all .15s}
+#sheet-workspace .sheet-ribbon-actions button{border-radius:7px;padding:6px 10px;font-size:12.5px;font-weight:600;background:transparent;transition:background-color .15s, color .15s, border-color .15s, box-shadow .15s}
 #sheet-workspace .sheet-ribbon-actions button.sheet-primary{background:#2563eb;color:#fff}
 #sheet-workspace .sheet-status{padding:4px 10px;font-size:12px;font-weight:600;border-radius:999px;background:#f0fdf4;color:#15803d;align-self:center}
 #sheet-workspace .sheet-format-tools{background:#ffffff;padding:7px 12px;gap:8px;border-bottom:1px solid #e2e8f0}
 #sheet-workspace .sheet-filters{background:#f8fafc;padding:8px 14px;gap:8px;display:flex;align-items:center;flex-wrap:wrap;border-bottom:1px solid #e2e8f0}
-#sheet-workspace .sheet-filters input,#sheet-workspace .sheet-filters select{border-radius:8px;border:1px solid #cbd5e1;padding:6px 10px;font-size:12.5px;height:34px;background:#fff;color:#0f172a;outline:none;transition:all .15s ease}
+#sheet-workspace .sheet-filters input,#sheet-workspace .sheet-filters select{border-radius:8px;border:1px solid #cbd5e1;padding:6px 10px;font-size:12.5px;height:34px;background:#fff;color:#0f172a;outline:none;transition:background-color .15s ease, color .15s ease, border-color .15s ease, box-shadow .15s ease}
 #sheet-workspace .sheet-filters input:focus,#sheet-workspace .sheet-filters select:focus{border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.12)}
 #sheet-workspace .sheet-formula{background:#ffffff;padding:5px 8px;gap:8px}
 #sheet-workspace #sheet-address{flex:0 0 70px;width:70px;height:34px;border:1px solid #cbd5e1;background:#fff;border-radius:8px;text-align:center;font-family:inherit;font-weight:700;font-size:13px;color:#2563eb;padding:3px;box-shadow:inset 0 1px 2px rgba(0,0,0,.03)}
@@ -275,7 +275,7 @@
 #sheet-workspace .sheet-scroll{overflow-anchor:none}
 .sheet-ribbon-top{display:flex;align-items:center;gap:4px;padding:4px 10px;background:#ffffff;border-bottom:1px solid #e2e8f0;flex-wrap:wrap;min-height:36px;box-sizing:border-box;max-width:100%}
 .sheet-ribbon-divider{display:inline-block;width:1px;height:16px;background:#e2e8f0;margin:0 3px;flex-shrink:0;align-self:center}
-#sheet-workspace #sheet-ribbon-toggle{white-space:nowrap;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;font-weight:600;font-size:12px;border-radius:6px;padding:0 10px;min-height:28px;height:28px;cursor:pointer;transition:all .15s ease;display:inline-flex;align-items:center;gap:4px;box-sizing:border-box}
+#sheet-workspace #sheet-ribbon-toggle{white-space:nowrap;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;font-weight:600;font-size:12px;border-radius:6px;padding:0 10px;min-height:28px;height:28px;cursor:pointer;transition:background-color .15s ease, color .15s ease, border-color .15s ease, box-shadow .15s ease;display:inline-flex;align-items:center;gap:4px;box-sizing:border-box}
 #sheet-workspace #sheet-ribbon-toggle:hover{background:#dbeafe;border-color:#93c5fd;color:#1e40af}
 #sheet-workspace .sheet-ribbon-top .sheet-status{padding:3px 10px;font-size:11.5px;font-weight:600;border-radius:999px;background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;min-height:24px;display:inline-flex;align-items:center;gap:4px;margin-inline-start:auto;white-space:nowrap}
 #sheet-workspace .sheet-ribbon-top .sheet-status:empty{display:none}
@@ -289,7 +289,7 @@
 #sheet-workspace .sheet-ribbon-panel .sheet-ribbon-group:last-child{border:0}
 #sheet-workspace .sheet-ribbon-panel .sheet-ribbon-group>small{display:none}
 #sheet-workspace .sheet-clean-toolbar .sheet-ribbon-actions{gap:4px;align-items:center;align-content:center;display:inline-flex;flex-wrap:nowrap;flex:0 0 auto}
-#sheet-workspace .sheet-clean-toolbar button{font-size:12px;font-weight:500;min-height:28px;height:28px;padding:0 8px;border-radius:6px;background:#fff;border:1px solid #e2e8f0;color:#334155;white-space:nowrap;cursor:pointer;transition:all .15s ease;box-shadow:0 1px 2px rgba(0,0,0,.02);display:inline-flex;align-items:center;justify-content:center;gap:4px;box-sizing:border-box}
+#sheet-workspace .sheet-clean-toolbar button{font-size:12px;font-weight:500;min-height:28px;height:28px;padding:0 8px;border-radius:6px;background:#fff;border:1px solid #e2e8f0;color:#334155;white-space:nowrap;cursor:pointer;transition:background-color .15s ease, color .15s ease, border-color .15s ease, box-shadow .15s ease;box-shadow:0 1px 2px rgba(0,0,0,.02);display:inline-flex;align-items:center;justify-content:center;gap:4px;box-sizing:border-box}
 #sheet-workspace .sheet-clean-toolbar button.sheet-primary{background:#2563eb;color:#fff;border-color:#1d4ed8;box-shadow:0 1px 2px rgba(37,99,235,.2);font-weight:600}
 #sheet-workspace .sheet-clean-toolbar button.sheet-primary:hover{background:#1d4ed8;border-color:#1e40af}
 #sheet-workspace .sheet-clean-toolbar #sheet-xlsx-export,#sheet-workspace .sheet-clean-toolbar #sheet-xlsx-import{color:#15803d;border-color:#bbf7d0;background:#f0fdf4;font-weight:600}
@@ -297,7 +297,7 @@
 #sheet-workspace .sheet-clean-toolbar button:hover{background:#f8fafc;color:#0f172a;border-color:#cbd5e1}
 #sheet-workspace .sheet-clean-toolbar button[aria-pressed=true]{background:#eff6ff!important;border-color:#3b82f6!important;color:#1d4ed8!important}
 #sheet-workspace .sheet-clean-toolbar label{display:inline-flex;align-items:center;gap:4px;font-size:12px;color:#475569;font-weight:500;margin:0;white-space:nowrap}
-#sheet-workspace .sheet-clean-toolbar select{max-width:100%;border:1px solid #e2e8f0;border-radius:6px;padding:0 6px;font-size:12px;background:#fff;min-height:28px;height:28px;color:#334155;outline:none;transition:all .15s;cursor:pointer;box-sizing:border-box}
+#sheet-workspace .sheet-clean-toolbar select{max-width:100%;border:1px solid #e2e8f0;border-radius:6px;padding:0 6px;font-size:12px;background:#fff;min-height:28px;height:28px;color:#334155;outline:none;transition:background-color .15s, color .15s, border-color .15s, box-shadow .15s;cursor:pointer;box-sizing:border-box}
 #sheet-workspace .sheet-clean-toolbar select:focus{border-color:#3b82f6;box-shadow:0 0 0 2px rgba(59,130,246,.15)}
 #sheet-workspace #sheet-font-family{width:150px}
 #sheet-workspace #sheet-selection-size{width:46px;text-align:center}
@@ -322,7 +322,7 @@
 .sheet-command-submenu{display:block;width:100%}
 .sheet-command-submenu>button{width:100%}
 .sheet-command-popover[dir=rtl] .sheet-command-arrow{transform:scaleX(-1)}
-#sheet-workspace .sheet-command-dropdown button{background:#fff;border:1px solid #e2e8f0;border-radius:6px;padding:0 8px;min-height:28px;height:28px;font-size:12px;font-weight:500;color:#334155;box-shadow:0 1px 2px rgba(0,0,0,.02);cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:4px}
+#sheet-workspace .sheet-command-dropdown button{background:#fff;border:1px solid #e2e8f0;border-radius:6px;padding:0 8px;min-height:28px;height:28px;font-size:12px;font-weight:500;color:#334155;box-shadow:0 1px 2px rgba(0,0,0,.02);cursor:pointer;transition:background-color .15s, color .15s, border-color .15s, box-shadow .15s;display:inline-flex;align-items:center;gap:4px}
 #sheet-workspace .sheet-command-dropdown button:hover{background:#f8fafc;color:#0f172a;border-color:#cbd5e1}
 #sheet-workspace .sheet-command-dropdown button[aria-expanded=true]{background:#eff6ff;border-color:#93c5fd;color:#1d4ed8;box-shadow:0 0 0 2px rgba(59,130,246,.12)}
 #sheet-workspace .sheet-ribbon-command-row>.sheet-command-dropdown>button{display:inline-flex;align-items:center;gap:4px;background:#fff;border:1px solid #e2e8f0;border-radius:6px;font-size:12px;font-weight:500;color:#334155;box-shadow:0 1px 2px rgba(0,0,0,.02);min-height:28px;height:28px;padding:0 8px}
@@ -340,7 +340,7 @@
 #sheet-workspace .sheet-style-group button:hover{background:#fff;color:#0f172a}
 #sheet-workspace .sheet-style-group button[aria-pressed=true]{background:#fff;color:#2563eb;box-shadow:0 1px 2px rgba(0,0,0,.08);font-weight:700}
 #sheet-workspace .sheet-color-group{display:inline-flex;align-items:center;gap:4px}
-#sheet-workspace .sheet-color-group label{height:28px;min-height:28px;border:1px solid #e2e8f0;border-radius:6px;background:#fff;padding:0 6px;display:inline-flex;align-items:center;gap:4px;font-size:11px;color:#475569;cursor:pointer;box-sizing:border-box;box-shadow:0 1px 2px rgba(0,0,0,.02);transition:all .15s}
+#sheet-workspace .sheet-color-group label{height:28px;min-height:28px;border:1px solid #e2e8f0;border-radius:6px;background:#fff;padding:0 6px;display:inline-flex;align-items:center;gap:4px;font-size:11px;color:#475569;cursor:pointer;box-sizing:border-box;box-shadow:0 1px 2px rgba(0,0,0,.02);transition:background-color .15s, color .15s, border-color .15s, box-shadow .15s}
 #sheet-workspace .sheet-color-group label:hover{background:#f8fafc;border-color:#cbd5e1;color:#0f172a}
 #sheet-workspace .sheet-clean-toolbar input[type=color]{-webkit-appearance:none;border:1px solid #cbd5e1;border-radius:4px;width:18px;height:18px;padding:0;cursor:pointer;background:transparent;vertical-align:middle}
 #sheet-workspace .sheet-clean-toolbar input[type=color]::-webkit-color-swatch-wrapper{padding:0}
@@ -351,34 +351,34 @@
 #sheet-workspace .sheet-align-group button[aria-pressed=true]{background:#fff;color:#2563eb;box-shadow:0 1px 2px rgba(0,0,0,.08)}
 #sheet-workspace #sheet-row-size{width:52px;height:28px;min-height:28px}
 #sheet-workspace #sheet-direction{height:28px;min-height:28px}
-#sheet-workspace #sheet-columns-title,#sheet-workspace #sheet-freeze{border-radius:6px;padding:0 8px;font-size:12px;font-weight:500;border:1px solid #e2e8f0;background:#fff;color:#334155;height:28px;min-height:28px;box-shadow:0 1px 2px rgba(0,0,0,.02);transition:all .15s}
+#sheet-workspace #sheet-columns-title,#sheet-workspace #sheet-freeze{border-radius:6px;padding:0 8px;font-size:12px;font-weight:500;border:1px solid #e2e8f0;background:#fff;color:#334155;height:28px;min-height:28px;box-shadow:0 1px 2px rgba(0,0,0,.02);transition:background-color .15s, color .15s, border-color .15s, box-shadow .15s}
 #sheet-workspace #sheet-columns-title:hover,#sheet-workspace #sheet-freeze:hover{background:#f8fafc;border-color:#cbd5e1;color:#0f172a}
 #sheet-workspace #sheet-freeze[aria-pressed=true]{background:#eff6ff;border-color:#93c5fd;color:#1d4ed8}
 #sheet-workspace .sheet-clean-toolbar .sheet-local-note{font-size:11px;color:#94a3b8;margin-inline-start:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px;padding:0 4px;line-height:28px;flex:0 1 auto}
 /* Modern search & filters bar directly above the table */
 #sheet-workspace .sheet-search-group{display:flex;align-items:center;gap:6px;flex:1 1 240px;min-width:180px}
-#sheet-workspace #sheet-search{flex:1;min-width:120px;height:34px;padding:6px 12px;border-radius:8px;border:1px solid #cbd5e1;background:#fff;font-size:12.5px;color:#0f172a;outline:none;transition:all .15s ease}
+#sheet-workspace #sheet-search{flex:1;min-width:120px;height:34px;padding:6px 12px;border-radius:8px;border:1px solid #cbd5e1;background:#fff;font-size:12.5px;color:#0f172a;outline:none;transition:background-color .15s ease, color .15s ease, border-color .15s ease, box-shadow .15s ease}
 #sheet-workspace #sheet-search:focus{border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.12)}
-#sheet-workspace #sheet-org{width:150px;height:34px;padding:6px 10px;border-radius:8px;border:1px solid #cbd5e1;background:#fff;font-size:12.5px;color:#0f172a;outline:none;transition:all .15s ease}
+#sheet-workspace #sheet-org{width:150px;height:34px;padding:6px 10px;border-radius:8px;border:1px solid #cbd5e1;background:#fff;font-size:12.5px;color:#0f172a;outline:none;transition:background-color .15s ease, color .15s ease, border-color .15s ease, box-shadow .15s ease}
 #sheet-workspace #sheet-org:focus{border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.12)}
-#sheet-workspace #sheet-date{width:145px;height:34px;padding:6px 10px;border-radius:8px;border:1px solid #cbd5e1;background:#fff;font-size:12.5px;color:#0f172a;outline:none;transition:all .15s ease}
+#sheet-workspace #sheet-date{width:145px;height:34px;padding:6px 10px;border-radius:8px;border:1px solid #cbd5e1;background:#fff;font-size:12.5px;color:#0f172a;outline:none;transition:background-color .15s ease, color .15s ease, border-color .15s ease, box-shadow .15s ease}
 #sheet-workspace #sheet-date:focus{border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.12)}
-#sheet-workspace #sheet-result{height:34px;padding:4px 10px;border-radius:8px;border:1px solid #cbd5e1;background:#fff;font-size:12.5px;color:#0f172a;cursor:pointer;outline:none;transition:all .15s ease}
+#sheet-workspace #sheet-result{height:34px;padding:4px 10px;border-radius:8px;border:1px solid #cbd5e1;background:#fff;font-size:12.5px;color:#0f172a;cursor:pointer;outline:none;transition:background-color .15s ease, color .15s ease, border-color .15s ease, box-shadow .15s ease}
 #sheet-workspace #sheet-result:focus{border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.12)}
-#sheet-workspace .sheet-duplicates-filter{display:inline-flex;align-items:center;gap:7px;height:34px;padding:0 10px;border-radius:8px;background:#fff;border:1px solid #e2e8f0;font-size:12px;font-weight:600;color:#475569;cursor:pointer;user-select:none;transition:all .15s ease}
+#sheet-workspace .sheet-duplicates-filter{display:inline-flex;align-items:center;gap:7px;height:34px;padding:0 10px;border-radius:8px;background:#fff;border:1px solid #e2e8f0;font-size:12px;font-weight:600;color:#475569;cursor:pointer;user-select:none;transition:background-color .15s ease, color .15s ease, border-color .15s ease, box-shadow .15s ease}
 #sheet-workspace .sheet-duplicates-filter:hover{border-color:#cbd5e1;color:#1e293b;background:#f8fafc}
 #sheet-workspace .sheet-duplicates-filter:has(input:checked),#sheet-workspace .sheet-duplicates-filter.active{background:#eff6ff;border-color:#2563eb;color:#1d4ed8;box-shadow:0 0 0 2px rgba(37,99,235,.18)}
 #sheet-workspace .sheet-duplicates-filter input[type=checkbox]{width:15px;height:15px;accent-color:#2563eb;cursor:pointer;margin:0}
-#sheet-workspace .sheet-duplicates-badge{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 6px;border-radius:999px;font-size:11px;font-weight:700;line-height:1;background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0;transition:all .15s ease}
+#sheet-workspace .sheet-duplicates-badge{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 6px;border-radius:999px;font-size:11px;font-weight:700;line-height:1;background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0;transition:background-color .15s ease, color .15s ease, border-color .15s ease, box-shadow .15s ease}
 #sheet-workspace .sheet-duplicates-badge.has-duplicates{background:#fef2f2;color:#dc2626;border-color:#fecaca}
 #sheet-workspace .sheet-duplicates-filter:has(input:checked) .sheet-duplicates-badge.has-duplicates,#sheet-workspace .sheet-duplicates-filter.active .sheet-duplicates-badge.has-duplicates{background:#dc2626;color:#fff;border-color:#b91c1c}
 #sheet-workspace .sheet-empty-view-row td.sheet-empty-view-cell{padding:50px 20px;background:#f8fafc;border:none}
 #sheet-workspace .sheet-empty-view-content{position:sticky;inset-inline-start:280px;display:inline-flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;max-width:420px;padding:24px 32px;background:#fff;border:1px solid #e2e8f0;border-radius:12px;box-shadow:0 4px 16px rgba(15,23,42,.06);text-align:center}
 #sheet-workspace .sheet-empty-view-icon{font-size:32px;line-height:1}
 #sheet-workspace .sheet-empty-view-content strong{font-size:14px;color:#1e293b;font-weight:700}
-#sheet-workspace .sheet-empty-view-btn{margin-top:4px;height:34px;padding:0 16px;border-radius:8px;background:#2563eb;color:#fff;border:none;font-size:12.5px;font-weight:600;cursor:pointer;transition:all .15s ease}
+#sheet-workspace .sheet-empty-view-btn{margin-top:4px;height:34px;padding:0 16px;border-radius:8px;background:#2563eb;color:#fff;border:none;font-size:12.5px;font-weight:600;cursor:pointer;transition:background-color .15s ease, color .15s ease, border-color .15s ease, box-shadow .15s ease}
 #sheet-workspace .sheet-empty-view-btn:hover{background:#1d4ed8;box-shadow:0 2px 8px rgba(37,99,235,.3)}
-#sheet-workspace #sheet-clear-filters{height:34px;padding:0 12px;border-radius:8px;background:#fff;border:1px solid #fecdd3;color:#e11d48;font-size:12px;font-weight:700;cursor:pointer;transition:all .15s ease;display:inline-flex;align-items:center;justify-content:center}
+#sheet-workspace #sheet-clear-filters{height:34px;padding:0 12px;border-radius:8px;background:#fff;border:1px solid #fecdd3;color:#e11d48;font-size:12px;font-weight:700;cursor:pointer;transition:background-color .15s ease, color .15s ease, border-color .15s ease, box-shadow .15s ease;display:inline-flex;align-items:center;justify-content:center}
 #sheet-workspace #sheet-clear-filters:hover{background:#fff1f2;border-color:#fda4af;color:#be123c}
 .sheet-file-dialog{border:1px solid #d7dfe8;border-radius:12px;background:#fff;color:#16324f;padding:20px;width:min(800px,calc(100vw - 32px));max-height:85vh;box-sizing:border-box;overflow:auto;font-family:var(--ui-font);box-shadow:0 20px 70px #10295740}
 .sheet-file-dialog::backdrop{background:#10295765}
@@ -628,10 +628,26 @@ body.sheet-expanded-open #workspace-sidebar,body.sheet-expanded-open #sidebar-ba
   border-radius: 8px;
   cursor: pointer;
   font-family: inherit;
-  transition: all 0.15s ease;
+  transition:background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+}
+@media (max-width: 760px) {
+  .sheet-report-actions{flex-wrap:wrap;overflow-x:visible}
+  .sheet-report-actions strong{flex:1 1 100%}
+  .sheet-report-actions>button{flex:1 1 auto;max-width:100%}
+}
+@media (pointer: coarse) {
+  #panel-trainees #sheet-workspace .sheet-grid .sheet-rownum{width:45px;min-width:45px;padding:0!important}
+  #panel-trainees #sheet-workspace .sheet-grid :is(th,td)[data-col="11"]{--col-w:max(45px,calc(var(--col-w-11,85px) * var(--sheet-zoom,1)))}
+  #panel-trainees #sheet-workspace .sheet-clean-toolbar :is(button,select),
+  #panel-trainees #sheet-workspace .sheet-report-actions>button{
+    min-width:44px;min-height:44px;height:44px;touch-action:manipulation;
+  }
+  #sheet-workspace :is(.sheet-style-group,.sheet-align-group,.sheet-valign-group){height:auto}
+  #sheet-workspace .sheet-color-group label{height:44px;min-height:44px}
+  .sheet-command-popover button{min-height:44px}
 }
 .app-modal-btn-cancel {
   background: var(--surface, #ffffff);

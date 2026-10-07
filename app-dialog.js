@@ -41,10 +41,10 @@
             <div class="app-modal-field">
               <label id="app-modal-input-label" for="app-modal-input" class="app-modal-label" hidden></label>
               <div class="app-modal-input-wrap">
-                <input id="app-modal-input" class="app-modal-input" autocomplete="off" />
+                <input id="app-modal-input" class="app-modal-input" autocomplete="off" aria-describedby="app-modal-desc app-modal-error" />
                 <span id="app-modal-unit" class="app-modal-unit" hidden></span>
               </div>
-              <div id="app-modal-error" class="app-modal-error" hidden></div>
+              <div id="app-modal-error" class="app-modal-error" aria-live="polite" hidden></div>
             </div>
           </div>
           <div class="app-modal-actions">
@@ -229,12 +229,14 @@
         els.error.hidden = true;
         els.error.textContent = '';
 
-        if (options.label) {
-          els.inputLabel.hidden = false;
-          els.inputLabel.textContent = options.label;
-        } else {
-          els.inputLabel.hidden = true;
-        }
+        els.inputLabel.hidden = false;
+        els.inputLabel.textContent = options.label || els.title.textContent;
+        els.input.removeAttribute('aria-invalid');
+        els.input.oninput = () => {
+          els.input.removeAttribute('aria-invalid');
+          els.error.hidden = true;
+          els.error.textContent = '';
+        };
 
         const inputType = options.inputType || 'text';
         els.input.type = inputType;
@@ -276,18 +278,21 @@
             if (!Number.isFinite(num)) {
               els.error.textContent = isAr ? 'يرجى إدخال رقم صحيح' : 'Please enter a valid number';
               els.error.hidden = false;
+              els.input.setAttribute('aria-invalid', 'true');
               els.input.focus();
               return;
             }
             if (options.min != null && num < options.min) {
               els.error.textContent = isAr ? `الحد الأدنى هو ${options.min}` : `Minimum value is ${options.min}`;
               els.error.hidden = false;
+              els.input.setAttribute('aria-invalid', 'true');
               els.input.focus();
               return;
             }
             if (options.max != null && num > options.max) {
               els.error.textContent = isAr ? `الحد الأقصى هو ${options.max}` : `Maximum value is ${options.max}`;
               els.error.hidden = false;
+              els.input.setAttribute('aria-invalid', 'true');
               els.input.focus();
               return;
             }

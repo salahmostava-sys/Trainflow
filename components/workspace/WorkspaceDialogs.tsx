@@ -37,7 +37,7 @@ export function WorkspaceDialogs() {
           </button>
         </div>
       </dialog>
-      <dialog id="edit-dialog" className="edit-dialog">
+      <dialog id="edit-dialog" className="edit-dialog" aria-labelledby="edit-heading">
         <form id="edit-form">
           <h2 id="edit-heading"></h2>
           <div id="edit-name-field">
@@ -132,6 +132,7 @@ export function WorkspaceDialogs() {
                   id="app-modal-input"
                   className="app-modal-input"
                   autoComplete="off"
+                  aria-describedby="app-modal-desc app-modal-error"
                 />
                 <span
                   id="app-modal-unit"
@@ -142,6 +143,7 @@ export function WorkspaceDialogs() {
               <div
                 id="app-modal-error"
                 className="app-modal-error"
+                aria-live="polite"
                 hidden
               ></div>
             </div>

@@ -593,6 +593,8 @@ function updateSidebar() {
   // Sidebar panel
   sidebar.inert = !open;
   sidebar.setAttribute('aria-label', t('sidebarPages'));
+  const mobileDrawer = open && !compact && window.matchMedia('(max-width:760px)').matches;
+  document.getElementById('workspace-main').inert = mobileDrawer;
 
   // Tab labels
   document.querySelector('nav.tabs').setAttribute('aria-label', t('sidebarPages'));
@@ -610,10 +612,22 @@ function updateSidebar() {
   // Mobile backdrop
   if (backdrop) {
     backdrop.setAttribute('aria-label', t('sidebarClose'));
-    backdrop.hidden = !open || compact || !window.matchMedia?.('(max-width:760px)')?.matches;
+    backdrop.hidden = !mobileDrawer;
   }
+  if (mobileDrawer && !document.getElementById('app').hidden && !sidebar.contains(document.activeElement)) toggle.focus();
   positionAccountMenu();
 }
+
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Tab' || e.defaultPrevented || document.getElementById('app').hidden || document.getElementById('sidebar-backdrop').hidden || document.querySelector('dialog[open]')) return;
+  const sidebar = document.getElementById('workspace-sidebar');
+  const controls = [...sidebar.querySelectorAll('button:not(:disabled),a[href]')].filter(el => el.getClientRects().length);
+  const first = controls[0], last = controls[controls.length - 1];
+  if (e.shiftKey && document.activeElement === first || !e.shiftKey && document.activeElement === last || !sidebar.contains(document.activeElement)) {
+    e.preventDefault();
+    (e.shiftKey ? last : first).focus();
+  }
+});
 
 // Compact toggle
 document.getElementById('sidebar-compact').addEventListener('click', () => {

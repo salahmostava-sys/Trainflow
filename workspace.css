@@ -980,7 +980,7 @@
   #sign-up{background:none;border:0;color:#1765cf;padding:6px;}
   #sign-up:hover{text-decoration:underline;}
   #auth-box button:focus-visible{outline:3px solid #91bafa;outline-offset:4px;}
-  #auth-message{min-height:44px;font-size:12px;line-height:1.9;color:#78879b;text-align:center;border-top:1px solid #edf0f5;padding-top:18px;margin:22px 0 0;overflow-wrap:anywhere;white-space:pre-line;}
+  #auth-message{min-height:44px;font-size:12px;line-height:1.9;color:#53657d;text-align:center;border-top:1px solid #edf0f5;padding-top:18px;margin:22px 0 0;overflow-wrap:anywhere;white-space:pre-line;}
   #auth-actions[inert]{opacity:.55;}
   @media(max-width:760px){#auth-box{padding:20px 14px;align-items:flex-start;}.auth-shell{max-width:480px;grid-template-columns:1fr;border-radius:20px;}.auth-story{min-height:0;padding:25px 28px;}.auth-intro{margin:20px 0 0;}.auth-intro h2{font-size:25px;margin:0;}.auth-eyebrow,.auth-intro>p,.auth-features,.auth-story-footer{display:none;}.auth-main{padding:32px 28px;}.auth-main h1{font-size:27px;}.auth-subtitle{margin-bottom:24px;}}
   @media(max-width:700px){

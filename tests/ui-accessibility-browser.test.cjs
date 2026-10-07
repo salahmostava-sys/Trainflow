@@ -151,3 +151,61 @@ test('mobile sheets start with compact tools and retain an explicit expansion ch
     const bounds=await button.boundingBox();assert.ok(bounds.width>=44&&bounds.height>=44,'Voucher actions support touch');
   }
 });
+
+test('the mobile drawer contains keyboard focus and releases it on close, compact mode and resize',{timeout:30000},async t=>{
+  const page=await openWorkspace(t,{viewport:{width:390,height:844}});
+  await page.locator('#sidebar-toggle').click();
+  await page.locator('#lang-btn').focus();await page.keyboard.press('Tab');
+  assert.equal(await page.locator(':focus').getAttribute('id'),'sidebar-compact');
+  await page.keyboard.press('Shift+Tab');
+  assert.equal(await page.locator(':focus').getAttribute('id'),'lang-btn');
+  assert.equal(await page.locator('#workspace-main').evaluate(el=>el.inert),true);
+  await page.keyboard.press('Escape');
+  assert.equal(await page.locator(':focus').getAttribute('id'),'sidebar-toggle');
+  assert.equal(await page.locator('#workspace-main').evaluate(el=>el.inert),false);
+  await page.locator('#sidebar-toggle').click();await page.locator('#sidebar-compact').click();
+  assert.equal(await page.locator('#workspace-main').evaluate(el=>el.inert),false);
+  await page.locator('#sidebar-compact').click();await page.setViewportSize({width:1440,height:1000});
+  assert.equal(await page.locator('#workspace-main').evaluate(el=>el.inert),false);
+});
+
+test('numeric prompts expose a localized label and announce validation without losing the value',{timeout:30000},async t=>{
+  const page=await openWorkspace(t);
+  await page.evaluate(()=>{window.__IBTA_TEST_AUTOMATION__=false;});
+  for(const [label,error] of [['ارتفاع الصف','الحد الأدنى هو 20'],['Row Height','Minimum value is 20']]){
+    await page.locator('#sheet-cell-format-menu').click();
+    await page.locator('#sheet-cell-format-menu-row-height').click();
+    const input=page.getByRole('spinbutton',{name:label,exact:true});
+    await input.fill('10');await page.locator('#app-modal-confirm').click();
+    assert.equal(await input.inputValue(),'10');assert.equal(await input.getAttribute('aria-invalid'),'true');
+    assert.equal(await page.locator('#app-modal-error').textContent(),error);
+    assert.equal(await page.locator('#app-modal-error').getAttribute('aria-live'),'polite');
+    assert.match(await input.getAttribute('aria-describedby'),/app-modal-error/);
+    await input.fill('48');assert.equal(await input.getAttribute('aria-invalid'),null);
+    await page.locator('#app-modal-cancel').click();
+    if(label==='ارتفاع الصف')await page.locator('#lang-btn').click();
+  }
+});
+
+test('touch controls and report actions remain usable without changing saved sheet density',{timeout:30000},async t=>{
+  const page=await openWorkspace(t,{viewport:{width:390,height:844},hasTouch:true});
+  await page.locator('#sheet-ribbon-toggle').click();
+  await page.locator('#sheet-row-size').selectOption('15');
+  assert.equal(await page.evaluate(()=>localStorage.getItem('ibta_trainee_row_size')),'15');
+  for(const selector of ['#sheet-ribbon-toggle','#sheet-font-minus','th[data-rowv="0"] button','td[data-v="0"][data-col="11"] select']){
+    const bounds=await page.locator(selector).boundingBox();assert.ok(bounds.height>=44&&bounds.width>=44,selector+' supports touch: '+JSON.stringify(bounds));
+  }
+  for(const language of ['ar','en']){
+    const bounds=await page.locator('#sheet-prometric-open').boundingBox();
+    assert.ok(bounds.x>=0&&bounds.x+bounds.width<=390,'Registration is visible without horizontal scrolling in '+language);
+    if(language==='ar'){
+      await page.locator('#sidebar-toggle').click();await page.locator('#lang-btn').click();await page.locator('#sidebar-toggle').click();
+    }
+  }
+  await page.locator('#sheet-zoom-reset').fill('50');await page.locator('#sheet-zoom-reset').press('Enter');
+  const rowTarget=await page.locator('th[data-rowv="0"] button').boundingBox();
+  assert.ok(rowTarget.height>=44&&rowTarget.width>=44,'Zoom does not shrink the touch target');
+  await page.locator('#sheet-address').fill('A900');await page.locator('#sheet-address').press('Enter');
+  assert.equal(await page.locator('td[data-v="899"][data-col="0"]').isVisible(),true,'Virtual scrolling reaches distant touch rows');
+  assert.equal(await page.evaluate(()=>localStorage.getItem('ibta_trainee_row_size')),'15');
+});

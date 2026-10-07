@@ -102,7 +102,7 @@ const client={
     return {};
   }
 };
-const ctx=vm.createContext({document,URL,Blob,localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v)},sessionStorage:{},window:{URL:{createObjectURL(blob){backupBlobs.push(blob);return 'blob:backup-test';},revokeObjectURL(){}},supabase:{createClient:()=>client},addEventListener(name,fn){windowListeners[name]=fn;}},navigator:{clipboard:{writeText:async text=>{if(clipboardFails)throw Error('denied');events.push({name:'clipboard',text});}}},setInterval(){},setTimeout(){},clearTimeout(){},confirm:()=>true,location:{reload(){}}});
+const ctx=vm.createContext({document,URL,Blob,localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v)},sessionStorage:{},window:{matchMedia:()=>({matches:false}),URL:{createObjectURL(blob){backupBlobs.push(blob);return 'blob:backup-test';},revokeObjectURL(){}},supabase:{createClient:()=>client},addEventListener(name,fn){windowListeners[name]=fn;}},navigator:{clipboard:{writeText:async text=>{if(clipboardFails)throw Error('denied');events.push({name:'clipboard',text});}}},setInterval(){},setTimeout(){},clearTimeout(){},confirm:()=>true,location:{reload(){}}});
 els['account-menu-popover']=new Element();els['account-menu-popover'].hidden=true;
 els['inventory-current-quantity']=new Element();
 els['inventory-purchased-quantity']=new Element();

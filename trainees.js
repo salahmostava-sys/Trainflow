@@ -51,6 +51,12 @@ const Trainees=(()=>{
   let rowSize=15;
   try{const savedRowSize=Number(localStorage.getItem('ibta_trainee_row_size'));if([15,21,28,36].includes(savedRowSize))rowSize=savedRowSize;}catch{}
   let expandedView=false,previousViewZoom=null;
+  const touchPointer=matchMedia('(pointer: coarse)');
+  function displayRowHeight(){
+    const preferred=rowSize*4/3*(expandedView?0.8:1);
+    // Keep touch targets usable at every zoom without rewriting saved density preferences.
+    return touchPointer.matches?Math.max(preferred,44*100/excelView.zoom):preferred;
+  }
   function setRowSize(value){
     const next=Number(value);if(![15,21,28,36].includes(next))return;
     rowSize=next;try{localStorage.setItem('ibta_trainee_row_size',String(rowSize));}catch{}
@@ -83,7 +89,7 @@ const Trainees=(()=>{
   function applyExcelView(){
     const grid=$('sheet-grid');if(!grid)return;
     grid.style.setProperty('--sheet-zoom',String(excelView.zoom/100));
-    $('sheet-workspace').style.setProperty('--sheet-row-size',rowSize+'pt');$('sheet-workspace').style.setProperty('--sheet-row-height',(rowSize*4/3*(expandedView?0.8:1))+'px');
+    $('sheet-workspace').style.setProperty('--sheet-row-size',rowSize+'pt');$('sheet-workspace').style.setProperty('--sheet-row-height',displayRowHeight()+'px');
     $('sheet-zoom-slider').value=String(excelView.zoom);if(document.activeElement!==$('sheet-zoom-reset'))$('sheet-zoom-reset').value=excelView.zoom+'%';
     $('sheet-zoom-out').disabled=excelView.zoom<=50;$('sheet-zoom-in').disabled=excelView.zoom>=200;
     grid.classList.toggle('sheet-wrap-text',excelView.wrap);
@@ -610,6 +616,7 @@ const Trainees=(()=>{
     $('sheet-clear-filters').onclick=()=>{commitEdit();clearFilters();render();};
     const grid=$('sheet-grid');
     grid.parentElement.addEventListener('scroll',()=>{queueDraw();schedulePosition();},{passive:true});
+    touchPointer.addEventListener('change',()=>{commitEdit();applyExcelView();resetRowHeights();rebuildRowOffsets();drawRows(true);});
     new ResizeObserver(()=>{
       if(expandedView&&previousViewZoom!==null&&!editing&&!$('sheet-workspace').classList.contains('sheet-expanded-tools')){
         const zoom=expandedZoom();if(zoom!==excelView.zoom){
@@ -987,7 +994,7 @@ const Trainees=(()=>{
     rowHeights.clear();for(const [key,style]of Object.entries(formatting.styles)){const r=Number(key.split(':')[0]),height=Math.max((style.height||0)*excelView.zoom/100,style.rotation?70:0);if(height)rowHeights.set(r,Math.max(rowHeights.get(r)||0,height));}
   }
   function rebuildRowOffsets(){
-    const estimate=Math.max((excelView.wrap?rowSize*4/3+8:rowSize*4/3*(expandedView?0.8:1)+1)*excelView.zoom/100,formatting.fontSize*excelView.zoom/100*(excelView.wrap?1.5:1.2));
+    const estimate=Math.max((excelView.wrap?rowSize*4/3+8:displayRowHeight()+1)*excelView.zoom/100,formatting.fontSize*excelView.zoom/100*(excelView.wrap?1.5:1.2),touchPointer.matches?44:0);
     rowOffsets=new Float64Array(view.length+1);for(let r=0;r<view.length;r++)rowOffsets[r+1]=rowOffsets[r]+(rowHeights.get(view[r])||estimate);
   }
   function rowAtOffset(offset){let low=0,high=view.length;while(low<high){const mid=(low+high)>>1;if(rowOffsets[mid+1]<=offset)low=mid+1;else high=mid;}return Math.min(low,Math.max(0,view.length-1));}

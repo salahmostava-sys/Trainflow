@@ -43,4 +43,14 @@ Local verification completed on 7 October 2026:
 
 Desktop and mobile screenshots were inspected. The regression checks run against synthetic records and do not create real Prometric accounts.
 
+## UI/UX follow-up
+
+The mobile drawer now contains keyboard focus and makes the covered workspace inert. Closing it, choosing compact mode or returning to a desktop viewport restores access. Shared prompts receive a visible localized label, linked validation messages and invalid-state feedback; record and worksheet dialogs announce their titles.
+
+Coarse-pointer devices receive larger sheet controls and row/result targets, including at reduced zoom. Saved row-density and column-width preferences remain unchanged, and virtual scrolling uses the displayed row height. Report, certificate and registration actions wrap on narrow screens. Login guidance uses darker text, and sheet transitions list their properties explicitly.
+
+Regression checks cover drawer keyboard cycling/release, Arabic/English prompt validation, touch target geometry, visible registration actions, unchanged density preferences and navigation to a distant row. Existing command regressions close the mobile drawer through its actual toggle before using covered workspace controls.
+
+Follow-up validation passed: `npm test`, `npm run build`, `npm run test:next`, `npm run test:ui` (9 passed, 1 existing skip), and all 15 browser suite files. The dropdown regression waits for the browser's asynchronous popover event before asserting its expanded state. Desktop and touch screenshots were inspected again.
+
 This is source review and functional regression validation with synthetic records. It does not establish the current live Supabase leaked-password-protection setting, live RLS configuration, or actual Google/Prometric uploads. Those remain separate live-account checks. Publication must be verified separately from a passing local build.
