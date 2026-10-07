@@ -136,16 +136,26 @@ async function renderMemberList(){
     });
   }catch{window.WorkspaceViews.message(box,t('genericError'));}
 }
+function auditEventDescription(event,emails,sheets){
+  const actionKey={INSERT:'auditInsert',UPDATE:'auditUpdate',DELETE:'auditDelete'}[event.action],action=actionKey?t(actionKey):event.action;
+  if(event.entity==='ibta_trainee_sheets'){
+    const [owner,sheetId='00000000-0000-0000-0000-000000000001']=String(event.record_key||'').split(':');
+    return action+' '+t('auditSheets')+' «'+(sheets.get(owner+':'+sheetId)||t('auditUnknownSheet'))+'» · '+t('auditOwner')+': '+(emails.get(owner)||t('auditUnknownUser'));
+  }
+  const entityKey={ibta_codes:'auditCodes',ibta_members:'auditMembers',ibta_settings:'auditSettings'}[event.entity];
+  return action+' '+(entityKey?t(entityKey):event.entity)+(event.entity==='ibta_settings'||!event.record_key?'':' «'+event.record_key+'»');
+}
 async function renderAuditList(){
   if(Cloud.role()!=='admin')return;
   const box=document.getElementById('audit-list');
   try{
     const [events,members]=await Promise.all([Cloud.auditEvents(),Cloud.listMembers()]);
     const emails=new Map(members.filter(member=>member.user_id).map(member=>[member.user_id,member.email]));
+    const owners=[...new Set(events.filter(event=>event.entity==='ibta_trainee_sheets').map(event=>String(event.record_key||'').split(':')[0]).filter(owner=>emails.has(owner)))];
+    const worksheets=await Promise.all(owners.map(async owner=>(await Cloud.listTraineeSheets(owner)).map(sheet=>[owner+':'+sheet.sheet_id,sheet.sheet_name])));
+    const sheets=new Map(worksheets.flat());
     window.WorkspaceViews.audit(box,{empty:t('activityEmpty'),entries:events.map(event=>{
-      const action=t({INSERT:'auditInsert',UPDATE:'auditUpdate',DELETE:'auditDelete'}[event.action]||'auditUpdate');
-      const entity=t({ibta_codes:'auditCodes',ibta_members:'auditMembers',ibta_settings:'auditSettings'}[event.entity]||'auditSettings');
-      return new Date(event.happened_at).toLocaleString(currentLang==='ar'?'ar-SA-u-ca-gregory':'en-US')+' · '+(emails.get(event.actor)||event.actor||'—')+' · '+action+' · '+entity+' · '+(event.record_key||'');
+      return new Date(event.happened_at).toLocaleString(currentLang==='ar'?'ar-SA-u-ca-gregory':'en-US')+' · '+(emails.get(event.actor)||t('auditUnknownUser'))+' · '+auditEventDescription(event,emails,sheets);
     })});
   }catch{window.WorkspaceViews.message(box,t('genericError'));}
 }

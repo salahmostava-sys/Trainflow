@@ -28,6 +28,9 @@
 .sheet-col-resizer{position:absolute;top:0;bottom:0;inset-inline-end:-5px;width:11px;cursor:col-resize;z-index:10;touch-action:none;user-select:none}
 .sheet-col-resizer::after{content:'';position:absolute;top:25%;bottom:25%;inset-inline-start:5px;width:1px;background:#94a3b8}
 .sheet-col-resizer:hover::after,.sheet-col-resizer.sheet-resizing::after{top:0;bottom:0;width:2px;background:var(--blue)}
+.sheet-row-resizer{position:absolute;bottom:0;inset-inline:0;height:9px;cursor:row-resize;z-index:3;touch-action:none;user-select:none}
+.sheet-row-resizer::after{content:'';position:absolute;bottom:0;inset-inline:25%;height:1px;background:#94a3b8}
+.sheet-row-resizer:hover::after{inset-inline:0;height:2px;background:var(--blue)}
 
 .sheet-grid th[data-col="0"],.sheet-grid td[data-col="0"]{--col-w:calc(var(--col-w-0,160px) * var(--sheet-zoom,1))}
 .sheet-grid th[data-col="1"],.sheet-grid td[data-col="1"]{--col-w:calc(var(--col-w-1,190px) * var(--sheet-zoom,1))}
@@ -204,10 +207,11 @@
 .sheet-trainee-dialog .sheet-detail-record button.sheet-get-exam-code:disabled{opacity:.5;cursor:default}
 .sheet-trainee-dialog .sheet-detail-record button.sheet-get-exam-code:focus-visible{outline:2px solid var(--blue);outline-offset:3px}
 .sheet-trainee-dialog .sheet-detail-record button.sheet-get-exam-code[hidden]{display:none}
-#sheet-workspace .sheet-grid tbody tr,#sheet-workspace .sheet-grid tbody td,#sheet-workspace .sheet-grid tbody th.sheet-rownum{height:calc(var(--sheet-row-height,20px) * var(--sheet-zoom,1))!important;min-height:calc(var(--sheet-row-height,20px) * var(--sheet-zoom,1))!important;max-height:calc(var(--sheet-row-height,20px) * var(--sheet-zoom,1))!important;line-height:calc(var(--sheet-row-height,20px) * var(--sheet-zoom,1))!important}
-#sheet-workspace .sheet-grid tbody th.sheet-rownum button{height:calc(var(--sheet-row-height,20px) * var(--sheet-zoom,1))!important;line-height:calc(var(--sheet-row-height,20px) * var(--sheet-zoom,1))!important}
+#sheet-workspace .sheet-grid tbody tr,#sheet-workspace .sheet-grid tbody td,#sheet-workspace .sheet-grid tbody th.sheet-rownum{height:var(--custom-row-height,calc(var(--sheet-row-height,20px) * var(--sheet-zoom,1)))!important;min-height:var(--custom-row-height,calc(var(--sheet-row-height,20px) * var(--sheet-zoom,1)))!important;max-height:var(--custom-row-height,calc(var(--sheet-row-height,20px) * var(--sheet-zoom,1)))!important;line-height:1.2!important}
+#sheet-workspace .sheet-grid tbody th.sheet-rownum button{display:block;height:100%!important;min-height:0!important;line-height:1.2!important;border:0!important;box-sizing:border-box;font-size:calc(11px * var(--sheet-zoom,1))!important}
+@media(pointer:coarse){#sheet-workspace .sheet-grid tbody th.sheet-rownum button{min-height:44px!important}}
 #sheet-workspace .sheet-grid tbody td{padding:0 calc(6px * var(--sheet-zoom,1))!important}
-#panel-trainees #sheet-workspace .sheet-result-select{min-height:calc(var(--sheet-row-height,20px) * var(--sheet-zoom,1))!important;font-size:calc(11px * var(--sheet-zoom,1))!important;line-height:calc(var(--sheet-row-height,20px) * var(--sheet-zoom,1))!important}
+#panel-trainees #sheet-workspace .sheet-result-select{min-height:0!important;font-size:calc(11px * var(--sheet-zoom,1))!important;line-height:1.2!important}
 .sheet-zoom-tools{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-inline-start:auto;color:var(--text)}
 #panel-trainees .sheet-zoom-tools button{min-width:32px;min-height:32px;padding:3px 8px;border:1px solid var(--border);border-radius:5px;background:#fff;color:var(--text)}
 #panel-trainees .sheet-zoom-tools input[type=range]{width:130px;min-width:90px;accent-color:var(--blue);cursor:pointer}
@@ -227,6 +231,7 @@
 .sheet-trainee-dialog .sheet-detail-record dd{min-width:0;text-align:left}
 .sheet-trainee-dialog button.sheet-detail-copy-value{display:block;width:100%;text-align:left;box-sizing:border-box}
 .sheet-trainee-dialog button.sheet-detail-login{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sheet-duplicate-dialog button.sheet-detail-course,.sheet-duplicate-dialog button.sheet-detail-course:hover{color:#b91c1c}
 .sheet-trainee-dialog .sheet-detail-result[data-result=pass]{background:transparent!important;color:#008a3d!important}
 @media(min-width:761px){
   .sheet-trainee-dialog button.sheet-detail-copy-value{padding:0;line-height:1.6}

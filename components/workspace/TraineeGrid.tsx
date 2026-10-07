@@ -34,6 +34,9 @@ export interface GridRow {
   cells: (GridCell | { gap: true; count: number; width: number })[];
   onSelect: React.MouseEventHandler<HTMLButtonElement>;
   onPointerDown: React.PointerEventHandler<HTMLButtonElement>;
+  resizeTitle: string;
+  onResize: React.PointerEventHandler<HTMLDivElement>;
+  onResetHeight: React.MouseEventHandler<HTMLDivElement>;
 }
 
 type CellControl = {
@@ -269,6 +272,13 @@ export function TraineeRows({
             >
               {row.sourceRow + 1}
             </button>
+            <div
+              className="sheet-row-resizer"
+              data-resizer-row={row.viewRow}
+              title={row.resizeTitle}
+              onPointerDown={row.onResize}
+              onDoubleClick={row.onResetHeight}
+            />
           </th>
           {row.cells.map((cell, index) =>
             "gap" in cell ? (

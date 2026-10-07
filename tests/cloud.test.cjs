@@ -17,6 +17,7 @@ const fire=async(element,type)=>{global.IS_REACT_ACT_ENVIRONMENT=true;try{await 
 const db={settings:{id:1,version:1,payload:{keycodes:[],categoryOrder:['Foundation'],codeCategories:['Foundation-100'],keycodeOrder:{},keycodeOverrides:{},dateColors:{},credentials:{account:'test-account',password:'test-password'},links:{zoom:'https://us02web.zoom.us/j/demo',prometric:'https://tcnet1.prometric.com/Login.aspx?demo=1'}}},codes:[{code:'TEST',category:'Foundation-100',notes:'',used_on:null,used_by:null,version:1}],stock:[],members:[{email:'test@example.invalid',role:'admin',active:true,user_id:'user-1'},{email:'member@example.invalid',role:'operator',active:true,user_id:null}]};
 const clone=x=>JSON.parse(JSON.stringify(x));
 const backupBlobs=[];db.traineeSheets=[];
+db.auditEvents=[{id:'audit-1',actor:'user-1',action:'UPDATE',entity:'ibta_codes',record_key:'TEST',happened_at:'2026-10-07T09:00:00Z'}];
 let conflict=false,clipboardFails=false,codeReads=0;
 const authUser={id:'user-1',email:'test@example.invalid',user_metadata:{}};
 const windowListeners={};let authListener,signOuts=0;
@@ -28,7 +29,7 @@ const client={
   auth:{getSession:async()=>{if(firstSessionRead){firstSessionRead=false;await initialSessionRead;}return sessionReadError?{error:Error('NETWORK')}:{data:{session:{user:clone(authUser),access_token:accessToken}}};},onAuthStateChange(fn){authListener=fn;},signOut:async()=>{signOuts++;authListener?.('SIGNED_OUT',null);return {};},updateUser:async args=>{events.push({name:'auth_update',args:clone(args)});if(args.data)authUser.user_metadata={...authUser.user_metadata,...args.data};return {data:{user:clone(authUser)}};}},
   from(table){
     if(table==='ibta_trainee_sheets'){const filters=[];const selected=()=>db.traineeSheets.filter(row=>filters.every(([key,value])=>row[key]===value));return {select(){return this;},eq(key,value){filters.push([key,value]);return this;},order(){return this;},maybeSingle:async()=>({data:clone(selected()[0]||null)}),then(resolve,reject){return Promise.resolve({data:clone(selected()),error:null}).then(resolve,reject);},range:async(from,to)=>({data:clone(selected().slice(from,to+1)),error:null})};}
-    if(table==='ibta_audit')return {select(){return this;},order(){return this;},limit:async()=>({data:[{id:'audit-1',actor:'user-1',action:'UPDATE',entity:'ibta_codes',record_key:'TEST',happened_at:'2026-10-07T09:00:00Z'}]})};
+    if(table==='ibta_audit')return {select(){return this;},order(){return this;},limit:async()=>({data:clone(db.auditEvents)})};
     if(table==='ibta_supervisor_stock')return {select:async()=>({data:clone(db.stock),error:null})};
     if(table==='ibta_members'){
       let filter;
@@ -171,6 +172,9 @@ for(const key of usedKeys) assert(englishKeys.includes(key),`Missing translation
   assert.equal(els['account-menu-popover'].hidden,true);
   assert.equal(els['cred-account-val'].textContent,'test-account');
   await run('renderAuditList()');assert.match(els['audit-list'].textContent,/TEST/);
+  db.auditEvents.push({actor:'user-1',action:'UPDATE',entity:'ibta_trainee_sheets',record_key:'user-1:00000000-0000-0000-0000-000000000001',happened_at:'2026-10-07T09:00:00Z'},{actor:'user-1',action:'UPDATE',entity:'ibta_settings',record_key:'1',happened_at:'2026-10-07T09:00:00Z'});
+  await run('renderAuditList()');assert.match(els['audit-list'].textContent,/تعديل جدول المتدربين «Sheet 1» · صاحب الجدول: test@example.invalid/);assert.doesNotMatch(els['audit-list'].textContent,/00000000-0000-0000-0000-000000000001|ibta_trainee_sheets/);
+  run("currentLang='en'");await run('renderAuditList()');assert.match(els['audit-list'].textContent,/Updated trainee worksheet «Sheet 1» · Owner: test@example.invalid/);run("currentLang='ar'");
   membersReadError=true;await run('renderAuditList()');assert.equal(els['audit-list'].textContent,run("t('genericError')"));
   membersReadError=false;await run('renderAuditList()');assert.match(els['audit-list'].textContent,/TEST/,'A failed audit read can recover without losing the React region');
   assert.match(els['cloud-status'].textContent,/متصل/);

@@ -438,6 +438,22 @@ const Trainees=(()=>{
     document.addEventListener('pointermove',onPointerMove);
     document.addEventListener('pointerup',onPointerUp);
   }
+  function saveRowHeight(index,height){
+    const next=D.format(formatting);
+    for(const [key,style]of Object.entries(next.styles))if(Number(key.split(':')[0])===index)delete style.height;
+    if(height!==null){const key=index+':0';next.styles[key]={...next.styles[key],height};}
+    change(cells,true,next);
+  }
+  function initRowResize(e,index){
+    if(e.button!==0)return;e.preventDefault();e.stopPropagation();
+    const token=epoch,zoom=excelView.zoom/100,startY=e.clientY,startHeight=e.currentTarget.parentElement.parentElement.getBoundingClientRect().height/zoom;
+    let height=Math.round(startHeight);commitEdit();
+    const move=event=>{if(token!==epoch)return;height=Math.max(20,Math.min(400,Math.round(startHeight+(event.clientY-startY)/zoom)));rowHeights.set(index,height*zoom);rebuildRowOffsets();queueDraw(true);};
+    const cleanup=()=>{document.removeEventListener('pointermove',move);document.removeEventListener('pointerup',finish);document.removeEventListener('pointercancel',cancel);};
+    const finish=()=>{cleanup();if(token===epoch&&height!==Math.round(startHeight))saveRowHeight(index,height);};
+    const cancel=()=>{cleanup();if(token===epoch)render();};
+    document.addEventListener('pointermove',move);document.addEventListener('pointerup',finish);document.addEventListener('pointercancel',cancel);
+  }
   const visibleCols=()=>{const width=cells[0]?.length||0;if(visibleCache?.format===formatting&&visibleCache.width===width)return visibleCache.cols;const hidden=new Set(formatting.hidden),cols=Array.from({length:colCount()},(_,c)=>c).filter(c=>!hidden.has(c));visibleCache={format:formatting,width,cols};return cols;};
   // Every data mutation creates a new matrix, so history can retain the old matrix safely.
   const snapshot=()=>({cells,format:D.format(formatting),alignments:{...cellAlignments}});
@@ -859,6 +875,8 @@ const Trainees=(()=>{
     const rows=[];
     for(let v=start;v<end;v++){
       const idx=view[v],row={viewRow:v,sourceRow:idx,height:rowHeights.get(idx),cells:[],
+        resizeTitle:tr('اسحب لتعديل ارتفاع الصف · انقر مرتين لاستعادة الارتفاع الافتراضي','Drag to change row height · Double-click to reset'),
+        onResize:e=>initRowResize(e,idx),onResetHeight:e=>{e.stopPropagation();commitEdit();saveRowHeight(idx,null);},
         onSelect:e=>{if(!skipSelectionClick&&!dragMoved)selectRow(v,e);skipSelectionClick=false;dragMoved=false;},
         onPointerDown:e=>{if(e.button!==0||e.pointerType==='touch')return;e.preventDefault();e.stopPropagation();rowDragging=true;dragMoved=false;skipSelectionClick=true;selectRow(v,e);}
       };
@@ -923,7 +941,7 @@ const Trainees=(()=>{
     labels.forEach((pair,column)=>{
       if(column>=baseLabels.length&&!row[column]&&!formatting.headers[column])return;
       const keycode=column===7?D.courseKeycode(row[column],DEFAULT_KEYCODES):null;
-      const field={label:column===7?tr('الدورة','Course'):tr(...pair),copyName:tr(...pair),value:row[column]||'',className:column===11?'sheet-detail-result':'',result:column===11?detailResult(row[column]):undefined};
+      const field={label:column===7?tr('الدورة','Course'):tr(...pair),copyName:tr(...pair),value:row[column]||'',className:({7:'sheet-detail-course',9:'sheet-detail-username',10:'sheet-detail-password',11:'sheet-detail-result'})[column]||'',result:column===11?detailResult(row[column]):undefined};
       if(column===7&&!keycode)field.note=tr('لا يوجد كي كود مطابق','No matching keycode');
       fields.push(field);
       if(column===7&&keycode){
@@ -946,7 +964,8 @@ const Trainees=(()=>{
       hideDuplicateHint();dialog.dir=currentLang==='ar'?'rtl':'ltr';
       $('sheet-trainee-title').textContent=tr('بيانات المتدرب — ','Trainee details — ')+name;
       const fields=detailFields(row,false),voucher=fields[0],loginDisplay=PROMETRIC_LOGIN_URL.replace(/(\/Login).+$/i,'$1…');
-      fields.unshift({label:'Prometric login link',value:PROMETRIC_LOGIN_URL,display:loginDisplay,className:'sheet-detail-login',direction:'ltr',empty:tr('غير محدد','Not configured')},detailKeycode(D.courseKeycode(row[7],DEFAULT_KEYCODES)),...[['Prometric Account',PROMETRIC_ACCOUNT],['Prometric Password',PROMETRIC_PASSWORD]].map(([label,value])=>({label,value,direction:'ltr',empty:tr('غير محدد','Not configured')})));
+      const credentials=fields.splice(fields.findIndex(field=>field.className==='sheet-detail-username'),2);
+      fields.unshift({label:'Prometric login link',value:PROMETRIC_LOGIN_URL,display:loginDisplay,className:'sheet-detail-login',direction:'ltr',empty:tr('غير محدد','Not configured')},...credentials,detailKeycode(D.courseKeycode(row[7],DEFAULT_KEYCODES)),...[['Prometric Account',PROMETRIC_ACCOUNT],['Prometric Password',PROMETRIC_PASSWORD]].map(([label,value])=>({label,value,direction:'ltr',empty:tr('غير محدد','Not configured')})));
       const refreshRecord=()=>{if(dialog.open&&activeIndex===index&&activeEpoch===epoch)show(index);};
       const exam=D.courseKeycode(row[7],DEFAULT_KEYCODES),category=exam&&(state.keycodeOverrides?.[exam.code]||exam.category),codeCategory=category&&getLinkedCodesCat(category);
       const claim=async action=>{

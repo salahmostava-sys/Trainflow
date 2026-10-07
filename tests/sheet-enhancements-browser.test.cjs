@@ -150,6 +150,8 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),path
     assert.equal(await page.locator('.sheet-get-exam-code').count(),0,'An existing code has no allocation or replacement button');
     assert.ok((await page.locator('#sheet-trainee-title').textContent()).endsWith('Trainee'));
     const details=await page.locator('#sheet-trainee-record').textContent();assert.match(details,/hidden@example.invalid/);assert.match(details,/demo-password/);assert.match(details,/EXTRA-AZ/);
+    assert.deepEqual((await page.locator('#sheet-trainee-record dt').allTextContents()).slice(0,3),['Prometric login link','اسم المستخدم','كلمة المرور']);
+    const course=page.locator('#sheet-trainee-record .sheet-detail-course');assert.equal(await course.evaluate(el=>getComputedStyle(el).color),'rgb(185, 28, 28)');await course.hover();assert.equal(await course.evaluate(el=>getComputedStyle(el).color),'rgb(185, 28, 28)','The course keeps its red color on hover');
     assert.equal(await page.locator('#sheet-trainee-dialog').getByRole('button',{name:/خيارات حساب Prometric|إنشاء حساب Prometric|Prometric account options|Create Prometric account/}).count(),0,'The account shortcut is removed while account fields remain available');
     for(const viewport of [{width:1366,height:768},{width:1280,height:720},{width:1024,height:600}]){
       await page.setViewportSize(viewport);

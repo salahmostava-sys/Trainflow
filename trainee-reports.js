@@ -41,7 +41,8 @@ const TraineeReports=(()=>{
       const prefs=preferences(),bridge=bridgeUrl(prefs.bridge);
       const readyOps=bridge&&sheetUrl(prefs.operations),readySucc=bridge&&sheetUrl(prefs.success);
       const count=(readyOps?1:0)+(readySucc?1:0);
-      ready.textContent=count===2?tr('جاهز للرفع من المعاينة','Ready to upload from preview'):count===1?tr('تقرير واحد جاهز','One report ready'):tr('غير مربوط — اضبط الروابط في الإعدادات','Not connected — configure in Settings');
+      ready.textContent=count&&navigator.onLine?tr('متصل','Connected'):tr('غير متصل','Disconnected');
+      ready.title=count===2?tr('روابط التقريرين مكتملة','Both report links are configured'):count===1?tr('رابط تقرير واحد مكتمل','One report link is configured'):tr('روابط التقارير غير مكتملة','Report links are incomplete');
     };
     const actionLabels={preview:['معاينة التقرير','Preview report'],'apply-date':['اختيار التاريخ','Choose date']};
     for(const [action,pair] of Object.entries(actionLabels)){const button=panel.querySelector('[data-action="'+action+'"]');if(button){button.dataset.ar=pair[0];button.dataset.en=pair[1];}}
@@ -76,5 +77,6 @@ const TraineeReports=(()=>{
       previewReport(matched,date,codes.filter(c=>!vouchers.has(c.code.trim().toUpperCase())).length,(kind,onStatus)=>doUpload(kind,onStatus,{owner,sheetId,date}));
     });
   }
+  for(const event of ['online','offline'])window.addEventListener(event,()=>panels.forEach(panel=>panel.updateReady()));
   setupSettings();return {mount,day,translate,syncExpanded(active){panels.forEach(panel=>panel.syncExpanded?.(active));}};
 })();
