@@ -1464,12 +1464,38 @@ if(window.history)window.history.scrollRestoration='manual';
     <div class="edit-dialog-actions"><button type="button" id="edit-cancel" data-i18n="cancelBtn">Cancel</button><button type="submit" class="save" data-i18n="saveSharedSettings">Save changes</button></div>
   </form>
 </dialog>
+<dialog id="app-modal-dialog" class="app-modal-dialog" aria-labelledby="app-modal-title" aria-describedby="app-modal-desc">
+  <div class="app-modal-content">
+    <div class="app-modal-header">
+      <div id="app-modal-icon-badge" class="app-modal-icon-badge" aria-hidden="true"></div>
+      <div class="app-modal-text">
+        <h2 id="app-modal-title" class="app-modal-title"></h2>
+        <p id="app-modal-desc" class="app-modal-desc"></p>
+      </div>
+    </div>
+    <div id="app-modal-body" class="app-modal-body" hidden>
+      <div class="app-modal-field">
+        <label id="app-modal-input-label" for="app-modal-input" class="app-modal-label" hidden></label>
+        <div class="app-modal-input-wrap">
+          <input id="app-modal-input" class="app-modal-input" autocomplete="off" />
+          <span id="app-modal-unit" class="app-modal-unit" hidden></span>
+        </div>
+        <div id="app-modal-error" class="app-modal-error" hidden></div>
+      </div>
+    </div>
+    <div class="app-modal-actions">
+      <button id="app-modal-cancel" type="button" class="app-modal-btn app-modal-btn-cancel"></button>
+      <button id="app-modal-confirm" type="button" class="app-modal-btn app-modal-btn-confirm"></button>
+    </div>
+  </div>
+</dialog>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.116.0/dist/umd/supabase.js"></script>
 <script src="session-policy.js"></script>
 <script src="cloud.js"></script>
 <script src="voucher-names.js"></script>
 <script src="voucher-columns.js"></script>
+<script src="app-dialog.js"></script>
 <script>
 // ---------- TRANSLATIONS ----------
 const TRANSLATIONS = {

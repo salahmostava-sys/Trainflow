@@ -57,7 +57,16 @@ document.getElementById('restore-file').addEventListener('change',async event=>{
   }catch{opsText('restore-preview',t('restoreInvalid'));}
 });
 document.getElementById('restore-button').addEventListener('click',async()=>{
-  if(!pendingBackup || !confirm(t('restoreConfirm')(pendingBackup.codes.length)))return;
+  if(!pendingBackup)return;
+  const ok=await (window.AppDialog?AppDialog.confirm({
+    title:currentLang==='ar'?'تأكيد استعادة النسخة الاحتياطية':'Confirm Backup Restore',
+    message:t('restoreConfirm')(pendingBackup.codes.length),
+    confirmText:currentLang==='ar'?'استعادة':'Restore',
+    cancelText:currentLang==='ar'?'إلغاء':'Cancel',
+    danger:true,
+    icon:'warning'
+  }):confirm(t('restoreConfirm')(pendingBackup.codes.length)));
+  if(!ok)return;
   try{
     await Cloud.restoreData(pendingBackup);
     pendingBackup=null;document.getElementById('restore-button').disabled=true;

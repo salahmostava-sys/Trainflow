@@ -176,9 +176,18 @@ const Trainees=(()=>{
     focusCell(startIdx,0);
     message(()=>tr(`تمت إضافة ${n.toLocaleString()} صف دفعة واحدة بنجاح`,`Added ${n.toLocaleString()} rows at once successfully`));
   }
-  function deleteSelectedRows(){
+  async function deleteSelectedRows(){
     commitEdit();const ids=new Set(selectedRows().map(r=>view[r]));
-    if(!ids.size||!confirm(tr((ids.size>1?'حذف الصفوف المحددة؟':'حذف الصف المحدد؟'),(ids.size>1?'Delete selected rows?':'Delete selected row?'))))return;
+    if(!ids.size)return;
+    const ok=await (window.AppDialog?AppDialog.confirm({
+      title:tr(ids.size>1?'حذف الصفوف المحددة':'حذف الصف المحدد',ids.size>1?'Delete Selected Rows':'Delete Selected Row'),
+      message:tr((ids.size>1?'حذف الصفوف المحددة؟':'حذف الصف المحدد؟'),(ids.size>1?'Delete selected rows?':'Delete selected row?')),
+      confirmText:tr('حذف','Delete'),
+      cancelText:tr('إلغاء','Cancel'),
+      danger:true,
+      icon:'trash'
+    }):confirm(tr((ids.size>1?'حذف الصفوف المحددة؟':'حذف الصف المحدد؟'),(ids.size>1?'Delete selected rows?':'Delete selected row?'))));
+    if(!ok)return;
     const next=D.removeRows(cells,formatting,ids);change(next.cells,true,next.format);
     message(()=>tr(ids.size>1?'تم حذف الصفوف المحددة':'تم حذف الصف المحدد',ids.size>1?'Selected rows deleted':'Selected row deleted'));
   }
@@ -278,13 +287,33 @@ const Trainees=(()=>{
     menu.style.left=x+'px';menu.style.top=y+'px';
   }
   function closeContextMenu(){const menu=$('sheet-context-menu');if(menu)menu.hidden=true;}
-  function editColumns(action){
+  async function editColumns(action){
     if(!loaded)return;if(!singleSelection())return;commitEdit();const [,,c1,c2]=bounds(),insert=action!=='delete';
     let start=insert?Math.max(D.BASE_WIDTH,cursor.c+((action==='right')!==(formatting.direction==='rtl')?1:0)):c1;
     const count=c2-c1+1;
     if(!insert&&start<D.BASE_WIDTH){message(()=>tr('أعمدة بيانات المتدرب الأساسية ثابتة. يمكنك إخفاؤها أو مسح محتواها.','The trainee fields are fixed. You can hide them or clear their contents.'),true);return;}
-    if(!insert&&!confirm(tr('حذف الأعمدة المحددة بكل بياناتها؟ يمكنك التراجع.','Delete selected columns and their data? You can undo.')))return;
-    let name='';if(insert){name=prompt(tr('اسم العمود الجديد:','New column name:'),tr('عمود جديد','New column'));if(name===null)return;}
+    if(!insert){
+      const ok=await (window.AppDialog?AppDialog.confirm({
+        title:tr('حذف الأعمدة المحددة','Delete Selected Columns'),
+        message:tr('حذف الأعمدة المحددة بكل بياناتها؟ يمكنك التراجع.','Delete selected columns and their data? You can undo.'),
+        confirmText:tr('حذف','Delete'),
+        cancelText:tr('إلغاء','Cancel'),
+        danger:true,
+        icon:'trash'
+      }):confirm(tr('حذف الأعمدة المحددة بكل بياناتها؟ يمكنك التراجع.','Delete selected columns and their data? You can undo.')));
+      if(!ok)return;
+    }
+    let name='';if(insert){
+      name=await (window.AppDialog?AppDialog.prompt({
+        title:tr('إضافة عمود جديد','Add New Column'),
+        message:tr('اسم العمود الجديد:','New column name:'),
+        defaultValue:tr('عمود جديد','New column'),
+        confirmText:tr('إضافة','Add'),
+        cancelText:tr('إلغاء','Cancel'),
+        icon:'column'
+      }):prompt(tr('اسم العمود الجديد:','New column name:'),tr('عمود جديد','New column')));
+      if(name===null)return;
+    }
     let next;try{next=D.columns(cells,formatting,start,count,insert,colCount());}catch{limitError();return;}
     if(insert)next.format.headers[start]=name.trim()||tr('عمود جديد','New column');
     change(next.cells,false,next.format);
@@ -492,7 +521,7 @@ const Trainees=(()=>{
           <label><span id="sheet-text-color-label"></span><input type="color" id="sheet-text-color" value="#16324f"></label>
           <button type="button" id="sheet-clear-format"></button><button type="button" id="sheet-wrap" aria-pressed="false">التفاف النص / Wrap text</button><button type="button" id="sheet-freeze" aria-pressed="false">تثبيت أول عمود / Freeze first column</button><label><span id="sheet-direction-label"></span><select id="sheet-direction"><option value="rtl">يمين ← يسار</option><option value="ltr">Left → Right</option></select></label>
         </div>
-        <div class="sheet-filters"><input id="sheet-search" type="search"><input id="sheet-org" type="search"><input id="sheet-date" type="search"><select id="sheet-result"></select><label class="sheet-duplicates-filter"><input type="checkbox" id="sheet-duplicates-only"><span id="sheet-duplicates-label"></span></label><button type="button" id="sheet-clear-filters"></button></div>
+        <div class="sheet-filters"><input id="sheet-search" type="search"><input id="sheet-org" type="search"><input id="sheet-date" type="search"><select id="sheet-result"></select><label class="sheet-duplicates-filter" id="sheet-duplicates-filter"><input type="checkbox" id="sheet-duplicates-only"><span id="sheet-duplicates-label"></span><span id="sheet-duplicates-count" class="sheet-duplicates-badge">0</span></label><button type="button" id="sheet-clear-filters"></button></div>
         <div class="sheet-scroll"><table class="sheet-grid" id="sheet-grid" role="grid" aria-label="Trainees"><thead></thead><tbody></tbody></table></div>
         <div class="sheet-add-rows-bar">
           <span id="sheet-add-prefix"></span>
@@ -567,7 +596,17 @@ const Trainees=(()=>{
     $('sheet-select-all').onclick=()=>selectAll();
     $('sheet-copy').onclick=async()=>{commitEdit();if(await copyText(D.tsv(cells)))message(()=>tr('تم نسخ الجدول بالكامل','Entire sheet copied'));};
     ['sheet-search','sheet-org','sheet-date','sheet-result'].forEach(id=>$(id).addEventListener('input',()=>{commitEdit();extraSelections=[];anchor=cursor={r:0,c:0};render();}));
-    $('sheet-duplicates-only').onchange=()=>{commitEdit();extraSelections=[];anchor=cursor={r:0,c:0};render();};
+    $('sheet-duplicates-only').onchange=()=>{
+      commitEdit();
+      extraSelections=[];
+      const idCol=visibleCols().includes(4)?4:(visibleCols()[0]??0);
+      anchor=cursor={r:0,c:idCol};
+      render();
+      if($('sheet-duplicates-only').checked){
+        let total=0;for(const rows of duplicateIds.values())total+=rows.length;
+        if(total>0)message(()=>tr('تمت التصفية: عرض '+total+' سجل بهويات مكررة','Filtered: displaying '+total+' records with duplicate IDs'));
+      }
+    };
     $('sheet-clear-filters').onclick=()=>{commitEdit();clearFilters();render();};
     const grid=$('sheet-grid');
     grid.parentElement.addEventListener('scroll',()=>{queueDraw();schedulePosition();},{passive:true});
@@ -654,9 +693,17 @@ const Trainees=(()=>{
       state:()=>({cells,view,owner,epoch,loaded:loaded&&!loading,cursor:{...cursor}}),catalog:()=>DEFAULT_KEYCODES,commitEdit,message});
     translate();
   }
-  function addColumn(){
+  async function addColumn(){
     if(!loaded)return;commitEdit();const c=colCount();if(c>=D.MAX_COLS)return limitError();
-    const name=prompt(tr('اسم العمود الجديد:','New column name:'),tr('عمود ','Column ')+colLetter(c));if(name===null)return;
+    const name=await (window.AppDialog?AppDialog.prompt({
+      title:tr('إضافة عمود جديد','Add New Column'),
+      message:tr('اسم العمود الجديد:','New column name:'),
+      defaultValue:tr('عمود ','Column ')+colLetter(c),
+      confirmText:tr('إضافة','Add'),
+      cancelText:tr('إلغاء','Cancel'),
+      icon:'column'
+    }):prompt(tr('اسم العمود الجديد:','New column name:'),tr('عمود ','Column ')+colLetter(c)));
+    if(name===null)return;
     const next=D.columns(cells,formatting,c,1,true,c);next.format.headers[c]=name.trim()||tr('عمود ','Column ')+colLetter(c);
     change(next.cells,true,next.format);focusCell(cursor.r,c);
   }
@@ -666,12 +713,19 @@ const Trainees=(()=>{
     const shouldOpen=force!==undefined?force:popover.hidden;
     if(!shouldOpen){popover.hidden=true;return;}
     popover.innerHTML='';
-    const createBtn=button('+ '+tr('إنشاء عمود جديد','Create new column'),()=>{
+    const createBtn=button('+ '+tr('إنشاء عمود جديد','Create new column'),async()=>{
       commitEdit();
       const newColIdx=colCount();
       if(newColIdx>=D.MAX_COLS){limitError();return;}
       const letter=colLetter(newColIdx);
-      const colName=prompt(tr('اسم العمود الجديد (اختياري):','New column name (optional):'),tr('عمود ','Column ')+letter);
+      const colName=await (window.AppDialog?AppDialog.prompt({
+        title:tr('إنشاء عمود جديد','Create New Column'),
+        message:tr('اسم العمود الجديد (اختياري):','New column name (optional):'),
+        defaultValue:tr('عمود ','Column ')+letter,
+        confirmText:tr('إنشاء','Create'),
+        cancelText:tr('إلغاء','Cancel'),
+        icon:'column'
+      }):prompt(tr('اسم العمود الجديد (اختياري):','New column name (optional):'),tr('عمود ','Column ')+letter));
       if(colName===null)return;
       const nextFormat=D.format(formatting);
       if(colName&&colName.trim()){
@@ -815,7 +869,17 @@ const Trainees=(()=>{
   }
   async function reload(){
     commitEdit();if(saving)await saving;
-    if(hasDraft()&&!confirm(tr('إعادة التحميل ستستبدل تعديلاتك غير المحفوظة. انسخ الجدول أولًا للاحتفاظ بها. المتابعة؟','Reload replaces unsaved edits. Copy the sheet first to keep them. Continue?')))return;
+    if(hasDraft()){
+      const ok=await (window.AppDialog?AppDialog.confirm({
+        title:tr('تنبيه: تعديلات غير محفوظة','Warning: Unsaved Changes'),
+        message:tr('إعادة التحميل ستستبدل تعديلاتك غير المحفوظة. انسخ الجدول أولًا للاحتفاظ بها. المتابعة؟','Reload replaces unsaved edits. Copy the sheet first to keep them. Continue?'),
+        confirmText:tr('متابعة إعادة التحميل','Continue Reload'),
+        cancelText:tr('إلغاء','Cancel'),
+        danger:true,
+        icon:'warning'
+      }):confirm(tr('إعادة التحميل ستستبدل تعديلاتك غير المحفوظة. انسخ الجدول أولًا للاحتفاظ بها. المتابعة؟','Reload replaces unsaved edits. Copy the sheet first to keep them. Continue?')));
+      if(!ok)return;
+    }
     clearTimeout(timer);await switchOwner(owner||Cloud.userId(),true);
   }
   function clearFilters(){['sheet-search','sheet-org','sheet-date','sheet-result'].forEach(id=>$(id).value='');$('sheet-duplicates-only').checked=false;sortCol=-1;sortRules=[];}
@@ -825,9 +889,29 @@ const Trainees=(()=>{
     let values=searchRows.get(row);if(!values){values=row.filter(Boolean).map(value=>value.toLocaleLowerCase());if(Object.isFrozen(row))searchRows.set(row,values);}
     return values.some(value=>value.includes(search));
   }
+  function updateDuplicateFilterUI(){
+    const input=$('sheet-duplicates-only');
+    if(!input)return;
+    const badge=$('sheet-duplicates-count');
+    const wrapper=input.closest('.sheet-duplicates-filter');
+    let total=0;
+    for(const indices of duplicateIds.values())total+=indices.length;
+    if(badge){
+      badge.textContent=String(total);
+      badge.classList.toggle('has-duplicates',total>0);
+    }
+    if(wrapper){
+      wrapper.classList.toggle('active',input.checked);
+      wrapper.title=total>0?
+        tr('تم اكتشاف '+total+' سجل بهويات مكررة'+(input.checked?' (معروضة حالياً)':' (انقر للتصفية)'),
+           total+' records with duplicate IDs found'+(input.checked?' (currently displayed)':' (click to filter)')):
+        tr('لا توجد إقامات مكررة في هذا الجدول','No duplicate IDs in this sheet');
+    }
+  }
   function buildView(){
     const search=$('sheet-search').value.toLocaleLowerCase(),org=$('sheet-org').value.toLocaleLowerCase(),date=$('sheet-date').value.toLocaleLowerCase(),result=$('sheet-result').value;
     duplicateIds=D.duplicates(cells);
+    updateDuplicateFilterUI();
     view=cells.map((_,i)=>i).filter(i=>matchesSearch(cells[i],search)&&(!org||cells[i][6].toLocaleLowerCase().includes(org))&&(!date||cells[i][8].toLocaleLowerCase().includes(date))&&(!result||cells[i][11]===result)&&(!$('sheet-duplicates-only').checked||duplicateIds.has(D.idKey(cells[i][4]))));
     const rules=sortRules.length?sortRules:sortCol>=0?[{column:sortCol,direction:sortDir}]:[];if(rules.length)view.sort((a,b)=>{for(const rule of rules){const value=rule.direction*(D.formulaValue(cells,a,rule.column,formulaCache)||'').localeCompare(D.formulaValue(cells,b,rule.column,formulaCache)||'',currentLang,{numeric:true});if(value)return value;}return a-b;});
     updateLastDataRow();if(!filtered())for(let i=cells.length;i<totalInputRows();i++)view.push(i);
@@ -867,11 +951,18 @@ const Trainees=(()=>{
       th.title=tr('اسحب أو Shift لأعمدة متجاورة · Ctrl لأعمدة متفرقة','Drag or Shift for adjacent columns · Ctrl for separate columns');
       if(c>=baseLabels.length){
         th.title=tr('انقر مرتين لتعديل اسم العمود · اسحب لتغيير العرض','Double-click to rename column · Drag to resize');
-        th.addEventListener('dblclick',e=>{
+        th.addEventListener('dblclick',async e=>{
           if(e.target.closest('.sheet-col-resizer'))return;
           e.stopPropagation();
           const curName=formatting.headers?.[c]||tr(...pair);
-          const newName=prompt(tr('اسم العمود:','Column name:'),curName);
+          const newName=await (window.AppDialog?AppDialog.prompt({
+            title:tr('تعديل اسم العمود','Rename Column'),
+            message:tr('اسم العمود:','Column name:'),
+            defaultValue:curName,
+            confirmText:tr('تعديل','Rename'),
+            cancelText:tr('إلغاء','Cancel'),
+            icon:'edit'
+          }):prompt(tr('اسم العمود:','Column name:'),curName));
           if(newName!==null&&newName.trim()&&newName.trim()!==curName){
             const next=D.format(formatting);if(!next.headers)next.headers={};next.headers[c]=newName.trim();change(cells,true,next);
           }
@@ -916,6 +1007,30 @@ const Trainees=(()=>{
   }
   function drawRows(force=false){
     if(!initialized||editing&&!force)return;const grid=$('sheet-grid'),scroll=grid.parentElement,tbody=grid.querySelector('tbody'),cols=visibleCols();
+    if(view.length===0){
+      commitEdit();drawnStart=drawnEnd=0;drawnColumns='';
+      const emptyRow=node('tr',undefined,{class:'sheet-empty-view-row'});
+      const emptyCell=node('td',undefined,{class:'sheet-empty-view-cell',colspan:cols.length+1});
+      const isDupFilter=$('sheet-duplicates-only')?.checked;
+      const emptyBox=node('div',undefined,{class:'sheet-empty-view-content'});
+      emptyBox.append(node('div',isDupFilter?'✅':'🔍',{class:'sheet-empty-view-icon'}));
+      emptyBox.append(node('strong',isDupFilter?
+        tr('لا توجد إقامات أو هويات مكررة في هذا الجدول ✨','No duplicate IDs found in this sheet ✨'):
+        tr('لا توجد بيانات مطابقة للفلاتر المحددة','No matching records for current filters')));
+      if(isDupFilter){
+        const clearBtn=button(tr('إلغاء فلترة التكرار','Clear duplicate filter'),()=>{
+          $('sheet-duplicates-only').checked=false;
+          $('sheet-duplicates-only').dispatchEvent(new Event('change'));
+        },'sheet-empty-view-btn');
+        emptyBox.append(clearBtn);
+      }
+      emptyCell.append(emptyBox);
+      emptyRow.append(emptyCell);
+      tbody.replaceChildren(emptyRow);
+      paint();
+      updateVisibleRows();
+      return;
+    }
     const height=scroll.clientHeight||400,head=grid.querySelector('thead').getBoundingClientRect().height||36;
     const first=rowAtOffset(Math.max(0,scroll.scrollTop-head)),start=view.length<=100?0:Math.max(0,first-8),end=view.length<=100?view.length:Math.min(view.length,rowAtOffset(scroll.scrollTop+height)+10);
     const merges=sheetMerges(),segments=columnWindow(cols,merges,start,end),columnKey=segments.map(s=>s.gap?'gap:'+s.count+':'+s.width:s.c).join(',');
@@ -1306,7 +1421,15 @@ const Trainees=(()=>{
     if(!loaded)return;if(!singleSelection())return;commitEdit();
     const [r1,r2,c1,c2]=bounds(),indices=new Set(view.slice(r1,r2+1));
     if(Object.entries(formatting.styles).some(([key,s])=>{if((s.mergeRows||1)===1&&(s.mergeCols||1)===1)return false;const [r,c]=key.split(':').map(Number);return c<=c2&&c+(s.mergeCols||1)-1>=c1&&[...indices].some(i=>i>=r&&i<r+(s.mergeRows||1));})){message(()=>tr('ألغِ دمج الخلايا المحددة قبل إزاحة الخلايا.','Unmerge the selected cells before shifting cells.'),true);return;}
-    if(!confirm(tr('حذف الخلايا المحددة وإزاحة باقي بيانات الصف؟ يشمل الأعمدة المخفية.','Delete selected cells and shift the remaining row data? Hidden columns are included.')))return;
+    const ok=await (window.AppDialog?AppDialog.confirm({
+      title:tr('حذف الخلايا وإزاحتها','Delete & Shift Cells'),
+      message:tr('حذف الخلايا المحددة وإزاحة باقي بيانات الصف؟ يشمل الأعمدة المخفية.','Delete selected cells and shift the remaining row data? Hidden columns are included.'),
+      confirmText:tr('حذف وإزاحة','Delete & Shift'),
+      cancelText:tr('إلغاء','Cancel'),
+      danger:true,
+      icon:'trash'
+    }):confirm(tr('حذف الخلايا المحددة وإزاحة باقي بيانات الصف؟ يشمل الأعمدة المخفية.','Delete selected cells and shift the remaining row data? Hidden columns are included.')));
+    if(!ok)return;
     const logical=formatting.direction==='rtl'?(direction==='left'?'right':'left'):direction;
     const next=D.deleteCells(cells,formatting,indices,c1,c2,logical,colCount());
     change(next.cells,false,next.format);
@@ -1410,7 +1533,14 @@ const Trainees=(()=>{
     const chosen=[...$('sheet-code-list').querySelectorAll('input[data-code]:checked')].map(el=>el.dataset.code);
     if(!chosen.length)return;if(chosen.length>250){$('sheet-code-status').textContent=tr('اختر حتى 250 كودًا في المرة.','Select up to 250 codes at a time.');return;}
     const snapshot=new Map(Cloud.codeSnapshot().map(row=>[row.code,row]));const items=chosen.map(code=>({code,version:snapshot.get(code).version}));
-    if(!confirm(codeMode==='pool'?tr('تخصيص الأكواد المحددة للمستخدم المعروض؟','Assign selected codes to the displayed user?'):tr('إرجاع الأكواد المحددة للمخزون؟','Return selected codes to stock?')))return;
+    const ok=await (window.AppDialog?AppDialog.confirm({
+      title:codeMode==='pool'?tr('تخصيص الأكواد','Assign Codes'):tr('إرجاع الأكواد','Return Codes'),
+      message:codeMode==='pool'?tr('تخصيص الأكواد المحددة للمستخدم المعروض؟','Assign selected codes to the displayed user?'):tr('إرجاع الأكواد المحددة للمخزون؟','Return selected codes to stock?'),
+      confirmText:codeMode==='pool'?tr('تخصيص','Assign'):tr('إرجاع','Return'),
+      cancelText:tr('إلغاء','Cancel'),
+      icon:'info'
+    }):confirm(codeMode==='pool'?tr('تخصيص الأكواد المحددة للمستخدم المعروض؟','Assign selected codes to the displayed user?'):tr('إرجاع الأكواد المحددة للمخزون؟','Return selected codes to stock?')));
+    if(!ok)return;
     codeBusy=true;$('sheet-code-workspace').inert=true;if($('sheet-owner'))$('sheet-owner').disabled=true;
     try{await Cloud.assignCodes(codeMode==='pool'?owner:null,items);renderCodes();$('sheet-code-status').textContent=tr('تم تحديث تخصيص الأكواد.','Code assignments updated.');}
     catch(error){$('sheet-code-status').textContent=/CONFLICT/.test(error.message||'')?tr('تغيرت الأكواد. حدّث القائمة وحاول مجددًا.','Codes changed. Refresh and try again.'):tr('تعذر تخصيص الأكواد. تأكد أن المستخدم نشط ثم حدّث القائمة.','Could not assign codes. Check that the user is active, then refresh.');}

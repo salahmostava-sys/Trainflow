@@ -48,7 +48,7 @@ http.createServer((req,res)=>{
   const pathname=new URL(req.url,'http://localhost').pathname;
   if(pathname==='/trainflow-prometric.zip'){res.setHeader('Content-Type','application/zip');return res.end(fs.readFileSync(path.join(__dirname,'../dist/trainflow-prometric.zip')));}
   if(pathname==='/exceljs-4.4.0.min.js'){res.setHeader('Content-Type','text/javascript');return res.end(fs.readFileSync(require.resolve('exceljs/dist/exceljs.min.js')));}
-  if(['/codes-export.js','/voucher-names.js','/voucher-columns.js','/prometric-core.js','/prometric-registration.js','/certificate-name.js','/trainees.js','/trainees-excel.js','/trainees-borders.js','/trainees-sheets.js','/trainees-core.js','/trainees-xlsx.js','/trainees-files.js','/trainees-xlsx-worker.js','/trainees.css','/ops-ui.js','/trainee-reports.js','/session-policy.js'].includes(pathname)){
+  if(['/app-dialog.js','/codes-export.js','/voucher-names.js','/voucher-columns.js','/prometric-core.js','/prometric-registration.js','/certificate-name.js','/trainees.js','/trainees-excel.js','/trainees-borders.js','/trainees-sheets.js','/trainees-core.js','/trainees-xlsx.js','/trainees-files.js','/trainees-xlsx-worker.js','/trainees.css','/ops-ui.js','/trainee-reports.js','/session-policy.js'].includes(pathname)){
     res.setHeader('Content-Type',pathname.endsWith('.css')?'text/css':'text/javascript');
     return res.end(fs.readFileSync(path.join(__dirname,'..',pathname.slice(1))));
   }

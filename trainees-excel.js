@@ -74,11 +74,22 @@ const TraineeExcel=(()=>{
     const borders=type=>selected((cells,fmt,r,c,s)=>{const vr=s.view.indexOf(r),cols=s.cols,at=cols.indexOf(c),key=r+':'+c,old=fmt.styles[key]||{},has=(row,col)=>D.selectedCell(ranges(s),row,col);fmt.styles[key]={...old,border:type,borderTop:null,borderBottom:null,borderLeft:null,borderRight:null};delete fmt.styles[key].borders;if(type==='outline')Object.assign(fmt.styles[key],{border:'none',borderTop:!has(vr-1,c),borderBottom:!has(vr+1,c),borderLeft:!has(vr,cols[at-1]??-1),borderRight:!has(vr,cols[at+1]??D.MAX_COLS)});});
     menu(font,'sheet-border-menu','حدود ▾','Borders ▾',[...['all','outline','none','top','bottom','left','right'].map((v,i)=>[v,['كل الحدود','حدود خارجية','بدون حدود','علوي','سفلي','يسار','يمين'][i],['All borders','Outside borders','No borders','Top','Bottom','Left','Right'][i],()=>borders(v)]),['format','تنسيق الحدود…','Format borders…',()=>{closeMenus();borderEditor.open();}]]);
     const align=group('sheet-excel-alignment','المحاذاة','Alignment');align.append($('sheet-align-right').parentElement);$('sheet-wrap').remove();const vertical=node('div',undefined,{class:'sheet-align-group sheet-valign-group'});for(const [key,ar,en]of [['top','محاذاة لأعلى','Top Align'],['middle','توسيط رأسي','Middle Align'],['bottom','محاذاة لأسفل','Bottom Align']])vertical.append(action('sheet-valign-'+key,ar,en,()=>h.formatSelection({valign:key})));align.append(vertical,action('sheet-wrap-text','التفاف النص','Wrap Text',()=>h.formatSelection({wrap:!(style().wrap??state().wrap)})));
-    const merge=mode=>{
+    const merge=async mode=>{
       const s=state();if(ranges(s).length>1){h.message(()=>tr('اختر منطقة واحدة متجاورة للدمج.','Select one contiguous range to merge.'),true);return;}if(s.filtered){h.message(()=>tr('امسح الفلاتر والفرز قبل الدمج.','Clear filters and sorting before merging.'),true);return;}const [r1,r2,c1,c2]=s.bounds,a=s.view[r1],b=s.view[r2];
       if(mode==='selection'){mutate((cells,fmt)=>{for(const r of rows(s)){for(const c of columns(s)){const key=r+':'+c,v=fmt.styles[key]||{};delete v.centerAcross;fmt.styles[key]=v;}fmt.styles[r+':'+c1]={...fmt.styles[r+':'+c1],align:'center',centerAcross:c2-c1+1};}});return;}
       if(mode!=='unmerge'&&r1===r2&&c1===c2)return;
-      const occupied=rows(s).some(r=>columns(s).some(c=>(r!==a||c!==c1)&&s.cells[r]?.[c]));if(mode!=='unmerge'&&occupied&&!confirm(tr('الدمج يحتفظ بقيمة أول خلية فقط. متابعة؟ يمكنك التراجع.','Merge keeps only the first cell value. Continue? You can undo.')))return;
+      const occupied=rows(s).some(r=>columns(s).some(c=>(r!==a||c!==c1)&&s.cells[r]?.[c]));
+      if(mode!=='unmerge'&&occupied){
+        const ok=await (window.AppDialog?AppDialog.confirm({
+          title:tr('تنبيه دمج الخلايا','Merge Cells Warning'),
+          message:tr('الدمج يحتفظ بقيمة أول خلية فقط. متابعة؟ يمكنك التراجع.','Merge keeps only the first cell value. Continue? You can undo.'),
+          confirmText:tr('متابعة الدمج','Continue Merge'),
+          cancelText:tr('إلغاء','Cancel'),
+          danger:false,
+          icon:'warning'
+        }):confirm(tr('الدمج يحتفظ بقيمة أول خلية فقط. متابعة؟ يمكنك التراجع.','Merge keeps only the first cell value. Continue? You can undo.')));
+        if(!ok)return;
+      }
       mutate((cells,fmt,_,rowAt)=>{for(const [key,v]of Object.entries(fmt.styles)){const [r,c]=key.split(':').map(Number);if(r<=b&&(r+(v.mergeRows||1)-1)>=a&&c<=c2&&(c+(v.mergeCols||v.centerAcross||1)-1)>=c1){delete v.mergeRows;delete v.mergeCols;delete v.centerAcross;}}
         if(mode==='unmerge')return;
         for(const r of rows(s)){const row=rowAt(r);for(const c of columns(s)){if((mode==='across'?c!==c1:r!==a||c!==c1)){while(row.length<=c)row.push('');row[c]='';}}}
@@ -99,11 +110,65 @@ const TraineeExcel=(()=>{
       separator(),action('sheet-sort-menu-clear','إلغاء الفرز','Clear sort',h.resetSort),action('sheet-find-select-menu-all','تحديد الكل','Select all',()=>h.selectAll()),action('sheet-find-select-menu-row','تحديد الصف','Select row',()=>{const s=state();h.select({r:s.cursor.r,c:0},{r:s.cursor.r,c:s.cols[s.cols.length-1]});}),action('sheet-find-select-menu-column','تحديد العمود','Select column',()=>{const s=state();h.select({r:0,c:s.cursor.c},{r:Math.max(0,s.view.length-1),c:s.cursor.c});})
     ]);
     const cellsGroup=$('sheet-add-col').closest('.sheet-ribbon-group').querySelector('.sheet-ribbon-actions');
-    const rowHeight=()=>{const n=Number(prompt(tr('ارتفاع الصف (20–400 بكسل):','Row height (20–400 px):'),String(style().height||28)));if(!Number.isInteger(n)||n<20||n>400)return;const s=state();mutate((cells,fmt)=>{const ids=new Set(rows(s));for(const [key,v]of Object.entries(fmt.styles))if(ids.has(Number(key.split(':')[0])))delete v.height;for(const r of ids){const c=s.cols[0];fmt.styles[r+':'+c]={...fmt.styles[r+':'+c],height:n};}});};
-    const columnWidth=auto=>{const s=state();let n=0;if(!auto){n=Number(prompt(tr('عرض العمود (40–800 بكسل):','Column width (40–800 px):'),'160'));if(!Number.isFinite(n)||n<40||n>800)return;}for(const c of columns(s)){const width=auto?Math.max(60,Math.min(800,s.cells.reduce((max,row)=>Math.max(max,String(row[c]||'').length),String(D.letter(c)).length)*7+24)):n;h.setColumnWidth(c,width);}h.saveColumnWidths();h.render();};
+    const rowHeight=async()=>{
+      const curH=String(style().height||28);
+      const res=await (window.AppDialog?AppDialog.prompt({
+        title:tr('ارتفاع الصف','Row Height'),
+        message:tr('أدخل ارتفاع الصف المطلوب (20–400 بكسل):','Enter row height (20–400 px):'),
+        defaultValue:curH,
+        inputType:'number',
+        min:20,
+        max:400,
+        unit:'px',
+        confirmText:tr('تطبيق','Apply'),
+        cancelText:tr('إلغاء','Cancel'),
+        icon:'row'
+      }):prompt(tr('ارتفاع الصف (20–400 بكسل):','Row height (20–400 px):'),curH));
+      if(res===null)return;
+      const n=Number(res);
+      if(!Number.isInteger(n)||n<20||n>400)return;
+      const s=state();mutate((cells,fmt)=>{const ids=new Set(rows(s));for(const [key,v]of Object.entries(fmt.styles))if(ids.has(Number(key.split(':')[0])))delete v.height;for(const r of ids){const c=s.cols[0];fmt.styles[r+':'+c]={...fmt.styles[r+':'+c],height:n};}});
+    };
+    const columnWidth=async auto=>{
+      const s=state();let n=0;
+      if(!auto){
+        const res=await (window.AppDialog?AppDialog.prompt({
+          title:tr('عرض العمود','Column Width'),
+          message:tr('أدخل عرض العمود المطلوب (40–800 بكسل):','Enter column width (40–800 px):'),
+          defaultValue:'160',
+          inputType:'number',
+          min:40,
+          max:800,
+          unit:'px',
+          confirmText:tr('تطبيق','Apply'),
+          cancelText:tr('إلغاء','Cancel'),
+          icon:'column'
+        }):prompt(tr('عرض العمود (40–800 بكسل):','Column width (40–800 px):'),'160'));
+        if(res===null)return;
+        n=Number(res);
+        if(!Number.isFinite(n)||n<40||n>800)return;
+      }
+      for(const c of columns(s)){const width=auto?Math.max(60,Math.min(800,s.cells.reduce((max,row)=>Math.max(max,String(row[c]||'').length),String(D.letter(c)).length)*7+24)):n;h.setColumnWidth(c,width);}h.saveColumnWidths();h.render();
+    };
     const formatEntries=[
       ['row-height','ارتفاع الصف…','Row Height…',rowHeight],['autofit-row','ضبط ارتفاع الصف تلقائيًا','AutoFit Row Height',()=>mutate((cells,fmt,s)=>{const ids=new Set(rows(s));for(const [key,v]of Object.entries(fmt.styles))if(ids.has(Number(key.split(':')[0])))delete v.height;})],['column-width','عرض العمود…','Column Width…',()=>columnWidth(false)],['autofit','ضبط عرض العمود تلقائيًا','AutoFit Column Width',()=>columnWidth(true)],
-      ['default-width','العرض الافتراضي…','Default Width…',()=>{const n=Number(prompt(tr('العرض الافتراضي (40–800 بكسل):','Default width (40–800 px):'),'160'));if(Number.isInteger(n)&&n>=40&&n<=800)mutate((cells,fmt)=>{fmt.defaultWidth=n;});}],
+      ['default-width','العرض الافتراضي…','Default Width…',async()=>{
+        const res=await (window.AppDialog?AppDialog.prompt({
+          title:tr('العرض الافتراضي للأعمدة','Default Column Width'),
+          message:tr('أدخل العرض الافتراضي (40–800 بكسل):','Enter default width (40–800 px):'),
+          defaultValue:'160',
+          inputType:'number',
+          min:40,
+          max:800,
+          unit:'px',
+          confirmText:tr('تطبيق','Apply'),
+          cancelText:tr('إلغاء','Cancel'),
+          icon:'column'
+        }):prompt(tr('العرض الافتراضي (40–800 بكسل):','Default width (40–800 px):'),'160'));
+        if(res===null)return;
+        const n=Number(res);
+        if(Number.isInteger(n)&&n>=40&&n<=800)mutate((cells,fmt)=>{fmt.defaultWidth=n;});
+      }],
       ['hide-rows','إخفاء الصفوف','Hide Rows',()=>mutate((cells,fmt,s)=>{fmt.hiddenRows=[...new Set([...(fmt.hiddenRows||[]),...rows(s)])];})],['show-rows','إظهار كل الصفوف','Unhide Rows',()=>mutate((cells,fmt)=>{fmt.hiddenRows=[];})],
       ['hide-cols','إخفاء الأعمدة','Hide Columns',()=>mutate((cells,fmt,s)=>{const selected=columns(s);if(selected.length>=s.cols.length)return;fmt.hidden=[...new Set([...fmt.hidden,...selected])];})],['show-cols','إظهار كل الأعمدة','Unhide Columns',()=>mutate((cells,fmt)=>{fmt.hidden=[];})],
       ...[['hide-sheet','إخفاء الشيت','Hide Sheet','hide'],['show-sheet','إظهار شيت…','Unhide Sheet…','show'],['rename-sheet','إعادة تسمية الشيت…','Rename Sheet…','rename'],['move-sheet','نقل أو نسخ الشيت…','Move or Copy Sheet…','move'],['tab-color','لون التبويب…','Tab Color…','color']].map(([key,ar,en,action])=>[key,ar,en,()=>{closeMenus();h.worksheet(action);}])

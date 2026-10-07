@@ -32,6 +32,8 @@ const duplicateRows=[D.blank(),D.blank(),D.blank(),D.blank()];
 duplicateRows[0][4]=' ٢١٢٣٤٥٦٧٨٩ ';duplicateRows[1][4]='2123456789';duplicateRows[2][4]='۲۱۲۳۴۵۶۷۸۹';
 assert.deepEqual(D.duplicates(duplicateRows).get('2123456789'),[0,1,2]);
 assert.equal(D.duplicates(duplicateRows).size,1,'Blank IDs are never duplicates');
+const dummyRows=[D.blank(),D.blank()];dummyRows[0][4]='0000000000';dummyRows[1][4]='0000000000';
+assert.equal(D.duplicates(dummyRows).size,0,'All-zero placeholders are not duplicates');
 assert.notEqual(D.idKey('00123'),D.idKey('123'),'Keep meaningful leading zeros');
 assert.equal(D.result('passed'),'ناجح');assert.equal(D.result('FAILED'),'راسب');assert.equal(D.result('absent'),'لم يدخل');
 const styled=D.format({direction:'rtl',fontSize:18,hidden:[1,3],styles:{'0:2':{bg:'#aabbcc',bold:true},'1:2':{color:'#112233',size:20}}});

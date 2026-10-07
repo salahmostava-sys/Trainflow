@@ -262,7 +262,15 @@ const Cloud = (() => {
       if(!prior) throw Error('IBTA_CODE_NOT_FOUND');
       if(prior.used_on){
         if(prior.used_by!==user.id && role!=='admin') throw Error('IBTA_CODE_USED_BY_OTHER');
-        if(!confirm(t('confirmCopyUsed'))) return false;
+        const ok=await (window.AppDialog?AppDialog.confirm({
+          title:currentLang==='ar'?'كود مستخدم بالفعل':'Code Already Used',
+          message:t('confirmCopyUsed'),
+          confirmText:currentLang==='ar'?'نسخ على أي حال':'Copy Anyway',
+          cancelText:currentLang==='ar'?'إلغاء':'Cancel',
+          danger:false,
+          icon:'warning'
+        }):confirm(t('confirmCopyUsed')));
+        if(!ok) return false;
       }else{
         const {data,error}=await client.rpc('ibta_claim_code',{target_code:code,expected_version:prior.version,use_date:todayStr()});
         if(error) throw error;
@@ -462,7 +470,15 @@ const Cloud = (() => {
       if(!raw) throw Error('IBTA_NO_LEGACY_DATA');
       const legacy=JSON.parse(raw);
       if(!legacy.codesByCategory || typeof legacy.codesByCategory!=='object') throw Error('IBTA_INVALID_LEGACY_DATA');
-      if(!confirm(t('confirmImportLegacy'))) return;
+      const ok=await (window.AppDialog?AppDialog.confirm({
+        title:currentLang==='ar'?'استيراد البيانات السابقة':'Import Legacy Data',
+        message:t('confirmImportLegacy'),
+        confirmText:currentLang==='ar'?'استيراد':'Import',
+        cancelText:currentLang==='ar'?'إلغاء':'Cancel',
+        danger:false,
+        icon:'info'
+      }):confirm(t('confirmImportLegacy')));
+      if(!ok) return;
       await refresh();
       for(const [cat,codes] of Object.entries(legacy.codesByCategory)){
         if(!Array.isArray(codes)) continue;
