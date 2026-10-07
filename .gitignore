@@ -6,6 +6,8 @@ generated/
 next-env.d.ts
 *.tsbuildinfo
 node_modules/
+/cloud.js
+/navigation.js
 .env
 .env.*
 *.log

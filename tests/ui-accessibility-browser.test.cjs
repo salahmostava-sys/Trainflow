@@ -5,61 +5,15 @@ const {chromium}=require('playwright');
 const root=path.join(__dirname,'..');
 let server,browser,origin;
 
-// Only the third-party SDK and clipboard are replaced; Cloud and all UI modules run unchanged.
-function installBoundaryFixtures(){
-  const clone=value=>JSON.parse(JSON.stringify(value));
-  const user={id:'ui-admin',email:'ui@example.invalid',user_metadata:{}};
-  const db=window.uiTestDatabase={settings:{id:1,version:1,payload:{
-    categoryOrder:['Foundation'],codeCategories:['Foundation-100'],keycodeOrder:{},
-    keycodes:['FIRST','SECOND','THIRD'].map(code=>({code,title:code,lang:'Arabic',category:'Foundation'})),
-    credentials:{account:'UI-ACCOUNT',password:'UI-PASSWORD'},links:{}
-  }},codes:[{code:'UI-VOUCHER',category:'Foundation-100',notes:'',used_on:null,used_by:null,version:1}],
-  members:[{...user,user_id:user.id,active:true,role:'admin'}],sheets:{},saveError:''};
-  window.uiTestCopies=[];
-  Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async text=>window.uiTestCopies.push(text)}});
-  const client={auth:{getSession:async()=>({data:{session:{user,access_token:'header.'+btoa(JSON.stringify({amr:[{method:'password',timestamp:Math.floor(Date.now()/1000)}]}))+'.signature'}}}),onAuthStateChange(){},signOut:async()=>({})},
-    from(table){
-      const filters=[];
-      const records=()=>{
-        const tables={ibta_settings:[db.settings],ibta_codes:db.codes,ibta_members:db.members,ibta_supervisor_stock:[],ibta_trainee_sheets:Object.entries(db.sheets).map(([owner_id,sheet])=>({owner_id,...sheet}))};
-        if(!Object.hasOwn(tables,table))throw Error('Unexpected table: '+table);
-        return tables[table].filter(row=>filters.every(([key,value])=>row[key]===value));
-      };
-      return {select(){return this;},eq(key,value){filters.push([key,value]);return this;},order(){return this;},
-        single:async()=>({data:clone(records()[0])}),maybeSingle:async()=>({data:clone(records()[0]||null)}),
-        range:async(from,to)=>({data:clone(records().slice(from,to+1))}),then(resolve,reject){return Promise.resolve({data:clone(records())}).then(resolve,reject);}};
-    },
-    async rpc(name,args){
-      if(name==='ibta_apply_changes'){
-        if(args.settings_version!==db.settings.version)return {error:{message:'CONFLICT'}};
-        if(args.settings_payload){db.settings.payload=clone(args.settings_payload);db.settings.version++;}
-        return {};
-      }
-      if(name==='ibta_claim_code'){
-        const row=db.codes.find(row=>row.code===args.target_code&&row.version===args.expected_version&&!row.used_on);
-        if(!row)return {data:[]};
-        Object.assign(row,{used_on:args.use_date,used_by:user.id,version:row.version+1});return {data:[clone(row)]};
-      }
-      if(name==='ibta_save_trainee_worksheet'){
-        if(db.saveError)return {error:{message:db.saveError}};
-        const old=db.sheets[args.target_owner]||{version:0};
-        if(old.version!==args.expected_version)return {error:{message:'CONFLICT'}};
-        db.sheets[args.target_owner]={sheet_id:args.target_sheet,sheet_name:'Sheet 1',sheet_hidden:false,sheet_order:0,cells:clone(args.new_cells),format:clone(args.new_format),version:old.version+1};
-        return {data:old.version+1};
-      }
-      if(name==='ibta_inventory_delivery_status')return {data:{enabled:false,provider:'web',time:'16:59'}};
-      throw Error('Unexpected RPC: '+name);
-    }
-  };
-  window.supabase={createClient:()=>client};
-}
+const installBoundaryFixtures=require('./workspace-sdk-fixture.cjs');
 
 before(async()=>{
+  require('../tools/prepare-runtime.cjs');
   const assets=new Set(fs.readdirSync(root).filter(name=>/\.(js|css)$/.test(name)));
   server=http.createServer((req,res)=>{
     const name=new URL(req.url,'http://localhost').pathname.slice(1);
-    if(!name){
-      const html=fs.readFileSync(path.join(root,'trainflow.html'),'utf8').replace(/<script src="https:\/\/cdn.jsdelivr.net[^>]+><\/script>/,'<script src="supabase-test-sdk.js"></script>');
+    if(['','trainees','keycodes','prometric','vouchers','inventory','settings'].includes(name)){
+      const html=require('../tools/workspace-source.cjs').renderDocument().replace(/<script src="https:\/\/cdn.jsdelivr.net[^>]+><\/script>/,'<script src="supabase-test-sdk.js"></script>');
       res.setHeader('Content-Type','text/html; charset=utf-8');res.end(html);
     }else if(name==='supabase-test-sdk.js'){
       res.setHeader('Content-Type','text/javascript');res.end('('+installBoundaryFixtures.toString()+')();');
@@ -84,9 +38,12 @@ async function openWorkspace(t,options={}){
   return page;
 }
 async function navigate(page,panel){
-  const button=page.locator('nav.tabs button[data-tab="'+panel+'"]');
+  const button=page.locator('nav.tabs [data-tab][data-tab="'+panel+'"]');
   if(!await button.isVisible())await page.locator('#sidebar-toggle').click();
   await button.click();
+  const paths={trainees:'trainees',keycodes:'keycodes',prometric:'prometric',codes:'vouchers',inventory:'inventory',settings:'settings'};
+  await page.waitForURL('**/'+paths[panel]);
+  await page.waitForFunction(()=>!document.getElementById('app').hidden&&!document.getElementById('app').classList.contains('workspace-restoring'));
 }
 
 test('keyboard copying claims a voucher once and leaves selection controls independent',{timeout:30000},async t=>{
@@ -161,4 +118,36 @@ test('long mobile notifications stay readable and skip navigation reaches the ma
   assert.equal(await page.locator('#panel-trainees').evaluate(el=>getComputedStyle(el).animationName),'none');
   await page.waitForTimeout(1600);
   assert.equal(await toast.evaluate(el=>el.classList.contains('show')),true,'Notification remains readable beyond the old 1.4-second timeout');
+});
+
+test('a failed sheet save blocks page navigation and keeps the draft editable',{timeout:30000},async t=>{
+  const page=await openWorkspace(t);
+  await page.evaluate(()=>{uiTestDatabase.saveError='CONFLICT';});
+  const cell=page.locator('td[data-v="0"][data-col="0"]');
+  await cell.dblclick();await page.keyboard.insertText('SAVE-BEFORE-NAVIGATION');await page.keyboard.press('Tab');
+  await page.locator('nav.tabs a[data-tab="prometric"]').click();
+  await page.waitForFunction(()=>document.getElementById('sheet-status').dataset.error==='true');
+  assert.equal(new URL(page.url()).pathname,'/');
+  assert.equal(await cell.textContent(),'SAVE-BEFORE-NAVIGATION');
+  assert.equal(await page.locator('#panel-trainees').isVisible(),true);
+  await page.evaluate(()=>{uiTestDatabase.saveError='';});
+  await navigate(page,'prometric');
+  await navigate(page,'trainees');
+  assert.equal(await page.locator('td[data-v="0"][data-col="0"]').textContent(),'SAVE-BEFORE-NAVIGATION');
+});
+
+test('mobile sheets start with compact tools and retain an explicit expansion choice',{timeout:30000},async t=>{
+  const page=await openWorkspace(t,{viewport:{width:390,height:844}});
+  const toggle=page.locator('#sheet-ribbon-toggle');
+  assert.equal(await toggle.getAttribute('aria-expanded'),'false');
+  assert.equal(await page.locator('#sheet-ribbon-panel-all').isVisible(),false);
+  assert.ok((await page.locator('#sheet-grid').boundingBox()).y<700,'The grid is visible in the first mobile screen');
+  await toggle.click();
+  await page.reload();
+  await page.waitForFunction(()=>!document.getElementById('app').hidden&&!document.getElementById('app').classList.contains('workspace-restoring'));
+  assert.equal(await toggle.getAttribute('aria-expanded'),'true');
+  await navigate(page,'codes');
+  for(const button of await page.locator('.code-row .col-actions button').all()){
+    const bounds=await button.boundingBox();assert.ok(bounds.width>=44&&bounds.height>=44,'Voucher actions support touch');
+  }
 });

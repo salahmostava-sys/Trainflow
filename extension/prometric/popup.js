@@ -1889,7 +1889,6 @@ function findColumnIndex(headers, patterns) {
 document.getElementById('sheetFetch')?.addEventListener('click', async () => {
   const btn = document.getElementById('sheetFetch');
   const url = document.getElementById('sheetUrl').value.trim();
-  await chrome.storage.local.set({ sheetUrl: url });
 
   const m = url.match(/\/d\/([a-zA-Z0-9-_]+)/);
   if (!m) return showSheetError('Invalid Google Sheet URL. Make sure you copy the full link.');
@@ -1906,6 +1905,10 @@ document.getElementById('sheetFetch')?.addEventListener('click', async () => {
   showSheetError('');
 
   try {
+    // Request optional access directly from the user's click, before other awaits.
+    const allowed = await chrome.permissions.request({ origins: ['https://docs.google.com/*'] });
+    if (!allowed) return showSheetError('Google Sheets access was declined. Allow access to import this sheet.');
+    await chrome.storage.local.set({ sheetUrl: url });
     // Delegate to the background service worker — the SW has no browser cookies
     // so Google won't redirect to ServiceLogin (which causes a CORS block here).
     const result = await new Promise((resolve, reject) => {

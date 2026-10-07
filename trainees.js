@@ -1417,7 +1417,7 @@ const Trainees=(()=>{
     return table.outerHTML;
   }
   function clearSelection(){if(!loaded)return;const next=cells.slice(),changed=new Set();eachSelected((idx,c)=>{if(!next[idx])return;if(!changed.has(idx)){next[idx]=[...next[idx]];changed.add(idx);}next[idx][c]='';});change(D.normalize(next));}
-  function deleteSelectedCells(direction){
+  async function deleteSelectedCells(direction){
     if(!loaded)return;if(!singleSelection())return;commitEdit();
     const [r1,r2,c1,c2]=bounds(),indices=new Set(view.slice(r1,r2+1));
     if(Object.entries(formatting.styles).some(([key,s])=>{if((s.mergeRows||1)===1&&(s.mergeCols||1)===1)return false;const [r,c]=key.split(':').map(Number);return c<=c2&&c+(s.mergeCols||1)-1>=c1&&[...indices].some(i=>i>=r&&i<r+(s.mergeRows||1));})){message(()=>tr('ألغِ دمج الخلايا المحددة قبل إزاحة الخلايا.','Unmerge the selected cells before shifting cells.'),true);return;}
@@ -1550,4 +1550,5 @@ const Trainees=(()=>{
   function suspend(){prometricTools?.reset();certificateTools?.reset();setExpandedView(false);excelTools?.closeFiles();closeDuplicateDetails();closeContextMenu();$('sheet-find-dialog')?.close();clearTimeout(timer);}
   return {open,translate,hasDraft,flush,reset,suspend,savePosition};
 })();
+window.TRAINFLOW_ENGINE = Trainees;
 Trainees.translate();

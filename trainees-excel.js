@@ -194,15 +194,15 @@ const TraineeExcel=(()=>{
       action('sheet-delete-cells','حذف خلايا…','Delete Cells…',()=>shift(false)),action('sheet-delete','حذف الصفوف','Delete Sheet Rows',h.deleteSelectedRows),action('sheet-delete-col','حذف الأعمدة','Delete Sheet Columns',()=>h.editColumns('delete')),action('sheet-delete-sheet','حذف الشيت…','Delete Sheet…',()=>{closeMenus();h.worksheet('delete');})]);
     $('sheet-more-tools').remove();
     const makeDivider=()=>node('span',undefined,{class:'sheet-ribbon-divider','aria-hidden':'true'});
-    const top=node('div',undefined,{class:'sheet-ribbon-top'}),panel=node('div',undefined,{id:'sheet-ribbon-panel-all',class:'sheet-ribbon-panel sheet-unified-ribbon',role:'region','aria-label':'أدوات الجدول / Sheet tools'}),commands=node('div',undefined,{class:'sheet-ribbon-command-row'}),formats=node('div',undefined,{class:'sheet-ribbon-format-row'});
+    const top=node('div',undefined,{class:'sheet-ribbon-top'}),panel=node('div',undefined,{id:'sheet-ribbon-panel-all',class:'sheet-ribbon-panel sheet-unified-ribbon',role:'region','aria-label':tr('أدوات الجدول','Sheet tools')}),commands=node('div',undefined,{class:'sheet-ribbon-command-row'}),formats=node('div',undefined,{class:'sheet-ribbon-format-row'});
     top.append(essential,$('sheet-status'));toolbar.prepend(top);
     for(const id of ['sheet-insert-menu','sheet-delete-menu','sheet-cell-format-menu','sheet-merge-menu','sheet-border-menu','sheet-sort-menu'])commands.append($(id));
     commands.append(makeDivider(),align.parentElement);
     formats.append(font.parentElement,makeDivider(),viewBody.parentElement);
     panel.append(commands,formats);toolbar.append(panel);
-    let ribbonOpen=true;try{ribbonOpen=JSON.parse(localStorage.getItem('ibta_sheet_ribbon')||'{}').open!==false;}catch{}
+    let ribbonOpen=!matchMedia('(max-width: 760px)').matches;try{const preference=JSON.parse(localStorage.getItem('ibta_sheet_ribbon')||'{}');if(typeof preference.open==='boolean')ribbonOpen=preference.open;}catch{}
     const ribbonToggle=node('button',undefined,{id:'sheet-ribbon-toggle',type:'button','aria-controls':panel.id});top.insertBefore(ribbonToggle,$('sheet-status'));
-    const syncRibbon=()=>{const s=state(),open=s.expandedView?$('sheet-workspace').classList.contains('sheet-expanded-tools'):ribbonOpen;panel.hidden=!open;ribbonToggle.setAttribute('aria-expanded',String(open));text(ribbonToggle,open?'إخفاء أدوات الجدول ▴':'إظهار أدوات الجدول ▾',open?'Hide sheet tools ▴':'Show sheet tools ▾');};
+    const syncRibbon=()=>{panel.setAttribute('aria-label',tr('أدوات الجدول','Sheet tools'));fontName.setAttribute('aria-label',tr('نوع الخط','Font family'));const s=state(),open=s.expandedView?$('sheet-workspace').classList.contains('sheet-expanded-tools'):ribbonOpen;panel.hidden=!open;ribbonToggle.setAttribute('aria-expanded',String(open));text(ribbonToggle,open?'إخفاء أدوات الجدول ▴':'إظهار أدوات الجدول ▾',open?'Hide sheet tools ▴':'Show sheet tools ▾');};
     ribbonToggle.onclick=()=>{h.commitEdit();closeMenus();ribbonOpen=!ribbonOpen;try{localStorage.setItem('ibta_sheet_ribbon',JSON.stringify({open:ribbonOpen}));}catch{}syncRibbon();};syncRibbon();
     for(const child of [...toolbar.children])if(child.classList.contains('sheet-ribbon-group'))child.remove();
     tools.remove();toolbar.classList.add('sheet-clean-toolbar');

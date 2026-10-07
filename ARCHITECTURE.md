@@ -2,7 +2,7 @@
 
 TrainFlow manages the work between receiving exam vouchers, assigning them to a team member, preparing trainees, registering Prometric accounts and reporting results. This document describes the implemented system, rather than a proposed redesign.
 
-Updated 6 October 2026. Production: [TrainFlow on Vercel](https://trainf.vercel.app/).
+Updated 7 October 2026 for the local migration. Production: [TrainFlow on Vercel](https://trainf.vercel.app/). Publication is a separate deployment step.
 
 ## System overview
 
@@ -11,7 +11,7 @@ flowchart TB
     Team[Approved team members]
     UI[TrainFlow browser workspace]
     Auth[Supabase Auth]
-    API[Next.js adapter and shared JavaScript API]
+    API[Typed Next.js API]
     DB[(Supabase PostgreSQL)]
     PRO[Prometric registration extension]
     Prometric[Prometric website]
@@ -40,10 +40,11 @@ The browser is the working surface. The server checks operational requests, whil
 
 | Path | Responsibility |
 | --- | --- |
-| `app/`, `components/`, `lib/` | Next.js routes, React/TypeScript workspace adapter and native History navigation |
+| `app/`, `components/workspace/`, `lib/` | Next.js routes, maintained TSX screens and domain/engine interfaces |
 | `codes-export.js` | Visible voucher-export dialog and colored XLSX preparation |
-| `trainflow.html` | Local application entry point, layout, shared styles and Arabic/English interface strings |
-| `cloud.js` | Authentication, same-origin data adapter, codes, stock, membership, backups and trainee persistence |
+| `workspace.js`, `workspace.css` | Shared commands, Arabic/English strings and maintained styles |
+| `client/cloud.ts` | Typed authentication, same-origin data adapter, codes, membership, backups and worksheet persistence |
+| `client/navigation.ts` | Save-before-navigation and page/settings URL restoration |
 | `ops-ui.js` | Administrative import, restore and settings interactions |
 | `trainees.js`, `trainees.css` | Private trainee workspace and virtualized grid rendering |
 | `trainees-core.js` | Trainee values, validation and matching logic |
@@ -53,9 +54,9 @@ The browser is the working surface. The server checks operational requests, whil
 | `prometric-core.js`, `prometric-registration.js` | Registration eligibility, job preview and extension coordination |
 | `trainee-reports.js` | Daily report preparation and Google report submission |
 | `session-policy.js` | Shared daily sign-in policy used by browser and API |
-| `server/worker.mjs` | Validated shared API called by the Next TypeScript adapter |
+| `server/api.ts` | Typed API, caller JWT, membership validation, role/owner checks and bounded JSON writes |
 | `extension/prometric/` | Manifest V3 registration extension and TrainFlow page bridge |
-| `tools/build-site.cjs` | Production assets, worker, asset hashes and extension ZIP packages |
+| `tools/build-site.cjs`, `tools/prepare-runtime.cjs`, `tools/workspace-source.cjs` | Compile typed assets, render maintained TSX for synthetic previews/static exports, hash assets and package extensions |
 | `tools/design-preview.cjs` | UI preview with synthetic data; no production writes |
 | `tools/google-reports.gs` | Google Apps Script bridge for existing report spreadsheets |
 | `database.sql`, `migrations/`, `supabase/migrations/` | Original schema and incremental database changes |
@@ -137,7 +138,7 @@ Only device preferences remain in browser local storage. Authentication uses ses
 
 ## Interface and selection
 
-React mounts the original interface directly, without an iframe. A native History bridge updates the six page URLs and settings query while preserving the mounted sheet and its unsaved work. The physical sidebar remains on the right, with full, 60 px compact and closed states. Its opener is outside the closed sidebar. The account popup is portalled outside the scrolling sidebar and positioned inside the viewport.
+React renders the TSX screens directly, without an iframe or raw HTML shell injection. Page links flush trainee drafts before loading a new document, while settings tab changes use history in the current document. Failed saves retain the current page and editable draft. The grid keeps its tested JavaScript renderer behind a typed interface. The sidebar remains on the right, with full, 60 px compact and closed states. Its opener stays reachable; the account popup is portalled and clamped to the viewport.
 
 Selections consist of an active rectangle plus additive rectangles. Coordinates refer to the displayed view; stored rows are resolved through its mapping. Drag/Shift extend adjacent cells or entire columns. Ctrl/Cmd adds or toggles separate areas. Union iteration visits overlaps once. Formatting, clearing and selected-row registration respect that union. Structural shifts, multi-cell paste and merges require one contiguous region so gaps are not changed accidentally.
 
@@ -145,7 +146,7 @@ Clipboard output contains both TSV and a styled HTML table. Separate rows/column
 
 ## Build and deployment
 
-The build generates public/workspace, generated/classic-ui.ts and .next. The Prometric ZIP is packaged from checked-in source. Operational records, SQL and private backups are not embedded in public assets.
+The build generates public/workspace, generated/workspace-assets.ts, compiled browser/API compatibility assets and .next. Maintained TSX is the screen source; generated asset metadata contains script addresses and the early language initializer. The Prometric ZIP is packaged from checked-in source. Operational records, SQL and private backups are not embedded in public assets.
 
 ~~~mermaid
 flowchart LR

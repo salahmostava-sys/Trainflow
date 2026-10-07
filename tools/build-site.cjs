@@ -2,6 +2,8 @@ const fs = require('node:fs');
 const path = require('node:path');
 const {createHash}=require('node:crypto');
 const {Script}=require('node:vm');
+require('./prepare-runtime.cjs');
+const {renderDocument}=require('./workspace-source.cjs');
 
 const root = path.resolve(__dirname, '..');
 const next = process.argv.includes('--next');
@@ -9,8 +11,8 @@ const output = path.join(root, next ? 'public/workspace' : 'dist');
 fs.mkdirSync(output, { recursive: true });
 // Remove retired assets when rebuilding an existing output directory.
 for(const file of ['inventory-delivery.js','trainflow-whatsapp-web.zip','_worker.js','_routes.json']){const retired=path.join(output,file);if(fs.existsSync(retired))fs.unlinkSync(retired);}
-let html=fs.readFileSync(path.join(root,'trainflow.html'),'utf8');
-const files=['app-dialog.js','prometric-core.js','prometric-registration.js','certificate-name.js','cloud.js','ops-ui.js','trainees.js','trainees-excel.js','trainees-borders.js','trainees-sheets.js','trainees-core.js','trainees-xlsx.js','trainees-files.js','trainees.css','trainee-reports.js','session-policy.js','codes-export.js','voucher-names.js','voucher-columns.js'];
+let html=renderDocument();
+const files=['app-dialog.js','prometric-core.js','prometric-registration.js','certificate-name.js','cloud.js','workspace.js','workspace.css','navigation.js','ops-ui.js','trainees.js','trainees-excel.js','trainees-borders.js','trainees-sheets.js','trainees-core.js','trainees-xlsx.js','trainees-files.js','trainees.css','trainee-reports.js','session-policy.js','codes-export.js','voucher-names.js','voucher-columns.js'];
 const vendor=fs.readFileSync(require.resolve('exceljs/dist/exceljs.min.js'));
 fs.writeFileSync(path.join(output,'exceljs-4.4.0.min.js'),vendor);
 fs.copyFileSync(require.resolve('exceljs/LICENSE'),path.join(output,'exceljs-LICENSE.txt'));
@@ -39,13 +41,10 @@ prometricZip.generateAsync({type:'nodebuffer',compression:'DEFLATE'}).then(prome
     const asset=value=>/^(?:https?:|\/)/i.test(value)?value:'/workspace/'+value;
     const attributes=tag=>Object.fromEntries([...tag.matchAll(/([\w-]+)="([^"]*)"/g)].map(([,key,value])=>[key,['src','href','data-worker','data-extension','data-connector'].includes(key)?asset(value):value]));
     const head=html.match(/<head>([\s\S]*?)<\/head>/i)[1],body=html.match(/<body[^>]*>([\s\S]*?)<\/body>/i)[1];
-    const classicStyles=[...head.matchAll(/<style>([\s\S]*?)<\/style>/gi)].map(match=>match[1]).join('\n');
-    const classicLinks=[...head.matchAll(/<link\b[^>]*>/gi)].map(match=>attributes(match[0]));
     const languageBootstrap=head.match(/<script[^>]*>([\s\S]*?)<\/script>/i)[1];
-    const classicScripts=[...body.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)].map(([,tag,content])=>({attributes:attributes(tag),content:content.replace('Cloud.boot();','window.TRAINFLOW_BOOT_WORKSPACE=()=>Cloud.boot();')}));
-    const classicMarkup=body.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,'').replace(/\b(href|src)="(?![a-z][a-z0-9+.-]*:|#|\/)([^"]+)"/gi,(_,name,value)=>name+'="'+asset(value)+'"');
+    const workspaceScripts=[...body.matchAll(/<script\b([^>]*)>[\s\S]*?<\/script>/gi)].map(([,tag])=>attributes(tag)).filter(attributes=>attributes.src);
     fs.mkdirSync(path.join(root,'generated'),{recursive:true});
-    fs.writeFileSync(path.join(root,'generated/classic-ui.ts'),Object.entries({classicMarkup,classicScripts,classicStyles,classicLinks,languageBootstrap}).map(([name,value])=>'export const '+name+' = '+JSON.stringify(value)+';').join('\n')+'\n');
+    fs.writeFileSync(path.join(root,'generated/workspace-assets.ts'),Object.entries({workspaceScripts,languageBootstrap}).map(([name,value])=>'export const '+name+' = '+JSON.stringify(value)+';').join('\n')+'\n');
   }
   console.log('Prometric extension package ready');
 }).catch(error=>{console.error(error.message);process.exitCode=1;});

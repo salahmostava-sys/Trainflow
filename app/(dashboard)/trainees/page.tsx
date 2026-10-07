@@ -1,1 +1,5 @@
-export default function WorkspacePage() { return null; }
+import { WorkspaceApplication } from '@/components/workspace/WorkspaceApplication';
+
+export default function WorkspacePage() {
+  return <WorkspaceApplication initialPanel="trainees" />;
+}

@@ -6,7 +6,7 @@ const { webcrypto } = require('node:crypto');
 const { test } = require('node:test');
 const Prometric = require('../prometric-core.js');
 
-function extensionFixture() {
+function extensionFixture(fetcher) {
   const stored = {}, tabs = new Map();
   const clone = value => value === undefined ? value : structuredClone(value);
   const event = () => ({ addListener(listener) { this.listener = listener; } });
@@ -30,7 +30,7 @@ function extensionFixture() {
     notifications: { create() {} },
     contextMenus: { create() {}, onClicked: event() }
   };
-  const context = vm.createContext({ chrome, console, crypto: webcrypto, URL, setTimeout: () => 1, clearTimeout() {} });
+  const context = vm.createContext({ chrome, console, crypto: webcrypto, URL, fetch: fetcher, setTimeout: () => 1, clearTimeout() {} });
   const extension = path.resolve(__dirname, '../extension/prometric');
   context.importScripts = (...files) => files.forEach(file => vm.runInContext(fs.readFileSync(path.join(extension, file), 'utf8'), context, { filename: file }));
   vm.runInContext(fs.readFileSync(path.join(extension, 'background.js'), 'utf8'), context, { filename: 'background.js' });
@@ -50,6 +50,32 @@ function registrationItems() {
   });
   return Prometric.prepare(rows, [0, 1]).items;
 }
+
+test('sheet import rejects unexpected URLs and fetches a valid CSV without cookies', async () => {
+  const requests = [];
+  const fixture = extensionFixture(async (url, options) => {
+    requests.push({ url, options });
+    return { ok: true, text: async () => 'Name,Email\nDUMMY STUDENT,dummy@example.invalid' };
+  });
+  const valid = 'https://docs.google.com/spreadsheets/d/dummy_sheet/export?format=csv&gid=0';
+  for (const url of [
+    valid.replace('https:', 'http:'),
+    valid.replace('docs.google.com', 'example.invalid'),
+    valid.replace('docs.google.com', 'user:password@docs.google.com'),
+    valid.replace('/export?', '/edit?'),
+    valid.replace('format=csv', 'format=html'),
+    valid.replace('gid=0', 'gid=invalid'),
+  ]) {
+    assert.equal((await fixture.send({ action: 'fetchSheet', url })).ok, false);
+  }
+  assert.equal(requests.length, 0, 'Rejected URLs cannot reach the network');
+  const response = await fixture.send({ action: 'fetchSheet', url: valid });
+  assert.equal(response.ok, true);
+  assert.equal(response.text, 'Name,Email\nDUMMY STUDENT,dummy@example.invalid');
+  assert.equal(requests.length, 1);
+  assert.equal(requests[0].url, valid);
+  assert.equal(requests[0].options.credentials, 'omit');
+});
 
 for (const clearVia of ['popup', 'context menu']) {
   test(`clearing pending registrations via ${clearVia} allows a new Trainflow run`, async () => {

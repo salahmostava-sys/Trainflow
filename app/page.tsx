@@ -1,1 +1,7 @@
-export default function WorkspacePage() { return null; }
+import { redirect } from 'next/navigation';
+
+export const dynamic = 'force-dynamic';
+
+export default function WorkspacePage() {
+  redirect('/trainees');
+}

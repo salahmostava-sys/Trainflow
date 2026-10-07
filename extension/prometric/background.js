@@ -547,7 +547,8 @@ async function handleMessage(msg, sender) {
 // when the same fetch is made from popup.html on a browser that is logged in.
 async function handleFetchSheet(msg) {
   try {
-    const url=new URL(msg.url);if(url.protocol!=='https:'||url.hostname!=='docs.google.com')throw Error('INVALID_SHEET_URL');
+    const url=new URL(msg.url);
+    if(url.protocol!=='https:'||url.hostname!=='docs.google.com'||url.username||url.password||!/^\/spreadsheets\/d\/[A-Za-z0-9_-]+\/export$/.test(url.pathname)||url.searchParams.get('format')!=='csv'||!/^\d+$/.test(url.searchParams.get('gid')||''))throw Error('INVALID_SHEET_URL');
     const res = await fetch(url.href, { credentials: 'omit' });
     if (!res.ok) return { ok: false, error: 'Cannot read sheet. Ensure share settings are "Anyone with the link can view".' };
     const text = await res.text();

@@ -114,17 +114,22 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),path
     await page.locator('th[data-col="7"] button').click({button:'right'});assert.equal(await page.locator('[data-action="delete-column"]').isDisabled(),true);await page.keyboard.press('Escape');
     assert.equal(await page.locator('#sheet-delete-col').isDisabled(),true,'Core schema columns stay protected');
     await cell(0,15).click();await page.locator('#sheet-bold').click();
+    // Exercise the real application dialog, including cancel, rather than its legacy native-dialog fixture mode.
+    await page.evaluate(()=>{window.__IBTA_TEST_AUTOMATION__=false;});
     await cell(0,14).click({button:'right'});await page.locator('[data-action="delete-left"]').click();
+    await page.locator('#app-modal-cancel').click();assert.equal(await cell(0,14).textContent(),'b','Cancel leaves the selected data unchanged');
+    await cell(0,14).click({button:'right'});await page.locator('[data-action="delete-left"]').click();await page.locator('#app-modal-confirm').click();
     assert.equal(await cell(0,14).textContent(),'c');assert.equal(await cell(0,15).textContent(),'d');
     assert.equal(await cell(0,14).evaluate(el=>getComputedStyle(el).fontWeight),'700');
     await page.locator('#sheet-undo').click();assert.equal(await cell(0,14).textContent(),'b');
-    await cell(0,14).click({button:'right'});await page.locator('[data-action="delete-right"]').click();
+    await cell(0,14).click({button:'right'});await page.locator('[data-action="delete-right"]').click();await page.locator('#app-modal-confirm').click();
     assert.equal(await cell(0,13).textContent(),'');assert.equal(await cell(0,14).textContent(),'a');assert.equal(await cell(0,15).textContent(),'c');
     await page.locator('#sheet-undo').click();
     await page.locator('#sheet-direction').selectOption('rtl');
-    await cell(0,14).click({button:'right'});await page.locator('[data-action="delete-left"]').click();
+    await cell(0,14).click({button:'right'});await page.locator('[data-action="delete-left"]').click();await page.locator('#app-modal-confirm').click();
     assert.equal(await cell(0,14).textContent(),'a','Physical left shifts correctly in RTL');
     await page.locator('#sheet-undo').click();await page.locator('#sheet-direction').selectOption('ltr');
+    await page.evaluate(()=>{window.__IBTA_TEST_AUTOMATION__=true;});
     await paste(0,51,'EXTRA-AZ');await page.locator('#sheet-save').click();await page.waitForFunction(()=>!Trainees.hasDraft());
     await page.locator('#sheet-reload').click();await page.waitForFunction(()=>document.getElementById('sheet-status').textContent==='تم الحفظ');
     assert.equal(await cell(0,51).textContent(),'EXTRA-AZ');

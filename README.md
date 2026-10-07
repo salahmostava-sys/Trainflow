@@ -78,10 +78,10 @@ Open http://127.0.0.1:4174. This preview replaces the data client and performs n
 
 ~~~mermaid
 flowchart LR
-    Team[Approved team] --> UI[Original TrainFlow interface]
+    Team[Approved team] --> UI[TSX workspace screens]
     UI --> Next[Next.js and TypeScript on Vercel]
     UI --> Auth[Supabase Auth]
-    Next --> API[Validated JavaScript API]
+    Next --> API[Validated TypeScript API]
     API --> DB[(Existing database with RLS)]
     UI --> Files[Local Excel worker and clipboard]
     UI --> Chrome[Prometric registration extension]
@@ -89,7 +89,7 @@ flowchart LR
     Reports --> Sheets[Google Sheets]
 ~~~
 
-The interface is mounted directly by React, without an iframe. Existing HTML/CSS and command modules preserve the established UI and data behavior. The TypeScript navigation bridge uses native browser history to keep the live sheet mounted. The server adapter reuses the validated JavaScript API and the signed-in user's JWT.
+React renders maintained TSX components for the login, sidebar and six workspace screens. Each page selects its initial panel. Navigation saves trainee edits before loading the destination document; a failed save keeps the current page and draft. Settings tabs use browser history within the page. Existing JavaScript spreadsheet and integration engines operate through typed boundaries while their migration continues. The TypeScript API forwards only the signed-in user's JWT.
 
 The existing Supabase project, accounts, ibta_* tables, sheet versions and permissions remain in use. Worksheet migrations preserve the original sheet as Sheet 1 and extend its key to owner + sheet ID. Existing trainee values are preserved. RLS and transactional database functions enforce access independently of the UI.
 
@@ -97,15 +97,18 @@ The existing Supabase project, accounts, ibta_* tables, sheet versions and permi
 
 | Location | Responsibility |
 | --- | --- |
-| app/, components/, lib/ | Next routes, React/TypeScript workspace adapter and navigation |
-| trainflow.html, root JS/CSS | Original interface and feature commands |
-| server/ | Shared authenticated API handler |
+| app/, components/workspace/, lib/ | Next routes, maintained TSX screens and shared domain types |
+| client/ | TypeScript cloud client and navigation; early language preferences |
+| workspace.js, workspace.css, root JS/CSS | Shared commands, styles and tested spreadsheet engines |
+| server/api.ts | Typed authenticated API; worker.mjs is a compatibility entry for local checks |
 | extension/ | Prometric registration Chrome extension |
 | tools/ | Asset packaging, synthetic preview and Google connector |
 | database.sql, migrations/, supabase/migrations/ | Original schema and reviewed incremental SQL changes |
 | tests/, .github/workflows/ | Unit, integration, browser and CI checks |
 | docs/, ARCHITECTURE.md | User guides and technical documentation |
 | generated/, public/workspace/, .next/ | Generated Next build artifacts; ignored by Git |
+
+Builds compile client/cloud.ts and client/navigation.ts into ignored browser assets. The maintained interface source is TSX; trainflow.html and the generated classic HTML injection have been removed. See [migration notes](docs/typed-workspace-migration.md).
 
 ## Verification
 

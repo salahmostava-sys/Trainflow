@@ -1,4 +1,4 @@
-# Prometric Auto Register — TrainFlow 4.1.4
+# Prometric Auto Register — TrainFlow 4.1.5
 
 Integrated from the user's Prometric Auto Register 4.0 source (Salah Mostafa,
 ISC license). Its original popup, registration steps, generation pattern,
@@ -50,6 +50,10 @@ Registration uses this extension's existing settings (password pattern, address,
 city, country and security answers). Adjust those settings in its popup first.
 Installing into a new folder may create a separate extension instance; configure
 its settings if Chrome did not retain the previous ones.
+
+Google Sheets host access is optional. Chrome requests it only when you click to
+import a Google Sheet; declining leaves the import unavailable and keeps the
+registration features usable. Shared sheets are fetched as CSV without cookies.
 
 Only the dedicated registration tab runs automation. Results require matching
 queue IDs and a registration submission marker before dashboard confirmation.

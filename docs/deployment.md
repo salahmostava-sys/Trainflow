@@ -11,7 +11,7 @@ pnpm install --frozen-lockfile
 pnpm dev
 ~~~
 
-For production review, run pnpm test, pnpm build, pnpm test:next, then pnpm start. pnpm build first packages the original HTML/CSS/JavaScript into public/workspace and creates generated/classic-ui.ts, then builds Next.js with type checking. Commit source files rather than generated directories.
+For production review, run pnpm test, pnpm test:ui, pnpm build, pnpm test:next, then pnpm start. pnpm build compiles the typed client and packages styles, feature modules and extensions into public/workspace. It creates generated/workspace-assets.ts containing script URLs and early language initialization, then builds the maintained TSX screens with Next type checking. Commit source files rather than generated directories.
 
 The synthetic preview is node tools/design-preview.cjs at http://127.0.0.1:4174. It replaces the cloud data client and cannot verify real authentication, database writes or external uploads. A static server does not implement /api/data.
 
@@ -27,9 +27,9 @@ The synthetic preview is node tools/design-preview.cjs at http://127.0.0.1:4174.
 | Production address | https://trainf.vercel.app/ |
 | API health | /api/health |
 
-vercel.json selects the Next deployment. The TypeScript API adapter calls server/worker.mjs and preserves the existing user JWT and database authorization. Supabase URL and publishable-key overrides may be configured as SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY. No service-role key is needed by this API.
+vercel.json selects the Next deployment. The API route calls server/api.ts directly and preserves the existing user JWT and database authorization. Supabase URL and publishable-key overrides may be configured as SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY. No service-role key is needed by this API. Browser database requests fail closed through /api/data; API errors are shown without retrying directly through Supabase REST.
 
-The URLs /trainees, /keycodes, /prometric, /vouchers, /inventory and /settings are directly addressable. Settings sections use a tab query parameter, for example /settings?tab=reports. The native History bridge preserves the mounted classic workspace during navigation; Back/Forward restores the panel without remounting the sheet.
+The URLs /trainees, /keycodes, /prometric, /vouchers, /inventory and /settings render TSX screens directly. A native document navigation saves trainee drafts first; failed saves keep the current page editable. Settings sections use a tab query parameter, for example /settings?tab=reports. Back/Forward and refresh restore the selected page and saved sheet data. The root uses a server redirect to /trainees so the early language/sidebar initialization runs in the destination document.
 
 The sidebar stays on the right in both languages, supports a 60 px compact rail and can be fully closed. Its opener remains visible outside the closed sidebar. The account popup is positioned outside the sidebar's overflow and clamped to the viewport.
 

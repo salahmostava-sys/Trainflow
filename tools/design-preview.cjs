@@ -1,3 +1,5 @@
+require('./prepare-runtime.cjs');
+const {renderDocument}=require('./workspace-source.cjs');
 // Local UI preview only. No Supabase connection, credentials, or production data.
 const http=require('node:http'),fs=require('node:fs'),path=require('node:path');
 const mock=`const previewSheets=new Map(window.previewInitialSheets||[]);const previewCodes=[{code:'DEMO-PRIVATE-001',category:'Foundation',owner_id:'demo-user',version:1,used_on:null},{code:'DEMO-POOL-002',category:'Master',owner_id:null,version:1,used_on:null}];const Cloud={
@@ -48,13 +50,15 @@ http.createServer((req,res)=>{
   const pathname=new URL(req.url,'http://localhost').pathname;
   if(pathname==='/trainflow-prometric.zip'){res.setHeader('Content-Type','application/zip');return res.end(fs.readFileSync(path.join(__dirname,'../dist/trainflow-prometric.zip')));}
   if(pathname==='/exceljs-4.4.0.min.js'){res.setHeader('Content-Type','text/javascript');return res.end(fs.readFileSync(require.resolve('exceljs/dist/exceljs.min.js')));}
-  if(['/app-dialog.js','/codes-export.js','/voucher-names.js','/voucher-columns.js','/prometric-core.js','/prometric-registration.js','/certificate-name.js','/trainees.js','/trainees-excel.js','/trainees-borders.js','/trainees-sheets.js','/trainees-core.js','/trainees-xlsx.js','/trainees-files.js','/trainees-xlsx-worker.js','/trainees.css','/ops-ui.js','/trainee-reports.js','/session-policy.js'].includes(pathname)){
+  if(['/app-dialog.js','/workspace.js','/navigation.js','/cloud.js','/workspace.css','/codes-export.js','/voucher-names.js','/voucher-columns.js','/prometric-core.js','/prometric-registration.js','/certificate-name.js','/trainees.js','/trainees-excel.js','/trainees-borders.js','/trainees-sheets.js','/trainees-core.js','/trainees-xlsx.js','/trainees-files.js','/trainees-xlsx-worker.js','/trainees.css','/ops-ui.js','/trainee-reports.js','/session-policy.js'].includes(pathname)){
     res.setHeader('Content-Type',pathname.endsWith('.css')?'text/css':'text/javascript');
     return res.end(fs.readFileSync(path.join(__dirname,'..',pathname.slice(1))));
   }
   if(pathname==='/google-reports.gs'){res.setHeader('Content-Type','text/plain; charset=utf-8');return res.end(fs.readFileSync(path.join(__dirname,'../tools/google-reports.gs')));}
-  if(pathname!=='/'){res.writeHead(404);return res.end();}
-  let html=fs.readFileSync(path.join(__dirname,'../trainflow.html'),'utf8');
+  if(!['/','/login','/trainees','/keycodes','/prometric','/vouchers','/inventory','/settings'].includes(pathname)){res.writeHead(404);return res.end();}
+  const panels={keycodes:'keycodes',prometric:'prometric',vouchers:'codes',inventory:'inventory',settings:'settings'};let html=renderDocument({initialPanel:panels[pathname.slice(1)]||'trainees'});
+  // Isolated command tests retain their synthetic state; production navigation is covered by test:next.
+  html=html.replace('const navigation=connectWorkspaceNavigation();window.TRAINFLOW_BOOT_WORKSPACE().then(()=>navigation.ready());',"document.addEventListener('click',event=>{if(event.target.closest('nav.tabs a'))event.preventDefault();});window.TRAINFLOW_BOOT_WORKSPACE();");
   html=html.replace(/<script src="https:\/\/cdn.jsdelivr.net[^>]+><\/script>/,'').replace('<script src="cloud.js"></script>','<script>'+mock+'</script>');
   res.setHeader('Content-Type','text/html; charset=utf-8');res.setHeader('Cache-Control','no-store');res.end(html);
 }).listen(Number(process.env.IBTA_PREVIEW_PORT)||4174,'127.0.0.1',()=>console.log('Design-only preview ready'));
