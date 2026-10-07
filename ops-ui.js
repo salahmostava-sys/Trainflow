@@ -125,48 +125,31 @@ document.getElementById('bulk-import-submit').addEventListener('click',async()=>
 async function renderMemberList(){
   if(Cloud.role()!=='admin')return;
   const box=document.getElementById('member-list');if(!box)return;
-  box.innerHTML='';
   try{
     const members=await Cloud.listMembers();
-    members.forEach(member=>{
-      const row=document.createElement('div');row.className='ops-list-row';
-      const name=document.createElement('span');name.textContent=member.email;
-      const select=document.createElement('select');
-      [['copy_only','roleCopyOnly'],['operator','roleOperator'],['admin','roleAdmin']].forEach(([value,key])=>{
-        const option=document.createElement('option');option.value=value;option.textContent=t(key);select.appendChild(option);
-      });select.value=member.role;
-      const active=document.createElement('select');
-      [[true,'memberActive'],[false,'memberInactive']].forEach(([value,key])=>{
-        const option=document.createElement('option');option.value=String(value);option.textContent=t(key);active.appendChild(option);
-      });active.value=String(member.active);
-      const save=document.createElement('button');save.type='button';save.textContent=t('memberSave');
-      const self=member.email.toLocaleLowerCase()===Cloud.email().toLocaleLowerCase();
-      select.disabled=self;active.disabled=self;save.disabled=self;
-      save.addEventListener('click',async()=>{
-        try{await Cloud.updateMember(member.email,select.value,active.value==='true');showToast(t('saved'));await renderMemberList();}
-        catch{showToast(t('genericError'));}
-      });
-      row.appendChild(name);row.appendChild(select);row.appendChild(active);row.appendChild(save);box.appendChild(row);
+    window.WorkspaceViews.members(box,{
+      roles:[['copy_only','roleCopyOnly'],['operator','roleOperator'],['admin','roleAdmin']].map(([value,key])=>({value,label:t(key)})),
+      statuses:[[true,'memberActive'],[false,'memberInactive']].map(([value,key])=>({value:String(value),label:t(key)})),saveLabel:t('memberSave'),
+      members:members.map(member=>({...member,self:member.email.toLocaleLowerCase()===Cloud.email().toLocaleLowerCase(),save:async(role,active)=>{
+        try{await Cloud.updateMember(member.email,role,active);showToast(t('saved'));await renderMemberList();}catch{showToast(t('genericError'));}
+      }}))
     });
-  }catch{opsText('member-list',t('genericError'));}
+  }catch{window.WorkspaceViews.message(box,t('genericError'));}
 }
 async function renderAuditList(){
   if(Cloud.role()!=='admin')return;
-  const box=document.getElementById('audit-list');box.innerHTML='';
+  const box=document.getElementById('audit-list');
   try{
     const [events,members]=await Promise.all([Cloud.auditEvents(),Cloud.listMembers()]);
-    const emails=new Map(members.filter(m=>m.user_id).map(m=>[m.user_id,m.email]));
-    if(!events.length){box.textContent=t('activityEmpty');return;}
-    events.forEach(event=>{
-      const row=document.createElement('div');row.className='ops-list-row';
-      const action=t({INSERT:'auditInsert',UPDATE:'auditUpdate',DELETE:'auditDelete'}[event.action] || 'auditUpdate');
-      const entity=t({ibta_codes:'auditCodes',ibta_members:'auditMembers',ibta_settings:'auditSettings'}[event.entity] || 'auditSettings');
-      row.textContent=new Date(event.happened_at).toLocaleString(currentLang==='ar'?'ar-SA-u-ca-gregory':'en-US')+' · '+
-        (emails.get(event.actor) || event.actor || '—')+' · '+action+' · '+entity+' · '+(event.record_key || '');
-      box.appendChild(row);
-    });
-  }catch{box.textContent=t('genericError');}
+    const emails=new Map(members.filter(member=>member.user_id).map(member=>[member.user_id,member.email]));
+    window.WorkspaceViews.audit(box,{empty:t('activityEmpty'),entries:events.map(event=>{
+      const action=t({INSERT:'auditInsert',UPDATE:'auditUpdate',DELETE:'auditDelete'}[event.action]||'auditUpdate');
+      const entity=t({ibta_codes:'auditCodes',ibta_members:'auditMembers',ibta_settings:'auditSettings'}[event.entity]||'auditSettings');
+      return new Date(event.happened_at).toLocaleString(currentLang==='ar'?'ar-SA-u-ca-gregory':'en-US')+' · '+(emails.get(event.actor)||event.actor||'—')+' · '+action+' · '+entity+' · '+(event.record_key||'');
+    })});
+  }catch{window.WorkspaceViews.message(box,t('genericError'));}
 }
+
 document.getElementById('admin-tools').addEventListener('toggle',event=>{if(event.target.open&&document.getElementById('member-list'))renderMemberList();});
 document.getElementById('audit-details').addEventListener('toggle',event=>{if(event.target.open)renderAuditList();});
 
@@ -209,18 +192,8 @@ function inventoryMessage(categories,stock,source=null){
 function renderInventory(){
   const categories=sortCategories(Object.keys(state.codesByCategory || {})),stock=Cloud.stockSnapshot(),messageSettings=Cloud.inventoryMessageSettings();
   const categorySelect=document.getElementById('inventory-category'),previous=categorySelect.value;
-  categorySelect.innerHTML='';
-  categories.forEach(category=>{
-    const option=document.createElement('option');option.value=category;option.textContent=displayCatName(category);
-    categorySelect.appendChild(option);
-  });
-  const stockList=document.getElementById('inventory-stock-list');stockList.innerHTML='';
-  categories.forEach(category=>{
-    const row=document.createElement('div');row.className='inventory-stock-row';
-    const label=document.createElement('span');label.textContent=displayCatName(category);
-    const balance=document.createElement('strong');balance.textContent=String(Object.hasOwn(stock,category)?stock[category]:t('inventoryNotSet'));
-    row.appendChild(label);row.appendChild(balance);stockList.appendChild(row);
-  });
+  window.WorkspaceViews.options(categorySelect,{options:categories.map(value=>({value,label:displayCatName(value)}))});
+  window.WorkspaceViews.stock(document.getElementById('inventory-stock-list'),{balances:categories.map(category=>({category:displayCatName(category),balance:String(Object.hasOwn(stock,category)?stock[category]:t('inventoryNotSet'))}))});
   categorySelect.value=categories.includes(previous)?previous:(categories[0] || '');
   syncInventoryAction();
   const complete=categories.length>0 && categories.every(category=>Object.hasOwn(stock,category));

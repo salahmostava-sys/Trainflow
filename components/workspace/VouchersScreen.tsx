@@ -1,3 +1,15 @@
+function ColumnResize({ column }: { column: number }) {
+  return (
+    <span
+      className="voucher-col-resizer"
+      data-column={column}
+      tabIndex={0}
+      role="separator"
+      aria-orientation="vertical"
+    />
+  );
+}
+
 export function VouchersScreen({ active = false }: { active?: boolean }) {
   return (
     <section className={active ? "panel active" : "panel"} id="panel-codes">
@@ -61,21 +73,30 @@ export function VouchersScreen({ active = false }: { active?: boolean }) {
                 id="select-all-codes"
                 aria-label="تحديد جميع الأكواد"
               />
+              <ColumnResize column={0} />
             </div>
-            <div className="col-n">#</div>
-            <div className="col-code" data-i18n="colCode">
-              Code
+            <div className="col-n">
+              #<ColumnResize column={1} />
             </div>
-            <div className="col-date" data-i18n="colDate">
-              Date
+            <div className="col-code">
+              <span data-i18n="colCode">Code</span>
+              <ColumnResize column={2} />
             </div>
-            <div className="col-trainee-name" data-i18n="colTraineeName">
-              Trainee name
+            <div className="col-date">
+              <span data-i18n="colDate">Date</span>
+              <ColumnResize column={3} />
             </div>
-            <div className="col-notes" data-i18n="colNotes">
-              Notes
+            <div className="col-trainee-name">
+              <span data-i18n="colTraineeName">Trainee name</span>
+              <ColumnResize column={4} />
             </div>
-            <div className="col-actions"></div>
+            <div className="col-notes">
+              <span data-i18n="colNotes">Notes</span>
+              <ColumnResize column={5} />
+            </div>
+            <div className="col-actions">
+              <ColumnResize column={6} />
+            </div>
           </div>
           <div className="code-list" id="code-grid"></div>
         </div>

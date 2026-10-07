@@ -1,15 +1,6 @@
 // Universal in-app modal dialog for confirmations, alerts, and user prompts.
 // Replaces native browser confirm() and prompt() with sleek, themed, accessible modals.
 (function(global){
-  const SVGS = {
-    trash: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>',
-    edit: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>',
-    warning: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
-    column: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="3" x2="12" y2="21"/><path d="M7 8h2m-2 4h2m-2 4h2m7-8h2m-2 4h2m-2 4h2"/></svg>',
-    row: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="12" x2="21" y2="12"/><path d="M8 7v2m4-2v2m4-2v2m-8 7v2m4-2v2m4-2v2"/></svg>',
-    info: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>'
-  };
-
   function getLang() {
     if (typeof global.currentLang === 'string') return global.currentLang;
     const docLang = document.documentElement.lang || document.body?.getAttribute('lang');
@@ -22,39 +13,6 @@
 
   function ensureDialogElements() {
     let dialog = document.getElementById('app-modal-dialog');
-    if (!dialog) {
-      dialog = document.createElement('dialog');
-      dialog.id = 'app-modal-dialog';
-      dialog.className = 'app-modal-dialog';
-      dialog.setAttribute('aria-labelledby', 'app-modal-title');
-      dialog.setAttribute('aria-describedby', 'app-modal-desc');
-      dialog.innerHTML = `
-        <div class="app-modal-content">
-          <div class="app-modal-header">
-            <div id="app-modal-icon-badge" class="app-modal-icon-badge" aria-hidden="true"></div>
-            <div class="app-modal-text">
-              <h2 id="app-modal-title" class="app-modal-title"></h2>
-              <p id="app-modal-desc" class="app-modal-desc"></p>
-            </div>
-          </div>
-          <div id="app-modal-body" class="app-modal-body" hidden>
-            <div class="app-modal-field">
-              <label id="app-modal-input-label" for="app-modal-input" class="app-modal-label" hidden></label>
-              <div class="app-modal-input-wrap">
-                <input id="app-modal-input" class="app-modal-input" autocomplete="off" aria-describedby="app-modal-desc app-modal-error" />
-                <span id="app-modal-unit" class="app-modal-unit" hidden></span>
-              </div>
-              <div id="app-modal-error" class="app-modal-error" aria-live="polite" hidden></div>
-            </div>
-          </div>
-          <div class="app-modal-actions">
-            <button id="app-modal-cancel" type="button" class="app-modal-btn app-modal-btn-cancel"></button>
-            <button id="app-modal-confirm" type="button" class="app-modal-btn app-modal-btn-confirm"></button>
-          </div>
-        </div>
-      `;
-      document.body.appendChild(dialog);
-    }
     return {
       dialog,
       iconBadge: document.getElementById('app-modal-icon-badge'),
@@ -127,7 +85,7 @@
 
         const iconType = options.icon || (options.danger ? 'trash' : 'warning');
         els.iconBadge.className = 'app-modal-icon-badge ' + (options.danger ? 'badge-danger' : 'badge-warning');
-        els.iconBadge.innerHTML = SVGS[iconType] || SVGS.warning;
+        window.WorkspaceViews.modalIcon(els.iconBadge,{kind:iconType,fallback:'warning'});
 
         const defaultTitle = options.danger 
           ? (isAr ? 'تأكيد الحذف' : 'Confirm Deletion')
@@ -218,7 +176,7 @@
 
         const iconType = options.icon || 'edit';
         els.iconBadge.className = 'app-modal-icon-badge badge-primary';
-        els.iconBadge.innerHTML = SVGS[iconType] || SVGS.edit;
+        window.WorkspaceViews.modalIcon(els.iconBadge,{kind:iconType,fallback:'edit'});
 
         els.title.textContent = options.title || (isAr ? 'تعديل' : 'Edit');
         els.desc.textContent = options.message || '';

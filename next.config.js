@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 module.exports = {
   reactStrictMode: true,
-  async rewrites() {
-    return [{ source: '/classic', destination: '/workspace/index.html' }];
+  async redirects() {
+    return [{ source: '/classic', destination: '/trainees', permanent: true }];
   },
 };

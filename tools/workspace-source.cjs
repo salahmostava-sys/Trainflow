@@ -10,7 +10,6 @@ const sources = [
   },
   { src: "session-policy.js" },
   { src: "cloud.js" },
-  { src: "voucher-names.js" },
   { src: "voucher-columns.js" },
   { src: "app-dialog.js" },
   { src: "workspace.js" },
@@ -90,6 +89,7 @@ function renderDocument({
   const loadingLanguage =
     "<script>document.getElementById('startup-message').textContent=window.IBTA_START_LANGUAGE==='ar'?'جارٍ تحميل مساحة العمل…':'Loading workspace…';</script>";
   const scripts =
+    '<script src="react-runtime.js"></script><script src="react-dom-runtime.js"></script><script src="workspace-views.js"></script>' +
     loadingLanguage +
     sources
       .map((attributes) => {
@@ -127,4 +127,4 @@ function renderDocument({
     "</body></html>"
   );
 }
-module.exports = { sources, renderDocument };
+module.exports = { sources, renderDocument, loadTsx };

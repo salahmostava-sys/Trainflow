@@ -19,6 +19,7 @@ for (const [source, target] of [
 ])
   fs.writeFileSync(path.join(root, target), browserSource(source));
 fs.mkdirSync(path.join(root, "generated"), { recursive: true });
+require('./compile-preview-views.cjs');
 fs.writeFileSync(
   path.join(root, "generated/api.mjs"),
   ts.transpileModule(

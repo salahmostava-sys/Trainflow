@@ -17,6 +17,8 @@ before(async()=>{
       res.setHeader('Content-Type','text/html; charset=utf-8');res.end(html);
     }else if(name==='supabase-test-sdk.js'){
       res.setHeader('Content-Type','text/javascript');res.end('('+installBoundaryFixtures.toString()+')();');
+    }else if(require('../tools/preview-assets.cjs')[name]){
+      res.setHeader('Content-Type','text/javascript');res.end(fs.readFileSync(require('../tools/preview-assets.cjs')[name]));
     }else if(assets.has(name)){
       res.setHeader('Content-Type',name.endsWith('.css')?'text/css':'text/javascript');res.end(fs.readFileSync(path.join(root,name)));
     }else{res.writeHead(404);res.end();}

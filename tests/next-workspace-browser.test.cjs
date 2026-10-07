@@ -9,6 +9,12 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=r
     const preview=launch(['tools/design-preview.cjs'],{IBTA_PREVIEW_PORT:String(previewPort)});await new Promise(resolve=>preview.stdout.once('data',resolve));
     browser=await chromium.launch({headless:true,channel:'msedge'});const page=await browser.newPage({viewport:{width:1366,height:900}}),reference=await browser.newPage({viewport:{width:1366,height:900}}),errors=[];
     page.on('pageerror',error=>errors.push(error.message));
+    page.on('console',message=>{if(message.type()==='error'&&/Minified React error|hydration|ReactDOM|flushSync/.test(message.text()))errors.push(message.text());});
+    assert.equal(fs.existsSync(path.join(root,'public/workspace/index.html')),false,'Production builds use Next pages without an HTML intermediate');
+    const classic=await page.request.get('http://localhost:'+port+'/classic',{maxRedirects:0});
+    assert.equal(classic.status(),308);assert.equal(classic.headers().location,'/trainees');
+    assert.equal((await page.request.get('http://localhost:'+port+'/workspace/index.html')).status(),404);
+
 
     await page.addInitScript(()=>{window.uiUseNativeClipboard=true;});
     await page.route('https://cdn.jsdelivr.net/**',route=>route.fulfill({contentType:'text/javascript',body:'('+require('./workspace-sdk-fixture.cjs').toString()+')();'}));

@@ -54,3 +54,15 @@ Regression checks cover drawer keyboard cycling/release, Arabic/English prompt v
 Follow-up validation passed: `npm test`, `npm run build`, `npm run test:next`, `npm run test:ui` (9 passed, 1 existing skip), and all 15 browser suite files. The dropdown regression waits for the browser's asynchronous popover event before asserting its expanded state. Desktop and touch screenshots were inspected again.
 
 This is source review and functional regression validation with synthetic records. It does not establish the current live Supabase leaked-password-protection setting, live RLS configuration, or actual Google/Prometric uploads. Those remain separate live-account checks. Publication must be verified separately from a passing local build.
+
+## React rendering completion
+
+All workspace screen markup, virtual grid rows and headers, voucher/keycode rows, allocation lists, settings forms, member/audit/stock views, spreadsheet ribbon and menus, details and feature dialogs now render from maintained TSX components. React renders untrusted values as text. Existing spreadsheet commands, workbook algorithms and integration controllers remain JavaScript; this completes the UI migration, not a conversion of every algorithm to TypeScript.
+
+`client/workspace-views.tsx` supplies typed view contracts to those controllers. Spreadsheet selection and geometry require committed DOM synchronously, so the bridge commits each region with `flushSync`. React owns that region's children; controllers retain native spreadsheet selection, focus, sizing and command callbacks. The unused voucher-name DOM factory was removed.
+
+Next builds derive the script/worker/connector descriptors directly from the source inventory. They neither generate nor parse `public/workspace/index.html`. `/classic` redirects to `/trainees`. Local isolated regression fixtures and optional static export render TSX to HTML and load a compiled React view bundle. Browser HTML and the extension's separate popup document remain normal platform outputs.
+
+Cloud regression tests now use Happy DOM and the actual React components, preserving external SDK/database/clipboard fixtures. Existing behavioral assertions remain; the font check examines styles and font resources so existing Excel font choices do not become a false failure. The production-page regression verifies the retired HTML URL and compatibility redirect.
+
+Completion validation on 7 October 2026 passed: `npm test`, `npx tsc --noEmit --pretty false`, `npm run build`, `npm run test:next`, `npm run test:ui` (9 passed, 1 existing skip), all 15 `npm run test:browser` suite files, frozen lockfile validation, and `git diff --check`. Desktop/mobile screenshots were inspected. Browser regressions verify saved custom row heights, result alignment, typing a complete voucher name before saving on blur, audit-list error recovery, and the existing spreadsheet/Excel/report/Prometric behavior. No database migration or live account registration was performed; Prometric password defaults and generation are unchanged.

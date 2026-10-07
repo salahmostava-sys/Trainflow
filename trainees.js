@@ -96,7 +96,7 @@ const Trainees=(()=>{
     grid.classList.toggle('sheet-freeze-column',excelView.freeze);
     grid.querySelectorAll('.sheet-frozen-cell').forEach(el=>el.classList.remove('sheet-frozen-cell'));
     const first=visibleCols()[0];grid.querySelectorAll('[data-col="'+first+'"]').forEach(el=>el.classList.add('sheet-frozen-cell'));
-    for(const key of ['wrap','freeze'])$('sheet-'+key)?.setAttribute('aria-pressed',String(excelView[key]));
+    for(const key of ['freeze'])$('sheet-'+key)?.setAttribute('aria-pressed',String(excelView[key]));
   }
   let hoverTimer,hoverHideTimer,detailTimer,hoverCell=null,detailKey='',detailPage=0,detailSource=-1;
   let colWidths={};
@@ -235,29 +235,8 @@ const Trainees=(()=>{
   }
   function initContextMenu(){
     // Column actions keep the 13 fixed operational fields in their original positions.
-    if($('sheet-context-menu'))return;
-    const menu=node('div',undefined,{id:'sheet-context-menu',class:'sheet-context-menu',hidden:''});
-    menu.innerHTML=`
-      <button type="button" data-action="cut"><span>✂️ <span class="sheet-menu-label"></span></span><span class="sheet-menu-shortcut">Ctrl+X</span></button>
-      <button type="button" data-action="copy"><span>📋 <span class="sheet-menu-label"></span></span><span class="sheet-menu-shortcut">Ctrl+C</span></button>
-      <button type="button" data-action="paste"><span>📄 <span class="sheet-menu-label"></span></span><span class="sheet-menu-shortcut">Ctrl+V</span></button>
-      <hr>
-      <button type="button" data-action="insert-above"><span>⬆️ <span class="sheet-menu-label"></span></span></button>
-      <button type="button" data-action="insert-below"><span>⬇️ <span class="sheet-menu-label"></span></span></button>
-      <button type="button" data-action="insert-1000"><span>➕ <span class="sheet-menu-label"></span></span></button>
-      <button type="button" data-action="delete-row"><span>🗑️ <span class="sheet-menu-label"></span></span></button>
-      <button type="button" data-action="insert-column-left"><span>← <span class="sheet-menu-label"></span></span></button>
-      <button type="button" data-action="insert-column-right"><span>→ <span class="sheet-menu-label"></span></span></button>
-      <button type="button" data-action="delete-column"><span>🗑️ <span class="sheet-menu-label"></span></span></button>
-      <hr>
-      <button type="button" data-action="clear-contents"><span>🧹 <span class="sheet-menu-label"></span></span><span class="sheet-menu-shortcut">Del</span></button>
-      <button type="button" data-action="delete-left"><span>← <span class="sheet-menu-label"></span></span></button>
-      <button type="button" data-action="delete-right"><span>→ <span class="sheet-menu-label"></span></span></button>
-      <button type="button" data-action="clear-format"><span>✨ <span class="sheet-menu-label"></span></span></button>
-      <hr>
-      <button type="button" data-action="select-all"><span>☑️ <span class="sheet-menu-label"></span></span><span class="sheet-menu-shortcut">Ctrl+A</span></button>
-    `;
-    document.body.append(menu);
+    const menu=$('sheet-context-menu');
+
     menu.addEventListener('click',async e=>{
       const btn=e.target.closest('button[data-action]');if(!btn)return;
       const action=btn.dataset.action;closeContextMenu();
@@ -349,35 +328,8 @@ const Trainees=(()=>{
     });
   }
   function initFindDialog(){
-    if($('sheet-find-dialog'))return;
-    const dlg=node('dialog',undefined,{id:'sheet-find-dialog',class:'sheet-find-dialog','aria-labelledby':'sheet-find-title'});
-    dlg.innerHTML=`
-      <div style="display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);padding-bottom:10px;">
-        <h3 id="sheet-find-title" style="margin:0;font-size:15px;font-weight:700;"></h3>
-        <button type="button" id="sheet-find-close" style="border:0;background:transparent;font-size:18px;cursor:pointer;color:var(--muted);padding:2px 8px;line-height:1;" aria-label="Close">✕</button>
-      </div>
-      <div class="sheet-find-body">
-        <div class="sheet-find-row">
-          <label for="sheet-find-input" id="sheet-find-label"></label>
-          <input type="text" id="sheet-find-input" autocomplete="off" spellcheck="false">
-        </div>
-        <div class="sheet-find-row">
-          <label for="sheet-replace-input" id="sheet-replace-label"></label>
-          <input type="text" id="sheet-replace-input" autocomplete="off" spellcheck="false">
-        </div>
-        <div class="sheet-find-options">
-          <label><input type="checkbox" id="sheet-find-case"><span id="sheet-find-case-label"></span></label>
-          <label><input type="checkbox" id="sheet-find-entire"><span id="sheet-find-entire-label"></span></label>
-        </div>
-        <p id="sheet-find-status" class="sheet-find-status" role="status"></p>
-        <div class="sheet-find-actions">
-          <button type="button" id="sheet-find-next" class="sheet-primary"></button>
-          <button type="button" id="sheet-find-replace-one"></button>
-          <button type="button" id="sheet-find-replace-all"></button>
-        </div>
-      </div>
-    `;
-    document.body.append(dlg);
+    const dlg=$('sheet-find-dialog');
+
     $('sheet-find-close').onclick=()=>dlg.close();
     $('sheet-find-next').onclick=findNext;
     $('sheet-find-replace-one').onclick=replaceOne;
@@ -490,7 +442,6 @@ const Trainees=(()=>{
   // Every data mutation creates a new matrix, so history can retain the old matrix safely.
   const snapshot=()=>({cells,format:D.format(formatting),alignments:{...cellAlignments}});
   function node(tag,text,attrs={}){const el=document.createElement(tag);if(text!==undefined)el.textContent=text;for(const [key,value]of Object.entries(attrs))el.setAttribute(key,value);return el;}
-  function button(text,fn,cls){const b=node('button',text,{type:'button'});if(cls)b.className=cls;b.addEventListener('click',fn);return b;}
   let statusTextForLanguage=()=>'',statusError=false;
   function renderMessage(){
     if(!$('sheet-status'))return;
@@ -508,54 +459,13 @@ const Trainees=(()=>{
   function init(){
     if(initialized)return;initialized=true;
     setTimeout(()=>TraineeReports.mount($('sheet-workspace'),()=>({owner,sheetId,rows:cells}),async()=>{commitEdit();return await flush();}),0);
-    $('panel-trainees').innerHTML=`
-      <div class="sheet-heading"><div><h2 id="sheet-title"></h2><p id="sheet-subtitle"></p></div></div>
-      <div id="sheet-workspace" class="sheet-card">
-        <div class="sheet-tools"><button type="button" id="sheet-add" class="sheet-primary"></button><button type="button" id="sheet-delete"></button><div class="sheet-add-col-wrap"><button type="button" id="sheet-add-col" class="sheet-primary"></button><div id="sheet-add-col-popover" class="sheet-add-col-popover" hidden></div></div><button type="button" id="sheet-find-btn"></button><button type="button" id="sheet-select-all"></button><button type="button" id="sheet-undo"></button><button type="button" id="sheet-redo"></button><button type="button" id="sheet-copy"></button><button type="button" id="sheet-save"></button><button type="button" id="sheet-reload"></button><span class="sheet-status" id="sheet-status" role="status" aria-live="polite"></span></div>
-        <div class="sheet-format-tools">
-          <details id="sheet-columns"><summary id="sheet-columns-title"></summary><div id="sheet-column-options"></div></details>
-          <button type="button" id="sheet-font-minus">A−</button><output id="sheet-font-size"></output><button type="button" id="sheet-font-plus">A+</button>
-          <label><span id="sheet-row-size-label"></span><select id="sheet-row-size"><option value="15">15</option><option value="21">21</option><option value="28">28</option><option value="36">36</option></select></label>
-          <label><span id="sheet-selection-size-label"></span><select id="sheet-selection-size"></select></label>
-          <button type="button" id="sheet-bold"><b>B</b></button>
-          <div class="sheet-align-group" role="group">
-            <button type="button" id="sheet-align-right" title="محاذاة لليمين"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="3" y1="5" x2="21" y2="5"></line><line x1="9" y1="12" x2="21" y2="12"></line><line x1="5" y1="19" x2="21" y2="19"></line></svg></button>
-            <button type="button" id="sheet-align-center" title="توسيط"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="4" y1="5" x2="20" y2="5"></line><line x1="7" y1="12" x2="17" y2="12"></line><line x1="5" y1="19" x2="19" y2="19"></line></svg></button>
-            <button type="button" id="sheet-align-left" title="محاذاة لليسار"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="3" y1="5" x2="21" y2="5"></line><line x1="3" y1="12" x2="15" y2="12"></line><line x1="3" y1="19" x2="19" y2="19"></line></svg></button>
-          </div>
-          <label><span id="sheet-fill-label"></span><input type="color" id="sheet-fill" value="#ffffff"></label>
-          <label><span id="sheet-text-color-label"></span><input type="color" id="sheet-text-color" value="#16324f"></label>
-          <button type="button" id="sheet-clear-format"></button><button type="button" id="sheet-wrap" aria-pressed="false">التفاف النص / Wrap text</button><button type="button" id="sheet-freeze" aria-pressed="false">تثبيت أول عمود / Freeze first column</button><label><span id="sheet-direction-label"></span><select id="sheet-direction"><option value="rtl">يمين ← يسار</option><option value="ltr">Left → Right</option></select></label>
-        </div>
-        <div class="sheet-filters"><input id="sheet-search" type="search"><input id="sheet-org" type="search"><input id="sheet-date" type="search"><select id="sheet-result"></select><label class="sheet-duplicates-filter" id="sheet-duplicates-filter"><input type="checkbox" id="sheet-duplicates-only"><span id="sheet-duplicates-label"></span><span id="sheet-duplicates-count" class="sheet-duplicates-badge">0</span></label><button type="button" id="sheet-clear-filters"></button></div>
-        <div class="sheet-scroll"><table class="sheet-grid" id="sheet-grid" role="grid" aria-label="Trainees"><thead></thead><tbody></tbody></table></div>
-        <div class="sheet-add-rows-bar">
-          <span id="sheet-add-prefix"></span>
-          <input type="number" id="sheet-add-bulk-count" value="1000" min="1" max="100000" step="100" class="sheet-add-bulk-input" aria-label="عدد الصفوف المراد إضافتها">
-          <span id="sheet-add-suffix"></span>
-          <button type="button" id="sheet-add-bulk-btn" class="sheet-primary"></button>
-        </div>
-        <div class="sheet-footer"><p id="sheet-help"></p><span id="sheet-count"></span></div>
-      </div>
-      <div id="sheet-code-workspace" hidden><div class="sheet-code-tools" id="sheet-code-admin" hidden><button type="button" id="sheet-owned"></button><button type="button" id="sheet-pool"></button><button type="button" id="sheet-assign" class="sheet-primary"></button></div><div class="sheet-code-tools"><input id="sheet-code-search" type="search"><button type="button" id="sheet-code-refresh"></button><span id="sheet-code-count"></span></div><p class="sheet-notice" id="sheet-code-notice"></p><div class="sheet-card sheet-code-list" id="sheet-code-list"></div><p id="sheet-code-status" role="status"></p></div>`;
-    const toolbar=$('sheet-workspace').querySelector('.sheet-tools');
-    toolbar.append(node('button',undefined,{id:'sheet-delete-col',type:'button'}));
-    for(const [label,ids] of [['الحافظة / Clipboard',['sheet-select-all','sheet-copy','sheet-undo','sheet-redo']],['الصفوف والأعمدة / Rows & columns',['sheet-add','sheet-delete','sheet-add-col','sheet-delete-col']],['تحرير وحفظ / Edit & save',['sheet-find-btn','sheet-save','sheet-reload']]]){
-      const group=node('div',undefined,{class:'sheet-ribbon-group'}),actions=node('div',undefined,{class:'sheet-ribbon-actions'});
-      for(const id of ids){const el=$(id);actions.append(id==='sheet-add-col'?el.parentElement:el);}
-      const caption=node('small');caption.dataset.ar=label.split(' / ')[0];caption.dataset.en=label.split(' / ')[1];caption.textContent=tr(caption.dataset.ar,caption.dataset.en);
-      group.append(actions,caption);if(ids.includes('sheet-save'))group.classList.add('sheet-essential-tools');toolbar.append(group);
-    }
-    toolbar.append($('sheet-status'));
-    const localNote=node('small',undefined,{id:'sheet-local-note',class:'sheet-local-note'});$('sheet-workspace').querySelector('.sheet-format-tools').append(localNote);
-    const more=button(tr('التنسيق وأدوات إضافية','Formatting & more tools'),()=>{const expanded=$('sheet-workspace').classList.toggle('sheet-show-tools');more.setAttribute('aria-expanded',String(expanded));});more.id='sheet-more-tools';more.className='sheet-mobile-toggle';more.setAttribute('aria-expanded','false');toolbar.before(more);
-    for(const key of ['wrap','freeze'])$('sheet-'+key).onclick=()=>{commitEdit();excelView[key]=!excelView[key];saveExcelView();applyExcelView();resetRowHeights();rebuildRowOffsets();drawRows(true);};
+
+    for(const key of ['freeze'])$('sheet-'+key).onclick=()=>{commitEdit();excelView[key]=!excelView[key];saveExcelView();applyExcelView();resetRowHeights();rebuildRowOffsets();drawRows(true);};
     $('sheet-row-size').value=String(rowSize);$('sheet-row-size').onchange=()=>setRowSize($('sheet-row-size').value);
-    const zoomTools=node('div',undefined,{class:'sheet-zoom-tools',dir:'ltr'});
-    zoomTools.innerHTML='<span id="sheet-zoom-label"></span><button type="button" id="sheet-zoom-out">−</button><input type="range" id="sheet-zoom-slider" min="50" max="200" step="1" value="100"><button type="button" id="sheet-zoom-in">+</button><input type="text" inputmode="numeric" autocomplete="off" spellcheck="false" id="sheet-zoom-reset" value="100%">';
-    $('sheet-workspace').querySelector('.sheet-footer').append(zoomTools);
-    const expandedButton=button('',()=>setExpandedView(true));expandedButton.id='sheet-expanded';expandedButton.setAttribute('aria-pressed','false');zoomTools.prepend(expandedButton);
-    const expandedBar=node('div',undefined,{class:'sheet-expanded-bar'}),exit=button('',()=>setExpandedView(false)),expandedTools=button('',()=>{const show=$('sheet-workspace').classList.toggle('sheet-expanded-tools');expandedTools.setAttribute('aria-pressed',String(show));excelTools?.syncRibbon();queueDraw(true);});exit.id='sheet-expanded-close';expandedTools.id='sheet-expanded-tools';expandedTools.setAttribute('aria-pressed','false');expandedBar.append(exit,expandedTools,node('output',undefined,{id:'sheet-visible-rows',role:'status'}));$('sheet-workspace').prepend(expandedBar);
+    const zoomTools=$('sheet-workspace').querySelector('.sheet-zoom-tools');
+
+    $('sheet-expanded').onclick=()=>setExpandedView(true);$('sheet-expanded-close').onclick=()=>setExpandedView(false);
+    $('sheet-expanded-tools').onclick=()=>{const show=$('sheet-workspace').classList.toggle('sheet-expanded-tools');$('sheet-expanded-tools').setAttribute('aria-pressed',String(show));excelTools?.syncRibbon();queueDraw(true);};
     $('sheet-zoom-out').onclick=()=>setZoom(excelView.zoom-10);$('sheet-zoom-in').onclick=()=>setZoom(excelView.zoom+10);
     $('sheet-zoom-slider').oninput=()=>setZoom($('sheet-zoom-slider').value);
     const zoomInput=$('sheet-zoom-reset'),commitZoom=()=>{
@@ -565,7 +475,6 @@ const Trainees=(()=>{
     };
     zoomInput.onfocus=()=>zoomInput.select();zoomInput.onblur=commitZoom;
     zoomInput.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();commitZoom();zoomInput.blur();}else if(e.key==='Escape'){e.preventDefault();e.stopPropagation();zoomInput.value=excelView.zoom+'%';zoomInput.blur();}};
-    const search=$('sheet-search'),searchGroup=node('div',undefined,{class:'sheet-search-group'});search.replaceWith(searchGroup);searchGroup.append(node('input',undefined,{id:'sheet-address',value:'A1','aria-label':'عنوان الخلية / Cell address',title:'D150',autocomplete:'off',spellcheck:'false',dir:'ltr'}),node('input',undefined,{id:'sheet-cell-content',type:'text',readonly:'',dir:'auto',autocomplete:'off',spellcheck:'false'}),search);
     $('sheet-address').addEventListener('keydown',e=>{
       if(e.key==='Escape'){e.preventDefault();$('sheet-address').blur();paint();return;}
       if(e.key!=='Enter')return;e.preventDefault();if(!loaded)return;
@@ -585,8 +494,6 @@ const Trainees=(()=>{
     $('sheet-delete').onclick=deleteSelectedRows;
     $('sheet-delete-col').onclick=()=>editColumns('delete');
     $('sheet-find-btn').onclick=()=>openFindDialog();
-    $('sheet-add-col').onclick=(e)=>{e.stopPropagation();commitEdit();toggleAddColumnMenu();};
-    document.addEventListener('click',e=>{if(!e.target.closest('.sheet-add-col-wrap')){$('sheet-add-col-popover')&&($('sheet-add-col-popover').hidden=true);}});
     $('sheet-font-minus').onclick=()=>adjustFont(-1);$('sheet-font-plus').onclick=()=>adjustFont(1);
     $('sheet-direction').onchange=()=>{commitEdit();const next=D.format(formatting);next.direction=$('sheet-direction').value;change(cells,true,next);};
     $('sheet-fill').onchange=()=>formatSelection({bg:$('sheet-fill').value});
@@ -595,12 +502,9 @@ const Trainees=(()=>{
     $('sheet-align-right').onclick=()=>setSelectionAlignment('right');
     $('sheet-align-center').onclick=()=>setSelectionAlignment('center');
     $('sheet-align-left').onclick=()=>setSelectionAlignment('left');
-    $('sheet-clear-format').onclick=()=>formatSelection(null);
     $('sheet-selection-size').onchange=()=>formatSelection({size:Number($('sheet-selection-size').value)});
-    for(let size=10;size<=32;size++)$('sheet-selection-size').append(node('option',String(size),{value:size}));
     $('sheet-undo').onclick=()=>undo(false);$('sheet-redo').onclick=()=>undo(true);
     $('sheet-select-all').onclick=()=>selectAll();
-    $('sheet-copy').onclick=async()=>{commitEdit();if(await copyText(D.tsv(cells)))message(()=>tr('تم نسخ الجدول بالكامل','Entire sheet copied'));};
     ['sheet-search','sheet-org','sheet-date','sheet-result'].forEach(id=>$(id).addEventListener('input',()=>{commitEdit();extraSelections=[];anchor=cursor={r:0,c:0};render();}));
     $('sheet-duplicates-only').onchange=()=>{
       commitEdit();
@@ -683,8 +587,8 @@ const Trainees=(()=>{
     window.addEventListener('beforeunload',e=>{savePosition();if(hasDraft()){e.preventDefault();e.returnValue='';}});
     window.addEventListener('pagehide',savePosition);
     document.addEventListener('visibilitychange',()=>{if(document.hidden)savePosition();});
-    if(typeof TraineeSheets!=='undefined')sheetTools=TraineeSheets.mount({$,tr,node,button,state:()=>({owner,sheetId,worksheets,loaded:loaded&&!loading&&!worksheetBusy}),switchSheet:id=>switchOwner(owner,false,id),action:worksheetAction});
-    if(typeof TraineeExcel!=='undefined')excelTools=TraineeExcel.mount({D,$,tr,node,button,
+    if(typeof TraineeSheets!=='undefined')sheetTools=TraineeSheets.mount({$,tr,node,state:()=>({owner,sheetId,worksheets,loaded:loaded&&!loading&&!worksheetBusy}),switchSheet:id=>switchOwner(owner,false,id),action:worksheetAction});
+    if(typeof TraineeExcel!=='undefined')excelTools=TraineeExcel.mount({D,$,tr,node,
       state:()=>({cells,formatting,view,owner:workspaceIdentity(),sheetId,loaded:loaded&&!loading&&!worksheetBusy,expandedView,wrap:excelView.wrap,labels:allLabels(),importLabels:baseLabels,bounds:bounds(),ranges:selectionRanges(),cursor:{...cursor},cols:visibleCols(),filtered:filtered()||!!formatting.hiddenRows?.length}),
       replaceSheet:(next,fmt)=>{change(next,false,fmt);const prefix=(workspaceIdentity()||'default')+':';for(const key of Object.keys(cellAlignments))if(key.startsWith(prefix))delete cellAlignments[key];saveAlignments();clearFilters();render();focusCell(0,0);},
       commitEdit,change,formatSelection,focusCell,render,message,cutSelection,copySelection,pasteSelection,executePaste,
@@ -694,9 +598,9 @@ const Trainees=(()=>{
       select:(a,b)=>{commitEdit();extraSelections=[];anchor=a;cursor=b;paint();},selectAll:()=>selectAll(),
       flush,sort:(column,direction)=>{commitEdit();sortRules=[];sortCol=column;sortDir=direction;render();},customSort:rules=>{commitEdit();sortRules=rules;sortCol=-1;render();},
       resetSort:()=>{sortRules=[];sortCol=-1;render();},clearFilters:()=>{clearFilters();render();},setColumnWidth,saveColumnWidths,resetColumnWidth});
-    if(typeof TraineePrometric!=='undefined')prometricTools=TraineePrometric.mount({D,$,tr,node,button,
+    if(typeof TraineePrometric!=='undefined')prometricTools=TraineePrometric.mount({D,$,tr,node,
       state:()=>({cells,view,owner:workspaceIdentity(),epoch,user:Cloud.userId(),loaded:loaded&&!loading,editing:!!editing,bounds:bounds(),selectedRows:selectedRows().map(r=>view[r])}),commitEdit,change,flush,focusCell,message});
-    if(typeof TraineeCertificate!=='undefined')certificateTools=TraineeCertificate.mount({D,$,tr,node,button,
+    if(typeof TraineeCertificate!=='undefined')certificateTools=TraineeCertificate.mount({D,$,tr,node,
       state:()=>({cells,view,owner,epoch,loaded:loaded&&!loading,cursor:{...cursor}}),catalog:()=>DEFAULT_KEYCODES,commitEdit,message});
     translate();
   }
@@ -713,72 +617,6 @@ const Trainees=(()=>{
     if(name===null)return;
     const next=D.columns(cells,formatting,c,1,true,c);next.format.headers[c]=name.trim()||tr('عمود ','Column ')+colLetter(c);
     change(next.cells,true,next.format);focusCell(cursor.r,c);
-  }
-  function toggleAddColumnMenu(force){
-    const popover=$('sheet-add-col-popover');
-    if(!popover)return;
-    const shouldOpen=force!==undefined?force:popover.hidden;
-    if(!shouldOpen){popover.hidden=true;return;}
-    popover.innerHTML='';
-    const createBtn=button('+ '+tr('إنشاء عمود جديد','Create new column'),async()=>{
-      commitEdit();
-      const newColIdx=colCount();
-      if(newColIdx>=D.MAX_COLS){limitError();return;}
-      const letter=colLetter(newColIdx);
-      const colName=await (window.AppDialog?AppDialog.prompt({
-        title:tr('إنشاء عمود جديد','Create New Column'),
-        message:tr('اسم العمود الجديد (اختياري):','New column name (optional):'),
-        defaultValue:tr('عمود ','Column ')+letter,
-        confirmText:tr('إنشاء','Create'),
-        cancelText:tr('إلغاء','Cancel'),
-        icon:'column'
-      }):prompt(tr('اسم العمود الجديد (اختياري):','New column name (optional):'),tr('عمود ','Column ')+letter));
-      if(colName===null)return;
-      const nextFormat=D.format(formatting);
-      if(colName&&colName.trim()){
-        if(!nextFormat.headers)nextFormat.headers={};
-        nextFormat.headers[newColIdx]=colName.trim();
-      }
-      const nextCells=cells.map(row=>{const r=[...row];while(r.length<=newColIdx)r.push('');return r;});
-      if(!nextCells.length)nextCells.push(D.blank(newColIdx+1));
-      change(nextCells,true,nextFormat);
-      popover.hidden=true;
-      focusCell(cursor.r,newColIdx);
-      message(()=>tr('تمت إضافة عمود جديد: ','New column added: ')+(nextFormat.headers?.[newColIdx]||letter));
-    },'sheet-create-col-btn');
-    popover.append(createBtn);
-
-    const hiddenCols=formatting.hidden||[];
-    if(hiddenCols.length>0){
-      const sep=node('div',undefined,{style:'border-top:1px solid var(--border);margin:4px 0;'});
-      const title=node('div',tr('أعمدة مخفية لإظهارها:','Hidden columns to restore:'),{style:'font-weight:700;font-size:11.5px;color:var(--muted);padding:4px;'});
-      popover.append(sep,title);
-      hiddenCols.forEach(c=>{
-        const colName=tr(...labels[c]);
-        const btn=button('+ '+colName,()=>{
-          commitEdit();
-          const next=D.format(formatting);
-          next.hidden=next.hidden.filter(i=>i!==c);
-          change(cells,true,next);
-          popover.hidden=true;
-          focusCell(cursor.r,c);
-          message(()=>tr('تمت استعادة عمود '+colName,'Column restored: '+colName));
-        });
-        popover.append(btn);
-      });
-      if(hiddenCols.length>1){
-        const allBtn=button(tr('إظهار كافة الأعمدة','Show all columns'),()=>{
-          commitEdit();
-          const next=D.format(formatting);
-          next.hidden=[];
-          change(cells,true,next);
-          popover.hidden=true;
-          message(()=>tr('تم إظهار كافة الأعمدة','All columns are now visible'));
-        },'sheet-add-all-btn');
-        popover.append(allBtn);
-      }
-    }
-    popover.hidden=false;
   }
   function translate(){
     ($('sidebar-trainees-label')||$('trainees-tab')).textContent=tr('المتدربون','Trainees');if(!initialized)return;
@@ -808,10 +646,9 @@ const Trainees=(()=>{
       'sheet-find-label':['بحث عن:','Find:'],'sheet-replace-label':['استبدال بـ:','Replace with:'],
       'sheet-find-case-label':['مطابقة حالة الأحرف','Match case'],'sheet-find-entire-label':['مطابقة كامل الخلية','Match entire cell'],
       'sheet-find-next':['بحث عن التالي','Find Next'],'sheet-find-replace-one':['استبدال','Replace'],'sheet-find-replace-all':['استبدال الكل','Replace All']
-    };for(const [id,pair]of Object.entries(text))$(id)&&($(id).textContent=tr(...pair));
+    };for(const [id,pair]of Object.entries(text)){const el=$(id);if(el&&!el.dataset.excelAr)el.textContent=tr(...pair);}
     for(const [id,pair]of Object.entries({'sheet-search':['بحث في الجدول…','Search sheet…'],'sheet-org':['فلترة بالجهة…','Filter organization…'],'sheet-date':['فلترة بتاريخ الاختبار…','Filter exam date…'],'sheet-code-search':['بحث عن كود…','Search codes…']})){$(id)&&($(id).placeholder=tr(...pair));$(id)&&($(id).setAttribute('aria-label',tr(...pair)));}
-    const value=$('sheet-result').value;$('sheet-result').replaceChildren();
-    [['',tr('كل النتائج','All results')],['ناجح','ناجح'],['راسب','راسب'],['لم يدخل','لم يدخل']].forEach(([v,label])=>$('sheet-result').append(node('option',label,{value:v})));
+    const value=$('sheet-result').value;window.WorkspaceViews.options($('sheet-result'),{options:[['',tr('كل النتائج','All results')],['ناجح','ناجح'],['راسب','راسب'],['لم يدخل','لم يدخل']].map(([value,label])=>({value,label}))});
     $('sheet-result').value=value;$('sheet-result').setAttribute('aria-label',tr('النتيجة','Result'));
     $('sheet-font-minus').title=tr('تصغير خط الجدول','Smaller sheet text');$('sheet-font-plus').title=tr('تكبير خط الجدول','Larger sheet text');$('sheet-bold').title=tr('خط عريض للمحدد','Bold selection');
     $('sheet-add').title=tr('إضافة صف جديد في نهاية الجدول','Add new row at the end of the sheet');
@@ -937,28 +774,20 @@ const Trainees=(()=>{
     applySavedColWidths();
     const grid=$('sheet-grid'),thead=grid.querySelector('thead'),tbody=grid.querySelector('tbody');
     const nextHeadersKey=JSON.stringify([currentLang,cols,allLabels()]);
-    if(headersKey!==nextHeadersKey){headersKey=nextHeadersKey;thead.replaceChildren();
-    const header=node('tr');
-    const cornerTh=node('th',undefined,{class:'sheet-rownum sheet-corner-cell',scope:'col'});
-    const cornerBtn=button('#',e=>{if(!skipSelectionClick&&!dragMoved)selectAll();skipSelectionClick=false;dragMoved=false;});
-    cornerBtn.id='sheet-select-all-corner';
-    cornerBtn.className='sheet-select-all-btn';
-    cornerBtn.innerHTML='<span class="sheet-corner-hash">#</span><span class="sheet-corner-triangle">◢</span>';
-    cornerBtn.title=tr('تحديد الجدول بالكامل (Ctrl+A)','Select all (Ctrl+A)');
-    cornerBtn.setAttribute('aria-label',tr('تحديد الكل','Select all'));
-    cornerBtn.addEventListener('pointerdown',e=>{if(e.button!==0||e.pointerType==='touch')return;e.preventDefault();selectAll();});
-    cornerTh.append(cornerBtn);
-    cornerTh.onclick=e=>{if(e.target!==cornerBtn)cornerBtn.click();};
-    header.append(cornerTh);
-    labels.forEach((pair,c)=>{
-      if(!cols.includes(c))return;
-      const th=node('th',undefined,{scope:'col','data-col':c});if(c>=baseLabels.length)th.style.setProperty('--col-w','calc(var(--col-w-'+c+',160px) * var(--sheet-zoom,1))');
-      const columnBtn=button(colLetter(c)+' · '+tr(...pair),e=>{if(!skipSelectionClick&&!dragMoved)selectColumn(c,e);skipSelectionClick=false;dragMoved=false;});
-      columnBtn.addEventListener('pointerdown',e=>{if(e.button!==0||e.pointerType==='touch')return;e.preventDefault();columnDragging=true;dragMoved=false;skipSelectionClick=true;selectColumn(c,e);});th.append(columnBtn);
-      th.title=tr('اسحب أو Shift لأعمدة متجاورة · Ctrl لأعمدة متفرقة','Drag or Shift for adjacent columns · Ctrl for separate columns');
-      if(c>=baseLabels.length){
-        th.title=tr('انقر مرتين لتعديل اسم العمود · اسحب لتغيير العرض','Double-click to rename column · Drag to resize');
-        th.addEventListener('dblclick',async e=>{
+    if(headersKey!==nextHeadersKey){
+      headersKey=nextHeadersKey;
+      window.WorkspaceViews.headers(thead,{
+        selectLabel:tr('تحديد الكل','Select all'),selectTitle:tr('تحديد الجدول بالكامل (Ctrl+A)','Select all (Ctrl+A)'),
+        resizeTitle:tr('اسحب لتعديل عرض العمود · انقر مرتين للضبط التلقائي','Drag to resize · Double click to reset'),
+        onSelectAll:()=>{if(!skipSelectionClick&&!dragMoved)selectAll();skipSelectionClick=false;dragMoved=false;},
+        onPointerDown:e=>{if(e.button!==0||e.pointerType==='touch')return;e.preventDefault();selectAll();},
+        columns:cols.map(c=>{const pair=labels[c];return {
+          column:c,label:colLetter(c)+' · '+tr(...pair),
+          width:c>=baseLabels.length?'calc(var(--col-w-'+c+',160px) * var(--sheet-zoom,1))':undefined,
+          title:c>=baseLabels.length?tr('انقر مرتين لتعديل اسم العمود · اسحب لتغيير العرض','Double-click to rename column · Drag to resize'):tr('اسحب أو Shift لأعمدة متجاورة · Ctrl لأعمدة متفرقة','Drag or Shift for adjacent columns · Ctrl for separate columns'),
+          onSelect:e=>{if(!skipSelectionClick&&!dragMoved)selectColumn(c,e);skipSelectionClick=false;dragMoved=false;},
+          onPointerDown:e=>{if(e.button!==0||e.pointerType==='touch')return;e.preventDefault();columnDragging=true;dragMoved=false;skipSelectionClick=true;selectColumn(c,e);},
+          onRename:async e=>{if(c<baseLabels.length)return;
           if(e.target.closest('.sheet-col-resizer'))return;
           e.stopPropagation();
           const curName=formatting.headers?.[c]||tr(...pair);
@@ -973,15 +802,11 @@ const Trainees=(()=>{
           if(newName!==null&&newName.trim()&&newName.trim()!==curName){
             const next=D.format(formatting);if(!next.headers)next.headers={};next.headers[c]=newName.trim();change(cells,true,next);
           }
-        });
-      }
-      const resizer=node('div',undefined,{class:'sheet-col-resizer','data-resizer-col':c,title:tr('اسحب لتعديل عرض العمود · انقر مرتين للضبط التلقائي','Drag to resize · Double click to reset')});
-      resizer.addEventListener('pointerdown',e=>initColumnResize(e,c,th));
-      resizer.addEventListener('dblclick',e=>{e.stopPropagation();resetColumnWidth(c);});
-      th.append(resizer);
-      header.append(th);
-    });
-    thead.append(header);
+          },
+          onResize:(e,th)=>initColumnResize(e,c,th),
+          onResetWidth:e=>{e.stopPropagation();resetColumnWidth(c);}
+        };})
+      });
     }
     resetRowHeights();rebuildRowOffsets();scroll.scrollTop=scrollTop;scroll.scrollLeft=scrollLeft;drawRows(true);
     scroll.scrollTop=scrollTop;scroll.scrollLeft=scrollLeft;
@@ -1016,24 +841,12 @@ const Trainees=(()=>{
     if(!initialized||editing&&!force)return;const grid=$('sheet-grid'),scroll=grid.parentElement,tbody=grid.querySelector('tbody'),cols=visibleCols();
     if(view.length===0){
       commitEdit();drawnStart=drawnEnd=0;drawnColumns='';
-      const emptyRow=node('tr',undefined,{class:'sheet-empty-view-row'});
-      const emptyCell=node('td',undefined,{class:'sheet-empty-view-cell',colspan:cols.length+1});
-      const isDupFilter=$('sheet-duplicates-only')?.checked;
-      const emptyBox=node('div',undefined,{class:'sheet-empty-view-content'});
-      emptyBox.append(node('div',isDupFilter?'✅':'🔍',{class:'sheet-empty-view-icon'}));
-      emptyBox.append(node('strong',isDupFilter?
-        tr('لا توجد إقامات أو هويات مكررة في هذا الجدول ✨','No duplicate IDs found in this sheet ✨'):
-        tr('لا توجد بيانات مطابقة للفلاتر المحددة','No matching records for current filters')));
-      if(isDupFilter){
-        const clearBtn=button(tr('إلغاء فلترة التكرار','Clear duplicate filter'),()=>{
-          $('sheet-duplicates-only').checked=false;
-          $('sheet-duplicates-only').dispatchEvent(new Event('change'));
-        },'sheet-empty-view-btn');
-        emptyBox.append(clearBtn);
-      }
-      emptyCell.append(emptyBox);
-      emptyRow.append(emptyCell);
-      tbody.replaceChildren(emptyRow);
+      const duplicates=$('sheet-duplicates-only')?.checked;
+      window.WorkspaceViews.rows(tbody,{rows:[],columnCount:cols.length+1,top:0,bottom:0,empty:{
+        icon:duplicates?'✅':'🔍',message:duplicates?tr('لا توجد إقامات أو هويات مكررة في هذا الجدول ✨','No duplicate IDs found in this sheet ✨'):tr('لا توجد بيانات مطابقة للفلاتر المحددة','No matching records for current filters'),
+        clearLabel:duplicates?tr('إلغاء فلترة التكرار','Clear duplicate filter'):undefined,
+        clear:()=>{$('sheet-duplicates-only').checked=false;$('sheet-duplicates-only').dispatchEvent(new Event('change'));}
+      }});
       paint();
       updateVisibleRows();
       return;
@@ -1042,28 +855,32 @@ const Trainees=(()=>{
     const first=rowAtOffset(Math.max(0,scroll.scrollTop-head)),start=view.length<=100?0:Math.max(0,first-8),end=view.length<=100?view.length:Math.min(view.length,rowAtOffset(scroll.scrollTop+height)+10);
     const merges=sheetMerges(),segments=columnWindow(cols,merges,start,end),columnKey=segments.map(s=>s.gap?'gap:'+s.count+':'+s.width:s.c).join(',');
     if(!force&&start===drawnStart&&end===drawnEnd&&columnKey===drawnColumns){updateVisibleRows();return;}
-    const hadFocus=grid.contains(document.activeElement),previousTop=scroll.scrollTop,previousLeft=scroll.scrollLeft;commitEdit();drawnStart=start;drawnEnd=end;drawnColumns=columnKey;const fragment=document.createDocumentFragment();
-    const spacer=(height)=>{const row=node('tr',undefined,{class:'sheet-spacer','aria-hidden':'true'}),cell=node('td',undefined,{colspan:cols.length+1});row.style.setProperty('height',height+'px','important');cell.style.setProperty('height',height+'px','important');row.append(cell);return row;};
-    const top=spacer(rowOffsets[start]),bottom=spacer(rowOffsets[view.length]-rowOffsets[end]);if(start)fragment.append(top);
+    const hadFocus=grid.contains(document.activeElement),previousTop=scroll.scrollTop,previousLeft=scroll.scrollLeft;commitEdit();drawnStart=start;drawnEnd=end;drawnColumns=columnKey;
+    const rows=[];
     for(let v=start;v<end;v++){
-      const idx=view[v],trEl=node('tr');if(rowHeights.has(idx))trEl.style.setProperty('height',rowHeights.get(idx)+'px','important');const number=node('th',undefined,{class:'sheet-rownum',scope:'row','data-rowv':v});
-      const rowBtn=button(String(idx+1),e=>{if(!skipSelectionClick&&!dragMoved)selectRow(v,e);skipSelectionClick=false;dragMoved=false;});
-      rowBtn.addEventListener('pointerdown',e=>{if(e.button!==0||e.pointerType==='touch')return;e.preventDefault();e.stopPropagation();rowDragging=true;dragMoved=false;skipSelectionClick=true;selectRow(v,e);});
-      number.append(rowBtn);trEl.append(number);
-      trEl.setAttribute('aria-rowindex',String(v+2));
-      segments.forEach(segment=>{
-        if(segment.gap){const gap=node('td',undefined,{class:'sheet-column-spacer',colspan:segment.count,'aria-hidden':'true'});gap.style.setProperty('--gap-width',segment.width+'px');trEl.append(gap);return;}
-        const c=segment.c;
-        const merge=merges.find(m=>idx>=m.r&&idx<=m.endR&&c>=m.c&&c<=m.endC);
+      const idx=view[v],row={viewRow:v,sourceRow:idx,height:rowHeights.get(idx),cells:[],
+        onSelect:e=>{if(!skipSelectionClick&&!dragMoved)selectRow(v,e);skipSelectionClick=false;dragMoved=false;},
+        onPointerDown:e=>{if(e.button!==0||e.pointerType==='touch')return;e.preventDefault();e.stopPropagation();rowDragging=true;dragMoved=false;skipSelectionClick=true;selectRow(v,e);}
+      };
+      for(const segment of segments){
+        if(segment.gap){row.cells.push(segment);continue;}
+        const c=segment.c,merge=merges.find(m=>idx>=m.r&&idx<=m.endR&&c>=m.c&&c<=m.endC);
         const firstMergeCol=merge&&cols.find(x=>x>=merge.c&&x<=merge.endC);
-        if(merge&&(c!==firstMergeCol||v!==Math.max(start,merge.r)))return;
+        if(merge&&(c!==firstMergeCol||v!==Math.max(start,merge.r)))continue;
         const source=merge?merge.r:idx,column=merge?merge.c:c;
-        const td=node('td',undefined,{'data-v':merge?merge.r:v,'data-col':column,tabindex:'-1',role:'gridcell',dir:'auto','aria-label':tr(...labels[column])+' '+(source+1)});decorateCell(td,source,column);
-        if(merge){td.colSpan=cols.filter(x=>x>=merge.c&&x<=merge.endC).length;td.rowSpan=Math.min(end-1,merge.endR)-Math.max(start,merge.r)+1;td.classList.add('sheet-merged');const sum=cols.filter(x=>x>=merge.c&&x<=merge.endC).map(x=>'var(--col-w-'+x+','+(colWidths[x]||({1:190,2:220,3:220,4:105,5:105,6:200,7:220,8:140,9:150,10:110,11:85,12:120}[x]||160))+'px)');td.style.setProperty('--col-w','calc(('+sum.join(' + ')+') * var(--sheet-zoom,1))');}
-        trEl.append(td);
-      });fragment.append(trEl);
+        const cell={column,viewRow:merge?merge.r:v,label:tr(...labels[column])+' '+(source+1),appearance:cellView(source,column)};
+        if(merge){
+          cell.colSpan=cols.filter(x=>x>=merge.c&&x<=merge.endC).length;cell.rowSpan=Math.min(end-1,merge.endR)-Math.max(start,merge.r)+1;
+          const sum=cols.filter(x=>x>=merge.c&&x<=merge.endC).map(x=>'var(--col-w-'+x+','+(colWidths[x]||({1:190,2:220,3:220,4:105,5:105,6:200,7:220,8:140,9:150,10:110,11:85,12:120}[x]||160))+'px)');
+          cell.width='calc(('+sum.join(' + ')+') * var(--sheet-zoom,1))';
+        }
+        row.cells.push(cell);
+      }
+      rows.push(row);
     }
-    if(end<view.length)fragment.append(bottom);tbody.replaceChildren(fragment);applyExcelView();paint();
+    window.WorkspaceViews.rows(tbody,{rows,columnCount:cols.length+1,top:rowOffsets[start],bottom:rowOffsets[view.length]-rowOffsets[end]});
+    const top=tbody.querySelector('[data-edge="top"]'),bottom=tbody.querySelector('[data-edge="bottom"]');
+    applyExcelView();paint();
     const oldFirst=rowOffsets[first];let heightChanged=false;tbody.querySelectorAll('th[data-rowv]').forEach(th=>{const index=view[+th.dataset.rowv],height=Math.max(rowHeights.get(index)||0,th.parentElement.getBoundingClientRect().height);if(rowHeights.get(index)!==height){rowHeights.set(index,height);heightChanged=true;}});if(heightChanged)rebuildRowOffsets();
     if(start){top.style.setProperty('height',rowOffsets[start]+'px','important');top.firstChild.style.setProperty('height',rowOffsets[start]+'px','important');}
     if(end<view.length){const remaining=rowOffsets[view.length]-rowOffsets[end];bottom.style.setProperty('height',remaining+'px','important');bottom.firstChild.style.setProperty('height',remaining+'px','important');}
@@ -1076,101 +893,62 @@ const Trainees=(()=>{
     let count=0;grid.querySelectorAll('th[data-rowv]').forEach(th=>{const rect=th.parentElement.getBoundingClientRect();if(rect.top>=top-1&&rect.bottom<=bottom+1)count++;});
     $('sheet-visible-rows').textContent=tr('الصفوف الظاهرة: ','Visible rows: ')+count;
   }
-  function decorateCell(td,index,column){
-    const value=cells[index]?.[column]||'',style=formatting.styles[index+':'+column]||{};
-    td.replaceChildren();if(column>=baseLabels.length)td.style.setProperty('--col-w','calc(var(--col-w-'+column+',160px) * var(--sheet-zoom,1))');td.style.backgroundColor=style.bg||'';td.style.color=style.color||'';
-    td.style.fontSize='calc('+(style.size||formatting.fontSize)+'px * var(--sheet-zoom,1))';td.style.fontWeight=style.bold?'700':'';
-    td.style.fontFamily=style.font?style.font+', sans-serif':'';td.style.fontStyle=style.italic?'italic':'';td.style.textDecoration=[style.underline?'underline':'',style.strike?'line-through':''].filter(Boolean).join(' ')||'';
-    td.style.verticalAlign=style.valign||'middle';td.style.whiteSpace=typeof style.wrap==='boolean'?(style.wrap?'pre-wrap':'nowrap'):'';td.style.textIndent=style.indent?style.indent*8+'px':'';
-    td.style.overflowWrap=style.wrap?'anywhere':'';
-    for(const side of ['Top','Bottom','Left','Right'])td.style['border'+side]=D.borderCss(style,side.toLowerCase())??(style['border'+side]===true?'1px solid #475569':style['border'+side]===false||style.border==='none'?'0':style.border==='all'||style.border==='outline'||style.border===side.toLowerCase()?'1px solid #475569':'');td.style.backgroundImage=D.borderImage(style);td.style.backgroundSize='100% 100%';
-    for(const key of ['height','min-height']){if(style.height)td.style.setProperty(key,style.height*excelView.zoom/100+'px','important');else td.style.removeProperty(key);}
-    const align=getCellAlign(index,column);
-    if(align)td.style.textAlign=align;else td.style.removeProperty('text-align');
-    td.classList.remove('sheet-result-pass','sheet-result-fail','sheet-result-absent','sheet-id-duplicate');td.removeAttribute('title');td.removeAttribute('aria-haspopup');
-    if(column===11){
-      const select=node('select',undefined,{'aria-label':tr('النتيجة للصف ','Result for row ')+(index+1),class:'sheet-result-select',dir:'rtl'});
-      if(align){select.style.setProperty('text-align',align,'important');select.style.setProperty('text-align-last',align,'important');}
-      ['', 'ناجح','راسب','لم يدخل',...(!['','ناجح','راسب','لم يدخل'].includes(value)?[value]:[])].forEach(v=>select.append(node('option',v||'—',{value:v})));
-      select.value=value;
-      if(value==='ناجح'||value==='راسب'||value==='لم يدخل')td.classList.add(value==='ناجح'?'sheet-result-pass':value==='راسب'?'sheet-result-fail':'sheet-result-absent');
-      select.onchange=()=>{const v=+td.dataset.v;extraSelections=[];cursor=anchor={r:v,c:11};change(D.paste(cells,[[select.value]],index,11));};
-      select.addEventListener('pointerdown',e=>{e.stopPropagation();if(e.shiftKey||e.ctrlKey||e.metaKey){e.preventDefault();dragging=true;dragMoved=false;skipSelectionClick=true;selectCell(+td.dataset.v,11,e.shiftKey,e.ctrlKey||e.metaKey);}});
-      select.addEventListener('click',e=>{if(e.shiftKey||e.ctrlKey||e.metaKey)e.preventDefault();skipSelectionClick=false;});
-      select.addEventListener('focus',()=>{const v=+td.dataset.v;if(v!==cursor.r||cursor.c!==11){extraSelections=[];cursor=anchor={r:v,c:11};paint();}});
-      td.addEventListener('click',()=>{try{select.showPicker?.();}catch{}});
-      td.append(select);
-    }else{
-      const span=node('span',value.startsWith('=')?D.formulaValue(cells,index,column,formulaCache):value,{class:'sheet-cell-value'});td.append(span);
-      td.classList.toggle('sheet-center-across-anchor',!!style.centerAcross);if(style.centerAcross){const parts=visibleCols().filter(c=>c>=column&&c<column+style.centerAcross);span.classList.add('sheet-center-across');span.style.width='calc(('+parts.map(c=>'var(--col-w-'+c+','+(colWidths[c]||formatting.defaultWidth||160)+'px)').join(' + ')+') * var(--sheet-zoom,1))';}
-      // Table text alignment falls back to the text direction when a nowrap line overflows.
-      // Physical flex alignment keeps long exam names aligned to the requested cell edge.
-      if(align&&!style.centerAcross&&!style.rotation&&!(typeof style.wrap==='boolean'?style.wrap:excelView.wrap)){span.style.display='flex';span.style.justifyContent=align;}
-      if(value.startsWith('=')){td.dataset.formula=value;td.title=value;}else delete td.dataset.formula;
-      if(style.rotation){span.style.display='inline-block';if(Math.abs(style.rotation)===90){span.style.writingMode='vertical-rl';if(style.rotation===-90)span.style.transform='rotate(180deg)';}else{span.style.transform='rotate('+style.rotation+'deg)';td.style.setProperty('height','70px','important');}}
-      if(column===4){const duplicates=duplicateIds.get(D.idKey(value));if(duplicates){td.classList.add('sheet-id-duplicate');td.append(node('span',tr('مكرر ×','Duplicate ×')+duplicates.length,{class:'sheet-duplicate-badge'}));td.setAttribute('aria-haspopup','dialog');}}
-    }
+  function cellView(index,column){
+    const raw=cells[index]?.[column]||'',format=formatting.styles[index+':'+column]||{},align=getCellAlign(index,column);
+    const style={backgroundColor:format.bg||'',color:format.color||'',fontSize:'calc('+(format.size||formatting.fontSize)+'px * var(--sheet-zoom,1))',fontWeight:format.bold?'700':'',fontFamily:format.font?format.font+', sans-serif':'',fontStyle:format.italic?'italic':'',textDecoration:[format.underline?'underline':'',format.strike?'line-through':''].filter(Boolean).join(' '),verticalAlign:format.valign||'middle',whiteSpace:typeof format.wrap==='boolean'?(format.wrap?'pre-wrap':'nowrap'):'',textIndent:format.indent?format.indent*8+'px':'',overflowWrap:format.wrap?'anywhere':'',backgroundImage:D.borderImage(format),backgroundSize:'100% 100%',textAlign:align||''};
+    if(column>=baseLabels.length)style['--col-w']='calc(var(--col-w-'+column+',160px) * var(--sheet-zoom,1))';
+    for(const side of ['Top','Bottom','Left','Right'])style['border'+side]=D.borderCss(format,side.toLowerCase())??(format['border'+side]===true?'1px solid #475569':format['border'+side]===false||format.border==='none'?'0':format.border==='all'||format.border==='outline'||format.border===side.toLowerCase()?'1px solid #475569':'');
+    if(format.height){style.height=format.height*excelView.zoom/100+'px';style.minHeight=style.height;}
+    const textStyle={},classes=[];
+    if(format.centerAcross){classes.push('sheet-center-across-anchor');const parts=visibleCols().filter(c=>c>=column&&c<column+format.centerAcross);textStyle.width='calc(('+parts.map(c=>'var(--col-w-'+c+','+(colWidths[c]||formatting.defaultWidth||160)+'px)').join(' + ')+') * var(--sheet-zoom,1))';}
+    if(align&&!format.centerAcross&&!format.rotation&&!(typeof format.wrap==='boolean'?format.wrap:excelView.wrap)){textStyle.display='flex';textStyle.justifyContent=align;}
+    if(format.rotation){textStyle.display='inline-block';if(Math.abs(format.rotation)===90){textStyle.writingMode='vertical-rl';if(format.rotation===-90)textStyle.transform='rotate(180deg)';}else{textStyle.transform='rotate('+format.rotation+'deg)';style.height='70px';}}
+    const duplicates=column===4&&duplicateIds.get(D.idKey(raw));if(duplicates)classes.push('sheet-id-duplicate');
+    if(column===11&&['ناجح','راسب','لم يدخل'].includes(raw))classes.push(raw==='ناجح'?'sheet-result-pass':raw==='راسب'?'sheet-result-fail':'sheet-result-absent');
+    return {raw,text:raw.startsWith('=')?String(D.formulaValue(cells,index,column,formulaCache)):raw,style,textStyle,className:classes.join(' '),align,
+      duplicateLabel:duplicates?tr('مكرر ×','Duplicate ×')+duplicates.length:undefined,
+      resultLabel:tr('النتيجة للصف ','Result for row ')+(index+1),
+      onResultChange:(selected,td)=>{const v=+td.dataset.v;extraSelections=[];cursor=anchor={r:v,c:11};change(D.paste(cells,[[selected]],index,11));},
+      onResultPointerDown:(e,td)=>{e.stopPropagation();if(e.shiftKey||e.ctrlKey||e.metaKey){e.preventDefault();dragging=true;dragMoved=false;skipSelectionClick=true;selectCell(+td.dataset.v,11,e.shiftKey,e.ctrlKey||e.metaKey);}},
+      onResultClick:e=>{if(e.shiftKey||e.ctrlKey||e.metaKey)e.preventDefault();skipSelectionClick=false;},
+      onResultFocus:td=>{const v=+td.dataset.v;if(v!==cursor.r||cursor.c!==11){extraSelections=[];cursor=anchor={r:v,c:11};paint();}}
+    };
   }
-  function resultBadge(value){
-    const badge=node('span',value||'—',{class:'sheet-detail-result',dir:'rtl'});
-    badge.dataset.result=value==='ناجح'?'pass':value==='راسب'?'fail':value==='لم يدخل'?'absent':'';return badge;
-  }
+  function decorateCell(td,index,column){window.WorkspaceViews.refreshCell(td,cellView(index,column));}
   let traineeHoverTimer;
-  function copyDetailValue(value,label,extraClass='',direction='auto',displayValue=value){
-    if(!value)return node('span','—');
-    const control=button(displayValue,async()=>{if(await copyText(value))showToast(tr('تم النسخ','Copied'));else showToast(tr('تعذر النسخ. حاول مرة أخرى.','Could not copy. Please retry.'));},'sheet-detail-copy-value '+extraClass);
-    control.dir=direction;control.title=tr('اضغط لنسخ ','Click to copy ')+label;control.setAttribute('aria-label',tr('نسخ ','Copy ')+label);
-    return control;
-  }
-  function appendDetailField(dl,row,pair,column,includeKeycode=true){
-    const keycode=column===7?D.courseKeycode(row[column],DEFAULT_KEYCODES):null;
-    dl.append(node('dt',column===7?tr('الدورة','Course'):tr(...pair)));const dd=node('dd',undefined,{dir:'auto'});
-    dd.append(copyDetailValue(row[column],tr(...pair),column===11?'sheet-detail-result':''));
-    if(column===11){const badge=dd.firstChild;badge.dataset.result=row[column]==='ناجح'?'pass':row[column]==='راسب'?'fail':row[column]==='لم يدخل'?'absent':'';}
-    if(column===7){
-      dl.append(dd);
-      if(keycode){
-        if(includeKeycode)appendDetailKeycode(dl,keycode);
+  const detailResult=value=>value==='ناجح'?'pass':value==='راسب'?'fail':value==='لم يدخل'?'absent':'';
+  const detailKeycode=keycode=>({label:tr('كي كود','Keycode'),value:keycode?.code||'',empty:tr('لا يوجد كي كود مطابق','No matching keycode'),className:'sheet-detail-keycode',direction:'ltr'});
+  function detailFields(row,includeKeycode=true){
+    const fields=[];
+    labels.forEach((pair,column)=>{
+      if(column>=baseLabels.length&&!row[column]&&!formatting.headers[column])return;
+      const keycode=column===7?D.courseKeycode(row[column],DEFAULT_KEYCODES):null;
+      const field={label:column===7?tr('الدورة','Course'):tr(...pair),copyName:tr(...pair),value:row[column]||'',className:column===11?'sheet-detail-result':'',result:column===11?detailResult(row[column]):undefined};
+      if(column===7&&!keycode)field.note=tr('لا يوجد كي كود مطابق','No matching keycode');
+      fields.push(field);
+      if(column===7&&keycode){
+        if(includeKeycode)fields.push(detailKeycode(keycode));
         const category=state.keycodeOverrides?.[keycode.code]||keycode.category;
-        const categoryValue=node('dd',undefined,{class:'sheet-detail-category-value',dir:'auto'});
-        categoryValue.append(category?copyDetailValue(displayCatName(category),tr('الفئة','Category'),'sheet-detail-category'):node('span',tr('فئة غير محددة','No category')));
-        dl.append(node('dt',tr('الفئة','Category')),categoryValue);
-      }else dd.append(node('div',tr('لا يوجد كي كود مطابق','No matching keycode')));
-      return;
-    }
-    dl.append(dd);
+        fields.push({label:tr('الفئة','Category'),value:category?displayCatName(category):'',empty:tr('فئة غير محددة','No category'),className:'sheet-detail-category'});
+      }
+    });return fields;
   }
-  function appendDetailKeycode(dl,keycode){
-    const dd=node('dd',undefined,{dir:'ltr'});dd.append(keycode?copyDetailValue(keycode.code,tr('كي كود الدورة','Course keycode'),'sheet-detail-keycode','ltr'):node('span',tr('لا يوجد كي كود مطابق','No matching keycode')));
-    dl.append(node('dt',tr('كي كود','Keycode')),dd);
-  }
-  function appendPrometricDetails(dl){
-    for(const [label,value]of [['Prometric Account',PROMETRIC_ACCOUNT],['Prometric Password',PROMETRIC_PASSWORD]]){
-      const dd=node('dd',undefined,{dir:'ltr'});dd.append(value?copyDetailValue(value,label,'','ltr'):node('span',tr('غير محدد','Not configured')));dl.append(node('dt',label,{dir:'ltr'}),dd);
-    }
-  }
+  const detailViewProps=()=>({copyLabel:tr('نسخ ','Copy '),copyTitle:tr('اضغط لنسخ ','Click to copy '),copy:async value=>{if(await copyText(value))showToast(tr('تم النسخ','Copied'));else showToast(tr('تعذر النسخ. حاول مرة أخرى.','Could not copy. Please retry.'));}});
   function closeTraineeDetails(){clearTimeout(traineeHoverTimer);const dialog=$('sheet-trainee-dialog');if(dialog?.open)dialog.close();}
   function initTraineeDetails(){
     let activeIndex=null,activeEpoch=null;
-    const dialog=node('dialog',undefined,{id:'sheet-trainee-dialog',class:'sheet-duplicate-dialog sheet-trainee-dialog','aria-labelledby':'sheet-trainee-title'});
-    const head=node('div',undefined,{class:'sheet-detail-header'}),close=button('×',closeTraineeDetails,'sheet-detail-close');
-    close.setAttribute('aria-label',tr('إغلاق','Close'));head.append(node('h2','',{id:'sheet-trainee-title'}),close);
-    dialog.append(head,node('div',undefined,{id:'sheet-trainee-record',class:'sheet-detail-record'}));document.body.append(dialog);
-    dialog.addEventListener('close',()=>{if(dialog.open)return;activeIndex=activeEpoch=null;$('sheet-trainee-record').replaceChildren();$('sheet-trainee-title').textContent='';});
+    const dialog=$('sheet-trainee-dialog'),close=dialog.querySelector('.sheet-detail-close');close.onclick=closeTraineeDetails;close.setAttribute('aria-label',tr('إغلاق','Close'));
+    dialog.addEventListener('close',()=>{if(dialog.open)return;activeIndex=activeEpoch=null;window.WorkspaceViews.clear($('sheet-trainee-record'));$('sheet-trainee-title').textContent='';});
     const show=index=>{
       if(!loaded||editing||dragging)return;
       const row=cells[index];if(!row?.[3])return;activeIndex=index;activeEpoch=epoch;
       hideDuplicateHint();dialog.dir=currentLang==='ar'?'rtl':'ltr';
       $('sheet-trainee-title').textContent=tr('بيانات المتدرب — ','Trainee details — ')+row[3];
-      const dl=node('dl'),login=node('dd',undefined,{dir:'ltr'}),loginDisplay=PROMETRIC_LOGIN_URL.replace(/(\/Login).+$/i,'$1…');login.append(PROMETRIC_LOGIN_URL?copyDetailValue(PROMETRIC_LOGIN_URL,'Prometric login link','sheet-detail-login','ltr',loginDisplay):node('span',tr('غير محدد','Not configured')));
-      dl.append(node('dt','Prometric login link',{dir:'ltr'}),login);appendDetailKeycode(dl,D.courseKeycode(row[7],DEFAULT_KEYCODES));appendPrometricDetails(dl);appendDetailField(dl,row,labels[0],0);
-      const codeValue=dl.lastElementChild;
-      labels.forEach((pair,c)=>{if(c===0||c>=baseLabels.length&&!row[c]&&!formatting.headers[c])return;appendDetailField(dl,row,pair,c,false);});
-      $('sheet-trainee-record').replaceChildren(dl);
-      if(prometricTools){const hasAccount=!!(row[9]?.trim()||row[10]?.trim());$('sheet-trainee-record').append(button(hasAccount?tr('خيارات حساب Prometric','Prometric account options'):tr('إنشاء حساب Prometric','Create Prometric account'),()=>{closeTraineeDetails();prometricTools.open([index]);},'sheet-primary sheet-create-prometric'));}
+      const fields=detailFields(row,false),voucher=fields[0],loginDisplay=PROMETRIC_LOGIN_URL.replace(/(\/Login).+$/i,'$1…');
+      fields.unshift({label:'Prometric login link',value:PROMETRIC_LOGIN_URL,display:loginDisplay,className:'sheet-detail-login',direction:'ltr',empty:tr('غير محدد','Not configured')},detailKeycode(D.courseKeycode(row[7],DEFAULT_KEYCODES)),...[['Prometric Account',PROMETRIC_ACCOUNT],['Prometric Password',PROMETRIC_PASSWORD]].map(([label,value])=>({label,value,direction:'ltr',empty:tr('غير محدد','Not configured')})));
       const refreshRecord=()=>{if(dialog.open&&activeIndex===index&&activeEpoch===epoch)show(index);};
       const exam=D.courseKeycode(row[7],DEFAULT_KEYCODES),category=exam&&(state.keycodeOverrides?.[exam.code]||exam.category),codeCategory=category&&getLinkedCodesCat(category);
-      const action=button('Get',async()=>{
+      const claim=async action=>{
         if(action.disabled)return;action.disabled=true;const token=epoch,selectedOwner=owner;
         try{
           if(!await flush())throw Error(tr('احفظ تعديلات الجدول أولًا.','Save sheet changes first.'));
@@ -1189,10 +967,11 @@ const Trainees=(()=>{
           if(!await copyText(code))throw Error(tr('تم حفظ الكود. اضغط على قيمة الكود لنسخه.','Code saved. Click the code value to copy it.'));
           refreshRecord();showToast(tr('تم حجز الكود وحفظه ونسخه','Code reserved, saved and copied'));
         }catch(error){if(token===epoch&&owner===selectedOwner&&cells[index]?.[0]?.trim())refreshRecord();showToast(error.message||tr('تعذر جلب الكود','Could not get code'));}finally{action.disabled=!codeCategory;}
-      },'sheet-get-exam-code');
-      action.dir='ltr';action.setAttribute('aria-label',tr('جلب كود الاختبار','Get exam code'));
-      action.disabled=!codeCategory;action.title=codeCategory?displayCatName(category):tr('لا توجد فئة اختبار مطابقة','No matching exam category');
-      if(!row[0]?.trim())codeValue.replaceChildren(action);if(!dialog.open)dialog.show();
+      };
+      if(!row[0]?.trim())voucher.action={label:'Get',ariaLabel:tr('جلب كود الاختبار','Get exam code'),disabled:!codeCategory,title:codeCategory?displayCatName(category):tr('لا توجد فئة اختبار مطابقة','No matching exam category'),run:claim};
+      const hasAccount=!!(row[9]?.trim()||row[10]?.trim());
+      window.WorkspaceViews.detailRecords($('sheet-trainee-record'),{...detailViewProps(),records:[{fields}],account:prometricTools?{label:hasAccount?tr('خيارات حساب Prometric','Prometric account options'):tr('إنشاء حساب Prometric','Create Prometric account'),open:()=>{closeTraineeDetails();prometricTools.open([index]);}}:undefined});
+      if(!dialog.open)dialog.show();
     };
     const grid=$('sheet-grid');
     grid.addEventListener('dblclick',e=>{const td=e.target.closest('td[data-col="3"]');if(td){commitEdit();show(view[+td.dataset.v]);}});
@@ -1200,16 +979,11 @@ const Trainees=(()=>{
     document.addEventListener('keydown',e=>{if(e.key==='Escape')closeTraineeDetails();});
   }
   function initDuplicateDetails(){
-    const hint=node('div',undefined,{id:'sheet-duplicate-hint',class:'sheet-duplicate-hint',role:'tooltip',hidden:''});document.body.append(hint);
-    const dialog=node('dialog',undefined,{id:'sheet-duplicate-dialog',class:'sheet-duplicate-dialog','aria-labelledby':'sheet-duplicate-title'});
-    const head=node('div',undefined,{class:'sheet-detail-header'});head.append(node('h2','',{id:'sheet-duplicate-title'}),button('×',()=>dialog.close(),'sheet-detail-close'));
-    head.lastChild.setAttribute('aria-label',tr('إغلاق','Close'));dialog.append(head,node('p','',{id:'sheet-duplicate-description'}),node('div',undefined,{id:'sheet-duplicate-records'}));
-    const footer=node('div',undefined,{class:'sheet-detail-footer'}),prev=button('‹',()=>{detailPage--;renderDuplicateDetails();}),next=button('›',()=>{detailPage++;renderDuplicateDetails();});
-    prev.id='sheet-detail-prev';next.id='sheet-detail-next';
-    const edit=button(tr('تعديل رقم الهوية','Edit ID'),()=>{const index=detailSource;dialog.close();clearFilters();render();focusCell(index,4);const td=$('sheet-grid').querySelector(`td[data-v="${index}"][data-col="4"]`);if(td)beginEdit(td);});edit.id='sheet-detail-edit';
-    footer.append(prev,node('span','',{id:'sheet-detail-page'}),next,edit);dialog.append(footer);document.body.append(dialog);
+    const hint=$('sheet-duplicate-hint'),dialog=$('sheet-duplicate-dialog'),close=dialog.querySelector('.sheet-detail-close');close.onclick=()=>dialog.close();close.setAttribute('aria-label',tr('إغلاق','Close'));
+    $('sheet-detail-prev').onclick=()=>{detailPage--;renderDuplicateDetails();};$('sheet-detail-next').onclick=()=>{detailPage++;renderDuplicateDetails();};
+    $('sheet-detail-edit').onclick=()=>{const index=detailSource;dialog.close();clearFilters();render();focusCell(index,4);const td=$('sheet-grid').querySelector(`td[data-v="${index}"][data-col="4"]`);if(td)beginEdit(td);};
     dialog.addEventListener('click',e=>{if(e.target===dialog){const rect=dialog.getBoundingClientRect();if(e.clientX<rect.left||e.clientX>rect.right||e.clientY<rect.top||e.clientY>rect.bottom)dialog.close();}});
-    dialog.addEventListener('close',()=>{detailKey='';$('sheet-duplicate-records').replaceChildren();$('sheet-duplicate-title').textContent='';$('sheet-duplicate-description').textContent='';dialog.style.width='';});
+    dialog.addEventListener('close',()=>{detailKey='';window.WorkspaceViews.clear($('sheet-duplicate-records'));$('sheet-duplicate-title').textContent='';$('sheet-duplicate-description').textContent='';dialog.style.width='';});
     const grid=$('sheet-grid');
     const start=e=>{const td=e.target.closest('td.sheet-id-duplicate');if(!td||editing||dragging||dialog.open)return;if(td===hoverCell&&!hint.hidden){clearTimeout(hoverHideTimer);return;}hideDuplicateHint();hoverCell=td;hoverTimer=setTimeout(()=>showDuplicateHint(td),180);};
     grid.addEventListener('pointerover',start);grid.addEventListener('focusin',start);
@@ -1222,16 +996,15 @@ const Trainees=(()=>{
   }
   function hideDuplicateHint(){
     clearTimeout(hoverTimer);clearTimeout(hoverHideTimer);hoverCell?.removeAttribute('aria-describedby');hoverCell=null;
-    const hint=$('sheet-duplicate-hint');if(hint){hint.hidden=true;hint.replaceChildren();}
+    const hint=$('sheet-duplicate-hint');if(hint){hint.hidden=true;window.WorkspaceViews.clear(hint);}
   }
   function closeDuplicateDetails(){closeTraineeDetails();clearTimeout(detailTimer);hideDuplicateHint();if($('sheet-duplicate-dialog')?.open)$('sheet-duplicate-dialog').close();}
   function showDuplicateHint(td){
     if(!td.isConnected||editing||$('sheet-duplicate-dialog').open||(!td.matches(':hover')&&document.activeElement!==td))return;
     const index=view[+td.dataset.v],matches=duplicateIds.get(D.idKey(cells[index]?.[4]||''));if(!matches)return;
-    const hint=$('sheet-duplicate-hint');hint.replaceChildren();hint.dir=formatting.direction;
-    hint.append(node('strong',tr('مكرر ','Repeated ')+matches.length+tr(' مرات',' times')),node('div',cells[index][4],{class:'sheet-detail-id',dir:'ltr'}));
-    matches.slice(0,10).forEach(i=>{const row=cells[i],card=node('div',undefined,{class:'sheet-hint-record'});card.append(node('strong',tr('الصف ','Row ')+(i+1)+' · '+(row[2]||row[3]||'—')));const dl=node('dl');for(const c of [7,9,10,11]){dl.append(node('dt',c===7?tr('الاختبار','Exam'):tr(...labels[c])));const dd=node('dd');dd.dir='auto';dd.append(c===11?resultBadge(row[c]):node('span',row[c]||'—'));dl.append(dd);}card.append(dl);hint.append(card);});
-    hint.append(node('p',tr('اضغط على الرقم لعرض جميع البيانات. انقر مرتين أو F2 لتعديله.','Click the ID for all details. Double-click or F2 to edit.')));
+    const hint=$('sheet-duplicate-hint');window.WorkspaceViews.clear(hint);hint.dir=formatting.direction;
+    window.WorkspaceViews.duplicateHint(hint,{title:tr('مكرر ','Repeated ')+matches.length+tr(' مرات',' times'),identity:cells[index][4],note:tr('اضغط على الرقم لعرض جميع البيانات. انقر مرتين أو F2 لتعديله.','Click the ID for all details. Double-click or F2 to edit.'),
+      records:matches.slice(0,10).map(i=>({title:tr('الصف ','Row ')+(i+1)+' · '+(cells[i][2]||cells[i][3]||'—'),fields:[7,9,10,11].map(column=>({label:column===7?tr('الاختبار','Exam'):tr(...labels[column]),value:cells[i][column]||'',result:column===11?detailResult(cells[i][column]):undefined}))}))});
     hint.hidden=false;td.setAttribute('aria-describedby',hint.id);
     const rect=td.getBoundingClientRect(),box=hint.getBoundingClientRect();
     hint.style.left=Math.max(8,Math.min(window.innerWidth-box.width-8,formatting.direction==='rtl'?rect.right-box.width:rect.left))+'px';
@@ -1251,8 +1024,7 @@ const Trainees=(()=>{
     const pageMatches=showAll?matches:matches.slice(detailPage*50,detailPage*50+50);
     $('sheet-duplicate-title').textContent=tr('بيانات الهوية / الإقامة: ','National / Iqama ID: ')+detailKey;
     $('sheet-duplicate-description').textContent=tr('مكرر ','Repeated ')+count+tr(' مرات في جدول المستخدم المعروض.',' times in the selected user’s sheet.');
-    const box=$('sheet-duplicate-records');box.replaceChildren();
-    pageMatches.forEach(i=>{const card=node('section',undefined,{class:'sheet-detail-record'});card.append(node('h3',tr('الصف ','Row ')+(i+1)+' · '+(cells[i][2]||cells[i][3]||'—')));const dl=node('dl');labels.forEach((pair,c)=>{if(c>=baseLabels.length&&!cells[i][c]&&!formatting.headers[c])return;appendDetailField(dl,cells[i],pair,c);});card.append(dl);box.append(card);});
+    window.WorkspaceViews.detailRecords($('sheet-duplicate-records'),{...detailViewProps(),records:pageMatches.map(i=>({title:tr('الصف ','Row ')+(i+1)+' · '+(cells[i][2]||cells[i][3]||'—'),fields:detailFields(cells[i])}))});
     const hasPages=pageCount>1;
     $('sheet-detail-page').style.display=hasPages?'':'none';
     $('sheet-detail-prev').style.display=hasPages?'':'none';
@@ -1266,9 +1038,10 @@ const Trainees=(()=>{
   }
   function renderColumnOptions(){
     const key=JSON.stringify([currentLang,allLabels(),formatting.hidden]);if(columnOptionsKey===key)return;columnOptionsKey=key;
-    const box=$('sheet-column-options');box.replaceChildren();
-    box.append(button(tr('إظهار الكل','Show all'),()=>{commitEdit();const next=D.format(formatting);next.hidden=[];change(cells,true,next);}));
-    labels.forEach((pair,c)=>{const label=node('label'),input=node('input',undefined,{type:'checkbox','data-column-toggle':c});input.checked=!formatting.hidden.includes(c);input.disabled=input.checked&&visibleCols().length===1;input.onchange=()=>{commitEdit();const next=D.format(formatting);next.hidden=input.checked?next.hidden.filter(i=>i!==c):[...next.hidden,c];change(cells,true,next);};label.append(input,node('span',tr(...pair)));box.append(label);});
+    window.WorkspaceViews.columnChoices($('sheet-column-options'),{showLabel:tr('إظهار الكل','Show all'),
+      showAll:()=>{commitEdit();const next=D.format(formatting);next.hidden=[];change(cells,true,next);},
+      columns:labels.map((pair,column)=>({column,label:tr(...pair),checked:!formatting.hidden.includes(column),disabled:!formatting.hidden.includes(column)&&visibleCols().length===1})),
+      toggle:(column,visible)=>{commitEdit();const next=D.format(formatting);next.hidden=visible?next.hidden.filter(index=>index!==column):[...next.hidden,column];change(cells,true,next);}});
   }
   function adjustFont(delta){commitEdit();const next=D.format(formatting);next.fontSize=Math.max(10,Math.min(32,next.fontSize+delta));change(cells,true,next);}
   function formatSelection(style){
@@ -1365,7 +1138,7 @@ const Trainees=(()=>{
     if(c===11){td.querySelector('select')?.focus();return;}
     editing={el:td,index:view[r],column:c,old:cells[view[r]]?.[c]||''};td.contentEditable='true';td.spellcheck=false;
     schedulePosition();
-    td.textContent=initial!==undefined?initial:editing.old;td.focus();
+    window.WorkspaceViews.editCell(td,initial!==undefined?initial:editing.old);td.focus();
     td.oninput=()=>schedule();
     td.oncompositionstart=()=>{td.dataset.composing='true';clearTimeout(timer);};
     td.oncompositionend=()=>{delete td.dataset.composing;schedule();};
@@ -1376,7 +1149,7 @@ const Trainees=(()=>{
   function commitEdit(cancel=false,keepEditing=false){
     if(!editing)return;const edit=editing;
     if(!keepEditing){editing=null;edit.el.contentEditable='false';edit.el.oninput=null;edit.el.oncompositionstart=null;edit.el.oncompositionend=null;delete edit.el.dataset.composing;}
-    const value=cancel?edit.old:edit.el.textContent;if(!keepEditing)edit.el.textContent=value;
+    const value=cancel?edit.old:edit.el.textContent;
     if(value!==edit.old){try{change(D.paste(cells,[[value]],edit.index,edit.column),false);if(!filtered()&&view.length<totalInputRows()){pendingRender=true;queueDraw(true);}}
       catch{limitError();}}
     if(keepEditing){edit.old=cells[edit.index]?.[edit.column]||'';return;}
@@ -1527,13 +1300,7 @@ const Trainees=(()=>{
     $('sheet-assign').textContent=codeMode==='pool'?tr('تخصيص المحدد للمستخدم','Assign selected to user'):tr('إرجاع المحدد للمخزون','Return selected to stock');
     $('sheet-code-notice').textContent=admin?tr('اختر المستخدم بالأعلى ثم خصص له الأكواد من المخزون غير المخصص. الإرجاع للمخزون متاح للأكواد غير المستخدمة فقط.','Choose a user above, then assign codes from unassigned stock. Only unused codes can be returned.'):tr('هذه الأكواد مخصصة لحسابك. تواصل مع الأدمن لإضافة أكواد.','These codes belong to your account. Ask the administrator to assign more.');
     $('sheet-code-count').textContent=tr('عدد الأكواد: ','Codes: ')+rows.length;
-    const box=$('sheet-code-list');box.replaceChildren();if(!rows.length){box.append(node('div',tr('لا توجد أكواد في هذا العرض.','No codes in this view.'),{class:'sheet-empty'}));return;}
-    const table=node('table',undefined,{class:'sheet-codes-table'}),thead=node('thead'),trEl=node('tr');
-    if(admin){const th=node('th'),all=node('input',undefined,{type:'checkbox','aria-label':tr('تحديد الكل','Select all')});all.onchange=()=>box.querySelectorAll('input[data-code]').forEach(el=>{if(!el.disabled)el.checked=all.checked;});th.append(all);trEl.append(th);}
-    [tr('الكود','Code'),tr('الفئة','Category'),tr('الاستخدام','Usage'),''].forEach(label=>trEl.append(node('th',label)));thead.append(trEl);table.append(thead);const body=node('tbody');
-    rows.forEach(row=>{const r=node('tr');if(admin){const td=node('td'),check=node('input',undefined,{type:'checkbox','data-code':row.code,'aria-label':row.code});check.disabled=codeMode==='owned'&&!!row.used_on;td.append(check);r.append(td);}
-      r.append(node('td',row.code,{dir:'ltr'}),node('td',row.category),node('td',row.used_on||tr('غير مستخدم','Unused')));
-      const action=node('td');action.append(button(tr('نسخ واستخدام','Copy & use'),async()=>{if(await Cloud.copyCode(row.code))renderCodes();}));r.append(action);body.append(r);});table.append(body);box.append(table);
+    window.WorkspaceViews.assignments($('sheet-code-list'),{rows,admin,owned:codeMode==='owned',labels:{empty:tr('لا توجد أكواد في هذا العرض.','No codes in this view.'),all:tr('تحديد الكل','Select all'),code:tr('الكود','Code'),category:tr('الفئة','Category'),usage:tr('الاستخدام','Usage'),unused:tr('غير مستخدم','Unused'),copy:tr('نسخ واستخدام','Copy & use')},copy:async code=>{if(await Cloud.copyCode(code))renderCodes();}});
   }
   async function assign(){
     if(codeBusy||!owner)return;
@@ -1553,7 +1320,7 @@ const Trainees=(()=>{
     catch(error){$('sheet-code-status').textContent=/CONFLICT/.test(error.message||'')?tr('تغيرت الأكواد. حدّث القائمة وحاول مجددًا.','Codes changed. Refresh and try again.'):tr('تعذر تخصيص الأكواد. تأكد أن المستخدم نشط ثم حدّث القائمة.','Could not assign codes. Check that the user is active, then refresh.');}
     finally{codeBusy=false;$('sheet-code-workspace').inert=false;if($('sheet-owner'))$('sheet-owner').disabled=false;}
   }
-  function reset(){sheetTools?.close();sheetId=FIRST_SHEET;worksheets=[];worksheetBusy=false;prometricTools?.reset();certificateTools?.reset();setExpandedView(false);excelTools?.closeFiles();closeDuplicateDetails();closeContextMenu();$('sheet-find-dialog')?.close();clearTimeout(timer);epoch++;owner='';cells=[];formatting=D.defaultFormat();loaded=false;loading=false;editing=null;history=[];future=[];revision=savedRevision=0;if(initialized){$('sheet-cell-content').value='';$('sheet-cell-content').title='';render();$('sheet-owner')?.replaceChildren();$('sheet-code-list').replaceChildren();$('sheet-workspace').inert=true;}}
+  function reset(){sheetTools?.close();sheetId=FIRST_SHEET;worksheets=[];worksheetBusy=false;prometricTools?.reset();certificateTools?.reset();setExpandedView(false);excelTools?.closeFiles();closeDuplicateDetails();closeContextMenu();$('sheet-find-dialog')?.close();clearTimeout(timer);epoch++;owner='';cells=[];formatting=D.defaultFormat();loaded=false;loading=false;editing=null;history=[];future=[];revision=savedRevision=0;if(initialized){$('sheet-cell-content').value='';$('sheet-cell-content').title='';render();if($('sheet-owner'))window.WorkspaceViews.options($('sheet-owner'),{options:[]});window.WorkspaceViews.clear($('sheet-code-list'));$('sheet-workspace').inert=true;}}
   function suspend(){prometricTools?.reset();certificateTools?.reset();setExpandedView(false);excelTools?.closeFiles();closeDuplicateDetails();closeContextMenu();$('sheet-find-dialog')?.close();clearTimeout(timer);}
   return {open,translate,hasDraft,flush,reset,suspend,savePosition};
 })();

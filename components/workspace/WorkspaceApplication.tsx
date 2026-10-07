@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import type { Panel, WorkspaceRuntimeWindow } from "@/lib/workspace-types";
 import { workspaceScripts } from "@/generated/workspace-assets";
 import { WorkspaceShell } from "./WorkspaceShell";
+import { WorkspaceViews } from "@/client/workspace-views";
 
 let bootPromise: Promise<void> | undefined;
 async function bootWorkspace() {
@@ -35,6 +36,7 @@ export function WorkspaceApplication({
   initialPanel: Panel;
 }) {
   useEffect(() => {
+    window.WorkspaceViews = WorkspaceViews;
     const startupMessage = document.getElementById("startup-message");
     startupMessage.textContent =
       document.documentElement.lang === "en"

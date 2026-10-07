@@ -27,7 +27,9 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
       const url=new URL(route.request().url());
       if(url.origin==='https://trainf.vercel.app'){
         if(url.pathname==='/')return route.fulfill({contentType:'text/html; charset=utf-8',body:template.replace('const previewSheets=new Map(window.previewInitialSheets||[]);','const previewSheets=new Map([["demo-admin",'+JSON.stringify({cells:fixtureRows,version:fixtureVersion,format:{direction:'ltr'}})+']]);')});
-        const file=url.pathname.slice(1);if(/^[a-z][a-z0-9-]*\.(js|css)$/.test(file)&&fs.existsSync(path.join(root,file)))return route.fulfill({contentType:file.endsWith('.css')?'text/css':'text/javascript',body:fs.readFileSync(path.join(root,file),'utf8')});
+        const file=url.pathname.slice(1),previewAsset=require('../tools/preview-assets.cjs')[file];
+        if(previewAsset)return route.fulfill({contentType:'text/javascript',body:fs.readFileSync(previewAsset,'utf8')});
+        if(/^[a-z][a-z0-9-]*\.(js|css)$/.test(file)&&fs.existsSync(path.join(root,file)))return route.fulfill({contentType:file.endsWith('.css')?'text/css':'text/javascript',body:fs.readFileSync(path.join(root,file),'utf8')});
         return route.fulfill({status:404,body:''});
       }
       if(url.origin==='https://tcnet1.prometric.com')return route.fulfill({contentType:'text/html; charset=utf-8',body:registrationFixture(url)});

@@ -1,23 +1,19 @@
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
 const path=require('node:path');
-class Element {
-  constructor(){this.children=[];this.listeners={};this.style={};this.dataset={};this.value='';this.hidden=false;this.textContent='';this.classList={add(){},remove(){},toggle(){},contains(){return false}};}
-  appendChild(e){this.children.push(e);} removeChild(e){this.children=this.children.filter(x=>x!==e);}
-  addEventListener(event,fn){this.listeners[event]=fn;} select(){} focus(){} matches(){return false;}
-  setAttribute(name,value){this[name]=value;}
-  get textContent(){return (this._text || '')+this.children.map(child=>child.textContent || '').join('');}
-  set textContent(value){this.children=[];this._text=String(value);}
-  getAttribute(name){return this[name] ?? null;}
-  getBoundingClientRect(){return {top:600,bottom:640,left:1250,right:1290,width:40,height:40};}
-  removeAttribute(name){delete this[name];}
-  get options(){return this.children;}
-  showModal(){this.open=true;}
-  click(){if(this.download)events.push({name:'download',filename:this.download});this.listeners.click?.();}
-  close(){this.open=false;}
-  set innerHTML(v){this.children=[];this._html=v;} get innerHTML(){return this._html||'';}
-}
-const els={},storage=new Map(),events=[];
-const document={listeners:{},addEventListener(event,fn){this.listeners[event]=fn;},getElementById:id=>els[id] ||= new Element(),createElement:()=>new Element(),querySelectorAll:()=>[],querySelector:()=>new Element(),body:new Element(),execCommand:()=>false,hidden:false};
+const {Window}=require('happy-dom'),React=require('react');
+const domWindow=new Window({url:'http://localhost',settings:{disableJavaScriptFileLoading:true,disableCSSFileLoading:true}});
+const document=domWindow.document;
+const html=require('../tools/workspace-source.cjs').renderDocument({inlineRuntime:true});
+document.documentElement.innerHTML=html.replace(/<script[^>]*>[\s\S]*?<\/script>/g,'');
+global.window=domWindow;global.document=document;global.FormData=domWindow.FormData;
+const views=require('../tools/workspace-source.cjs').loadTsx(path.join(__dirname,'../client/workspace-views.tsx')).WorkspaceViews;
+let eventPrototype=Object.getPrototypeOf(document.createElement('button'));while(!Object.hasOwn(eventPrototype,'addEventListener'))eventPrototype=Object.getPrototypeOf(eventPrototype);
+const nativeListen=eventPrototype.addEventListener;
+eventPrototype.addEventListener=function(event,listener,...args){this.listeners||={};this.listeners[event]=listener;return nativeListen.call(this,event,listener,...args);};
+const els=new Proxy({}, {get:(_,id)=>document.getElementById(id)}),storage=new Map(),events=[];
+const documentListeners={};const documentListen=document.addEventListener.bind(document);
+document.addEventListener=(event,listener,...args)=>{documentListeners[event]=listener;return documentListen(event,listener,...args);};
+const fire=async(element,type)=>{global.IS_REACT_ACT_ENVIRONMENT=true;try{await React.act(async()=>{element.dispatchEvent(new domWindow.Event(type,{bubbles:true,cancelable:true}));});}finally{delete global.IS_REACT_ACT_ENVIRONMENT;}};
 const db={settings:{id:1,version:1,payload:{keycodes:[],categoryOrder:['Foundation'],codeCategories:['Foundation-100'],keycodeOrder:{},keycodeOverrides:{},dateColors:{},credentials:{account:'test-account',password:'test-password'},links:{zoom:'https://us02web.zoom.us/j/demo',prometric:'https://tcnet1.prometric.com/Login.aspx?demo=1'}}},codes:[{code:'TEST',category:'Foundation-100',notes:'',used_on:null,used_by:null,version:1}],stock:[],members:[{email:'test@example.invalid',role:'admin',active:true,user_id:'user-1'},{email:'member@example.invalid',role:'operator',active:true,user_id:null}]};
 const clone=x=>JSON.parse(JSON.stringify(x));
 const backupBlobs=[];db.traineeSheets=[];
@@ -27,16 +23,18 @@ const windowListeners={};let authListener,signOuts=0;
 let releaseInitialSession,firstSessionRead=true,sessionReadError=false;
 const initialSessionRead=new Promise(resolve=>{releaseInitialSession=resolve;});
 const accessToken='header.'+Buffer.from(JSON.stringify({amr:[{method:'password',timestamp:Math.floor(Date.now()/1000)}]})).toString('base64url')+'.signature';
+let membersReadError=false;
 const client={
   auth:{getSession:async()=>{if(firstSessionRead){firstSessionRead=false;await initialSessionRead;}return sessionReadError?{error:Error('NETWORK')}:{data:{session:{user:clone(authUser),access_token:accessToken}}};},onAuthStateChange(fn){authListener=fn;},signOut:async()=>{signOuts++;authListener?.('SIGNED_OUT',null);return {};},updateUser:async args=>{events.push({name:'auth_update',args:clone(args)});if(args.data)authUser.user_metadata={...authUser.user_metadata,...args.data};return {data:{user:clone(authUser)}};}},
   from(table){
     if(table==='ibta_trainee_sheets'){const filters=[];const selected=()=>db.traineeSheets.filter(row=>filters.every(([key,value])=>row[key]===value));return {select(){return this;},eq(key,value){filters.push([key,value]);return this;},order(){return this;},maybeSingle:async()=>({data:clone(selected()[0]||null)}),then(resolve,reject){return Promise.resolve({data:clone(selected()),error:null}).then(resolve,reject);},range:async(from,to)=>({data:clone(selected().slice(from,to+1)),error:null})};}
+    if(table==='ibta_audit')return {select(){return this;},order(){return this;},limit:async()=>({data:[{id:'audit-1',actor:'user-1',action:'UPDATE',entity:'ibta_codes',record_key:'TEST',happened_at:'2026-10-07T09:00:00Z'}]})};
     if(table==='ibta_supervisor_stock')return {select:async()=>({data:clone(db.stock),error:null})};
     if(table==='ibta_members'){
       let filter;
       return {select(){return this;},eq(field,value){filter=[field,value];return this;},
         maybeSingle:async()=>({data:clone(db.members.find(row=>row[filter?.[0]]===filter?.[1]) || null)}),
-        order:async()=>({data:clone(db.members)}),
+        order:async()=>membersReadError?{error:Error('NETWORK')}:{data:clone(db.members)},
         insert:async row=>{db.members.push(clone(row));return {error:null};},
         update(changes){return {eq:async(field,value)=>{const row=db.members.find(item=>item[field]===value);Object.assign(row,changes);return {error:null};}};}
       };
@@ -102,20 +100,14 @@ const client={
     return {};
   }
 };
-const ctx=vm.createContext({document,URL,Blob,localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v)},sessionStorage:{},window:{matchMedia:()=>({matches:false}),URL:{createObjectURL(blob){backupBlobs.push(blob);return 'blob:backup-test';},revokeObjectURL(){}},supabase:{createClient:()=>client},addEventListener(name,fn){windowListeners[name]=fn;}},navigator:{clipboard:{writeText:async text=>{if(clipboardFails)throw Error('denied');events.push({name:'clipboard',text});}}},setInterval(){},setTimeout(){},clearTimeout(){},confirm:()=>true,location:{reload(){}}});
-els['account-menu-popover']=new Element();els['account-menu-popover'].hidden=true;
-els['inventory-current-quantity']=new Element();
-els['inventory-purchased-quantity']=new Element();
-els['inventory-supervisor-name']=new Element();
-els['inventory-message-language']=new Element();
+const ctx=vm.createContext({document,URL,Blob,localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v)},sessionStorage:{},window:{WorkspaceViews:views,matchMedia:()=>({matches:false}),URL:{createObjectURL(blob){backupBlobs.push(blob);return 'blob:backup-test';},revokeObjectURL(){}},supabase:{createClient:()=>client},addEventListener(name,fn){windowListeners[name]=fn;}},navigator:{clipboard:{writeText:async text=>{if(clipboardFails)throw Error('denied');events.push({name:'clipboard',text});}}},setInterval(){},setTimeout(){},clearTimeout(){},confirm:()=>true,location:{reload(){}}});
 ctx.atob=atob;
 vm.runInContext(fs.readFileSync(path.join(__dirname,'../session-policy.js'),'utf8'),ctx);
 vm.runInContext(fs.readFileSync(path.join(__dirname,'../cloud.js'),'utf8'),ctx);
-const html=require('../tools/workspace-source.cjs').renderDocument({inlineRuntime:true});
 assert.match(html,/family=Cairo/);
 assert.match(html,/--ui-font:'Cairo'/);
 assert.match(html,/#auth-box\{font-family:var\(--ui-font\)/);
-assert(!/Tajawal|Calibri/.test(html));
+assert(!/Tajawal|Calibri/.test(Array.from(document.querySelectorAll('style,link[href*=fonts]')).map(element=>element.textContent+(element.getAttribute('href')||'')).join('')));
 assert.match(html,/id="prometric-login-card"[^>]*>\s*<div[^>]*data-i18n="prometricLoginLink"/);
 assert(html.indexOf('id="prometric-login-card"')<html.indexOf('id="cred-account"'));
 assert.match(html,/\.cred-value,\.resource-value\{[^}]*font-size:16px;[^}]*font-weight:600/);
@@ -131,7 +123,6 @@ for(const tab of ['profile','data','prometric','inventory','extensions','reports
 }
 assert(!html.includes('id="autochain-toggle"'));assert(!html.includes('id="settings-tab-preferences"'));assert(!html.includes('id="signed-in"'));assert(!html.includes('id="refresh-data"'));
 assert(!html.includes('id="copy-prometric-link"'));
-vm.runInContext(fs.readFileSync(path.join(__dirname,'../voucher-names.js'),'utf8'),ctx);
 for(const [,script] of html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g))vm.runInContext(script,ctx);
 vm.runInContext(fs.readFileSync(path.join(__dirname,'../ops-ui.js'),'utf8'),ctx);
 const run=s=>vm.runInContext(s,ctx);
@@ -174,10 +165,13 @@ for(const key of usedKeys) assert(englishKeys.includes(key),`Missing translation
   assert.equal(els['account-avatar'].textContent,'T');
   els['account-menu-btn'].listeners.click();
   assert.equal(els['account-menu-popover'].hidden,false);
-  assert.equal(els['account-menu-btn']['aria-expanded'],'true');
-  document.listeners.keydown({key:'Escape'});
+  assert.equal(els['account-menu-btn'].getAttribute('aria-expanded'),'true');
+  documentListeners.keydown({key:'Escape'});
   assert.equal(els['account-menu-popover'].hidden,true);
   assert.equal(els['cred-account-val'].textContent,'test-account');
+  await run('renderAuditList()');assert.match(els['audit-list'].textContent,/TEST/);
+  membersReadError=true;await run('renderAuditList()');assert.equal(els['audit-list'].textContent,run("t('genericError')"));
+  membersReadError=false;await run('renderAuditList()');assert.match(els['audit-list'].textContent,/TEST/,'A failed audit read can recover without losing the React region');
   assert.match(els['cloud-status'].textContent,/متصل/);
   els['inventory-category'].value='Foundation-100';
   assert.match(els['inventory-current-balance'].textContent,/لم يُحدد/);
@@ -225,14 +219,14 @@ for(const key of usedKeys) assert(englishKeys.includes(key),`Missing translation
   run("state.codeNotes.TEST='hello'");assert.equal(await run('saveState()'),true);assert.equal(db.codes[0].notes,'hello');
   await run("Cloud.copyCode('TEST')");assert.equal(db.codes[0].used_by,'user-1');
   assert.equal(db.codes[0].used_at,'2026-09-30T09:45:00.000Z');
-  assert.equal(els['code-grid'].children.find(row=>row.dataset.code).children[3].textContent,run('todayStr()')+' 12:45');
+  assert.equal(Array.from(els['code-grid'].children).find(row=>row.dataset.code).children[3].textContent,run('todayStr()')+' 12:45');
   assert(events.findIndex(e=>e.name==='ibta_claim_code')<events.findIndex(e=>e.name==='clipboard'&&e.text==='TEST'));
   conflict=true;run("state.codeNotes.TEST='stale'");assert.equal(await run('saveState()'),false);assert.equal(run('state.codeNotes.TEST'),'hello');conflict=false;
   db.codes.push({code:'FAIL-COPY',category:'Foundation-100',notes:'',used_on:null,used_by:null,version:1});await run('Cloud.refresh()');
   clipboardFails=true;assert.equal(await run("Cloud.copyCode('FAIL-COPY')"),false);assert.equal(db.codes.find(r=>r.code==='FAIL-COPY').used_by,'user-1');
   assert.match(els['cloud-status'].textContent,/تم حجز/);
   assert(!storage.has('ibta_ops_state_v4'));
-  const count=events.length;const row=els['code-grid'].children.find(row=>row.dataset.code);await row.listeners.click({target:{closest:()=>true}});assert.equal(events.length,count);
+  const count=events.length;const row=Array.from(els['code-grid'].children).find(row=>row.dataset.code);await fire(row.querySelector('.col-check input'),'click');assert.equal(events.length,count);
   db.settings.payload.dateColors={'27/09/2026':'#FFC000','28/09/2026':'#FFC000'};
   db.codes.push({code:'PREVIOUS-DAY',category:'Foundation-100',notes:'',used_on:'27/09/2026',used_by:'user-1',version:1});
   db.codes.push({code:'CURRENT-DAY-A',category:'Foundation-100',notes:'',used_on:'28/09/2026',used_by:'user-1',version:1});
@@ -245,9 +239,9 @@ for(const key of usedKeys) assert(englishKeys.includes(key),`Missing translation
   assert.deepEqual(usedOnDay.find(group=>group.cat==='Foundation-100').codes,['CURRENT-DAY-A']);
   assert.deepEqual(usedOnDay.find(group=>group.cat==='Master-100').codes,['CURRENT-DAY-B']);
   assert.match(els['daily-used-results'].children[0].textContent,/2/);
-  const reportSections=els['daily-used-results'].children.slice(1);
+  const reportSections=Array.from(els['daily-used-results'].children).slice(1);
   assert.equal(reportSections.length,2);
-  const renderedCodes=reportSections.flatMap(section=>section.children.slice(1).flatMap(list=>list.children.map(code=>code.textContent)));
+  const renderedCodes=reportSections.flatMap(section=>Array.from(section.children).slice(1).flatMap(list=>Array.from(list.children).map(code=>code.textContent)));
   assert.deepEqual(renderedCodes,['CURRENT-DAY-A','CURRENT-DAY-B']);
   els['daily-used-date'].value='2026-09-26';
   els['daily-used-date'].listeners.change();
@@ -257,40 +251,37 @@ for(const key of usedKeys) assert(englishKeys.includes(key),`Missing translation
   els['daily-used-date'].listeners.change();
   const colors=run('getDayColors()');
   assert.notEqual(colors['27/09/2026'],colors['28/09/2026']);
-  const paintedCode=code=>els['code-grid'].children.find(row=>row.children[2]?.textContent===code)?.style.background;
+  const paintedCode=code=>Array.from(els['code-grid'].children).find(row=>row.children[2]?.textContent===code)?.style.background;
   run("activeCategory='Foundation-100';renderCodeGrid()");
   assert.equal(paintedCode('CURRENT-DAY-A'),colors['28/09/2026']);
   run("activeCategory='Master-100';renderCodeGrid()");
   assert.equal(paintedCode('CURRENT-DAY-B'),colors['28/09/2026']);
   const keycodesPanel=els['panel-keycodes'];
   const settingsAddForms=els['settings-add-forms'];
-  assert.equal(keycodesPanel.children.some(block=>block.className==='add-box' || block.className==='kc-add-exam'),false);
+  assert.equal(Array.from(keycodesPanel.children).some(block=>block.className==='add-box' || block.className==='kc-add-exam'),false);
   assert.equal(settingsAddForms.hidden,false);
-  let addCategory=settingsAddForms.children[1];
-  addCategory.children[2].children[0].value='New Category';
-  addCategory.children[4].children[0].value='First Test Exam';
-  addCategory.children[4].children[1].value='Arabic';
-  addCategory.children[4].children[2].value='FIRST-KEY-1';
-  addCategory.children[4].children[3].value='New Category';
-  await addCategory.children[2].children[1].listeners.click();
+  let addCategory=settingsAddForms.querySelector('.add-box form');
+  addCategory.elements.name.value='New Category';await fire(addCategory.elements.name,'input');
+  addCategory.elements.examTitle.value='First Test Exam';addCategory.elements.language.value='Arabic';addCategory.elements.keycode.value='FIRST-KEY-1';
+  await fire(addCategory,'submit');
   assert(db.settings.payload.categoryOrder.includes('New Category'));
   assert.equal(db.settings.payload.keycodes[0].code,'FIRST-KEY-1');
-  let newBlock=keycodesPanel.children.find(block=>block.children[0]?.children[0]?.textContent?.includes('New Category'));
+  let newBlock=Array.from(keycodesPanel.children).find(block=>block.children[0]?.children[0]?.textContent?.includes('New Category'));
   let examForm=settingsAddForms.children[0].children[1];
   const category=examForm.children[0].children[1];
   const [examTitle,language,keycode,destination]=examForm.children[1].children;
-  category.value='New Category';category.listeners.change();
+  category.value='New Category';await fire(category,'change');
   examTitle.value='New Test Exam';language.value='English';keycode.value='TEST-KEY-1';destination.value='New Category';
-  await examForm.listeners.submit({preventDefault(){}});
+  await fire(examForm,'submit');
   assert.deepEqual(db.settings.payload.keycodes[1],{title:'New Test Exam',lang:'English',code:'TEST-KEY-1',category:'New Category'});
   await run('Cloud.refresh()');
   assert.equal(run('DEFAULT_KEYCODES[1].code'),'TEST-KEY-1');
-  newBlock=keycodesPanel.children.find(block=>block.children[0]?.children[0]?.textContent?.includes('New Category'));
-  assert(newBlock.children[1].children.some(row=>row.children?.[3]?.textContent==='TEST-KEY-1'));
+  newBlock=Array.from(keycodesPanel.children).find(block=>block.children[0]?.children[0]?.textContent?.includes('New Category'));
+  assert(Array.from(newBlock.children[1].children).some(row=>row.children?.[3]?.textContent==='TEST-KEY-1'));
   examForm=settingsAddForms.children[0].children[1];
   examForm.children[1].children[0].value='Duplicate';
   examForm.children[1].children[2].value='test-key-1';
-  await examForm.listeners.submit({preventDefault(){}});
+  await fire(examForm,'submit');
   assert.equal(db.settings.payload.keycodes.length,2);
   assert.equal(els['manage-data'].hidden,false);
   els['manage-category'].value='New Category';
@@ -306,7 +297,7 @@ for(const key of usedKeys) assert(englishKeys.includes(key),`Missing translation
   await els['edit-form'].listeners.submit({preventDefault(){}});
   assert.equal(db.settings.payload.keycodes[1].title,'Revised Exam');
   assert.equal(db.settings.payload.keycodes[1].code,'REVISED-KEY-1');
-  els['manage-code-category'].value='Foundation-100';els['manage-code-category'].listeners.change();
+  els['manage-code-category'].value='Foundation-100';await fire(els['manage-code-category'],'change');
   els['manage-code'].value='CURRENT-DAY-A';els['manage-code-edit'].listeners.click();
   els['edit-code'].value='REVISED-CODE';els['edit-category'].value='Master-100';els['edit-notes'].value='updated';
   await els['edit-form'].listeners.submit({preventDefault(){}});
@@ -360,13 +351,13 @@ for(const key of usedKeys) assert(englishKeys.includes(key),`Missing translation
   assert(events.some(e=>e.name==='auth_update'&&e.args.password==='new-password'&&e.args.current_password==='old-password'));
   assert.equal(els['profile-new-password'].value,'');
   run("activeCategory='Master-100';renderCodeGrid()");
-  const rowToDelete=els['code-grid'].children.find(row=>row.children[2]?.textContent==='REVISED-CODE');
-  const deleteButton=rowToDelete.children.at(-1).children.at(-1);
+  const rowToDelete=Array.from(els['code-grid'].children).find(row=>row.children[2]?.textContent==='REVISED-CODE');
+  const deleteButton=Array.from(Array.from(rowToDelete.children).at(-1).children).at(-1);
   assert.match(deleteButton.innerHTML,/<svg/);
-  const deleting=deleteButton.listeners.click({stopPropagation(){}});
+  await fire(deleteButton,'click');
   assert.equal(els['delete-dialog'].open,true);
   els['delete-confirm'].onclick();
-  await deleting;
+  await new Promise(setImmediate);
   assert(!db.codes.some(r=>r.code==='REVISED-CODE'));
 
   els['bulk-import-category'].value='Foundation-100';
@@ -424,4 +415,5 @@ for(const key of usedKeys) assert(englishKeys.includes(key),`Missing translation
   assert.equal(els['startup-screen'].hidden,true,'Failed initialization does not leave a permanent loading screen');
   assert.equal(els['auth-box'].hidden,false);
   console.log('PASS: delayed session restoration avoids login flash and initialization errors reveal login');
+  await domWindow.happyDOM.abort();
 })().catch(e=>{console.error(e);process.exitCode=1;});

@@ -2,7 +2,7 @@
 const TraineePrometric=(()=>{
   'use strict';
   function mount(h){
-    const {D,$,tr,node,button}=h,P=PrometricData;
+    const {D,$,tr}=h,P=PrometricData;
     let client;try{client=sessionStorage.getItem('ibta_prometric_client');if(!client){client=crypto.randomUUID();sessionStorage.setItem('ibta_prometric_client',client);}}catch{client=crypto.randomUUID();}
     let connected=false,version='',retakeSupported=false,run=null,extensionBusy=false,recoverable=false,working=false,applying=false,plan=null,context=null,lastError='',polling=false,selectedIndices=[];
     const credentialChecks=new Map();
@@ -14,16 +14,15 @@ const TraineePrometric=(()=>{
       const id=crypto.randomUUID(),owner=s.owner,epoch=s.epoch;
       return new Promise((resolve,reject)=>{const timer=setTimeout(()=>{pending.delete(id);reject(Error('DISCONNECTED'));},8000);pending.set(id,{timer,resolve:payload=>{const now=h.state();if(!now.loaded||now.owner!==owner||now.epoch!==epoch)return reject(Error('OUTDATED'));payload?.ok?resolve(payload):reject(Error(payload?.error||'DISCONNECTED'));},reject});window.postMessage({channel:'IBTA_PROMETRIC_APP',id,payload:{type,client,owner,...extra}},location.origin);});
     }
-    const dialog=node('dialog',undefined,{id:'sheet-prometric-dialog',class:'sheet-file-dialog sheet-prometric-dialog','aria-labelledby':'sheet-prometric-title'}),header=node('div',undefined,{class:'sheet-file-header'}),title=node('h3','',{id:'sheet-prometric-title'}),close=button('×',()=>dialog.close());close.setAttribute('aria-label',tr('إغلاق','Close'));header.append(title,close);
-    const connection=node('p','',{id:'sheet-prometric-connection',role:'status'}),setup=node('div',undefined,{class:'sheet-prometric-setup'}),download=node('a','',{id:'sheet-prometric-download',href:document.getElementById('prometric-registration-script')?.dataset.extension||'trainflow-prometric.zip',download:''}),instructions=node('p');setup.append(download,instructions);
-    const summary=node('p','',{id:'sheet-prometric-summary'}),accountMode=node('label',undefined,{class:'sheet-prometric-account-mode',hidden:true}),modeText=node('span'),modeSelect=node('select',undefined,{id:'sheet-prometric-account-mode'}),modeHelp=node('p','',{class:'sheet-prometric-account-help'}),preview=node('div',undefined,{class:'sheet-file-preview'}),actions=node('div',undefined,{class:'sheet-prometric-actions'}),start=button('',startRegistration,'sheet-primary'),refresh=button('',()=>poll(true)),stop=button('',stopRegistration),recover=button('',recoverResults),status=node('p','',{id:'sheet-prometric-status',role:'status'}),results=node('div',undefined,{class:'sheet-file-preview',id:'sheet-prometric-results'});modeSelect.append(node('option','',{value:'reuse'}),node('option','',{value:'new'}));accountMode.append(modeText,modeSelect,modeHelp);start.id='sheet-prometric-start';refresh.id='sheet-prometric-refresh';stop.id='sheet-prometric-stop';recover.id='sheet-prometric-recover';actions.append(start,refresh,stop,recover);dialog.append(header,connection,setup,summary,accountMode,preview,actions,status,results);document.body.append(dialog);
+    const dialog=$('sheet-prometric-dialog');window.WorkspaceViews.prometricDialog(dialog,{extensionURL:$('prometric-registration-script')?.dataset.extension||'trainflow-prometric.zip'});
+    const title=$('sheet-prometric-title'),close=$('sheet-prometric-close'),connection=$('sheet-prometric-connection'),setup=dialog.querySelector('.sheet-prometric-setup'),download=$('sheet-prometric-download'),instructions=$('sheet-prometric-instructions'),summary=$('sheet-prometric-summary'),accountMode=dialog.querySelector('.sheet-prometric-account-mode'),modeText=$('sheet-prometric-mode-caption'),modeSelect=$('sheet-prometric-account-mode'),modeHelp=dialog.querySelector('.sheet-prometric-account-help'),preview=$('sheet-prometric-preview'),start=$('sheet-prometric-start'),refresh=$('sheet-prometric-refresh'),stop=$('sheet-prometric-stop'),recover=$('sheet-prometric-recover'),status=$('sheet-prometric-status'),results=$('sheet-prometric-results');
+    close.setAttribute('aria-label',tr('إغلاق','Close'));close.onclick=()=>dialog.close();start.onclick=startRegistration;refresh.onclick=()=>poll(true);stop.onclick=stopRegistration;recover.onclick=recoverResults;
     modeSelect.addEventListener('change',()=>{if(working||run?.items.some(item=>['pending','done'].includes(item.status)))return;buildPlan();draw();});
-    const openButton=button('',()=>open());openButton.id='sheet-prometric-open';$('sheet-workspace').querySelector('.sheet-ribbon-top .sheet-ribbon-actions').append(openButton);
+    const openButton=$('sheet-prometric-open');openButton.onclick=()=>open();$('sheet-workspace').querySelector('.sheet-ribbon-top .sheet-ribbon-actions').append(openButton);
     function translate(){
       title.textContent=tr('تسجيل المتدربين في Prometric','Prometric trainee registration');openButton.textContent=tr('تسجيل Prometric','Prometric registration');start.textContent=tr('إنشاء الحسابات','Create accounts');refresh.textContent=tr('تحديث الحالة','Refresh status');stop.textContent=tr('إيقاف التسجيل','Stop registration');download.textContent=tr('تحميل إضافة Prometric المتصلة بالنظام','Download the TrainFlow-connected Prometric extension');instructions.textContent=tr('فك ZIP في مجلد ثابت، ثم حمّله من chrome://extensions باستخدام Load unpacked. عطّل نسخة Prometric القديمة، وأعد تحميل TrainFlow وPrometric في نفس Chrome. الإضافة تستخدم إعدادات التسجيل المحفوظة فيها.','Extract ZIP to a permanent folder and use Load unpacked at chrome://extensions. Disable the old Prometric extension, then reload TrainFlow and Prometric in the same Chrome profile. Registration uses the settings saved in the extension.');modeText.textContent=tr('للمتدربين الذين لديهم حساب محفوظ','For trainees with a saved account');modeSelect.options[0].textContent=tr('استخدام الحساب المسجل','Use the saved account');modeSelect.options[1].textContent=tr('إنشاء حساب جديد بنفس البيانات','Create a new account with the same details');draw();
       recover.textContent=tr('استعادة نتائج التبويب المغلق','Recover results from a closed tab');
     }
-    function table(headers){const t=node('table'),head=node('thead'),row=node('tr');headers.forEach(label=>row.append(node('th',label)));head.append(row);t.append(head,node('tbody'));return t;}
     function buildPlan(){
       const s=h.state();if(!same(s))return;credentialChecks.clear();
       try{plan=P.prepare(s.cells,selectedIndices,{allowExisting:modeSelect.value==='new'});lastError='';}catch(error){plan=null;lastError=errorText(error.message);}
@@ -39,21 +38,21 @@ const TraineePrometric=(()=>{
       setup.hidden=connected;const retakePlan=!!plan?.items.some(item=>item.replaceExisting);start.disabled=!connected||working||!plan?.items.length||extensionBusy||!!run?.items.some(i=>['pending','done'].includes(i.status))||(retakePlan&&!retakeSupported);refresh.disabled=working;stop.hidden=!run?.items.some(i=>i.status==='pending');stop.disabled=working;
       recover.hidden=!recoverable;recover.disabled=working;
       const hasSaved=selectedIndices.some(index=>{const row=s.cells[index];return row?.[9]?.trim()||row?.[10]?.trim();});accountMode.hidden=!hasSaved;modeSelect.disabled=working||!!run?.items.some(item=>['pending','done'].includes(item.status));modeHelp.textContent=modeSelect.value==='new'&&!retakeSupported&&connected?errorText('UPDATE_EXTENSION'):modeSelect.value==='new'?tr('سيبقى اليوزر والباسورد الحاليان كما هما حتى يتأكد نجاح التسجيل الجديد ويحفظ في الجدول.','The current username and password stay in place until the new registration is confirmed and saved to the sheet.'):tr('لن يتم إنشاء حساب جديد للصفوف التي لديها حساب؛ يمكنك استعمال بياناتها المسجلة الآن.','Rows with a saved account will not get a new account; you can use their saved credentials now.');
-      preview.replaceChildren();summary.textContent=plan?tr('جاهز للتسجيل: ','Ready to register: ')+plan.items.length+tr(' · تم تخطي: ',' · Skipped: ')+plan.skipped.length:'';
-      if(plan){const t=table([tr('الصف','Row'),tr('الاسم بالإنجليزي','English name'),tr('البريد الإلكتروني','Email'),tr('الحالة','Status')]);for(const item of [...plan.items,...plan.skipped].slice(0,100)){const row=node('tr');for(const value of [item.row+1,item.name,item.email,item.reason?reasonText(item.reason):tr('جاهز','Ready')])row.append(node('td',String(value)));t.lastChild.append(row);}preview.append(t);if(plan.items.length+plan.skipped.length>100)preview.append(node('p',tr('المعاينة تعرض أول 100 صف؛ التنفيذ يشمل كل الصفوف الجاهزة.','Preview shows the first 100 rows; all ready rows will be processed.')));}
-      results.replaceChildren();status.textContent=lastError;
+      summary.textContent=plan?tr('جاهز للتسجيل: ','Ready to register: ')+plan.items.length+tr(' · تم تخطي: ',' · Skipped: ')+plan.skipped.length:'';
+      window.WorkspaceViews.preview(preview,{headings:plan?[tr('الصف','Row'),tr('الاسم بالإنجليزي','English name'),tr('البريد الإلكتروني','Email'),tr('الحالة','Status')]:[],rows:plan?[...plan.items,...plan.skipped].slice(0,100).map(item=>[String(item.row+1),item.name,item.email,item.reason?reasonText(item.reason):tr('جاهز','Ready')]):[],note:plan&&plan.items.length+plan.skipped.length>100?tr('المعاينة تعرض أول 100 صف؛ التنفيذ يشمل كل الصفوف الجاهزة.','Preview shows the first 100 rows; all ready rows will be processed.'):undefined});
+      window.WorkspaceViews.registrationResults(results,{headings:[],rows:[]});status.textContent=lastError;
       if(!run)return;const counts={};run.items.forEach(item=>counts[item.status]=(counts[item.status]||0)+1);
       status.textContent=(lastError?lastError+' · ':'')+tr('حُفظ: ','Saved: ')+(counts.saved||0)+tr(' · ينتظر الحفظ: ',' · Awaiting save: ')+(counts.done||0)+tr(' · ينتظر التسجيل: ',' · Pending: ')+(counts.pending||0)+tr(' · لم يكتمل: ',' · Incomplete: ')+((counts.failed||0)+(counts.cancelled||0));
-      const t=table([tr('الاسم','Name'),tr('الحالة','Status'),tr('الإجراء','Action')]),index=P.indexRows(s.cells);
-      for(const item of [...run.items.filter(i=>i.status==='done'),...run.items.filter(i=>i.status!=='done')].slice(0,100)){
-        const row=node('tr'),match=item.status==='done'?displayMatch(s.cells,item,index):null;
+      const index=P.indexRows(s.cells),rows=[];
+      for(const item of [...run.items.filter(record=>record.status==='done'),...run.items.filter(record=>record.status!=='done')].slice(0,100)){
+        const match=item.status==='done'?displayMatch(s.cells,item,index):null;
         const label=item.status==='saved'?tr('تم الحفظ في الجدول','Saved to sheet'):item.status==='reviewed'?tr('تمت المراجعة دون كتابة في الجدول','Reviewed without writing to the sheet'):item.status==='done'?(match?.reason?reasonText(match.reason):tr('جاهز للحفظ','Ready to save')):item.status==='pending'?tr('جارٍ التسجيل / ينتظر دوره','Registering / queued'):tr('لم يتأكد نجاح التسجيل؛ راجع Prometric قبل إعادة المحاولة','Registration not confirmed; check Prometric before retrying');
-        row.append(node('td',item.name),node('td',label));const action=node('td');
-        if(item.status==='done')action.append(button(tr('نسخ اليوزر والباسورد','Copy username and password'),async()=>{if(same(h.state())&&await copyText(item.username+'\t'+item.password))showToast(tr('تم النسخ','Copied'));}));
-        if(item.status==='done'&&match?.reason&&match.reason!=='checking')action.append(button(tr('تمت المراجعة — عدم الكتابة','Reviewed — do not write'),async()=>{if(!same(h.state())||working)return;working=true;draw();try{const data=await call('DISMISS',{run:run.id,ids:[item.id]});run=data.run;lastError='';}catch(error){lastError=errorText(error.message);}finally{working=false;draw();}}));
-        row.append(action);t.lastChild.append(row);
+        const actions=[];
+        if(item.status==='done')actions.push({label:tr('نسخ اليوزر والباسورد','Copy username and password'),run:async()=>{if(same(h.state())&&await copyText(item.username+'\t'+item.password))showToast(tr('تم النسخ','Copied'));}});
+        if(item.status==='done'&&match?.reason&&match.reason!=='checking')actions.push({label:tr('تمت المراجعة — عدم الكتابة','Reviewed — do not write'),run:async()=>{if(!same(h.state())||working)return;working=true;draw();try{const response=await call('DISMISS',{run:run.id,ids:[item.id]});run=response.run;lastError='';}catch(error){lastError=errorText(error.message);}finally{working=false;draw();}}});
+        rows.push({id:item.id,name:item.name,status:label,actions});
       }
-      results.append(t);
+      window.WorkspaceViews.registrationResults(results,{headings:[tr('الاسم','Name'),tr('الحالة','Status'),tr('الإجراء','Action')],rows});
     }
     async function applyResults(current){
       let s=h.state();if(applying||!s.loaded||!s.user||s.editing||current?.owner!==s.owner||current.client!==client)return;
@@ -106,7 +105,7 @@ const TraineePrometric=(()=>{
       if(data.changed){poll();return;}const request=pending.get(data.id);if(!request)return;pending.delete(data.id);clearTimeout(request.timer);request.resolve(data.payload);
     });
     const timer=setInterval(()=>poll(),5000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)poll();});
-    function reset(){dialog.close();dialog.querySelectorAll('tbody').forEach(el=>el.replaceChildren());run=plan=context=null;selectedIndices=[];credentialChecks.clear();lastError='';for(const request of pending.values()){clearTimeout(request.timer);request.reject(Error('OUTDATED'));}pending.clear();}
+    function reset(){dialog.close();window.WorkspaceViews.preview(preview,{headings:[],rows:[]});window.WorkspaceViews.registrationResults(results,{headings:[],rows:[]});run=plan=context=null;selectedIndices=[];credentialChecks.clear();lastError='';for(const request of pending.values()){clearTimeout(request.timer);request.reject(Error('OUTDATED'));}pending.clear();}
     translate();return {open,reset,translate,poll};
   }
   return {mount};

@@ -251,8 +251,7 @@ function getLinkedCodesCat(cat){
 }
 function fillManageSelect(id,entries){
   const select=document.getElementById(id),selected=select.value;
-  select.innerHTML='';
-  entries.forEach(([value,label])=>{const option=document.createElement('option');option.value=value;option.textContent=label;select.appendChild(option);});
+  window.WorkspaceViews.options(select,{options:entries.map(([value,label])=>({value,label}))});
   if(entries.some(([value])=>value===selected))select.value=selected;
   else select.value=entries[0]?.[0] || '';
 }
@@ -297,10 +296,7 @@ function openEdit(kind,target){
   document.getElementById('edit-date').value=kind==='code'?(state.usedCodes[target] || ''):'';
   document.getElementById('edit-notes').value=kind==='code'?(state.codeNotes[target] || ''):'';
   const select=document.getElementById('edit-category');
-  select.innerHTML='';
-  (isExam?state.categoryOrder:Object.keys(state.codesByCategory)).forEach(cat=>{
-    const option=document.createElement('option');option.value=cat;option.textContent=displayCatName(cat);select.appendChild(option);
-  });
+  window.WorkspaceViews.options(select,{options:(isExam?state.categoryOrder:Object.keys(state.codesByCategory)).map(value=>({value,label:displayCatName(value)}))});
   if(!isCategory) select.value=isExam?(state.keycodeOverrides[target.code] || target.category):Object.keys(state.codesByCategory).find(cat=>state.codesByCategory[cat].includes(target));
   dialog.showModal();
 }
@@ -464,7 +460,6 @@ function showToast(msg){
   clearTimeout(toastTimer);
   toastTimer = setTimeout(()=>{el.classList.remove('show');el.textContent='';}, 5000);
 }
-const TRASH_ICON='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M10 7V4h4v3M6 7l1 13h10l1-13M10 11v6m4-6v6"/></svg>';
 function confirmDelete(message){
   const dialog=document.getElementById('delete-dialog');
   document.getElementById('delete-dialog-message').textContent=message;
@@ -882,214 +877,30 @@ async function goToCodesCategory(codesCat){
   await Cloud.refresh();
 }
 
-function buildAddCategoryBox(){
-  const box = document.createElement('details');
-  box.className = 'add-box';
-  box.style.marginTop = '0';
-  box.style.marginBottom = '12px';
-  const summary = document.createElement('summary');
-  summary.textContent = t('addCategory');
-  const hint = document.createElement('div');
-  hint.className = 'hint';
-  hint.textContent = t('categoryNameHint');
-  const row = document.createElement('div');
-  row.className = 'kc-add-cat-row';
-  const input = document.createElement('input');
-  input.type = 'text';
-  input.className = 'kc-add-cat-input';
-  input.placeholder = t('categoryNamePlaceholder');
-  input.setAttribute('aria-label',t('categoryNamePlaceholder'));
-  const addBtn = document.createElement('button');
-  addBtn.className = 'save';
-  addBtn.textContent = t('addBtn');
-
-  const examHint = document.createElement('div');
-  examHint.className = 'hint';
-  examHint.textContent = t('firstExamHint');
-  const examFields = document.createElement('div');
-  examFields.className = 'kc-add-exam-fields';
-  const examTitle = document.createElement('input');
-  examTitle.type = 'text';
-  examTitle.maxLength = 200;
-  examTitle.placeholder = t('examTitleCol');
-  examTitle.setAttribute('aria-label', t('examTitleCol'));
-  const examLanguage = document.createElement('select');
-  examLanguage.setAttribute('aria-label', t('langCol'));
-  ['Arabic','English'].forEach(value=>{
-    const option = document.createElement('option');
-    option.value = value;
-    option.textContent = t('languageNames')[value];
-    examLanguage.appendChild(option);
-  });
-  const examCode = document.createElement('input');
-  examCode.type = 'text';
-  examCode.maxLength = 200;
-  examCode.placeholder = t('keycodeCol');
-  examCode.setAttribute('aria-label', t('keycodeCol'));
-  const examDestination = document.createElement('select');
-  examDestination.setAttribute('aria-label', t('moveCategoryCol'));
-  state.categoryOrder.forEach(value=>{
-    const option = document.createElement('option');
-    option.value = value;
-    option.textContent = displayCatName(value);
-    examDestination.appendChild(option);
-  });
-  const newCategoryOption = document.createElement('option');
-  newCategoryOption.selected = true;
-  examDestination.appendChild(newCategoryOption);
-  function updateNewCategoryOption(){
-    newCategoryOption.value = input.value.trim();
-    newCategoryOption.textContent = input.value.trim() || t('categoryNamePlaceholder');
-  }
-  input.addEventListener('input', updateNewCategoryOption);
-  updateNewCategoryOption();
-  [examTitle,examLanguage,examCode,examDestination].forEach(field=>examFields.appendChild(field));
-
-  const codesHint = document.createElement('div');
-  codesHint.className = 'hint';
-  codesHint.textContent = t('categoryCodesHint');
-  const codesTa = document.createElement('textarea');
-  codesTa.placeholder = 'IBTAMEAF-XXXX-XXXX';
-  codesTa.setAttribute('aria-label',t('categoryCodesHint'));
-  codesTa.style.marginTop = '0';
-
-  async function submit(){
-    const name = input.value.trim();
-    if(!name) return;
-    const title = examTitle.value.trim();
-    const keycode = examCode.value.trim();
-    if((title && !keycode) || (!title && keycode)){ showToast(t('examRequired')); return; }
-    if(keycode && DEFAULT_KEYCODES.some(item=>item.code.toLowerCase() === keycode.toLowerCase())){
-      showToast(t('keycodeExists')); return;
-    }
-    const isNew = !state.categoryOrder.includes(name);
-    if(isNew) state.categoryOrder.push(name);
-    if(title && keycode){
-      DEFAULT_KEYCODES.push({title,lang:examLanguage.value,code:keycode,category:name});
-      if(examDestination.value && examDestination.value !== name) state.keycodeOverrides[keycode] = examDestination.value;
-    }
-    const codesCat = getLinkedCodesCat(name);
-    if(!state.codesByCategory[codesCat]) state.codesByCategory[codesCat] = [];
-
-    const lines = codesTa.value.split('\n').map(s=>s.trim()).filter(Boolean);
-    const existing = new Set(state.codesByCategory[codesCat]);
-    let added = 0;
-    lines.forEach(code=>{
-      if(!existing.has(code)){
-        state.codesByCategory[codesCat].push(code);
-        existing.add(code);
-        added++;
-      }
-    });
-
-    if(!isNew && added === 0 && !keycode){ showToast(t('categoryExists')); return; }
-
-    if(!await saveState()) return;
-    showToast(isNew ? t('categoryAdded') : t('newCodesAdded')(added));
-    renderKeycodes();
-    renderCodeTabs();
-  }
-  addBtn.addEventListener('click', submit);
-  input.addEventListener('keydown', async e=>{ if(e.key === 'Enter'){ e.preventDefault(); submit(); } });
-  row.appendChild(input);
-  row.appendChild(addBtn);
-  box.appendChild(summary);
-  box.appendChild(hint);
-  box.appendChild(row);
-  box.appendChild(examHint);
-  box.appendChild(examFields);
-  box.appendChild(codesHint);
-  box.appendChild(codesTa);
-  return box;
-}
-
-function buildAddExamBox(){
-  const box = document.createElement('details');
-  box.className = 'kc-add-exam';
-  const summary = document.createElement('summary');
-  summary.textContent = t('addExam');
-  const form = document.createElement('form');
-  const categoryLabel = document.createElement('label');
-  categoryLabel.className = 'kc-add-exam-category';
-  const categoryName = document.createElement('span');
-  categoryName.textContent = t('categoryNamePlaceholder');
-  const category = document.createElement('select');
-  category.name = 'category';
-  state.categoryOrder.forEach(value=>{
-    const option = document.createElement('option');
-    option.value = value;
-    option.textContent = displayCatName(value);
-    category.appendChild(option);
-  });
-  categoryLabel.appendChild(categoryName);
-  categoryLabel.appendChild(category);
-  const fields = document.createElement('div');
-  fields.className = 'kc-add-exam-fields';
-  const title = document.createElement('input');
-  title.name = 'examTitle';
-  title.type = 'text';
-  title.maxLength = 200;
-  title.required = true;
-  title.placeholder = t('examTitleCol');
-  title.setAttribute('aria-label', t('examTitleCol'));
-  const language = document.createElement('select');
-  language.name = 'language';
-  language.setAttribute('aria-label', t('langCol'));
-  ['Arabic','English'].forEach(value=>{
-    const option = document.createElement('option');
-    option.value = value;
-    option.textContent = t('languageNames')[value];
-    language.appendChild(option);
-  });
-  const keycode = document.createElement('input');
-  keycode.name = 'keycode';
-  keycode.type = 'text';
-  keycode.maxLength = 200;
-  keycode.required = true;
-  keycode.placeholder = t('keycodeCol');
-  keycode.setAttribute('aria-label', t('keycodeCol'));
-  const destination = document.createElement('select');
-  destination.name = 'moveCategory';
-  destination.setAttribute('aria-label', t('moveCategoryCol'));
-  state.categoryOrder.forEach(value=>{
-    const option = document.createElement('option');
-    option.value = value;
-    option.textContent = displayCatName(value);
-    destination.appendChild(option);
-  });
-  category.addEventListener('change',()=>{destination.value=category.value;});
-  [title,language,keycode,destination].forEach(field=>fields.appendChild(field));
-  const button = document.createElement('button');
-  button.type = 'submit';
-  button.textContent = t('addBtn');
-  form.addEventListener('submit', async event=>{
-    event.preventDefault();
-    const examTitle = title.value.trim();
-    const code = keycode.value.trim();
-    const cat = category.value;
-    if(!examTitle || !code){ showToast(t('examRequired')); return; }
-    if(DEFAULT_KEYCODES.some(item=>item.code.toLowerCase() === code.toLowerCase())){
-      showToast(t('keycodeExists')); return;
-    }
-    DEFAULT_KEYCODES.push({title:examTitle,lang:language.value,code,category:cat});
-    if(destination.value !== cat) state.keycodeOverrides[code] = destination.value;
-    if(!await saveState()) return;
-    renderKeycodes();
-    showToast(t('examAdded'));
-  });
-  form.appendChild(categoryLabel);
-  form.appendChild(fields);
-  form.appendChild(button);
-  box.appendChild(summary);
-  box.appendChild(form);
-  return box;
-}
-
 function renderSettingsAddForms(){
-  const container=document.getElementById('settings-add-forms');
-  container.innerHTML='';
-  container.appendChild(buildAddExamBox());
-  container.appendChild(buildAddCategoryBox());
+  window.WorkspaceViews.addForms(document.getElementById('settings-add-forms'),{
+    options:state.categoryOrder.map(value=>({value,label:displayCatName(value)})),languages:['Arabic','English'].map(value=>({value,label:t('languageNames')[value]})),
+    labels:{addExam:t('addExam'),addCategory:t('addCategory'),category:t('categoryNamePlaceholder'),title:t('examTitleCol'),language:t('langCol'),code:t('keycodeCol'),destination:t('moveCategoryCol'),add:t('addBtn'),categoryHint:t('categoryNameHint'),firstExamHint:t('firstExamHint'),codesHint:t('categoryCodesHint')},
+    addExam:async exam=>{
+      if(!exam.title||!exam.code){showToast(t('examRequired'));return;}
+      if(DEFAULT_KEYCODES.some(item=>item.code.toLowerCase()===exam.code.toLowerCase())){showToast(t('keycodeExists'));return;}
+      DEFAULT_KEYCODES.push({title:exam.title,lang:exam.language,code:exam.code,category:exam.category});
+      if(exam.destination!==exam.category)state.keycodeOverrides[exam.code]=exam.destination;
+      if(await saveState()){renderKeycodes();showToast(t('examAdded'));}
+    },
+    addCategory:async category=>{
+      const {name,title,code,language,destination,codes}=category;if(!name)return;
+      if((title&&!code)||(!title&&code)){showToast(t('examRequired'));return;}
+      if(code&&DEFAULT_KEYCODES.some(item=>item.code.toLowerCase()===code.toLowerCase())){showToast(t('keycodeExists'));return;}
+      const isNew=!state.categoryOrder.includes(name);if(isNew)state.categoryOrder.push(name);
+      if(title&&code){DEFAULT_KEYCODES.push({title,lang:language,code,category:name});if(destination&&destination!==name)state.keycodeOverrides[code]=destination;}
+      const linked=getLinkedCodesCat(name);state.codesByCategory[linked]||=[];
+      const existing=new Set(state.codesByCategory[linked]);let added=0;
+      for(const voucher of codes.split('\n').map(line=>line.trim()).filter(Boolean))if(!existing.has(voucher)){state.codesByCategory[linked].push(voucher);existing.add(voucher);added++;}
+      if(!isNew&&!added&&!code){showToast(t('categoryExists'));return;}
+      if(await saveState()){showToast(isNew?t('categoryAdded'):t('newCodesAdded')(added));renderKeycodes();renderCodeTabs();}
+    }
+  });
 }
 
 async function saveKeycodeOrder(category,orderedCodes){
@@ -1109,226 +920,39 @@ async function moveKeycode(category,code,step){
   movedRow.querySelector('.copy-code-btn').focus();
 }
 function renderKeycodes(){
-  const panel = document.getElementById('panel-keycodes');
-  panel.innerHTML = '';
-
-  const groups = {};
-  state.categoryOrder.forEach(c=>groups[c] = []);
-  DEFAULT_KEYCODES.forEach(item=>{
-    const cat = state.keycodeOverrides[item.code] || item.category;
-    if(!groups[cat]) groups[cat] = [];
-    groups[cat].push(item);
+  const groups={};state.categoryOrder.forEach(category=>groups[category]=[]);
+  for(const exam of DEFAULT_KEYCODES){const category=state.keycodeOverrides[exam.code]||exam.category;(groups[category]||=[]).push(exam);}
+  const moveCategory=async(index,step)=>{const order=state.categoryOrder;[order[index+step],order[index]]=[order[index],order[index+step]];if(await saveState())renderKeycodes();};
+  window.WorkspaceViews.keycodes(document.getElementById('panel-keycodes'),{
+    options:state.categoryOrder.map(value=>({value,label:displayCatName(value)})),
+    headings:['',t('examTitleCol'),t('langCol'),t('keycodeCol'),t('moveCategoryCol')],emptyLabel:t('noExams'),
+    groups:state.categoryOrder.map((cat,index)=>{
+      const items=getOrderedKeycodeItems(cat,groups[cat]||[]),linked=getLinkedCodesCat(cat),codes=state.codesByCategory[linked]||[],remaining=codes.filter(code=>!state.usedCodes[code]).length;
+      return {category:cat,title:displayCatName(cat)+' ('+items.length+')',linkedLabel:'🔗 '+displayCatName(linked)+' · '+t('remaining')+' '+remaining,
+        upLabel:t('moveUp'),downLabel:t('moveDown'),removeLabel:t('removeCategory'),first:index===0,last:index===state.categoryOrder.length-1,removable:!CATEGORY_ORDER.includes(cat),
+        moveUp:()=>moveCategory(index,-1),moveDown:()=>moveCategory(index,1),openCodes:()=>goToCodesCategory(linked),
+        remove:async()=>{
+          if(!await confirmDelete(t('confirmRemoveCategory')(cat)))return;
+          for(const exam of DEFAULT_KEYCODES)if(exam.category===cat)exam.category=state.keycodeOverrides[exam.code]||CATEGORY_ORDER[0];
+          for(const code of Object.keys(state.keycodeOverrides))if(state.keycodeOverrides[code]===cat)delete state.keycodeOverrides[code];
+          state.categoryOrder=state.categoryOrder.filter(category=>category!==cat);delete state.categoryLabels[cat];delete state.keycodeOrder[cat];
+          if(await saveState()){renderKeycodes();showToast(t('categoryRemoved'));}
+        },
+        rows:items.map(exam=>({code:exam.code,title:exam.title,language:t('languageNames')[exam.lang]||exam.lang,copyLabel:t('copyCode')(exam.code),categoryLabel:t('moveCategoryCol')+': '+exam.title,
+          copy:async()=>{if(!await copyText(exam.code))return false;showToast(t('copiedColon')(exam.code));return true;},
+          move:async(category)=>{state.keycodeOverrides[exam.code]=category;if(await saveState()){renderKeycodes();showToast(t('movedTo')(exam.title,displayCatName(category)));}},
+          dragStart:event=>{draggedKcCode=exam.code;draggedKcCat=cat;event.dataTransfer.effectAllowed='move';event.dataTransfer.setData('text/plain',exam.code);},
+          dragEnd:()=>{draggedKcCode=draggedKcCat=null;},
+          dragOver:event=>{if(draggedKcCat!==cat||draggedKcCode===null)return false;event.preventDefault();return true;},
+          drop:async event=>{event.preventDefault();if(draggedKcCat!==cat||!draggedKcCode||draggedKcCode===exam.code)return;
+            const order=items.map(item=>item.code),from=order.indexOf(draggedKcCode);if(from<0)return;order.splice(from,1);order.splice(order.indexOf(exam.code),0,draggedKcCode);
+            if(await saveKeycodeOrder(cat,order))draggedKcCode=draggedKcCat=null;
+          }
+        }))
+      };
+    })
   });
-
-  state.categoryOrder.forEach((cat, catIndex)=>{
-    let items = groups[cat] || [];
-    items = getOrderedKeycodeItems(cat, items);
-    const linkedCodesCat = getLinkedCodesCat(cat);
-    const codesList = (state.codesByCategory[linkedCodesCat] || []);
-    const usedCount = codesList.filter(c => state.usedCodes[c]).length;
-    const remaining = codesList.length - usedCount;
-
-    const block = document.createElement('div');
-    block.className = 'kc-block';
-
-    const titleRow = document.createElement('div');
-    titleRow.className = 'kc-title-row';
-    const titleEl = document.createElement('div');
-    titleEl.className = 'kc-title';
-    titleEl.textContent = displayCatName(cat) + ' (' + items.length + ')';
-
-    const titleActions = document.createElement('div');
-    titleActions.className = 'kc-title-actions';
-
-    const orderBtns = document.createElement('div');
-    orderBtns.className = 'kc-order-btns';
-    const upBtn = document.createElement('button');
-    upBtn.className = 'kc-order-btn';
-    upBtn.textContent = '▲';
-    upBtn.title = t('moveUp');
-    upBtn.disabled = catIndex === 0;
-    upBtn.addEventListener('click', async ()=>{
-      const arr = state.categoryOrder;
-      [arr[catIndex-1], arr[catIndex]] = [arr[catIndex], arr[catIndex-1]];
-      if(!await saveState()) return;
-      renderKeycodes();
-    });
-    const downBtn = document.createElement('button');
-    downBtn.className = 'kc-order-btn';
-    downBtn.textContent = '▼';
-    downBtn.title = t('moveDown');
-    downBtn.disabled = catIndex === state.categoryOrder.length - 1;
-    downBtn.addEventListener('click', async ()=>{
-      const arr = state.categoryOrder;
-      [arr[catIndex+1], arr[catIndex]] = [arr[catIndex], arr[catIndex+1]];
-      if(!await saveState()) return;
-      renderKeycodes();
-    });
-    orderBtns.appendChild(upBtn);
-    orderBtns.appendChild(downBtn);
-
-    const linkBtn = document.createElement('button');
-    linkBtn.className = 'kc-link';
-    linkBtn.textContent = '🔗 ' + displayCatName(linkedCodesCat) + ' · ' + t('remaining') + ' ' + remaining;
-    linkBtn.addEventListener('click', ()=> goToCodesCategory(linkedCodesCat));
-
-    titleActions.appendChild(orderBtns);
-    titleActions.appendChild(linkBtn);
-
-    if(!CATEGORY_ORDER.includes(cat)){
-      const removeBtn = document.createElement('button');
-      removeBtn.className = 'kc-remove-cat-btn';
-      removeBtn.innerHTML = TRASH_ICON;
-      removeBtn.title = t('removeCategory');
-      removeBtn.setAttribute('aria-label',t('removeCategory'));
-      removeBtn.addEventListener('click', async ()=>{
-        if(!await confirmDelete(t('confirmRemoveCategory')(cat))) return;
-        DEFAULT_KEYCODES.forEach(item=>{
-          if(item.category === cat) item.category = state.keycodeOverrides[item.code] || CATEGORY_ORDER[0];
-        });
-        Object.keys(state.keycodeOverrides).forEach(code=>{
-          if(state.keycodeOverrides[code] === cat) delete state.keycodeOverrides[code];
-        });
-        state.categoryOrder = state.categoryOrder.filter(c=>c!==cat);
-        delete state.categoryLabels[cat];
-        delete state.keycodeOrder[cat];
-        if(!await saveState()) return;
-        renderKeycodes();
-        showToast(t('categoryRemoved'));
-      });
-      titleActions.appendChild(removeBtn);
-    }
-
-    titleRow.appendChild(titleEl);
-    titleRow.appendChild(titleActions);
-    block.appendChild(titleRow);
-
-    const scroll = document.createElement('div');
-    scroll.className = 'kc-scroll';
-
-    const headRow = document.createElement('div');
-    headRow.className = 'kc-head-row';
-    headRow.innerHTML = `
-      <div class="kc-col-drag"></div>
-      <div class="kc-col-title">${t('examTitleCol')}</div>
-      <div class="kc-col-lang">${t('langCol')}</div>
-      <div class="kc-col-code">${t('keycodeCol')}</div>
-      <div class="kc-col-cat">${t('moveCategoryCol')}</div>
-    `;
-    scroll.appendChild(headRow);
-
-    if(items.length === 0){
-      const empty = document.createElement('div');
-      empty.className = 'kc-empty';
-      empty.textContent = t('noExams');
-      scroll.appendChild(empty);
-    }
-
-    items.forEach(item=>{
-      const row = document.createElement('div');
-      row.className = 'kc-row';
-      row.dataset.keycode = item.code;
-
-      const handle = document.createElement('div');
-      handle.className = 'kc-drag-handle';
-      handle.textContent = '⋮⋮';
-      handle.draggable = true;
-      handle.addEventListener('dragstart', async (e)=>{
-        if(e.target.closest('button')){e.preventDefault();return;}
-        draggedKcCode = item.code;
-        draggedKcCat = cat;
-        row.classList.add('dragging');
-        try{ e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', item.code); }catch(err){}
-      });
-      handle.addEventListener('dragend', async ()=>{
-        row.classList.remove('dragging');
-        draggedKcCode = null;
-        draggedKcCat = null;
-        scroll.querySelectorAll('.kc-row.drag-over').forEach(r=>r.classList.remove('drag-over'));
-      });
-
-      row.addEventListener('dragover', async (e)=>{
-        if(draggedKcCat !== cat || draggedKcCode === null) return;
-        e.preventDefault();
-        row.classList.add('drag-over');
-      });
-      row.addEventListener('dragleave', async ()=>{
-        row.classList.remove('drag-over');
-      });
-      row.addEventListener('drop', async (e)=>{
-        e.preventDefault();
-        row.classList.remove('drag-over');
-        if(draggedKcCat !== cat || draggedKcCode === null || draggedKcCode === item.code) return;
-        const codesInOrder = items.map(it=>it.code);
-        const fromIdx = codesInOrder.indexOf(draggedKcCode);
-        if(fromIdx === -1) return;
-        codesInOrder.splice(fromIdx, 1);
-        const toIdx = codesInOrder.indexOf(item.code);
-        codesInOrder.splice(toIdx, 0, draggedKcCode);
-        if(!await saveKeycodeOrder(cat,codesInOrder)) return;
-        draggedKcCode = null;
-        draggedKcCat = null;
-      });
-
-      const titleCell = document.createElement('div');
-      titleCell.className = 'kc-col-title';
-      titleCell.textContent = item.title;
-
-      const langCell = document.createElement('div');
-      langCell.className = 'kc-col-lang';
-      langCell.textContent = t('languageNames')[item.lang] || item.lang;
-
-      const codeCell = document.createElement('div');
-      codeCell.className = 'kc-col-code';
-      const copyButton=document.createElement('button');
-      copyButton.type='button';copyButton.className='copy-code-btn';copyButton.textContent=item.code;
-      copyButton.setAttribute('aria-label',t('copyCode')(item.code));
-      codeCell.appendChild(copyButton);
-
-      const catCell = document.createElement('div');
-      catCell.className = 'kc-col-cat';
-      const select = document.createElement('select');
-      select.setAttribute('aria-label',t('moveCategoryCol')+': '+item.title);
-      state.categoryOrder.forEach(c=>{
-        const opt = document.createElement('option');
-        opt.value = c;
-        opt.textContent = displayCatName(c);
-        if(c === cat) opt.selected = true;
-        select.appendChild(opt);
-      });
-      select.addEventListener('click', e=> e.stopPropagation());
-      select.addEventListener('change', async e=>{
-        state.keycodeOverrides[item.code] = e.target.value;
-        if(!await saveState()) return;
-        renderKeycodes();
-        showToast(t('movedTo')(item.title, displayCatName(e.target.value)));
-      });
-      catCell.appendChild(select);
-
-      row.appendChild(handle);
-      row.appendChild(titleCell);
-      row.appendChild(langCell);
-      row.appendChild(codeCell);
-      row.appendChild(catCell);
-
-      async function copyKeycode(){
-        if(!await copyText(item.code)) return;
-        row.classList.add('copied');
-        showToast(t('copiedColon')(item.code));
-        setTimeout(()=>row.classList.remove('copied'), 900);
-      }
-      copyButton.addEventListener('click',async event=>{event.stopPropagation();await copyKeycode();});
-      row.addEventListener('click',copyKeycode);
-
-      scroll.appendChild(row);
-    });
-
-    block.appendChild(scroll);
-    panel.appendChild(block);
-  });
-
-  renderSettingsAddForms();
-  Cloud.decorate();
+  renderSettingsAddForms();Cloud.decorate();
 }
 
 // ---------- PANEL 2: PROMETRIC ----------
@@ -1447,37 +1071,22 @@ function positionCodeTimeline(previous=null){
 }
 
 function renderCodeTabs(){
-  const wrap = document.getElementById('code-cat-tabs');
-  wrap.innerHTML = '';
-  sortCategories(Object.keys(state.codesByCategory)).forEach(cat=>{
-    const b = document.createElement('button');
-    b.textContent = displayCatName(cat);
-    if(cat === activeCategory) b.classList.add('active');
-    b.addEventListener('click', async ()=>{
-      activeCategory = cat;
-      selectedCodes.clear();
-      codeScrolledToTop = false;
-      const scrollLabel=document.getElementById('code-scroll-label');
-      if(scrollLabel)scrollLabel.textContent=t('codeScrollToTop');
-      document.getElementById('code-scroll-top-btn')?.classList.remove('active');
-      renderCodeTabs();
-      renderCodeGrid();
-    });
-    wrap.appendChild(b);
+  window.WorkspaceViews.categories(document.getElementById('code-cat-tabs'),{
+    options:sortCategories(Object.keys(state.codesByCategory)).map(value=>({value,label:displayCatName(value)})),selected:activeCategory,
+    choose:category=>{
+      activeCategory=category;selectedCodes.clear();codeScrolledToTop=false;
+      const label=document.getElementById('code-scroll-label');if(label)label.textContent=t('codeScrollToTop');
+      document.getElementById('code-scroll-top-btn')?.classList.remove('active');renderCodeTabs();renderCodeGrid();
+    }
   });
 }
 
 function renderStats(){
-  const list = state.codesByCategory[activeCategory] || [];
-  const usedCount = list.filter(c => state.usedCodes[c]).length;
-  const el = document.getElementById('code-stats');
-  el.innerHTML = `
-    <div class="stat">${t('total')}: <b>${list.length}</b></div>
-    <div class="stat">${t('copiedStat')}: <b>${usedCount}</b></div>
-    <div class="stat">${t('remainingStat')}: <b>${list.length - usedCount}</b></div>
-  `;
+  const codes=state.codesByCategory[activeCategory]||[],used=codes.filter(code=>state.usedCodes[code]).length;
+  window.WorkspaceViews.stats(document.getElementById('code-stats'),{stats:[{label:t('total'),count:codes.length},{label:t('copiedStat'),count:used},{label:t('remainingStat'),count:codes.length-used}]});
   renderDailyUsed();
 }
+
 document.getElementById('daily-used-details').addEventListener('toggle',()=>{
   document.getElementById('daily-used-panel').hidden=!document.getElementById('daily-used-details').open;
 });
@@ -1495,25 +1104,10 @@ function dailyUsedGroups(iso){
   }));
 }
 function renderDailyUsed(){
-  const box=document.getElementById('daily-used-results');
-  box.innerHTML='';
-  const iso=document.getElementById('daily-used-date').value;
-  if(!iso){const prompt=document.createElement('div');prompt.className='daily-used-none';prompt.textContent=t('chooseUsedDate');box.appendChild(prompt);return;}
-  const groups=dailyUsedGroups(iso);
-  const total=groups.reduce((sum,group)=>sum+group.codes.length,0);
-  const totalEl=document.createElement('div');totalEl.className='daily-used-total';totalEl.textContent=t('dailyUsedTotal')(total);box.appendChild(totalEl);
-  if(total===0){const empty=document.createElement('div');empty.className='daily-used-none';empty.textContent=t('dailyUsedNone');box.appendChild(empty);}
-  groups.filter(group=>group.codes.length).forEach(group=>{
-    const section=document.createElement('div');section.className='daily-used-group';
-    const title=document.createElement('strong');title.textContent=displayCatName(group.cat)+': '+group.codes.length;section.appendChild(title);
-    if(group.codes.length){
-      const list=document.createElement('div');list.className='daily-used-codes';
-      group.codes.forEach(code=>{const pill=document.createElement('span');pill.textContent=code;list.appendChild(pill);});
-      section.appendChild(list);
-    }
-    box.appendChild(section);
-  });
+  const date=document.getElementById('daily-used-date').value,groups=date?dailyUsedGroups(date):[],total=groups.reduce((sum,group)=>sum+group.codes.length,0);
+  window.WorkspaceViews.daily(document.getElementById('daily-used-results'),{groups:groups.filter(group=>group.codes.length).map(group=>({category:displayCatName(group.cat),codes:group.codes})),totalLabel:date?t('dailyUsedTotal')(total):undefined,emptyLabel:!date?t('chooseUsedDate'):total===0?t('dailyUsedNone'):undefined});
 }
+
 document.getElementById('daily-used-date').addEventListener('change',renderDailyUsed);
 
 function updateBulkBar(){
@@ -1532,7 +1126,6 @@ function renderCodeGrid(){
   renderKeycodes();
   const grid = document.getElementById('code-grid');
   const previous=captureCodeTimeline();
-  grid.innerHTML = '';
   const list = state.codesByCategory[activeCategory] || [];
   const timeline=orderedCodeTimeline(list);
   grid.dataset.category=activeCategory || '';grid.dataset.hasHistory=String(timeline.start>0);
@@ -1542,131 +1135,21 @@ function renderCodeGrid(){
   const dayColors = getDayColors();
   renderStats();
   updateBulkBar();
-  if(list.length === 0){
-    grid.innerHTML = `<div class="empty-state" style="border:none; box-shadow:none;">${t('noCodesYet')}</div>`;
-    positionCodeTimeline();
-    return;
-  }
-  timeline.ordered.forEach(({code,index:i},position)=>{
-    const used = state.usedCodes[code];
-    const row = document.createElement('div');
-    row.className = 'code-row' + (used ? ' used' : '') + (position===timeline.start ? ' code-current-start' : '');
-    row.dataset.code=code;
-
-    const checkCell = document.createElement('div');
-    checkCell.className = 'col-check';
-    checkCell.addEventListener('click', e=>e.stopPropagation());
-    const checkbox = document.createElement('input');
-    checkbox.type = 'checkbox';
-    checkbox.setAttribute('aria-label',t('selectCode')(code));
-    checkbox.checked = selectedCodes.has(code);
-    // The checkbox is only for selecting codes for bulk deletion. It must
-    // never bubble into the row's copy action.
-    checkbox.addEventListener('mousedown', e=> e.stopPropagation());
-    checkbox.addEventListener('click', e=> e.stopPropagation());
-    checkbox.addEventListener('change', async e=>{
-      if(e.target.checked) selectedCodes.add(code);
-      else selectedCodes.delete(code);
-      updateBulkBar();
-    });
-    checkCell.appendChild(checkbox);
-
-    const n = document.createElement('div');
-    n.className = 'col-n';
-    n.textContent = i + 1;
-
-    const c = document.createElement('div');
-    c.className = 'col-code';
-    const copyButton=document.createElement('button');
-    copyButton.type='button';copyButton.className='copy-code-btn';copyButton.textContent=code;
-    copyButton.setAttribute('aria-label',t('copyCode')(code));
-    copyButton.addEventListener('click',async event=>{event.stopPropagation();await Cloud.copyCode(code);});
-    c.appendChild(copyButton);
-
-    const d = document.createElement('div');
-    d.className = 'col-date';
-    d.textContent = used ? used+(state.codeUseTimes?.[code]?' '+codeCopyTime(state.codeUseTimes[code]):'') : '';
-
-    if(used){
-      const dayColor = dayColors[used];
-      const fg = getContrastText(dayColor);
-      row.style.background = dayColor;
-      row.style.color = fg;
-      n.style.color = fg;
-      c.style.textDecoration = 'line-through';
-      c.style.textDecorationColor = fg;
-      c.style.color = fg;
-      d.style.color = fg;
-    }
-
-    const notesCell = document.createElement('div');
-    notesCell.className = 'col-notes';
-    const notesInput = document.createElement('input');
-    notesInput.type = 'text';
-    notesInput.placeholder = t('notePlaceholder');
-    notesInput.setAttribute('aria-label',t('codeNote')(code));
-    notesInput.value = state.codeNotes[code] || '';
-    notesInput.addEventListener('click', e=> e.stopPropagation());
-    notesInput.addEventListener('mousedown', e=> e.stopPropagation());
-    notesInput.addEventListener('change', async e=>{
-      const val = e.target.value;
-      if(val.trim() === ''){ delete state.codeNotes[code]; }
-      else { state.codeNotes[code] = val; }
-      if(!await saveState()) return;
-    });
-    notesCell.appendChild(notesInput);
-
-    const actions = document.createElement('div');
-    actions.className = 'col-actions';
-
-    if(used){
-      const unmarkBtn = document.createElement('button');
-      unmarkBtn.className = 'icon-btn';
-      unmarkBtn.title = t('removeMark');
-      unmarkBtn.setAttribute('aria-label',t('removeMark'));
-      unmarkBtn.textContent = '↺';
-      unmarkBtn.addEventListener('click', async (e)=>{
-        e.stopPropagation();
-        delete state.usedCodes[code];
-        if(!await saveState()) return;
-        renderCodeGrid();
-        showToast(t('markRemoved'));
-      });
-      actions.appendChild(unmarkBtn);
-    }
-
-    const delBtn = document.createElement('button');
-    delBtn.className = 'icon-btn danger';
-    delBtn.title = t('deleteCode');
-    delBtn.setAttribute('aria-label',t('deleteCode'));
-    delBtn.innerHTML = TRASH_ICON;
-    delBtn.addEventListener('click', async (e)=>{
-      e.stopPropagation();
-      if(!await confirmDelete(t('confirmDeleteCode')(code))) return;
-      state.codesByCategory[activeCategory] = state.codesByCategory[activeCategory].filter(x=>x!==code);
-      delete state.usedCodes[code];
-      delete state.codeNotes[code];
-      selectedCodes.delete(code);
-      if(!await saveState()) return;
-      renderCodeGrid();
-      showToast(t('codeDeleted'));
-    });
-    actions.appendChild(delBtn);
-
-    row.addEventListener('click', async e=>{
-      if(e.target.closest('.col-check, .col-notes, .col-actions, input, button, select, textarea')) return;
-      await Cloud.copyCode(code);
-    });
-
-    row.appendChild(checkCell);
-    row.appendChild(n);
-    row.appendChild(c);
-    row.appendChild(d);
-    row.appendChild(VoucherNames.cell(code));
-    row.appendChild(notesCell);
-    row.appendChild(actions);
-    grid.appendChild(row);
-  });
+  window.WorkspaceViews.vouchers(grid,{emptyLabel:t('noCodesYet'),rows:timeline.ordered.map(({code,index},position)=>{
+    const used=state.usedCodes[code],background=used?dayColors[used]:undefined;
+    return {code,number:index+1,used:!!used,current:position===timeline.start,background,foreground:used?getContrastText(background):undefined,
+      date:used?used+(state.codeUseTimes?.[code]?' '+codeCopyTime(state.codeUseTimes[code]):''):'',name:state.voucherNames?.[code]||'',notes:state.codeNotes[code]||'',selected:selectedCodes.has(code),readOnlyName:Cloud.role()==='copy_only',
+      labels:{select:t('selectCode')(code),copy:t('copyCode')(code),name:currentLang==='ar'?'اسم المتدرب للفاوتشر '+code:'Trainee name for voucher '+code,namePlaceholder:currentLang==='ar'?'اسم المتدرب':'Trainee name',notes:t('codeNote')(code),notesPlaceholder:t('notePlaceholder'),unmark:t('removeMark'),remove:t('deleteCode')},
+      copy:()=>Cloud.copyCode(code),select:selected=>{if(selected)selectedCodes.add(code);else selectedCodes.delete(code);updateBulkBar();},
+      saveName:async name=>{const saved=await Cloud.saveVoucherName(code,name);if(saved)showToast(currentLang==='ar'?'تم حفظ اسم المتدرب':'Trainee name saved');return saved;},
+      saveNotes:async notes=>{if(notes.trim())state.codeNotes[code]=notes;else delete state.codeNotes[code];await saveState();},
+      unmark:async()=>{delete state.usedCodes[code];if(await saveState()){renderCodeGrid();showToast(t('markRemoved'));}},
+      remove:async()=>{if(!await confirmDelete(t('confirmDeleteCode')(code)))return;
+        state.codesByCategory[activeCategory]=state.codesByCategory[activeCategory].filter(item=>item!==code);delete state.usedCodes[code];delete state.codeNotes[code];selectedCodes.delete(code);
+        if(await saveState()){renderCodeGrid();showToast(t('codeDeleted'));}
+      }
+    };
+  })});
   Cloud.decorate();
   positionCodeTimeline(previous);
 }
