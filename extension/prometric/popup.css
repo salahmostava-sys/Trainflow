@@ -1,4 +1,4 @@
-/* popup.css – Prometric Auto Register Extension Styles
+/* popup.css – TrainFlow Prometric Extension Styles
    Modernized UI/UX Design System with Light/Dark Mode & Accessibility
 */
 
@@ -115,18 +115,19 @@ body {
 
 /* ═══ HEADER ═══ */
 .hdr {
-  display: flex;
+  display: grid;
+  grid-template-columns: 40px minmax(0,1fr) auto;
   align-items: center;
   gap: 12px;
   padding: 13px 18px;
   border-bottom: 1px solid var(--border);
-  background: var(--surface);
+  background: linear-gradient(135deg,var(--surface),var(--surface2));
   backdrop-filter: var(--glass);
 }
 .hdr-icon {
-  width: 36px;
-  height: 36px;
-  background: transparent url('trainflow-app-icon.svg') center/contain no-repeat;
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
   border-radius: 10px;
   flex-shrink: 0;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
@@ -141,7 +142,7 @@ body {
 }
 .hdr-title {
   font-weight: 700;
-  font-size: 13.5px;
+  font-size: 20px;
   color: var(--text);
   white-space: nowrap;
   letter-spacing: -0.2px;
@@ -155,7 +156,9 @@ body {
   display: flex;
   align-items: center;
   gap: 6px;
-  margin-left: auto;
+  grid-column: 1 / -1;
+  justify-content: flex-end;
+  flex-wrap: wrap;
 }
 
 /* ─── Status Pill ────────────────────────────────────────────────────────────── */

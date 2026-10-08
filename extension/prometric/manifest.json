@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
-  "name": "Prometric Auto Register — TrainFlow",
-  "version": "4.2.0",
+  "name": "TrainFlow — Prometric",
+  "version": "4.2.1",
   "description": "Prometric registration and selected exam results linked to your TrainFlow trainee sheet",
   "permissions": [
     "tabs",
@@ -22,15 +22,15 @@
   "action": {
     "default_popup": "popup.html",
     "default_icon": {
-      "16": "icon16.png",
-      "48": "icon48.png",
-      "128": "icon128.png"
+      "16": "trainflow-icon16.png",
+      "48": "trainflow-icon48.png",
+      "128": "trainflow-icon128.png"
     }
   },
   "icons": {
-    "16": "icon16.png",
-    "48": "icon48.png",
-    "128": "icon128.png"
+    "16": "trainflow-icon16.png",
+    "48": "trainflow-icon48.png",
+    "128": "trainflow-icon128.png"
   },
   "content_scripts": [
     {

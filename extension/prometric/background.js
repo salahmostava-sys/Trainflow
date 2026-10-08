@@ -211,7 +211,7 @@ async function processEndOfQueue() {
   if (desktopNotifications ?? DEFAULT_DESKTOP_NOTIFICATIONS) {
     chrome.notifications.create({
       type: 'basic',
-      iconUrl: 'icon128.png',
+      iconUrl: 'trainflow-icon128.png',
       title: 'Batch Complete OK',
       message: `Registration finished: ${done} Successful, ${failed} Failed.`,
       priority: 2

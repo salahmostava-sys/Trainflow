@@ -1,10 +1,14 @@
-# Prometric Auto Register — TrainFlow 4.2.0
+# TrainFlow — Prometric 4.2.1
 
 Integrated from the user's Prometric Auto Register 4.0 source (Salah Mostafa,
 ISC license). Its original popup, registration steps, generation pattern,
 address defaults and import/export tools are retained.
 
-Production origin: **https://trainf.vercel.app/**. Updated 6 October 2026. Configured exclusively for the Vercel production origin.
+Production origin: **https://trainf.vercel.app/**. Updated 8 October 2026. Configured exclusively for the Vercel production origin.
+
+The toolbar, extension manager, notifications and popup use the same TrainFlow
+logo. Replace the installed extension files in their existing folder and reload
+the extension to update cached Chrome icons while keeping saved settings.
 
 ## Fetch exam results
 
