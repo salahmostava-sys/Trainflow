@@ -1143,6 +1143,60 @@ const Trainees=(()=>{
     $('sheet-align-center')?.setAttribute('aria-pressed',String(curAlign==='center'));
     $('sheet-align-left')?.setAttribute('aria-pressed',String(curAlign==='left'));
     excelTools?.paint(style);
+    updateSelectionStats();
+  }
+  function updateSelectionStats(){
+    const statsEl=$('sheet-selection-stats');
+    if(!statsEl)return;
+    const ranges=selectionRanges();
+    const cols=visibleCols();
+    if(ranges.length===1&&ranges[0][0]===ranges[0][1]&&ranges[0][2]===ranges[0][3]){
+      statsEl.textContent='';
+      statsEl.title='';
+      statsEl.hidden=true;
+      return;
+    }
+    let cellCount=0,numericCount=0,nonEmptyCount=0,sum=0;
+    if(ranges.length===1){
+      const [r1,r2,c1,c2]=ranges[0];
+      const rMin=Math.max(0,Math.min(r1,r2)),rMax=Math.min(view.length-1,Math.max(r1,r2));
+      const colMatches=cols.filter(c=>c>=Math.min(c1,c2)&&c<=Math.max(c1,c2)).length;
+      cellCount=(rMax>=rMin?rMax-rMin+1:0)*colMatches;
+    }
+    eachSelected((rowIndex,colIndex)=>{
+      if(ranges.length>1)cellCount++;
+      if(rowIndex===undefined||rowIndex>lastDataRow)return;
+      const val=cells[rowIndex]?.[colIndex]||'';
+      if(val.trim()!=='')nonEmptyCount++;
+      const str=val.startsWith('=')&&colIndex!==11?String(D.formulaValue(cells,rowIndex,colIndex,formulaCache)):val;
+      const num=D.number(str);
+      if(num!==null){
+        numericCount++;
+        sum+=num;
+      }
+    });
+    if(cellCount>1){
+      const parts=[];
+      parts.push(tr('العدد: ','Count: ')+cellCount.toLocaleString());
+      if(numericCount>0){
+        const cleanSum=Math.round((sum+Number.EPSILON)*1e8)/1e8;
+        const formattedSum=cleanSum.toLocaleString(undefined,{maximumFractionDigits:4});
+        parts.push(tr('المجموع: ','Sum: ')+formattedSum);
+      }
+      statsEl.textContent=parts.join(' · ');
+      if(numericCount>1){
+        const avg=Math.round(((sum/numericCount)+Number.EPSILON)*1e8)/1e8;
+        const formattedAvg=avg.toLocaleString(undefined,{maximumFractionDigits:4});
+        statsEl.title=parts.join(' · ')+tr(' · المتوسط: ',' · Average: ')+formattedAvg;
+      }else{
+        statsEl.title=statsEl.textContent;
+      }
+      statsEl.hidden=false;
+    }else{
+      statsEl.textContent='';
+      statsEl.title='';
+      statsEl.hidden=true;
+    }
   }
   function selectCell(r,c,extend=false,additive=false){startSelection({r,c},{r,c},extend,additive);$('sheet-grid').querySelector(`td[data-v="${r}"][data-col="${c}"]`)?.focus();}
   function focusCell(r,c,extend=false){
@@ -1338,7 +1392,7 @@ const Trainees=(()=>{
     catch(error){$('sheet-code-status').textContent=/CONFLICT/.test(error.message||'')?tr('تغيرت الأكواد. حدّث القائمة وحاول مجددًا.','Codes changed. Refresh and try again.'):tr('تعذر تخصيص الأكواد. تأكد أن المستخدم نشط ثم حدّث القائمة.','Could not assign codes. Check that the user is active, then refresh.');}
     finally{codeBusy=false;$('sheet-code-workspace').inert=false;if($('sheet-owner'))$('sheet-owner').disabled=false;}
   }
-  function reset(){sheetTools?.close();sheetId=FIRST_SHEET;worksheets=[];worksheetBusy=false;prometricTools?.reset();certificateTools?.reset();setExpandedView(false);excelTools?.closeFiles();closeDuplicateDetails();closeContextMenu();$('sheet-find-dialog')?.close();clearTimeout(timer);epoch++;owner='';cells=[];formatting=D.defaultFormat();loaded=false;loading=false;editing=null;history=[];future=[];revision=savedRevision=0;if(initialized){$('sheet-cell-content').value='';$('sheet-cell-content').title='';render();if($('sheet-owner'))window.WorkspaceViews.options($('sheet-owner'),{options:[]});window.WorkspaceViews.clear($('sheet-code-list'));$('sheet-workspace').inert=true;}}
+  function reset(){sheetTools?.close();sheetId=FIRST_SHEET;worksheets=[];worksheetBusy=false;prometricTools?.reset();certificateTools?.reset();setExpandedView(false);excelTools?.closeFiles();closeDuplicateDetails();closeContextMenu();$('sheet-find-dialog')?.close();clearTimeout(timer);epoch++;owner='';cells=[];formatting=D.defaultFormat();loaded=false;loading=false;editing=null;history=[];future=[];revision=savedRevision=0;if(initialized){$('sheet-cell-content').value='';$('sheet-cell-content').title='';if($('sheet-selection-stats')){$('sheet-selection-stats').textContent='';$('sheet-selection-stats').hidden=true;}render();if($('sheet-owner'))window.WorkspaceViews.options($('sheet-owner'),{options:[]});window.WorkspaceViews.clear($('sheet-code-list'));$('sheet-workspace').inert=true;}}
   function suspend(){prometricTools?.reset();certificateTools?.reset();setExpandedView(false);excelTools?.closeFiles();closeDuplicateDetails();closeContextMenu();$('sheet-find-dialog')?.close();clearTimeout(timer);}
   return {open,translate,hasDraft,flush,reset,suspend,savePosition};
 })();

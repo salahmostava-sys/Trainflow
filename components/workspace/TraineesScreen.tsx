@@ -83,25 +83,6 @@ export function TraineesScreen({ active = false }: { active?: boolean }) {
               <tbody></tbody>
             </table>
           </div>
-          <div className="sheet-add-rows-bar">
-            <span id="sheet-add-prefix"></span>
-            <input
-              type="number"
-              id="sheet-add-bulk-count"
-              defaultValue="1000"
-              min="1"
-              max="100000"
-              step="100"
-              className="sheet-add-bulk-input"
-              aria-label="عدد الصفوف المراد إضافتها"
-            />
-            <span id="sheet-add-suffix"></span>
-            <button
-              type="button"
-              id="sheet-add-bulk-btn"
-              className="sheet-primary"
-            ></button>
-          </div>
           <div
             id="sheet-worksheet-tabs"
             className="sheet-worksheet-tabs"
@@ -109,6 +90,34 @@ export function TraineesScreen({ active = false }: { active?: boolean }) {
             aria-label="Worksheets"
           />
           <div className="sheet-footer">
+            <div className="sheet-add-rows-bar">
+              <span id="sheet-add-prefix"></span>
+              <input
+                type="number"
+                id="sheet-add-bulk-count"
+                defaultValue="1000"
+                min="1"
+                max="100000"
+                step="100"
+                className="sheet-add-bulk-input"
+                aria-label="عدد الصفوف المراد إضافتها"
+              />
+              <span id="sheet-add-suffix"></span>
+              <button
+                type="button"
+                id="sheet-add-bulk-btn"
+                className="sheet-primary"
+              ></button>
+            </div>
+            <div className="sheet-footer-stats">
+              <span
+                id="sheet-selection-stats"
+                className="sheet-selection-stats"
+                hidden={true}
+              ></span>
+              <span id="sheet-count"></span>
+            </div>
+            <p id="sheet-help"></p>
             <div className="sheet-zoom-tools" dir="ltr">
               <button type="button" id="sheet-expanded" aria-pressed="false" />
               <span id="sheet-zoom-label"></span>
@@ -135,8 +144,6 @@ export function TraineesScreen({ active = false }: { active?: boolean }) {
                 defaultValue="100%"
               />
             </div>
-            <p id="sheet-help"></p>
-            <span id="sheet-count"></span>
           </div>
         </div>
         <div id="sheet-code-workspace" hidden={true}>
