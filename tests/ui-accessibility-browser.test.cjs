@@ -159,6 +159,7 @@ test('compact operational pages remove empty width and keep inventory copying re
   const page=await openWorkspace(t);
   await page.evaluate(async()=>{
     uiTestDatabase.stock=[{category:'Foundation-100',remaining:10}];
+    uiTestDatabase.settings.payload.inventorySupervisorName='محمد';
     uiTestDatabase.settings.payload.links={prometric:'https://tcnet1.prometric.com/Login.aspx?ClientNameSingleSite=preview',zoom:'https://us02web.zoom.us/j/123456789?pwd=preview'};
     await Cloud.refresh();
   });
@@ -175,6 +176,18 @@ test('compact operational pages remove empty width and keep inventory copying re
     }
     await page.setViewportSize({width:390,height:844});
     assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),panel+' remains within the mobile viewport');
+    if(panel==='inventory'){
+      for(const width of [390,1440]){
+        await page.setViewportSize({width,height:1000});
+        const sections=page.locator('#inventory-message section');
+        const [mine,supervisor,total]=await Promise.all([0,1,2].map(index=>sections.nth(index).boundingBox()));
+        assert.equal(mine.y,supervisor.y,'Both balances start at the same height');
+        assert.ok(mine.x-(supervisor.x+supervisor.width)>=20,'Arabic balances have a clear gap');
+        assert.ok(total.y>=Math.max(mine.y+mine.height,supervisor.y+supervisor.height)+20,'Totals appear below both balances');
+        const message=await page.locator('#inventory-message').boundingBox();
+        assert.ok(Math.abs(total.x+total.width/2-(message.x+message.width/2))<1,'Totals are centered');
+      }
+    }
     await page.setViewportSize({width:1440,height:1000});
   }
   const copy=page.locator('#inventory-copy-message');
@@ -188,7 +201,13 @@ test('compact operational pages remove empty width and keep inventory copying re
   }
   await page.mouse.up();
   await page.waitForFunction(()=>uiTestCopies.length===1);
-  assert.equal(await page.evaluate(()=>uiTestCopies[0]),await page.locator('#inventory-message').innerText(),'Copying retains the full inventory message');
+  assert.match(await page.evaluate(()=>uiTestCopies[0]),/^التاريخ: [^\n]+\n\nالأكواد معايا\nFoundation: 1\n\nالأكواد مع محمد\nFoundation: 10\n\nإجمالي الأكواد\nFoundation: 11\nالإجمالي الكلي: 11$/,'Copying retains the complete plain-text message and correct totals');
+  assert.equal(await page.locator('#inventory-message section').count(),3,'Copying preserves the summary layout');
+  await page.evaluate(async()=>{uiTestDatabase.settings.payload.inventoryMessageLanguage='en';await Cloud.refresh();});
+  assert.equal(await page.locator('#inventory-message').getAttribute('dir'),'ltr');
+  assert.deepEqual(await page.locator('#inventory-message h4').allTextContents(),['Codes with me','Codes with محمد','Total codes']);
+  await copy.click();await page.waitForFunction(()=>uiTestCopies.length===2);
+  assert.match(await page.evaluate(()=>uiTestCopies[1]),/^Date: [^\n]+\n\nCodes with me\nFoundation: 1\n\nCodes with محمد\nFoundation: 10\n\nTotal codes\nFoundation: 11\nOverall total: 11$/);
   await navigate(page,'trainees');await page.waitForFunction(()=>document.getElementById('sheet-status').textContent==='تم الحفظ');await page.locator('#sheet-prometric-open').click();
   const registration=page.locator('#sheet-prometric-dialog');assert.ok((await registration.boundingBox()).width<=760,'Registration dialog has a compact desktop width');
   await page.setViewportSize({width:390,height:844});assert.ok(await registration.evaluate(el=>{const box=el.getBoundingClientRect();return box.left>=0&&box.right<=innerWidth;}),'Registration dialog fits mobile');await page.keyboard.press('Escape');

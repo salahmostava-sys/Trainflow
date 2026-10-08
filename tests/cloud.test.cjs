@@ -200,8 +200,10 @@ for(const key of usedKeys) assert(englishKeys.includes(key),`Missing translation
   assert.equal(db.stock[0].remaining,200);
   assert.equal(els['inventory-copy-message'].disabled,false);
   await els['inventory-copy-message'].listeners.click();
-  assert.match(els['inventory-message'].textContent,/الأكواد معايا\nFoundation: 1\n\nالأكواد مع المشرف\nFoundation: 200\n\nإجمالي الأكواد\nFoundation: 201/);
-  assert.equal(events.some(e=>e.name==='clipboard'&&e.text.includes('الأكواد معايا')),true);
+  assert.deepEqual(Array.from(els['inventory-message'].querySelectorAll('section'),section=>section.textContent),[
+    'الأكواد معاياFoundation: 1','الأكواد مع المشرفFoundation: 200','إجمالي الأكوادFoundation: 201الإجمالي الكلي: 201'
+  ]);
+  assert.match(events.findLast(event=>event.name==='clipboard').text,/الأكواد معايا\nFoundation: 1\n\nالأكواد مع المشرف\nFoundation: 200\n\nإجمالي الأكواد\nFoundation: 201/);
   els['daily-used-details'].open=true;
   els['daily-used-details'].listeners.toggle();
   assert.equal(els['daily-used-panel'].hidden,false);

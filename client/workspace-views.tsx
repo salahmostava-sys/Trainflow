@@ -23,6 +23,7 @@ import {
   MemberList,
   AuditList,
   StockList,
+  InventorySummary,
 } from "../components/workspace/OperationsViews";
 import {
   WorksheetDialog,
@@ -67,6 +68,12 @@ function renderView(container: Element, view: React.ReactNode) {
 }
 
 export const WorkspaceViews = {
+  inventorySummary(
+    container: Element,
+    props: React.ComponentProps<typeof InventorySummary>,
+  ) {
+    renderView(container, <InventorySummary {...props} />);
+  },
   message(container: Element, message: string) {
     renderView(container, message);
   },

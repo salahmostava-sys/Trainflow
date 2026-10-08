@@ -179,7 +179,7 @@ function sortCategories(cats){
   });
 }
 
-function inventoryMessage(categories,stock,source=null){
+function inventorySummary(categories,stock,source=null){
   categories=sortCategories(categories);
   const settings=source?.settings||Cloud.inventoryMessageSettings(),dict=TRANSLATIONS[settings.language];
   const labels=source?.labels||state.categoryLabels;
@@ -191,13 +191,17 @@ function inventoryMessage(categories,stock,source=null){
     ? categories.reduce((sum,category)=>sum+mine(category)+stock[category],0):dict.inventoryNotSet;
   const dateStr=typeof todayStr==='function'?todayStr():new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Riyadh',day:'2-digit',month:'2-digit',year:'numeric'}).format(new Date());
   const dateHeader=dict.inventoryMessageDate?dict.inventoryMessageDate(dateStr):(settings.language==='ar'?'التاريخ: '+dateStr:'Date: '+dateStr);
-  return [dateHeader,'',
-    dict.inventoryMessageMine,...categories.map(category=>label(category)+': '+mine(category)),
-    '',dict.inventoryMessageSupervisor(name),...categories.map(category=>label(category)+': '+theirs(category)),
-    '',dict.inventoryMessageTotal,...categories.map(category=>{
+  return {date:dateHeader,sections:[
+    {title:dict.inventoryMessageMine,lines:categories.map(category=>label(category)+': '+mine(category))},
+    {title:dict.inventoryMessageSupervisor(name),lines:categories.map(category=>label(category)+': '+theirs(category))},
+    {title:dict.inventoryMessageTotal,lines:categories.map(category=>{
       const total=Object.hasOwn(stock,category)?mine(category)+stock[category]:dict.inventoryNotSet;
       return label(category)+': '+total;
-    }),dict.inventoryMessageOverall+': '+overall].join('\n');
+    })}],overall:dict.inventoryMessageOverall+': '+overall};
+}
+function inventoryMessage(categories,stock,source=null){
+  const summary=inventorySummary(categories,stock,source);
+  return [summary.date,'',...summary.sections.flatMap(section=>[section.title,...section.lines,'']).slice(0,-1),summary.overall].join('\n');
 }
 function renderInventory(){
   const categories=sortCategories(Object.keys(state.codesByCategory || {})),stock=Cloud.stockSnapshot(),messageSettings=Cloud.inventoryMessageSettings();
@@ -207,11 +211,11 @@ function renderInventory(){
   categorySelect.value=categories.includes(previous)?previous:(categories[0] || '');
   syncInventoryAction();
   const complete=categories.length>0 && categories.every(category=>Object.hasOwn(stock,category));
-  const message=inventoryMessage(categories,stock);
   const msgEl=document.getElementById('inventory-message');
   if(msgEl){
-    msgEl.textContent=message;
+    window.WorkspaceViews.inventorySummary(msgEl,inventorySummary(categories,stock));
     msgEl.dir=messageSettings.language==='ar'?'rtl':'ltr';
+    msgEl.lang=messageSettings.language;
   }
   const hintEl=document.getElementById('inventory-message-hint');
   if(hintEl)hintEl.textContent=!complete?t('inventoryMessageHint'):'';
@@ -257,6 +261,5 @@ document.getElementById('inventory-add-purchased').addEventListener('click',asyn
 document.getElementById('inventory-copy-message').addEventListener('click',async()=>{
   const categories=sortCategories(Object.keys(state.codesByCategory || {})),stock=Cloud.stockSnapshot();
   const message=inventoryMessage(categories,stock);
-  document.getElementById('inventory-message').textContent=message;
   if(await copyText(message))showToast(t('inventoryMessageCopied'));
 });

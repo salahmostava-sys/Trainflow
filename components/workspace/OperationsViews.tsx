@@ -111,3 +111,32 @@ export function StockList({
     </>
   );
 }
+
+export function InventorySummary({
+  date,
+  sections,
+  overall,
+}: {
+  date: string;
+  sections: { title: string; lines: string[] }[];
+  overall: string;
+}) {
+  return (
+    <>
+      <p className="inventory-summary-date">{date}</p>
+      <div className="inventory-summary-grid">
+        {sections.map((section, index) => (
+          <section className="inventory-summary-section" key={section.title}>
+            <h4>{section.title}</h4>
+            {section.lines.map((line, lineIndex) => (
+              <p key={lineIndex}><bdi>{line}</bdi></p>
+            ))}
+            {index === sections.length - 1 && (
+              <p className="inventory-summary-overall">{overall}</p>
+            )}
+          </section>
+        ))}
+      </div>
+    </>
+  );
+}
