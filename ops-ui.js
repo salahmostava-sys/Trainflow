@@ -202,12 +202,12 @@ function inventorySummary(categories,stock,source=null){
 function inventoryMessage(categories,stock,source=null){
   const summary=inventorySummary(categories,stock,source);
   const divider='──────────────────';
-  const parts=[summary.date,''];
+  const parts=['*'+summary.date+'*',''];
   summary.sections.forEach((section,index)=>{
     if(index===summary.sections.length-1)parts.push(divider);
     parts.push('*'+section.title+'*',...section.lines,'');
   });
-  parts.push('*'+summary.overall+'*');
+  parts.push('\u2003\u2003\u2003*'+summary.overall+'*');
   return parts.join('\n');
 }
 function renderInventoryCardCanvas(categories,stock,source=null){
