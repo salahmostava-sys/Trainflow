@@ -201,7 +201,14 @@ function inventorySummary(categories,stock,source=null){
 }
 function inventoryMessage(categories,stock,source=null){
   const summary=inventorySummary(categories,stock,source);
-  return [summary.date,'',...summary.sections.flatMap(section=>[section.title,...section.lines,'']).slice(0,-1),summary.overall].join('\n');
+  const divider='──────────────────';
+  const parts=[summary.date,''];
+  summary.sections.forEach((section,index)=>{
+    if(index===summary.sections.length-1)parts.push(divider);
+    parts.push('*'+section.title+'*',...section.lines,'');
+  });
+  parts.push('*'+summary.overall+'*');
+  return parts.join('\n');
 }
 function renderInventory(){
   const categories=sortCategories(Object.keys(state.codesByCategory || {})),stock=Cloud.stockSnapshot(),messageSettings=Cloud.inventoryMessageSettings();
