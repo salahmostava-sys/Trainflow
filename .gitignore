@@ -15,4 +15,5 @@ node_modules/
 *.bak
 supabase/.temp/
 artifacts/
+.scannerwork/
 
