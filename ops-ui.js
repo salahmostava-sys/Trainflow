@@ -203,24 +203,10 @@ function inventoryMessage(categories,stock,source=null){
   const summary=inventorySummary(categories,stock,source);
   const divider='──────────────────';
   const parts=[summary.date,''];
-  const sec0=summary.sections[0], sec1=summary.sections[1], secTotal=summary.sections[2];
-  if(sec0 && sec1){
-    const col0Width=Math.max(...sec0.lines.map(l=>l.length),0);
-    const targetWidth=Math.max(col0Width,('*'+sec0.title+'*').length)+2;
-    parts.push(('*'+sec0.title+'*').padEnd(targetWidth)+'|   *'+sec1.title+'*');
-    const maxLines=Math.max(sec0.lines.length,sec1.lines.length);
-    for(let i=0;i<maxLines;i++){
-      const l0=sec0.lines[i]||'', l1=sec1.lines[i]||'';
-      parts.push(l0.padEnd(targetWidth)+'|   '+l1);
-    }
-    parts.push('');
-  } else {
-    summary.sections.slice(0,2).forEach(s=>parts.push('*'+s.title+'*',...s.lines,''));
-  }
-  if(secTotal){
-    parts.push(divider);
-    parts.push('*'+secTotal.title+'*',...secTotal.lines,'');
-  }
+  summary.sections.forEach((section,index)=>{
+    if(index===summary.sections.length-1)parts.push(divider);
+    parts.push('*'+section.title+'*',...section.lines,'');
+  });
   parts.push('*'+summary.overall+'*');
   return parts.join('\n');
 }
