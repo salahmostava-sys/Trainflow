@@ -22,6 +22,14 @@ export function InventoryScreen({ active = false }: { active?: boolean }) {
           >
             Copy message
           </button>
+          <button
+            id="inventory-copy-image"
+            className="resource-btn"
+            type="button"
+            data-i18n="inventoryCopyImage"
+          >
+            Copy as image
+          </button>
         </div>
       </div>
     </section>

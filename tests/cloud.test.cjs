@@ -199,11 +199,12 @@ for(const key of usedKeys) assert(englishKeys.includes(key),`Missing translation
   await els['inventory-add-purchased'].listeners.click();
   assert.equal(db.stock[0].remaining,200);
   assert.equal(els['inventory-copy-message'].disabled,false);
+  assert.equal(els['inventory-copy-image'].disabled,false);
   await els['inventory-copy-message'].listeners.click();
   assert.deepEqual(Array.from(els['inventory-message'].querySelectorAll('section'),section=>section.textContent),[
     'الأكواد معاياFoundation: 1','الأكواد مع المشرفFoundation: 200','إجمالي الأكوادFoundation: 201الإجمالي الكلي: 201'
   ]);
-  assert.match(events.findLast(event=>event.name==='clipboard').text,/\*الأكواد معايا\*\nFoundation: 1\n\n\*الأكواد مع المشرف\*\nFoundation: 200\n\n──────────────────\n\*إجمالي الأكواد\*\nFoundation: 201/);
+  assert.match(events.findLast(event=>event.name==='clipboard').text,/\*الأكواد معايا\*\s+\|\s+\*الأكواد مع المشرف\*\nFoundation: 1\s+\|\s+Foundation: 200\n\n──────────────────\n\*إجمالي الأكواد\*\nFoundation: 201/);
   els['daily-used-details'].open=true;
   els['daily-used-details'].listeners.toggle();
   assert.equal(els['daily-used-panel'].hidden,false);

@@ -473,6 +473,9 @@
   #inventory-copy-message{background:var(--blue-600);border-color:var(--blue-600);color:#fff;}
   #inventory-copy-message:hover,#inventory-copy-message:active{background:#00499f;border-color:#00499f;color:#fff;}
   #inventory-copy-message:focus-visible{outline:3px solid var(--blue);outline-offset:3px;}
+  #inventory-copy-image{background:#0284c7;border-color:#0284c7;color:#fff;}
+  #inventory-copy-image:hover,#inventory-copy-image:active{background:#0369a1;border-color:#0369a1;color:#fff;}
+  #inventory-copy-image:focus-visible{outline:3px solid var(--blue);outline-offset:3px;}
 
   /* Inventory Supervisor Balances & Actions */
   .inventory-control-bar{

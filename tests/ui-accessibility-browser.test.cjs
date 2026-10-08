@@ -201,13 +201,13 @@ test('compact operational pages remove empty width and keep inventory copying re
   }
   await page.mouse.up();
   await page.waitForFunction(()=>uiTestCopies.length===1);
-  assert.match(await page.evaluate(()=>uiTestCopies[0]),/^التاريخ: [^\n]+\n\n\*الأكواد معايا\*\nFoundation: 1\n\n\*الأكواد مع محمد\*\nFoundation: 10\n\n──────────────────\n\*إجمالي الأكواد\*\nFoundation: 11\n\n\*الإجمالي الكلي: 11\*$/,'Copying retains the complete plain-text message and correct totals');
+  assert.match(await page.evaluate(()=>uiTestCopies[0]),/^التاريخ: [^\n]+\n\n\*الأكواد معايا\*\s+\|\s+\*الأكواد مع محمد\*\nFoundation: 1\s+\|\s+Foundation: 10\n\n──────────────────\n\*إجمالي الأكواد\*\nFoundation: 11\n\n\*الإجمالي الكلي: 11\*$/,'Copying retains the complete plain-text message and correct totals');
   assert.equal(await page.locator('#inventory-message section').count(),3,'Copying preserves the summary layout');
   await page.evaluate(async()=>{uiTestDatabase.settings.payload.inventoryMessageLanguage='en';await Cloud.refresh();});
   assert.equal(await page.locator('#inventory-message').getAttribute('dir'),'ltr');
   assert.deepEqual(await page.locator('#inventory-message h4').allTextContents(),['Codes with me','Codes with محمد','Total codes']);
   await copy.click();await page.waitForFunction(()=>uiTestCopies.length===2);
-  assert.match(await page.evaluate(()=>uiTestCopies[1]),/^Date: [^\n]+\n\n\*Codes with me\*\nFoundation: 1\n\n\*Codes with محمد\*\nFoundation: 10\n\n──────────────────\n\*Total codes\*\nFoundation: 11\n\n\*Overall total: 11\*$/);
+  assert.match(await page.evaluate(()=>uiTestCopies[1]),/^Date: [^\n]+\n\n\*Codes with me\*\s+\|\s+\*Codes with محمد\*\nFoundation: 1\s+\|\s+Foundation: 10\n\n──────────────────\n\*Total codes\*\nFoundation: 11\n\n\*Overall total: 11\*$/);
   await navigate(page,'trainees');await page.waitForFunction(()=>document.getElementById('sheet-status').textContent==='تم الحفظ');await page.locator('#sheet-prometric-open').click();
   const registration=page.locator('#sheet-prometric-dialog');assert.ok((await registration.boundingBox()).width<=760,'Registration dialog has a compact desktop width');
   await page.setViewportSize({width:390,height:844});assert.ok(await registration.evaluate(el=>{const box=el.getBoundingClientRect();return box.left>=0&&box.right<=innerWidth;}),'Registration dialog fits mobile');await page.keyboard.press('Escape');
