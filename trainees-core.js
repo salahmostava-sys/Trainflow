@@ -177,7 +177,7 @@
     ['CBP-LTC','Leading Through Change','القيادة خلال التغيير'],['CBP-ES','Executive Secretarial','Executive Secretary','السكرتارية التنفيذية'],
     ['CBP-AB','Accounting and Budgeting','Accounting & Budgeting','المحاسبة والميزانية'],['CBP-BC','Business Communication','Business Communications','اتصالات الأعمال'],
     ['CBP-CMPR','Crisis Management and Public Relations','Crisis Management & Public Relations','Crisis Management in Public Relations','إدارة الأزمات في العلاقات العامة'],
-    ['CBP-ECM','Event and Crowd Management','Event & Crowd Management','Events and Crowd Management','Event and Conference Management','Events and Conferences Management','Event Management','إدارة الفعاليات والحشود'],
+    ['CBP-ECM','Event and Crowd Management','Event & Crowd Management','Events and Crowd Management','Event and Crowd Safety Management','Event & Crowd Safety Management','Event and Conference Management','Events and Conferences Management','Event Management','إدارة الفعاليات والحشود','إدارة الفعاليات وسلامة الحشود'],
     ['CBP-TOT','Training of Trainers','Train the Trainer','Training Trainers','Train Of Trainer','تدريب المدربين'],['CBP-BM','Business Management','إدارة الأعمال'],
     ['CBP-BE','Business Etiquette','سلوكيات الأعمال','آداب الأعمال','اتيكيت الأعمال'],
     ['CBP-CTS','Computer Technology Specialist','Computer Technology','تقنية الحاسب','تقنية الحاسب الآلي','تكنولوجيا الحاسب','تكنولوجيا الحاسب الآلي'],

@@ -20,6 +20,8 @@ for(const [id,title,arabic]of courseFixtures){
   for(const name of [id.replace('-','–'),id.replace('-','‑'),'CBP™- '+title])assert.equal(D.courseKeycode(name,catalog)?.code,id+'-AR-KEY','Pasted course titles and Unicode hyphens match: '+name);
 }
 assert.equal(D.courseKeycode('CBP-HRM',catalog)?.code,'CBP-HR-AR-KEY');
+for(const title of ['إدارة الفعاليات وسلامة الحشود','محترف الأعمال المعتمد في إدارة الفعاليات و سلامة الحشود','Event and Crowd Safety Management','Event & Crowd Safety Management'])assert.equal(D.courseKeycode(title,catalog)?.code,'CBP-ECM-AR-KEY','Events and crowd safety uses the saved ECM keycode: '+title);
+assert.equal(D.courseKeycode('CBP-ECM',[{title:'إدارة الفعاليات وسلامة الحشود',code:'SAVED-CROWD-KEY',lang:'Arabic'}])?.code,'SAVED-CROWD-KEY','An Arabic crowd-safety catalog title matches the course identifier');
 assert.equal(D.courseKeycode('CBP-M-UNKNOWN',catalog),null,'An unknown identifier must not match a shorter course identifier');
 assert.equal(D.courseKeycode('CBP™- Safety Management',[{title:'Safety Management',code:'CUSTOM-KEY',lang:'Arabic'}])?.code,'CUSTOM-KEY','Custom catalog courses also match a CBP title prefix');
 assert.equal(D.courseKeycode('CBP-CUSTOM',[{title:'Safety Management',code:'CBP-CUSTOM',lang:'Arabic'}])?.code,'CBP-CUSTOM','Exact custom keycodes remain usable');
