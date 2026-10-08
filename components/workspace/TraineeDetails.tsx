@@ -79,7 +79,7 @@ export function DetailRecords(props: DetailRecordsProps) {
           <dl>
             {record.fields.map((field, column) => (
               <React.Fragment key={column}>
-                <dt dir={field.direction || "auto"}>{field.label}</dt>
+                <dt dir="auto">{field.label}</dt>
                 <dd
                   dir={field.direction || "auto"}
                   className={

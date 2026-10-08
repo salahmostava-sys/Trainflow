@@ -220,15 +220,15 @@
 .sheet-detail-course-meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:7px;font-size:12px}
 .sheet-detail-keycode{font-weight:700;overflow-wrap:anywhere}
 .sheet-detail-category{padding:2px 7px;border:1px solid var(--border);border-radius:5px;font-size:11px}
-.sheet-duplicate-dialog button.sheet-detail-copy-value{border:0;background:transparent;padding:3px 0;border-radius:3px;font:inherit;color:inherit;text-align:start;white-space:pre-wrap;overflow-wrap:anywhere;max-width:100%;line-height:1.6}
+.sheet-duplicate-dialog button.sheet-detail-copy-value{border:0;background:transparent;padding:3px 0;border-radius:3px;font:inherit;color:inherit;text-align:left;white-space:pre-wrap;overflow-wrap:anywhere;max-width:100%;line-height:1.6}
 .sheet-detail-copy-value::after{content:none}
 .sheet-duplicate-dialog button.sheet-detail-copy-value:hover{color:var(--blue-600);text-decoration:underline}
 .sheet-duplicate-dialog button.sheet-detail-copy-value:focus-visible{outline:2px solid var(--blue);outline-offset:3px}
-.sheet-duplicate-dialog button.sheet-detail-category{border:0;padding:3px 0;font-size:inherit;text-align:right}
-.sheet-detail-category-value{text-align:right}
+.sheet-duplicate-dialog button.sheet-detail-category{border:0;padding:3px 0;font-size:inherit}
+.sheet-detail-record dl{direction:rtl;align-items:start}
+.sheet-detail-record dt{min-width:0;text-align:right;overflow-wrap:anywhere}
+.sheet-detail-record dd{min-width:0;text-align:left}
 .sheet-trainee-dialog .sheet-detail-record dl{direction:rtl;grid-template-columns:140px minmax(0,1fr);gap:10px var(--space-lg);align-items:start;font-size:var(--type-body);line-height:1.6}
-.sheet-trainee-dialog .sheet-detail-record dt{text-align:right}
-.sheet-trainee-dialog .sheet-detail-record dd{min-width:0;text-align:left}
 .sheet-trainee-dialog button.sheet-detail-copy-value{display:block;width:100%;text-align:left;box-sizing:border-box}
 .sheet-trainee-dialog button.sheet-detail-login{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .sheet-duplicate-dialog button.sheet-detail-course,.sheet-duplicate-dialog button.sheet-detail-course:hover{color:#b91c1c}

@@ -246,6 +246,58 @@ test('Prometric account choices stay independent across preview pages and can co
   assert.equal(await preview.getByRole('combobox',{name:'Account action for row 1',exact:true}).inputValue(),'reuse','A new batch requires fresh explicit replacement choices');
 });
 
+test('duplicate details keep mixed-direction labels and long values in separate aligned columns',{timeout:30000},async t=>{
+  const page=await openWorkspace(t);
+  const keycode='KEY-'.repeat(22),anydesk='1234567890'.repeat(8);
+  await page.evaluate(async({keycode,anydesk})=>{
+    const course='محترف الأعمال المعتمد في القيادة خلال التغيير CBP-LTC';
+    uiTestDatabase.settings.payload.keycodes=[{code:keycode,title:course,lang:'Arabic',category:'Foundation'}];
+    const cells=[
+      ['VOUCHER-1','first@example.invalid','الاسم العربي الطويل للمتدرب الأول','FIRST STUDENT','1080424995','0501234567','جامعة أم القرى',course,'2026-10-08','STUDENT1','PASSWORD1','ناجح',anydesk],
+      ['','second@example.invalid','الاسم العربي الثاني','SECOND STUDENT','1080424995','','',course,'','','','لم يدخل','']
+    ];
+    uiTestDatabase.sheets['ui-admin']={sheet_id:'00000000-0000-0000-0000-000000000001',sheet_name:'Sheet 1',sheet_hidden:false,sheet_order:0,cells,version:1,format:{}};
+    await Cloud.refresh();
+  },{keycode,anydesk});
+  await page.locator('#sheet-reload').click();await page.waitForFunction(()=>document.getElementById('sheet-status').textContent==='تم الحفظ');
+  // Regression: English Key Code/AnyDesk labels drifted into the value column, and Category aligned separately.
+  for(const direction of ['rtl','ltr']){
+    await page.locator('#sheet-direction').selectOption(direction);
+    await page.locator('td[data-v="0"][data-col="4"]').click();
+    const dialog=page.locator('#sheet-duplicate-dialog');await dialog.waitFor({state:'visible'});
+    assert.equal(await dialog.locator('.sheet-detail-record').count(),2);
+    for(const width of [1440,390]){
+      await page.setViewportSize({width,height:1000});
+      const records=await dialog.locator('.sheet-detail-record').evaluateAll(elements=>elements.map(record=>{
+        const rows=[...record.querySelectorAll('dt')].map(label=>{
+          const value=label.nextElementSibling,button=value.querySelector('button'),a=label.getBoundingClientRect(),b=value.getBoundingClientRect();
+          return {label:label.textContent,labelAlign:getComputedStyle(label).textAlign,valueAlign:getComputedStyle(value).textAlign,buttonAlign:button&&getComputedStyle(button).textAlign,labelLeft:a.left,labelRight:a.right,valueLeft:b.left,valueRight:b.right,topGap:Math.abs(a.top-b.top),fits:value.scrollWidth<=value.clientWidth+1};
+        });
+        return {rows,fits:record.scrollWidth<=record.clientWidth+1};
+      }));
+      for(const record of records){
+        assert.ok(record.fits,'Long values stay inside their card');
+        assert.ok(record.rows.some(row=>row.label==='Key Code')&&record.rows.some(row=>row.label==='AnyDesk ID'));
+        for(const row of record.rows){
+          assert.equal(row.labelAlign,'right',row.label+' follows the label column');
+          assert.equal(row.valueAlign,'left',row.label+' follows the value column');
+          if(row.buttonAlign)assert.equal(row.buttonAlign,'left');
+          assert.ok(row.valueRight<row.labelLeft&&row.topGap<1&&row.fits,row.label+' cannot overlap its label');
+          assert.ok(Math.abs(row.labelRight-record.rows[0].labelRight)<1&&Math.abs(row.valueLeft-record.rows[0].valueLeft)<1,'Every field uses the same columns');
+        }
+      }
+      assert.ok(await dialog.evaluate(el=>el.scrollWidth<=el.clientWidth+1),'The modal fits the viewport');
+      if(direction==='rtl')await page.screenshot({path:path.join(root,'artifacts/duplicate-details-'+width+'.png')});
+    }
+    await page.setViewportSize({width:1440,height:1000});
+    await dialog.getByRole('button',{name:'نسخ Key Code',exact:true}).first().click();
+    assert.equal(await page.evaluate(()=>uiTestCopies.at(-1)),keycode,'Wrapping preserves the exact copied Key Code');
+    await dialog.getByRole('button',{name:'نسخ AnyDesk ID',exact:true}).first().click();
+    assert.equal(await page.evaluate(()=>uiTestCopies.at(-1)),anydesk);
+    await dialog.locator('.sheet-detail-close').click();await page.setViewportSize({width:1440,height:1000});
+  }
+});
+
 test('language switching translates saved and failed status without discarding the sheet draft',{timeout:30000},async t=>{
   const page=await openWorkspace(t);
   await page.waitForFunction(()=>document.getElementById('sheet-status').textContent==='تم الحفظ');
