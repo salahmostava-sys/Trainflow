@@ -1,7 +1,7 @@
 /* Results belong to one sheet and app tab until their durable-save acknowledgment. */
 const IbtaExamResults=(()=>{
   'use strict';
-  const LOGIN='https://tcnet1.prometric.com/Login.aspx?ClientNameSingleSite=ibtamea',SCORES='https://tcnet1.prometric.com/Candidate/ManageReviewScores.aspx';
+  const LOGIN='https://tcnet1.prometric.com/Login.aspx?ClientNameSingleSite=ibtamea';
   const text=(value,max)=>typeof value==='string'&&value.length>0&&value.length<=max;
   const origin=sender=>{try{return new URL(sender.url).origin;}catch{return '';}};
   const appSender=sender=>sender?.id===chrome.runtime.id&&sender.frameId===0&&Number.isInteger(sender.tab?.id)&&origin(sender)==='https://trainf.vercel.app';
@@ -25,7 +25,11 @@ const IbtaExamResults=(()=>{
   }
   async function advance(run){
     const account=current(run);
-    if(!account){await closeTab(run);return;}
+    if(!account){
+      if(run.items.at(-1)?.status==='failed'&&Number.isInteger(run.examTab)){await persist(run);await chrome.tabs.update(run.examTab,{active:true});}
+      else await closeTab(run);
+      return;
+    }
     run.stage='login';run.started=Date.now();
     if(Number.isInteger(run.examTab)){await persist(run);await chrome.tabs.update(run.examTab,{url:LOGIN});}
     else {const tab=await chrome.tabs.create({url:'about:blank',active:false});run.examTab=tab.id;await persist(run);await chrome.tabs.update(tab.id,{url:LOGIN,autoDiscardable:false});}
@@ -40,7 +44,9 @@ const IbtaExamResults=(()=>{
   }
   async function start(payload,sender){
     const readiness=await status(payload,sender);if(readiness.busy)throw Error('BUSY');
-    const run={id:crypto.randomUUID(),owner:payload.owner,client:payload.client,appTab:sender.tab.id,items:accounts(payload.items),examTab:null};
+    const selectedAccounts=accounts(payload.items);
+    const previous=await storedRun();if(Number.isInteger(previous?.examTab))await closeTab(previous);
+    const run={id:crypto.randomUUID(),owner:payload.owner,client:payload.client,appTab:sender.tab.id,items:selectedAccounts,examTab:null};
     await persist(run);
     try{await advance(run);}catch{await cancel(run,'START_FAILED');throw Error('START_FAILED');}
   }
@@ -69,21 +75,24 @@ const IbtaExamResults=(()=>{
   async function context(sender){
     const run=await storedRun(),account=current(run);
     if(sender?.id!==chrome.runtime.id||sender.frameId!==0||origin(sender)!=='https://tcnet1.prometric.com'||sender.tab?.id!==run?.examTab||!account)return {ok:true,active:false};
+    const documentAccount=run.documentAccounts?.[sender.documentId];
+    if(documentAccount&&documentAccount!==account.id)return {ok:true,active:false};
+    if(sender.documentId&&!documentAccount){run.documentAccounts={...run.documentAccounts,[sender.documentId]:account.id};await chrome.storage.local.set({ibtaExamRun:run});}
     if(Date.now()-run.started>120000){await finish(run,account,{error:'TIMEOUT'});return {ok:true,active:false};}
     return {ok:true,active:true,run:run.id,id:account.id,stage:run.stage,username:account.username,password:run.stage==='login'?account.password:undefined,examTitles:account.examTitles,examLanguage:account.examLanguage};
   }
   async function finish(run,account,report){
     delete account.username;delete account.password;
-    if(report.error){account.status='failed';account.error=report.error;}
+    if(report.error){account.status='failed';account.error=report.error;account.page=report.page;}
     else {account.status='done';Object.assign(account,report);}
     await persist(run);await advance(run);
   }
   async function record(message,sender){
     const trusted=await context(sender);if(!trusted.active||trusted.run!==message.run||trusted.id!==message.id)throw Error('FORBIDDEN');
     const run=await storedRun(),account=current(run);
-    if(message.error){if(!['LOGIN_FAILED','WRONG_ACCOUNT','REPORT_UNAVAILABLE','PAGINATED_RESULTS','AMBIGUOUS_RESULTS','NO_MATCHING_RESULT','UNCONFIRMED_RESULT'].includes(message.error))throw Error('INVALID_RESULT');await finish(run,account,{error:message.error});}
+    if(message.error){if(!['LOGIN_FAILED','WRONG_ACCOUNT','SESSION_EXPIRED','REPORT_UNAVAILABLE','PAGINATED_RESULTS','AMBIGUOUS_RESULTS','NO_MATCHING_RESULT','UNCONFIRMED_RESULT'].includes(message.error))throw Error('INVALID_RESULT');await finish(run,account,{error:message.error,page:String(message.page||'').slice(0,200)});}
     else if(message.loggedIn===true&&run.stage==='login'){
-      if(String(message.username).toLowerCase()!==account.username.toLowerCase())throw Error('WRONG_ACCOUNT');run.stage='scores';await persist(run);await chrome.tabs.update(run.examTab,{url:SCORES});
+      if(String(message.username).toLowerCase()!==account.username.toLowerCase())throw Error('WRONG_ACCOUNT');run.stage='scores';await persist(run);
     }else {
       const parsed=PrometricScores.outcome(message.rawScore);
       if(run.stage!=='scores'||new URL(sender.url).pathname!=='/Candidate/ManageReviewScores.aspx'||!parsed||!text(message.examTitle,2000)||!PrometricScores.matchesTitle(message.examTitle,account.examTitles,account.examLanguage))throw Error('INVALID_RESULT');

@@ -9,15 +9,16 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
     const makeRow=(name,code,user)=>{const row=Array(52).fill('');row[0]=code;row[1]=name.toLowerCase()+'@example.invalid';row[3]=name+' STUDENT';row[7]='CBP-L';row[9]=user;row[10]='Dummy-Pass';row[13]='KEEP CUSTOM';return row;};
     const rows=[makeRow('ALPHA','DUMMY-1','DUMMY-ALPHA'),makeRow('BETA','DUMMY-2','DUMMY-BETA'),makeRow('NO-CODE','','DUMMY-NO-CODE'),makeRow('UNSELECTED','DUMMY-4','DUMMY-OTHER')];
     context=await chromium.launchPersistentContext(fs.mkdtempSync(path.join(artifacts,'prometric-results-')),{channel:'msedge',headless:true,viewport:{width:1440,height:1000},args:['--disable-extensions-except='+extension,'--load-extension='+extension,'--host-resolver-rules=MAP trainf.vercel.app 127.0.0.1, MAP tcnet1.prometric.com 127.0.0.1']});
-    const logins=[],errors=[];let account='DUMMY-OUTSIDER',signouts=0;
-    await context.exposeBinding('fixtureLogin',(_,credentials)=>{logins.push(credentials);account=credentials.username;});
+    const logins=[],errors=[];let account='DUMMY-OUTSIDER',signouts=0,candidateVisited=false,forceSessionExpiry=false;
+    await context.exposeBinding('fixtureLogin',(_,credentials)=>{logins.push(credentials);account=credentials.username;candidateVisited=false;});
     await context.exposeBinding('fixtureLogout',()=>{account='';signouts++;});
     const profile=()=>'<a id="UserProfileHyperLink">'+account+'</a><a id="SignOutLinkButton" href="#" onclick="fixtureLogout().then(()=>location.href=\'/Login.aspx?ClientNameSingleSite=ibtamea\');return false">Sign Out</a>';
     function prometricFixture(url){
       let body='';
-      if(url.pathname==='/Login.aspx')body=account?profile():'<input id="PageContent_UserNameTextbox_txtTextBox" placeholder="Username"><input id="PageContent_PasswordTextbox_txtTextBox" type="password"><button id="PageContent_SignInButton" onclick="fixtureLogin({username:document.getElementById(\'PageContent_UserNameTextbox_txtTextBox\').value,password:document.getElementById(\'PageContent_PasswordTextbox_txtTextBox\').value}).then(()=>location.href=\'/User/Welcome.aspx\')">Sign In</button>';
-      else if(url.pathname==='/User/Welcome.aspx')body=profile();
-      else if(url.pathname==='/Candidate/ManageReviewScores.aspx')body=profile()+'<table id="PageContent_ManageReviewScoresGridView_gridView"><tr><th>Test Title</th><th>Your Score</th></tr><tr><td title="TEST TITLE">Sales Arabic</td><td title="YOUR SCORE">Pass (99%)</td></tr><tr><td title="TEST TITLE">Leadership English</td><td title="DATE">October 7, 2026</td><td title="YOUR SCORE">'+(account==='DUMMY-ALPHA'?'Pass (88.2%)':'Fail (61%)')+'</td></tr></table>';
+      if(url.pathname==='/Login.aspx')body=account?profile():'<input id="PageContent_UserNameTextbox_txtTextBox" placeholder="Username"><input id="PageContent_PasswordTextbox_txtTextBox" type="password"><button id="PageContent_SignInButton" onclick="document.body.append(document.createElement(\'progress\'));fixtureLogin({username:document.getElementById(\'PageContent_UserNameTextbox_txtTextBox\').value,password:document.getElementById(\'PageContent_PasswordTextbox_txtTextBox\').value}).then(()=>setTimeout(()=>location.href=\'/User/Welcome.aspx\',250))">Sign In</button>';
+      else if(url.pathname==='/User/Welcome.aspx')body=profile()+'<nav id="NavigationMenu"><span>Candidate</span><a href="/fixture-take-test" style="display:none">Take Test</a></nav>';
+      else if(url.pathname==='/fixture-take-test'){candidateVisited=true;body=profile()+'<a href="/Candidate/ManageReviewScores.aspx">History</a>';}
+      else if(url.pathname==='/Candidate/ManageReviewScores.aspx')body=candidateVisited&&!forceSessionExpiry?profile()+'<table id="PageContent_ManageReviewScoresGridView_gridView"><tr><th>Test Title</th><th>Your Score</th></tr><tr><td title="TEST TITLE">Sales Arabic</td><td title="YOUR SCORE">Pass (99%)</td></tr><tr><td title="TEST TITLE">Leadership English</td><td title="DATE">October 7, 2026</td><td title="YOUR SCORE">'+(account==='DUMMY-ALPHA'?'Pass (88.2%)':'Fail (61%)')+'</td></tr></table>':'<p>Your Session has been timed out! Please login again.</p><input id="PageContent_LoginButton" type="button" value="Login">';
       else throw Error('Unexpected Prometric navigation: '+url.pathname);
       return '<!doctype html><html><body>'+body+'</body></html>';
     }
@@ -61,8 +62,23 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
     await page.setViewportSize({width:390,height:844});await page.screenshot({path:path.join(artifacts,'prometric-results-mobile.png')});
     assert.equal(await page.locator('#sheet-exam-dialog').evaluate(dialog=>dialog.scrollWidth<=dialog.clientWidth),true,'Mobile report cards fit inside the dialog');
     await page.setViewportSize({width:1440,height:1000});
+    // Regression: missing profiles were called wrong accounts and the failed tab vanished.
+    forceSessionExpiry=true;
+    await page.locator('#sheet-exam-close').click();
+    await page.locator('td[data-v="1"][data-col="3"]').click();
+    await page.locator('#sheet-exam-open').click();await page.waitForFunction(()=>!document.getElementById('sheet-exam-start').disabled);
+    await page.locator('#sheet-exam-start').click();
+    await page.waitForFunction(()=>document.getElementById('sheet-exam-results').textContent.includes('انتهت جلسة Prometric'));
+    const failed=await worker.evaluate(()=>chrome.storage.local.get('ibtaExamRun'));
+    assert.equal(failed.ibtaExamRun.items.length,1,'Only the selected retry row is accessed');
+    assert.equal(failed.ibtaExamRun.items[0].error,'SESSION_EXPIRED');
+    assert.equal(failed.ibtaExamRun.items[0].password,undefined);
+    const failureTab=await worker.evaluate(async()=>{const {ibtaExamRun:run}=await chrome.storage.local.get('ibtaExamRun');return chrome.tabs.get(run.examTab);});
+    assert.equal(failureTab.active,true);assert.match(failureTab.url,/ManageReviewScores\.aspx/);
+    assert.deepEqual(await page.evaluate(()=>previewSheets.get('demo-admin').cells),saved.cells,'Expired sessions never overwrite previously saved results');
+    assert.match(await page.locator('#sheet-exam-status').textContent(),/متروك مفتوحًا/);
     // Persisted conflicts beyond the first page must remain individually reviewable.
-    await worker.evaluate(async()=>{const {ibtaExamRun:run}=await chrome.storage.local.get('ibtaExamRun');const confirmed=run.items[0];run.items=Array.from({length:51},(_,index)=>({...confirmed,id:'dummy-review-'+index,row:index,name:'REVIEW STUDENT '+index,fingerprint:'missing-'+index,status:'done'}));await chrome.storage.local.set({ibtaExamRun:run});});
+    await worker.evaluate(async confirmed=>{const {ibtaExamRun:run}=await chrome.storage.local.get('ibtaExamRun');run.items=Array.from({length:51},(_,index)=>({...confirmed,id:'dummy-review-'+index,row:index,name:'REVIEW STUDENT '+index,fingerprint:'missing-'+index,status:'done'}));await chrome.storage.local.set({ibtaExamRun:run});},acknowledged.ibtaExamRun.items[0]);
     await page.locator('#sheet-exam-refresh').click();await page.waitForFunction(()=>document.querySelector('#sheet-exam-results').textContent.includes('REVIEW STUDENT 49'));
     await page.locator('#sheet-exam-results').getByRole('button',{name:'التالي',exact:true}).click();
     assert.match(await page.locator('#sheet-exam-results').textContent(),/REVIEW STUDENT 50/);

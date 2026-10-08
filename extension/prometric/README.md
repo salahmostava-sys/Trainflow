@@ -1,4 +1,4 @@
-# TrainFlow — Prometric 4.2.1
+# TrainFlow — Prometric 4.2.2
 
 Integrated from the user's Prometric Auto Register 4.0 source (Salah Mostafa,
 ISC license). Its original popup, registration steps, generation pattern,
@@ -19,6 +19,11 @@ it does not launch a test. TCNet's explicit Pass/Fail and score are written to t
 result column and a free **Exam score** column without changing credentials or custom
 columns. Each account's credentials are removed from this results queue after it
 finishes. Confirmed scores remain recoverable until TrainFlow acknowledges its cloud save.
+
+Results follow **Candidate → Take Test → History / Review Scores**, using the site's
+navigation links. An expired session is reported separately from a mismatched account.
+The last failed account tab remains open for inspection; retrying closes that old tab.
+Previously visited documents cannot receive the next trainee's credentials.
 
 Multiple attempts for the same exam, paginated histories, unavailable reports and
 unconfirmed scores require manual review. They do not change the existing result.

@@ -23,7 +23,7 @@ function extensionFixture(fetcher) {
       onRemoved: event(),
       async create(options) { const tab = { id: ++nextTab, ...options }; tabs.set(tab.id, tab); return tab; },
       async get(id) { if (!tabs.has(id)) throw Error('Tab closed'); return tabs.get(id); },
-      async update() {},
+      async update(id, options) { Object.assign(tabs.get(id), options); },
       async remove(id) { tabs.delete(id); },
       async sendMessage() {}
     },
@@ -88,6 +88,27 @@ test('result jobs isolate app and Prometric tabs and retain scores until durable
   const recovered=await request('RECOVER',{}, {...app,tab:{id:11}});
   assert.equal(recovered.run.appTab,11);assert.equal(recovered.run.items[0].password,undefined,'Closed-tab recovery does not expose queued passwords');
   assert.equal((await request('STOP',{run:recovered.run.id})).error,'OUTDATED','The old app tab cannot control a recovered batch');
+});
+
+test('completed account documents cannot access the next account and failed tabs remain inspectable',async()=>{
+  const fixture=extensionFixture(),items=await examItems();
+  const request=(type,extra={})=>fixture.send({action:'ibtaExamRequest',payload:{owner:'dummy-owner',client:'dummy-client',type,...extra}},{id:fixture.chrome.runtime.id,frameId:0,url:'https://trainf.vercel.app/',tab:{id:10}});
+  await request('START',{items});
+  const tab=fixture.stored.ibtaExamRun.examTab,run=fixture.stored.ibtaExamRun.id;
+  const sender=documentId=>({id:fixture.chrome.runtime.id,frameId:0,documentId,url:'https://tcnet1.prometric.com/User/Welcome.aspx',tab:{id:tab}});
+  for(const documentId of ['dummy-login-document','dummy-welcome-document'])assert.equal((await fixture.send({action:'ibtaExamContext'},sender(documentId))).username,items[0].username);
+  assert.equal((await fixture.send({action:'ibtaExamRecord',run,id:items[0].id,error:'WRONG_ACCOUNT'},sender('dummy-welcome-document'))).ok,true);
+  for(const documentId of ['dummy-login-document','dummy-welcome-document'])assert.equal((await fixture.send({action:'ibtaExamContext'},sender(documentId))).active,false,'Previous documents cannot receive another trainee\'s credentials');
+  const second=sender('dummy-next-document');
+  assert.equal((await fixture.send({action:'ibtaExamContext'},second)).username,items[1].username);
+  assert.equal((await fixture.send({action:'ibtaExamRecord',run,id:items[1].id,error:'SESSION_EXPIRED',page:'/SessionTimedout.aspx'},second)).ok,true);
+  assert.equal(fixture.stored.ibtaExamRun.items[1].error,'SESSION_EXPIRED');
+  assert.equal(fixture.stored.ibtaExamRun.items[1].page,'/SessionTimedout.aspx');
+  assert.ok(fixture.stored.ibtaExamRun.items.every(account=>!account.password&&!account.username));
+  assert.equal(fixture.tabs.get(tab).active,true,'The last failed page remains open for inspection');
+  assert.equal((await fixture.send({action:'ibtaExamContext'},second)).active,false,'A failed tab cannot keep requesting credentials');
+  assert.equal((await request('START',{items:items.slice(1)})).ok,true);
+  assert.equal(fixture.tabs.has(tab),false,'Retry closes the old failed tab');
 });
 
 test('sheet import rejects unexpected URLs and fetches a valid CSV without cookies', async () => {
