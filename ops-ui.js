@@ -205,11 +205,13 @@ function inventoryMessage(categories,stock,source=null){
   const parts=[summary.date,''];
   const sec0=summary.sections[0], sec1=summary.sections[1], secTotal=summary.sections[2];
   if(sec0 && sec1){
-    parts.push('*'+sec0.title+'*   |   *'+sec1.title+'*');
+    const col0Width=Math.max(...sec0.lines.map(l=>l.length),0);
+    const targetWidth=Math.max(col0Width,('*'+sec0.title+'*').length)+2;
+    parts.push(('*'+sec0.title+'*').padEnd(targetWidth)+'|   *'+sec1.title+'*');
     const maxLines=Math.max(sec0.lines.length,sec1.lines.length);
     for(let i=0;i<maxLines;i++){
       const l0=sec0.lines[i]||'', l1=sec1.lines[i]||'';
-      parts.push(l0+'   |   '+l1);
+      parts.push(l0.padEnd(targetWidth)+'|   '+l1);
     }
     parts.push('');
   } else {
