@@ -70,7 +70,7 @@ test('keyboard copying claims a voucher once and leaves selection controls indep
   }
 });
 
-test('saving a voucher name preserves the next field focus and draft after one click',{timeout:30000},async t=>{
+test('voucher names require double click to edit and preserve the next field draft during saving',{timeout:30000},async t=>{
   const page=await openWorkspace(t);await navigate(page,'codes');
   await page.evaluate(async()=>{
     uiTestDatabase.codes.push({...uiTestDatabase.codes[0],code:'SECOND-VOUCHER'});await Cloud.refresh();
@@ -78,20 +78,21 @@ test('saving a voucher name preserves the next field focus and draft after one c
   });
   const first=page.getByRole('textbox',{name:'اسم المتدرب للفاوتشر UI-VOUCHER',exact:true});
   const second=page.getByRole('textbox',{name:'اسم المتدرب للفاوتشر SECOND-VOUCHER',exact:true});
-  await first.fill('FIRST TRAINEE');await second.click();
-  assert.equal(await second.evaluate(el=>el===document.activeElement),true,'One click focuses the next name while the previous save is pending');
+  await first.click();assert.equal(await first.evaluate(el=>el.readOnly),true,'A single click does not enable name editing');
+  await first.dblclick();await first.fill('FIRST TRAINEE');await second.dblclick();
+  assert.equal(await second.evaluate(el=>el===document.activeElement&&!el.readOnly),true,'Double click edits the next name while the previous save is pending');
   assert.equal(await page.locator('#app').evaluate(el=>el.inert),false);
   await page.keyboard.insertText('SECOND DRAFT');
   await page.evaluate(()=>{uiReleaseNameSave();window.uiTestNameSaveGate=null;});
   await page.waitForFunction(()=>state.voucherNames['UI-VOUCHER']==='FIRST TRAINEE');
   assert.equal(await second.evaluate(el=>el===document.activeElement),true);assert.equal(await second.inputValue(),'SECOND DRAFT','A save cannot replace another field draft');
-  await first.click();await page.waitForFunction(()=>state.voucherNames['SECOND-VOUCHER']==='SECOND DRAFT');
+  await first.dblclick();await page.waitForFunction(()=>state.voucherNames['SECOND-VOUCHER']==='SECOND DRAFT');
   assert.equal(await first.evaluate(el=>el===document.activeElement),true);
   await first.fill('EDITED FIRST');await page.keyboard.press('Tab');
   await page.waitForFunction(()=>state.voucherNames['UI-VOUCHER']==='EDITED FIRST');
   assert.equal(await page.getByRole('textbox',{name:'ملاحظات الكود UI-VOUCHER',exact:true}).evaluate(el=>el===document.activeElement),true,'Tab focus survives saving');
   await page.evaluate(()=>{uiTestDatabase.nameSaveError='CONFLICT: reload required';});
-  await first.fill('REJECTED NAME');await second.click();await page.keyboard.insertText(' STILL EDITING');
+  await first.focus();await page.keyboard.press('F2');await first.fill('REJECTED NAME');await second.dblclick();await page.keyboard.press('End');await page.keyboard.insertText(' STILL EDITING');
   await page.waitForFunction(()=>document.getElementById('cloud-status').textContent===t('conflict'));
   assert.equal(await first.inputValue(),'EDITED FIRST');assert.equal(await second.evaluate(el=>el===document.activeElement),true);assert.equal(await second.inputValue(),'SECOND DRAFT STILL EDITING');
   assert.equal(await page.evaluate(()=>uiTestDatabase.codes[0].trainee_name),'EDITED FIRST');assert.deepEqual(await page.evaluate(()=>uiTestCopies),[],'Editing names never claims or copies a voucher');

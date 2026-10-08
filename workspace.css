@@ -806,7 +806,8 @@
   .code-sheet .col-actions{justify-content:center;text-align:center;}
   .code-row .col-trainee-name{padding:2px 4px;}
   .code-row .col-trainee-name input{font:inherit;width:100%;box-sizing:border-box;border:1px solid transparent;border-radius:4px;background:transparent;color:inherit;padding:4px 6px;min-height:28px;}
-  .code-row .col-trainee-name input:hover,.code-row .col-trainee-name input:focus{background:var(--surface);border-color:var(--blue);color:var(--text);outline:none;}
+  .code-row .col-trainee-name input:not([readonly]):hover,.code-row .col-trainee-name input:not([readonly]):focus{background:var(--surface);border-color:var(--blue);color:var(--text);outline:none;}
+  .code-row .col-trainee-name input[readonly]:focus-visible{outline:2px solid var(--blue);outline-offset:-2px;}
 
   .code-list{display:flex; flex-direction:column; min-width:var(--voucher-min-width);width:var(--voucher-table-width,auto);}
   .code-row{

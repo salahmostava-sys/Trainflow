@@ -233,6 +233,7 @@
 .sheet-trainee-dialog button.sheet-detail-login{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .sheet-duplicate-dialog button.sheet-detail-course,.sheet-duplicate-dialog button.sheet-detail-course:hover{color:#b91c1c}
 .sheet-trainee-dialog .sheet-detail-result[data-result=pass]{background:transparent!important;color:#008a3d!important}
+.sheet-detail-result[data-result=fail]{background:transparent!important;color:#b91c1c!important}
 @media(min-width:761px){
   .sheet-trainee-dialog button.sheet-detail-copy-value{padding:0;line-height:1.6}
 }

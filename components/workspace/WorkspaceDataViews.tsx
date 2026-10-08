@@ -53,6 +53,7 @@ export interface VoucherView {
 }
 function VoucherName({ voucher }: { voucher: VoucherView }) {
   const [busy, setBusy] = React.useState(false);
+  const [editing, setEditing] = React.useState(false);
   const savedName = React.useRef(voucher.name);
   return (
     <div
@@ -62,6 +63,9 @@ function VoucherName({ voucher }: { voucher: VoucherView }) {
         event.currentTarget.querySelector("input")!.focus();
       }}
       onPointerDown={(event) => event.stopPropagation()}
+      onDoubleClick={() => {
+        if (!voucher.readOnlyName && !busy) setEditing(true);
+      }}
     >
       <input
         type="text"
@@ -71,12 +75,25 @@ function VoucherName({ voucher }: { voucher: VoucherView }) {
         placeholder={voucher.labels.namePlaceholder}
         aria-label={voucher.labels.name}
         disabled={voucher.readOnlyName}
-        readOnly={busy}
+        readOnly={busy || !editing}
         aria-busy={busy}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === "F2") {
+            event.preventDefault();
+            if (!busy) {
+              if (editing && event.key === "Enter") event.currentTarget.blur();
+              else setEditing(true);
+            }
+          } else if (event.key === "Escape" && editing) {
+            event.currentTarget.value = savedName.current;
+            event.currentTarget.blur();
+          }
+        }}
         onBlur={async (event) => {
           const input = event.currentTarget,
             previous = savedName.current,
             name = input.value.trim();
+          setEditing(false);
           if (busy || name === previous) return;
           setBusy(true);
           try {
