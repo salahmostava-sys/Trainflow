@@ -1,11 +1,28 @@
 const assert=require('node:assert/strict');
 const D=require('../trainees-core.js');
 const courseFixtures=[['CBP-M','Marketing','التسويق'],['CBP-S','Sales','المبيعات'],['CBP-CS','Customer Service','خدمة العملاء'],['CBP-AI','Artificial Intelligence','الذكاء الاصطناعي'],['CBP-L','Leadership','القيادة الإدارية'],['CBP-PM','Project Management','إدارة المشاريع'],['CBP-CYBP','CYBP','ريادة الاعمال'],['CBP-ME','Employee Motivation','تحفيز الموظفين'],['CBP-CM','Conflict Management','إدارة النزاعات'],['CBP-LTC','Leading Through Change','القيادة خلال التغيير'],['CBP-ES','Executive Secretarial','السكرتارية التنفيذية'],['CBP-AB','Accounting and Budgeting','المحاسبة والميزانية'],['CBP-BC','Business Communication','اتصالات الاعمال'],['CBP-CMPR','Crisis Management and Public Relations','إدارة الأزمات في العلاقات العامة'],['CBP-ECM','Event and Conference Management','إدارة الفعاليات والحشود'],['CBP-TOT','Training of Trainers','تدريب المدربين'],['CBP-BM','Business Management','إدارة الاعمال']];
+courseFixtures.push(
+  ['CBP-BE','Business Etiquette','سلوكيات الأعمال'],
+  ['CBP-CTS','Computer Technology Specialist','تقنية الحاسب الآلي'],
+  ['CBP-HR','Human Resources','إدارة الموارد البشرية'],
+  ['CBP-TH','Tourism and Hospitality','السياحة والضيافة'],
+  ['CBP-DDM','Dynamic Decision Making','اتخاذ القرارات الديناميكية'],
+  ['CBP-SMS','Secrets of Management Success','أسرار النجاح الإداري'],
+  ['CBP-EGB','English Grammar for Business','قواعد اللغة الإنجليزية للأعمال'],
+  ['CBP-FS','Financial Sustainability','الاستدامة المالية'],
+  ['CBP-AIS','Artificial Intelligence Strategist','استراتيجيات الذكاء الاصطناعي'],
+  ['CBP-PDBA','Professional Diploma in Business Administration','الدبلوم المهني في إدارة الأعمال']
+);
 const catalog=courseFixtures.flatMap(([id,title])=>[{title,code:id+'-AR-KEY',lang:'Arabic'},{title,code:id+'-EN-KEY',lang:'English'}]);
 for(const [id,title,arabic]of courseFixtures){
   for(const name of [id,title,'محترف الأعمال المعتمد في '+arabic,'محترف الأعمال المعتمد في '+arabic+' '+id])assert.equal(D.courseKeycode(name,catalog)?.code,id+'-AR-KEY',name);
   for(const name of [id+' محترف الأعمال المعتمد في '+arabic,'محترف الأعمال المعتمد في '+arabic+' '+id.toLowerCase(),'محترف الاعمال المعتمد في '+arabic+' '+id])assert.equal(D.courseKeycode(name,catalog)?.code,id+'-AR-KEY','Form course matches Arabic keycode: '+name);
+  for(const name of [id.replace('-','–'),id.replace('-','‑'),'CBP™- '+title])assert.equal(D.courseKeycode(name,catalog)?.code,id+'-AR-KEY','Pasted course titles and Unicode hyphens match: '+name);
 }
+assert.equal(D.courseKeycode('CBP-HRM',catalog)?.code,'CBP-HR-AR-KEY');
+assert.equal(D.courseKeycode('CBP-M-UNKNOWN',catalog),null,'An unknown identifier must not match a shorter course identifier');
+assert.equal(D.courseKeycode('CBP™- Safety Management',[{title:'Safety Management',code:'CUSTOM-KEY',lang:'Arabic'}])?.code,'CUSTOM-KEY','Custom catalog courses also match a CBP title prefix');
+assert.equal(D.courseKeycode('CBP-CUSTOM',[{title:'Safety Management',code:'CBP-CUSTOM',lang:'Arabic'}])?.code,'CBP-CUSTOM','Exact custom keycodes remain usable');
 assert.equal(D.courseKeycode('محترف الأعمال المعتمد للشباب في ريادة الاعمال CBP-CYBP',catalog)?.code,'CBP-CYBP-AR-KEY');
 assert.equal(D.courseKeycode('دورة غير معروفة',catalog),null);
 assert.equal(D.courseKeycode('Sales',[{title:'Sales',code:'ONE',lang:'Arabic'},{title:'Sales',code:'TWO',lang:'Arabic'}]),null,'Ambiguous matches never choose an arbitrary code');

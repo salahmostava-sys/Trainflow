@@ -170,22 +170,34 @@
     eachSelected(ranges,view,cols,(r,c,vr)=>{const at=cols.indexOf(c),key=r+':'+c,v=fmt.styles[key]||{},edges={...v.borders},endRow=Math.max(vr,view.indexOf(r+(v.mergeRows||1)-1)),endCol=Math.max(at,cols.findLastIndex(x=>x<=c+(v.mergeCols||1)-1));for(const [side,rr,cc,inside]of [['top',vr-1,c,'horizontal'],['bottom',endRow+1,c,'horizontal'],['left',vr,cols[rtl?endCol+1:at-1]??-1,'vertical'],['right',vr,cols[rtl?at-1:endCol+1]??-1,'vertical']]){const pen=draft[has(rr,cc)?inside:side];if(pen)edges[side]={...pen};}for(const side of ['diagonalUp','diagonalDown'])if(draft[side])edges[side]={...draft[side]};if(Object.keys(edges).length)fmt.styles[key]={...v,borders:edges};});return fmt;
   }
   const courseAliases=[
-    ['CBP-M','Marketing','التسويق'],['CBP-S','Sales','المبيعات'],['CBP-CS','Customer Service','خدمة العملاء'],
+    ['CBP-M','Marketing','التسويق'],['CBP-S','Sales','المبيعات'],['CBP-CS','Customer Service','Customer Services','خدمة العملاء'],
     ['CBP-AI','Artificial Intelligence','الذكاء الاصطناعي'],['CBP-L','Leadership','القيادة الإدارية','القيادة'],
     ['CBP-PM','Project Management','إدارة المشاريع'],['CBP-CYBP','CYBP','Certified Young Business Professional','Youth Business','ريادة الأعمال','ريادة الاعمال'],
-    ['CBP-ME','Employee Motivation','Motivating Employees','تحفيز الموظفين'],['CBP-CM','Conflict Management','إدارة النزاعات'],
+    ['CBP-ME','Employee Motivation','Motivating Employees','Motivating Employees to be their Best','تحفيز الموظفين'],['CBP-CM','Conflict Management','إدارة النزاعات'],
     ['CBP-LTC','Leading Through Change','القيادة خلال التغيير'],['CBP-ES','Executive Secretarial','Executive Secretary','السكرتارية التنفيذية'],
     ['CBP-AB','Accounting and Budgeting','Accounting & Budgeting','المحاسبة والميزانية'],['CBP-BC','Business Communication','Business Communications','اتصالات الأعمال'],
     ['CBP-CMPR','Crisis Management and Public Relations','Crisis Management & Public Relations','Crisis Management in Public Relations','إدارة الأزمات في العلاقات العامة'],
     ['CBP-ECM','Event and Crowd Management','Event & Crowd Management','Events and Crowd Management','Event and Conference Management','Events and Conferences Management','Event Management','إدارة الفعاليات والحشود'],
-    ['CBP-TOT','Training of Trainers','Train the Trainer','Training Trainers','تدريب المدربين'],['CBP-BM','Business Management','إدارة الأعمال']
+    ['CBP-TOT','Training of Trainers','Train the Trainer','Training Trainers','Train Of Trainer','تدريب المدربين'],['CBP-BM','Business Management','إدارة الأعمال'],
+    ['CBP-BE','Business Etiquette','سلوكيات الأعمال','آداب الأعمال','اتيكيت الأعمال'],
+    ['CBP-CTS','Computer Technology Specialist','Computer Technology','تقنية الحاسب','تقنية الحاسب الآلي','تكنولوجيا الحاسب','تكنولوجيا الحاسب الآلي'],
+    ['CBP-HR','CBP-HRM','Human Resources','Human Resource Management','Human Resources Management','Human Resources Management Specialist','إدارة الموارد البشرية','الموارد البشرية'],
+    ['CBP-TH','Tourism and Hospitality','Tourism & Hospitality','السياحة والضيافة'],
+    ['CBP-DDM','Dynamic Decision Making','اتخاذ القرارات الديناميكية','اتخاذ القرار الديناميكي'],
+    ['CBP-SMS','Secrets of Management Success','أسرار النجاح الإداري','أسرار النجاح في الإدارة'],
+    ['CBP-EGB','English Grammar for Business','قواعد اللغة الإنجليزية للأعمال'],
+    ['CBP-FS','Financial Sustainability','الاستدامة المالية'],
+    ['CBP-AIS','Artificial Intelligence Strategist','استراتيجيات الذكاء الاصطناعي'],
+    ['CBP-PDBA','Professional Diploma in Business Administration','الدبلوم المهني في إدارة الأعمال']
   ];
+  const courseIds=courseAliases.flat().filter(alias=>alias.startsWith('CBP-')).map(alias=>alias.slice(4)).sort((a,b)=>b.length-a.length);
+  const courseIdentifier=new RegExp('\\bCBP[-\\s]*('+courseIds.join('|')+')(?![a-z0-9-])','i');
   const courseName=value=>String(value||'').normalize('NFKC').toLowerCase().replace(/[\u064b-\u065f\u0670\u0640\u200e\u200f\u061c]/g,'').replace(/[أإآ]/g,'ا').replace(/ى/g,'ي').replace(/محترف الاعمال المعتمد\s*(?:في)?/g,'').replace(/certified business professional\s*(?:in)?/g,'').replace(/[^a-z0-9\u0621-\u064a]/g,'');
   function courseKeycode(value,catalog){
-    const identity=text=>{const identifier=String(text||'').match(/\bCBP[-\s]*(CMPR|CYBP|LTC|ECM|TOT|CS|AI|PM|ME|CM|ES|AB|BC|BM|M|S|L)\b/i);return courseName(identifier?'CBP-'+identifier[1]:text);};
+    const identity=text=>{const normalized=String(text||'').normalize('NFKC').replace(/[\u2010-\u2015\u2212]/g,'-'),identifier=normalized.match(courseIdentifier);return courseName(identifier?'CBP-'+identifier[1]:normalized.replace(/^CBP(?:TM)?\s*-?\s*/i,''));};
     const name=identity(value);if(!name)return null;
     const aliases=courseAliases.find(group=>group.some(alias=>courseName(alias)===name));
-    const names=new Set((aliases||[value]).map(courseName));
+    const names=new Set((aliases||[value]).map(courseName));names.add(name);
     let matches=(Array.isArray(catalog)?catalog:[]).filter(item=>item&&typeof item.code==='string'&&item.code.trim()&&(names.has(identity(item.title))||names.has(courseName(item.code))));
     const preferred=matches.filter(item=>/^(arabic|ar|العربية|عربي)$/i.test(String(item.lang||'').trim()));
     if(preferred.length)matches=preferred;
