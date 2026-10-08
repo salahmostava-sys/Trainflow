@@ -47,7 +47,8 @@ export function TraineesScreen({ active = false }: { active?: boolean }) {
               <input
                 id="sheet-cell-content"
                 type="text"
-                readOnly
+                disabled
+                maxLength={2000}
                 dir="auto"
                 autoComplete="off"
                 spellCheck={false}
