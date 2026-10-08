@@ -11,6 +11,13 @@ assert.equal(P.prepare([a,[...a]],[0,1]).items.length,0,'Duplicate row identitie
 assert.equal(P.prepare([a,trainee(a[3],a[1],a[4],'CBP-M')],[0,1]).items.length,2,'Different exam rows remain separate registrations');
 assert.equal(P.indexRows(Array.from({length:3068},(_,i)=>trainee('TEST STUDENT '+i,'test'+i+'@example.invalid',String(i)))).size,3068);
 (async()=>{
+  const savedAlpha=[...a],savedBeta=[...b];savedAlpha[9]='ALPHA-OLD';savedAlpha[10]='ALPHA-PASSWORD';
+  const accountChoices=new Map([[0,{fingerprint:P.fingerprint(savedAlpha),credentials:P.credentials(savedAlpha)}]]);
+  const mixedPlan=P.prepare([savedAlpha,savedBeta,trainee('GAMMA STUDENT','gamma@example.invalid','00007')],[0,1,2],accountChoices);
+  assert.deepEqual(mixedPlan.items.map(item=>item.row),[0,2],'Only the chosen saved account and the trainee without an account are registered');
+  assert.deepEqual(mixedPlan.skipped.map(item=>[item.row,item.reason]),[[1,'existing']]);
+  savedAlpha[9]='MANUALLY-CHANGED';
+  assert.equal(P.prepare([savedAlpha],[0],accountChoices).skipped[0].reason,'existing','A per-row replacement choice cannot authorize replacing credentials edited afterward');
   const root=path.resolve(__dirname,'../extension/prometric'),stored={},clone=v=>v===undefined?undefined:JSON.parse(JSON.stringify(v));let nextTab=40;
   const event=()=>({addListener(){}}),ctx=vm.createContext({console,crypto,URL,setTimeout:()=>1,clearTimeout(){}});
   ctx.chrome={runtime:{id:'fixture-extension',getManifest:()=>({version:'4.1.0'}),onMessage:event(),onInstalled:event()},
@@ -18,7 +25,7 @@ assert.equal(P.indexRows(Array.from({length:3068},(_,i)=>trainee('TEST STUDENT '
     tabs:{onRemoved:event(),async create({url}){return {id:++nextTab,url};},async get(id){return {id};},async update(){},async remove(){},async sendMessage(){}},action:{setBadgeText(){},setBadgeBackgroundColor(){}},notifications:{create(){}},contextMenus:{create(){},onClicked:event()}};
   ctx.importScripts=(...files)=>files.forEach(file=>vm.runInContext(fs.readFileSync(path.join(root,file),'utf8'),ctx,{filename:file}));vm.runInContext(fs.readFileSync(path.join(root,'background.js'),'utf8'),ctx);
   const api=vm.runInContext('IbtaRegistration',ctx),sender={id:'fixture-extension',frameId:0,url:'https://trainf.vercel.app/',tab:{id:10}},base={owner:'owner-one',client:'test-client'};
-  const retakeRow=[...a];retakeRow[9]='OLD-USER';retakeRow[10]='OLD-PASSWORD';const retake=P.prepare([retakeRow],[0],{allowExisting:true}).items[0];assert.equal(retake.replaceExisting,true,'An existing trainee account can be explicitly prepared for a retake');retake.previousCredentials=await P.credentialsHash(retake.originalCredentials);const replacement={...retake,username:'NEW-USER',password:'NEW-PASSWORD'};assert.equal(P.locate([retakeRow],replacement,undefined,await P.credentialsHash(P.credentials(retakeRow))).row,0,'Only the unchanged saved account can be replaced');retakeRow[10]='MANUALLY-EDITED';assert.equal(P.locate([retakeRow],replacement,undefined,await P.credentialsHash(P.credentials(retakeRow))).reason,'credentialsChanged','Manual account changes block replacement');
+  const retakeRow=[...a];retakeRow[9]='OLD-USER';retakeRow[10]='OLD-PASSWORD';const retake=P.prepare([retakeRow],[0],new Map([[0,{fingerprint:P.fingerprint(retakeRow),credentials:P.credentials(retakeRow)}]])).items[0];assert.equal(retake.replaceExisting,true,'An existing trainee account can be explicitly prepared for a retake');retake.previousCredentials=await P.credentialsHash(retake.originalCredentials);const replacement={...retake,username:'NEW-USER',password:'NEW-PASSWORD'};assert.equal(P.locate([retakeRow],replacement,undefined,await P.credentialsHash(P.credentials(retakeRow))).row,0,'Only the unchanged saved account can be replaced');retakeRow[10]='MANUALLY-EDITED';assert.equal(P.locate([retakeRow],replacement,undefined,await P.credentialsHash(P.credentials(retakeRow))).reason,'credentialsChanged','Manual account changes block replacement');
   await assert.rejects(()=>api.enqueue({...base,type:'PING'},{...sender,frameId:1}),/FORBIDDEN/);
   assert.equal((await api.enqueue({...base,type:'PING'},sender)).capabilities.retake,true,'The extension declares retake support');
   await assert.rejects(()=>api.enqueue({...base,type:'PING'},{...sender,url:'https://other.invalid/'}),/FORBIDDEN/);

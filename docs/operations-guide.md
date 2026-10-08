@@ -124,13 +124,15 @@ Run `node tests/cloud.test.cjs` for frontend storage, import, inventory, and bac
 
 ## Prometric registration from trainee rows
 
-The trainee ribbon includes **Prometric registration** for selected rows. A single
-trainee's details provides **Prometric account options**. When a trainee will test
-again, select **Create a new account with the same details**; otherwise the saved
-username and password remain ready to use. The original credentials stay in the row
-until the new registration is confirmed and the sheet save succeeds. The preview
-skips existing credentials in the default mode, invalid emails, incomplete English
-names and duplicate row identities before creation. Batches
+The trainee ribbon includes **Prometric registration** for selected rows. Each row
+with saved credentials has its own **Keep the saved account / Create a new account**
+choice and **Copy account** button. Choosing a new account affects only that row;
+all other saved accounts are kept. The preview shows 50 rows per page and retains
+choices when navigating pages or switching language. A new batch starts with saved
+accounts kept and requires new explicit replacement choices. The original credentials
+stay in the row until the new registration is confirmed and the sheet save succeeds.
+Invalid emails, incomplete English names and duplicate row identities prevent
+creation. Changes to a row's identity or credentials invalidate its replacement choice. Batches
 support up to 5,000 selected trainees and run sequentially in one dedicated tab.
 
 Download the integrated extension from this dialog, extract it to a permanent

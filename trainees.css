@@ -413,6 +413,12 @@
 .sheet-prometric-setup{border:1px solid var(--border);padding:12px;border-radius:8px;background:#fff}
 .sheet-prometric-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .sheet-prometric-dialog .sheet-file-preview{max-height:220px}
+#sheet-prometric-preview table{width:100%;min-width:620px}
+.sheet-prometric-row-choice{display:grid;gap:6px;min-width:150px}
+.sheet-prometric-row-choice select,.sheet-prometric-row-choice button{width:100%;font-size:12px;min-height:34px}
+.sheet-prometric-row-choice select:focus-visible,.sheet-prometric-row-choice button:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.sheet-prometric-pagination{display:flex;align-items:center;justify-content:center;gap:12px;margin:10px 0}
+.sheet-prometric-pagination span{font-size:12px;white-space:nowrap}
 .sheet-file-preview{overflow:auto;max-height:230px;margin:12px 0}
 .sheet-file-preview table{border-collapse:collapse;font-size:12px;white-space:nowrap}
 .sheet-file-preview th,.sheet-file-preview td{padding:7px 10px;border:1px solid #d7dfe8;text-align:start}

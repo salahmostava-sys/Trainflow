@@ -5,12 +5,16 @@
   const normalized=value=>String(value||'').normalize('NFKC').trim().replace(/\s+/g,' ');
   function fingerprint(row){return JSON.stringify([1,3,4,5,7].map(c=>normalized(row?.[c]).toLocaleLowerCase()));}
   const credentials=row=>JSON.stringify([String(row?.[9]||''),String(row?.[10]||'')]);
+  function replacementSelected(row,index,choices){
+    const chosen=choices.get(index);
+    return chosen?.fingerprint===fingerprint(row)&&chosen?.credentials===credentials(row);
+  }
   async function credentialsHash(value){
     const bytes=new TextEncoder().encode(String(value||''));
     const digest=await crypto.subtle.digest('SHA-256',bytes);
     return [...new Uint8Array(digest)].map(byte=>byte.toString(16).padStart(2,'0')).join('');
   }
-  function prepare(rows,indices,options={}){
+  function prepare(rows,indices,replacementAccounts=new Map()){
     const items=[],skipped=[],identities=new Map();
     for(let r=0;r<rows.length;r++){const key=fingerprint(rows[r]);identities.set(key,(identities.get(key)||0)+1);}
     for(const index of new Set(indices)){
@@ -20,7 +24,7 @@
       if(!/^[A-Za-z][A-Za-z\s.,'’()-]*$/.test(name)||name.split(/\s+/).filter(part=>/[A-Za-z]/.test(part)).length<2)reason='name';
       else if(!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email))reason='email';
       else if(identities.get(fingerprint(row))!==1)reason='duplicate';
-      else if(hasCredentials&&!options.allowExisting)reason='existing';
+      else if(hasCredentials&&!replacementSelected(row,index,replacementAccounts))reason='existing';
       if(reason){skipped.push({row:index,name,email,reason});continue;}
       items.push({id:crypto.randomUUID(),row:index,name,email,fingerprint:fingerprint(row),...(hasCredentials?{replaceExisting:true,originalCredentials:credentials(row)}:{})});
     }
@@ -42,5 +46,5 @@
     if(item.replaceExisting)return {row,reason:'credentialsChanged'};
     return {row};
   }
-  const api={MAX_ITEMS,fingerprint,credentials,credentialsHash,prepare,locate,indexRows};root.PrometricData=api;if(typeof module!=='undefined'&&module.exports)module.exports=api;
+  const api={MAX_ITEMS,fingerprint,credentials,replacementSelected,credentialsHash,prepare,locate,indexRows};root.PrometricData=api;if(typeof module!=='undefined'&&module.exports)module.exports=api;
 })(typeof globalThis!=='undefined'?globalThis:this);

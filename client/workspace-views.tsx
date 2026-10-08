@@ -34,6 +34,7 @@ import {
   CodesExportDialog,
   PrometricDialog,
   RegistrationResults,
+  RegistrationPreview,
 } from "../components/workspace/SheetFeatureViews";
 import { ReportSettings } from "../components/workspace/ReportSettings";
 import {
@@ -53,12 +54,16 @@ import { CodeAssignments } from "../components/workspace/CodeAssignments";
 import { ModalIcon } from "../components/workspace/ModalIcon";
 
 const roots = new WeakMap<Element, { root: Root; revision: number }>();
-function renderView(container: Element, view: React.ReactNode) {
+function mountedView(container: Element) {
   let mounted = roots.get(container);
   if (!mounted) {
     mounted = { root: createRoot(container), revision: 0 };
     roots.set(container, mounted);
   }
+  return mounted;
+}
+function renderView(container: Element, view: React.ReactNode) {
+  const mounted = mountedView(container);
   // The spreadsheet controller needs the committed DOM for selection and geometry.
   flushSync(() =>
     mounted.root.render(
@@ -142,6 +147,14 @@ export const WorkspaceViews = {
     props: React.ComponentProps<typeof RegistrationResults>,
   ) {
     renderView(container, <RegistrationResults {...props} />);
+  },
+  registrationPreview(
+    container: Element,
+    props: React.ComponentProps<typeof RegistrationPreview>,
+  ) {
+    const mounted = mountedView(container);
+    // Status polling must retain the focused account choice and open native menu.
+    flushSync(() => mounted.root.render(<RegistrationPreview {...props} />));
   },
   modalIcon(container: Element, props: React.ComponentProps<typeof ModalIcon>) {
     renderView(container, <ModalIcon {...props} />);

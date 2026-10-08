@@ -207,15 +207,8 @@ export function PrometricDialog({ extensionURL }: { extensionURL: string }) {
         <a id="sheet-prometric-download" href={extensionURL} download />
         <p id="sheet-prometric-instructions" />
       </div>
-      <p id="sheet-prometric-summary" />
-      <label className="sheet-prometric-account-mode" hidden>
-        <span id="sheet-prometric-mode-caption" />
-        <select id="sheet-prometric-account-mode">
-          <option value="reuse" />
-          <option value="new" />
-        </select>
-        <p className="sheet-prometric-account-help" />
-      </label>
+      <p id="sheet-prometric-summary" role="status" />
+      <p id="sheet-prometric-account-help" hidden />
       <div id="sheet-prometric-preview" className="sheet-file-preview" />
       <div className="sheet-prometric-actions">
         <button
@@ -229,6 +222,100 @@ export function PrometricDialog({ extensionURL }: { extensionURL: string }) {
       </div>
       <p id="sheet-prometric-status" role="status" />
       <div className="sheet-file-preview" id="sheet-prometric-results" />
+    </>
+  );
+}
+export function RegistrationPreview({
+  rows,
+  headings,
+  labels,
+  page,
+  disabled,
+  changeAccount,
+  changePage,
+  copyAccount,
+}: {
+  rows: {
+    row: number;
+    name: string;
+    email: string;
+    username: string;
+    hasAccount: boolean;
+    mode: string;
+    status: string;
+  }[];
+  headings: string[];
+  labels: {
+    reuse: string;
+    create: string;
+    copy: string;
+    account: string;
+    previous: string;
+    next: string;
+    page: string;
+  };
+  page: number;
+  disabled: boolean;
+  changeAccount(row: number, mode: string): void;
+  changePage(page: number): void;
+  copyAccount(row: number): Promise<void>;
+}) {
+  if (!rows.length) return null;
+  const pageSize = 50,
+    pages = Math.ceil(rows.length / pageSize),
+    currentPage = Math.min(page, pages - 1);
+  return (
+    <>
+      <table>
+        <thead>
+          <tr>{headings.map((heading) => <th key={heading}>{heading}</th>)}</tr>
+        </thead>
+        <tbody>
+          {rows.slice(currentPage * pageSize, (currentPage + 1) * pageSize).map((row) => (
+            <tr key={row.row}>
+              <td>{row.row + 1}</td>
+              <td>{row.name}</td>
+              <td><bdi>{row.email}</bdi></td>
+              <td><bdi>{row.username || "—"}</bdi></td>
+              <td>
+                {row.hasAccount ? (
+                  <div className="sheet-prometric-row-choice">
+                    <select
+                      aria-label={labels.account + " " + (row.row + 1)}
+                      value={row.mode}
+                      disabled={disabled}
+                      onChange={(event) => changeAccount(row.row, event.currentTarget.value)}
+                    >
+                      <option value="reuse">{labels.reuse}</option>
+                      <option value="new">{labels.create}</option>
+                    </select>
+                    <button
+                      type="button"
+                      aria-label={labels.copy + " " + (row.row + 1)}
+                      disabled={disabled}
+                      onClick={() => { void copyAccount(row.row); }}
+                    >
+                      {labels.copy}
+                    </button>
+                  </div>
+                ) : labels.create}
+              </td>
+              <td>{row.status}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      {pages > 1 && (
+        <div className="sheet-prometric-pagination">
+          <button type="button" disabled={currentPage === 0} onClick={() => changePage(currentPage - 1)}>
+            {labels.previous}
+          </button>
+          <span role="status">{labels.page} {currentPage + 1} / {pages}</span>
+          <button type="button" disabled={currentPage === pages - 1} onClick={() => changePage(currentPage + 1)}>
+            {labels.next}
+          </button>
+        </div>
+      )}
     </>
   );
 }

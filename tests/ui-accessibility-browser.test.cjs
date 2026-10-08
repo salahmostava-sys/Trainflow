@@ -213,6 +213,39 @@ test('compact operational pages remove empty width and keep inventory copying re
   await page.setViewportSize({width:390,height:844});assert.ok(await registration.evaluate(el=>{const box=el.getBoundingClientRect();return box.left>=0&&box.right<=innerWidth;}),'Registration dialog fits mobile');await page.keyboard.press('Escape');
 });
 
+test('Prometric account choices stay independent across preview pages and can copy one saved account',{timeout:30000},async t=>{
+  const page=await openWorkspace(t);
+  await page.evaluate(()=>{
+    const cells=Array.from({length:52},(_,index)=>{
+      const row=Array(13).fill('');row[1]='trainee'+index+'@example.invalid';row[3]='SAVED STUDENT';row[4]=String(index);row[9]='SAVED-'+index;row[10]='PASSWORD-'+index;return row;
+    });
+    uiTestDatabase.sheets['ui-admin']={sheet_id:'00000000-0000-0000-0000-000000000001',sheet_name:'Sheet 1',sheet_hidden:false,sheet_order:0,cells,version:1,format:{}};
+  });
+  await page.locator('#sheet-reload').click();await page.waitForFunction(()=>document.getElementById('sheet-status').textContent==='تم الحفظ');
+  await page.locator('#sheet-select-all').click();await page.locator('#sheet-prometric-open').click();
+  const preview=page.locator('#sheet-prometric-preview');
+  assert.equal(await preview.getByRole('combobox').count(),50);
+  const first=preview.getByRole('combobox',{name:'الإجراء لحساب الصف 1',exact:true});
+  await first.focus();await first.selectOption('new');
+  assert.equal(await first.evaluate(el=>el===document.activeElement),true,'Changing one account retains keyboard focus');
+  await preview.getByRole('button',{name:'التالي',exact:true}).click();
+  assert.equal(await preview.getByRole('combobox').count(),2);
+  const last=preview.getByRole('combobox',{name:'الإجراء لحساب الصف 52',exact:true});
+  await last.selectOption('new');await preview.getByRole('button',{name:'السابق',exact:true}).click();
+  assert.equal(await preview.getByRole('combobox',{name:'الإجراء لحساب الصف 1',exact:true}).inputValue(),'new');
+  assert.equal(await preview.getByRole('combobox',{name:'الإجراء لحساب الصف 2',exact:true}).inputValue(),'reuse');
+  await preview.getByRole('button',{name:'نسخ الحساب 2',exact:true}).click();
+  assert.deepEqual(await page.evaluate(()=>uiTestCopies),['SAVED-1\tPASSWORD-1']);
+  assert.match(await page.locator('#sheet-prometric-summary').textContent(),/جاهز للتسجيل: 2 · حسابات محفوظة: 50 · يحتاج مراجعة: 0/);
+  await preview.getByRole('button',{name:'التالي',exact:true}).click();assert.equal(await last.inputValue(),'new');
+  await page.evaluate(()=>{currentLang='en';applyLanguage();});
+  assert.equal(await preview.getByRole('combobox',{name:'Account action for row 52',exact:true}).inputValue(),'new');
+  await page.setViewportSize({width:390,height:844});
+  assert.ok(await page.locator('#sheet-prometric-dialog').evaluate(el=>el.getBoundingClientRect().right<=innerWidth),'Per-row account controls stay within the mobile dialog');
+  await page.keyboard.press('Escape');await page.locator('#sheet-prometric-open').click();
+  assert.equal(await preview.getByRole('combobox',{name:'Account action for row 1',exact:true}).inputValue(),'reuse','A new batch requires fresh explicit replacement choices');
+});
+
 test('language switching translates saved and failed status without discarding the sheet draft',{timeout:30000},async t=>{
   const page=await openWorkspace(t);
   await page.waitForFunction(()=>document.getElementById('sheet-status').textContent==='تم الحفظ');
