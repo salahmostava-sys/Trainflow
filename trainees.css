@@ -422,6 +422,18 @@
 .sheet-prometric-row-choice select:focus-visible,.sheet-prometric-row-choice button:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
 .sheet-prometric-pagination{display:flex;align-items:center;justify-content:center;gap:12px;margin:10px 0}
 .sheet-prometric-pagination span{font-size:12px;white-space:nowrap}
+#sheet-exam-dialog{overscroll-behavior:contain}
+.sheet-exam-table{width:100%;font-variant-numeric:tabular-nums}
+@media(max-width:600px){
+  .sheet-exam-table,.sheet-exam-table tbody,.sheet-exam-table tr{display:block}
+  .sheet-exam-table thead{display:none}
+  .sheet-exam-table tr{padding:8px;border:1px solid #d7dfe8;border-radius:8px;margin-bottom:8px}
+  #sheet-exam-dialog .sheet-exam-table td{display:flex;justify-content:space-between;gap:12px;padding:5px 0;border:0;max-width:none;white-space:normal}
+  .sheet-exam-table td::before{content:attr(data-label);color:#52647c;flex:0 0 90px;text-align:start}
+  .sheet-exam-table td span{min-width:0;overflow-wrap:anywhere;text-align:end}
+  .sheet-exam-table td:empty{display:none!important}
+  .sheet-exam-table td[data-empty="true"]{display:none!important}
+}
 .sheet-file-preview{overflow:auto;max-height:230px;margin:12px 0}
 .sheet-file-preview table{border-collapse:collapse;font-size:12px;white-space:nowrap}
 .sheet-file-preview th,.sheet-file-preview td{padding:7px 10px;border:1px solid #d7dfe8;text-align:start}

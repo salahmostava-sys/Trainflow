@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Prometric Auto Register — TrainFlow",
-  "version": "4.1.5",
-  "description": "Prometric registration linked to your TrainFlow trainee sheet",
+  "version": "4.2.0",
+  "description": "Prometric registration and selected exam results linked to your TrainFlow trainee sheet",
   "permissions": [
     "tabs",
     "storage",
@@ -33,6 +33,11 @@
     "128": "icon128.png"
   },
   "content_scripts": [
+    {
+      "matches": ["https://tcnet1.prometric.com/*"],
+      "js": ["exam-results-core.js", "exam-results-content.js"],
+      "run_at": "document_idle"
+    },
     {
       "matches": [
         "https://tcnet1.prometric.com/*"

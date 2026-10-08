@@ -19,7 +19,7 @@ const IbtaRegistration=(()=>{
       run.client=payload.client;run.tab=sender.tab.id;await chrome.storage.local.set({ibtaRun:run});return status(payload);
     }
     if(payload.type==='START'){
-      if(stored.isRunning||stored.singleRunning||run?.items.some(i=>['pending','done'].includes(i.status)))throw Error('BUSY');
+      if(stored.isRunning||stored.singleRunning||run?.items.some(i=>['pending','done'].includes(i.status))||await IbtaExamResults.reserved())throw Error('BUSY');
       if(!Array.isArray(payload.items)||!payload.items.length||payload.items.length>MAX)throw Error('INVALID_ROWS');
       const seen=new Set(),items=payload.items.map(i=>{
         if(!i||!str(i.id,80)||seen.has(i.id)||!str(i.name,300)||!/[A-Za-z]/.test(i.name)||!str(i.email,320)||!isValidEmail(i.email)||!str(i.fingerprint,12000)||!Number.isInteger(i.row)||i.row<0||i.row>=1000000)throw Error('INVALID_ROWS');
@@ -71,5 +71,5 @@ const IbtaRegistration=(()=>{
     await chrome.storage.local.set({ibtaRun:run});await notify(run);
   }
   async function reserved(){const {ibtaRun:run}=await chrome.storage.local.get('ibtaRun');return !!run?.items.some(i=>['pending','done'].includes(i.status));}
-  return {enqueue,trustedStep,submitted:(msg,sender)=>queue(()=>markSubmitted(msg,sender)),record:(msg,state,status)=>queue(()=>recordResult(msg,state,status)),cancelPending:()=>queue(cancelPendingRun),reserved};
+  return {enqueue,exclusive:queue,trustedStep,submitted:(msg,sender)=>queue(()=>markSubmitted(msg,sender)),record:(msg,state,status)=>queue(()=>recordResult(msg,state,status)),cancelPending:()=>queue(cancelPendingRun),reserved};
 })();

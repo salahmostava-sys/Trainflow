@@ -1,5 +1,5 @@
 if (typeof importScripts === 'function') {
-  importScripts('utils.js', 'trainflow-integration.js');
+  importScripts('utils.js', 'trainflow-integration.js', 'exam-results-core.js', 'exam-results-integration.js');
 } else if (typeof require === 'function') {
   const utils = require('./utils.js');
   globalThis.generateCredentials = utils.generateCredentials;
@@ -123,6 +123,7 @@ async function buildCredentials(item) {
 
 // Automatically stop the extension if the user closes the active registration tab
 chrome.tabs.onRemoved.addListener(async (tabId) => {
+  await IbtaRegistration.exclusive(()=>IbtaExamResults.tabClosed(tabId));
   const { currentTabId, singleRunning, isRunning } = await chrome.storage.local.get(['currentTabId', 'singleRunning', 'isRunning']);
   if (tabId === currentTabId) {
     if (singleRunning || isRunning) {
@@ -278,6 +279,8 @@ let isMsgProcessing = false;
 const backgroundMsgQueue = [];
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  const examHandlers={ibtaExamRequest:()=>IbtaExamResults.request(msg.payload,sender),ibtaExamContext:()=>IbtaExamResults.context(sender),ibtaExamRecord:()=>IbtaExamResults.record(msg,sender)};
+  if(Object.hasOwn(examHandlers,msg?.action)){IbtaRegistration.exclusive(examHandlers[msg.action]).then(sendResponse).catch(error=>sendResponse({ok:false,error:error.message}));return true;}
   if (msg?.action === 'prometricContext' || (sender?.tab && ['resumeQueue','stopQueue'].includes(msg?.action))) {
     chrome.storage.local.get('currentTabId').then(({currentTabId}) => {const active=sender?.id===chrome.runtime.id&&sender.frameId===0&&sender.tab?.id===currentTabId&&new URL(sender.url||'https://invalid.invalid').origin==='https://tcnet1.prometric.com';if(msg.action==='prometricContext')return sendResponse({ok:true,active});if(!active)return sendResponse({ok:false,error:'FORBIDDEN'});backgroundMsgQueue.push({msg,sender,sendResponse});processBackgroundQueue();}).catch(()=>sendResponse({ok:false,error:'FORBIDDEN'}));return true;
   }
@@ -302,7 +305,7 @@ async function processBackgroundQueue() {
   isMsgProcessing = true;
   const { msg, sender, sendResponse } = backgroundMsgQueue.shift();
   try {
-    await handleMessage(msg, sender);
+    if(['startSingle','startQueue','retryFailed'].includes(msg.action))await IbtaRegistration.exclusive(()=>handleMessage(msg,sender));else await handleMessage(msg, sender);
     sendResponse?.({ok:true});
   } catch (e) {
     sendResponse?.({ok:false,error:e.message});
@@ -522,7 +525,7 @@ async function handleClearSession() {
 
 async function handleMessage(msg, sender) {
   if (['stepDone','stepFailed'].includes(msg.action) && !await IbtaRegistration.trustedStep(msg, sender)) throw Error('FORBIDDEN');
-  if (['startSingle','startQueue','retryFailed'].includes(msg.action) && await IbtaRegistration.reserved()) throw Error('IBTA_JOB_PENDING');
+  if (['startSingle','startQueue','retryFailed'].includes(msg.action) && (await IbtaRegistration.reserved()||await IbtaExamResults.reserved())) throw Error('IBTA_JOB_PENDING');
   const state = await getState();
   const handlers = {
     stepDone: () => handleStepDone(msg, state),
@@ -573,11 +576,11 @@ chrome.contextMenus.onClicked.addListener(async (info) => {
     await addRunLog('Registration paused via context menu', 'pause');
     await updateBadge();
   } else if (info.menuItemId === "resume_queue") {
-    const { queue, queueIndex } = await getState();
-    if (queue && queueIndex < queue.length) {
-      await chrome.storage.local.set({ isRunning: true });
-      await openNextTab();
-    }
+    await IbtaRegistration.exclusive(async()=>{
+      if(await IbtaExamResults.reserved())return;
+      const {queue,queueIndex}=await getState();
+      if(queue&&queueIndex<queue.length){await chrome.storage.local.set({isRunning:true});await openNextTab();}
+    });
   } else if (info.menuItemId === "stop_clear") {
     await new Promise((resolve, reject) => {
       backgroundMsgQueue.push({

@@ -1,4 +1,5 @@
 import * as React from "react";
+import { ExamResultsDialog, ExamResultsTable } from "../components/workspace/ExamResults";
 import { createRoot, type Root } from "react-dom/client";
 import { flushSync } from "react-dom";
 import {
@@ -141,6 +142,11 @@ export const WorkspaceViews = {
     props: React.ComponentProps<typeof PrometricDialog>,
   ) {
     renderView(container, <PrometricDialog {...props} />);
+  },
+  examResultsDialog(container: Element) { renderView(container, <ExamResultsDialog />); },
+  examResultsTable(container: Element, props: React.ComponentProps<typeof ExamResultsTable>) {
+    const mounted=mountedView(container);
+    flushSync(()=>mounted.root.render(<ExamResultsTable key={props.rows[0]?.id||"empty"} {...props} />));
   },
   registrationResults(
     container: Element,

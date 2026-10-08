@@ -19,6 +19,8 @@ const sources = [
   { src: "trainees-borders.js" },
   { src: "trainees-sheets.js" },
   { src: "prometric-core.js" },
+  { src: "prometric-exam-core.js" },
+  { src: "prometric-exam-results.js" },
   {
     src: "prometric-registration.js",
     id: "prometric-registration-script",

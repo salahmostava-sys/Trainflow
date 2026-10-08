@@ -1,10 +1,28 @@
-# Prometric Auto Register — TrainFlow 4.1.5
+# Prometric Auto Register — TrainFlow 4.2.0
 
 Integrated from the user's Prometric Auto Register 4.0 source (Salah Mostafa,
 ISC license). Its original popup, registration steps, generation pattern,
 address defaults and import/export tools are retained.
 
 Production origin: **https://trainf.vercel.app/**. Updated 6 October 2026. Configured exclusively for the Vercel production origin.
+
+## Fetch exam results
+
+Select trainee rows, then choose **Fetch Prometric results → Fetch selected results**.
+Only those selected rows with a voucher code, complete saved credentials and an exam
+title are eligible. The dedicated tab signs in to each account and reads Review Scores;
+it does not launch a test. TCNet's explicit Pass/Fail and score are written to the
+result column and a free **Exam score** column without changing credentials or custom
+columns. Each account's credentials are removed from this results queue after it
+finishes. Confirmed scores remain recoverable until TrainFlow acknowledges its cloud save.
+
+Multiple attempts for the same exam, paginated histories, unavailable reports and
+unconfirmed scores require manual review. They do not change the existing result.
+Changes to a row's identity, voucher, credentials or result also prevent automatic writes.
+Use **Do not write** for a reviewed conflict, or restore pending scores from the same
+sheet after closing the original app tab. Registration and results jobs cannot run
+at the same time. The Prometric site session in that Chrome profile may switch
+between the selected accounts while this batch runs.
 
 ## Update an installed unpacked extension
 

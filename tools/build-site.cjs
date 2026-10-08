@@ -19,7 +19,7 @@ for(const file of ['inventory-delivery.js','trainflow-whatsapp-web.zip','_worker
 let html=next?'':renderDocument();
 const hashes=new Map();
 const fingerprint=(file,bytes)=>{const hash=createHash('sha256').update(bytes).digest('hex').slice(0,12);hashes.set(file,hash);return hash;};
-const files=['app-dialog.js','prometric-core.js','prometric-registration.js','certificate-name.js','cloud.js','workspace.js','workspace.css','navigation.js','ops-ui.js','trainees.js','trainees-excel.js','trainees-borders.js','trainees-sheets.js','trainees-core.js','trainees-xlsx.js','trainees-files.js','trainees.css','trainee-reports.js','session-policy.js','codes-export.js','voucher-columns.js'];
+const files=['app-dialog.js','prometric-core.js','prometric-exam-core.js','prometric-exam-results.js','prometric-registration.js','certificate-name.js','cloud.js','workspace.js','workspace.css','navigation.js','ops-ui.js','trainees.js','trainees-excel.js','trainees-borders.js','trainees-sheets.js','trainees-core.js','trainees-xlsx.js','trainees-files.js','trainees.css','trainee-reports.js','session-policy.js','codes-export.js','voucher-columns.js'];
 const vendor=fs.readFileSync(require.resolve('exceljs/dist/exceljs.min.js'));
 fs.writeFileSync(path.join(output,'exceljs-4.4.0.min.js'),vendor);
 fs.copyFileSync(require.resolve('exceljs/LICENSE'),path.join(output,'exceljs-LICENSE.txt'));

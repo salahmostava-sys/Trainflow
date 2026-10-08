@@ -20,7 +20,7 @@ const Trainees=(()=>{
   let formatting=D.defaultFormat(),duplicateIds=new Map();
   let rowOffsets=[0],rowHeights=new Map(),drawnStart=-1,drawnEnd=-1,drawnColumns='',scrollFrame=0;
   let visibleCache=null,columnOptionsKey='',headersKey='',mergeCacheFormat=null,mergeCache=[];
-  let excelTools=null,prometricTools=null,certificateTools=null,formulaCache=new Map();
+  let excelTools=null,prometricTools=null,examResultTools=null,certificateTools=null,formulaCache=new Map();
   const searchRows=new WeakMap();
   let lastDataRow=-1;
   let positionTimer,restoringPosition=false;
@@ -615,6 +615,8 @@ const Trainees=(()=>{
       resetSort:()=>{sortRules=[];sortCol=-1;render();},clearFilters:()=>{clearFilters();render();},setColumnWidth,saveColumnWidths,resetColumnWidth});
     if(typeof TraineePrometric!=='undefined')prometricTools=TraineePrometric.mount({D,$,tr,node,
       state:()=>({cells,view,owner:workspaceIdentity(),epoch,user:Cloud.userId(),loaded:loaded&&!loading,editing:!!editing,bounds:bounds(),selectedRows:selectedRows().map(r=>view[r])}),commitEdit,change,flush,focusCell,message});
+    if(typeof TraineeExamResults!=='undefined')examResultTools=TraineeExamResults.mount({$,tr,
+      state:()=>({cells,formatting,owner:workspaceIdentity(),epoch,user:Cloud.userId(),loaded:loaded&&!loading&&!worksheetBusy,editing:!!editing,selectedRows:selectedRows().map(r=>view[r])}),catalog:()=>DEFAULT_KEYCODES,commitEdit,change,flush});
     if(typeof TraineeCertificate!=='undefined')certificateTools=TraineeCertificate.mount({D,$,tr,node,
       state:()=>({cells,view,owner,epoch,loaded:loaded&&!loading,cursor:{...cursor}}),catalog:()=>DEFAULT_KEYCODES,commitEdit,message});
     translate();
@@ -680,6 +682,7 @@ const Trainees=(()=>{
     excelTools?.translate();
     sheetTools?.translate();
     prometricTools?.translate();
+    examResultTools?.translate();
     certificateTools?.translate();
     renderMessage();
     if(!editing)render();renderCodes();
@@ -693,11 +696,13 @@ const Trainees=(()=>{
     if(!owner||!loaded)await switchOwner(Cloud.userId());
     renderCodes();
     prometricTools?.poll();
+    examResultTools?.poll();
   }
   async function switchOwner(next,discard=false,nextSheet=sheetId){
     if(loading)return false;
     savePosition();
     prometricTools?.reset();
+    examResultTools?.reset();
     certificateTools?.reset();
     excelTools?.closeFiles();
     closeDuplicateDetails();
@@ -1392,8 +1397,8 @@ const Trainees=(()=>{
     catch(error){$('sheet-code-status').textContent=/CONFLICT/.test(error.message||'')?tr('تغيرت الأكواد. حدّث القائمة وحاول مجددًا.','Codes changed. Refresh and try again.'):tr('تعذر تخصيص الأكواد. تأكد أن المستخدم نشط ثم حدّث القائمة.','Could not assign codes. Check that the user is active, then refresh.');}
     finally{codeBusy=false;$('sheet-code-workspace').inert=false;if($('sheet-owner'))$('sheet-owner').disabled=false;}
   }
-  function reset(){sheetTools?.close();sheetId=FIRST_SHEET;worksheets=[];worksheetBusy=false;prometricTools?.reset();certificateTools?.reset();setExpandedView(false);excelTools?.closeFiles();closeDuplicateDetails();closeContextMenu();$('sheet-find-dialog')?.close();clearTimeout(timer);epoch++;owner='';cells=[];formatting=D.defaultFormat();loaded=false;loading=false;editing=null;history=[];future=[];revision=savedRevision=0;if(initialized){$('sheet-cell-content').value='';$('sheet-cell-content').title='';if($('sheet-selection-stats')){$('sheet-selection-stats').textContent='';$('sheet-selection-stats').hidden=true;}render();if($('sheet-owner'))window.WorkspaceViews.options($('sheet-owner'),{options:[]});window.WorkspaceViews.clear($('sheet-code-list'));$('sheet-workspace').inert=true;}}
-  function suspend(){prometricTools?.reset();certificateTools?.reset();setExpandedView(false);excelTools?.closeFiles();closeDuplicateDetails();closeContextMenu();$('sheet-find-dialog')?.close();clearTimeout(timer);}
+  function reset(){sheetTools?.close();sheetId=FIRST_SHEET;worksheets=[];worksheetBusy=false;prometricTools?.reset();examResultTools?.reset();certificateTools?.reset();setExpandedView(false);excelTools?.closeFiles();closeDuplicateDetails();closeContextMenu();$('sheet-find-dialog')?.close();clearTimeout(timer);epoch++;owner='';cells=[];formatting=D.defaultFormat();loaded=false;loading=false;editing=null;history=[];future=[];revision=savedRevision=0;if(initialized){$('sheet-cell-content').value='';$('sheet-cell-content').title='';if($('sheet-selection-stats')){$('sheet-selection-stats').textContent='';$('sheet-selection-stats').hidden=true;}render();if($('sheet-owner'))window.WorkspaceViews.options($('sheet-owner'),{options:[]});window.WorkspaceViews.clear($('sheet-code-list'));$('sheet-workspace').inert=true;}}
+  function suspend(){prometricTools?.reset();examResultTools?.reset();certificateTools?.reset();setExpandedView(false);excelTools?.closeFiles();closeDuplicateDetails();closeContextMenu();$('sheet-find-dialog')?.close();clearTimeout(timer);}
   return {open,translate,hasDraft,flush,reset,suspend,savePosition};
 })();
 window.TRAINFLOW_ENGINE = Trainees;

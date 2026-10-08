@@ -275,6 +275,7 @@ export function TraineesScreen({ active = false }: { active?: boolean }) {
           <span className="sheet-menu-shortcut">{"Ctrl+A"}</span>
         </button>
       </div>
+      <dialog id="sheet-exam-dialog" className="sheet-file-dialog sheet-prometric-dialog" aria-labelledby="sheet-exam-title" />
       <dialog
         id="sheet-find-dialog"
         className="sheet-find-dialog"

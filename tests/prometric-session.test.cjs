@@ -5,6 +5,7 @@ const vm = require('node:vm');
 const { webcrypto } = require('node:crypto');
 const { test } = require('node:test');
 const Prometric = require('../prometric-core.js');
+const Exam = require('../prometric-exam-core.js');
 
 function extensionFixture(fetcher) {
   const stored = {}, tabs = new Map();
@@ -39,7 +40,7 @@ function extensionFixture(fetcher) {
   const send = (message, sender = popup) => new Promise(resolve => chrome.runtime.onMessage.listener(message, sender, resolve));
   const request = payload => send({ action: 'ibtaRequest', payload: { owner: 'dummy-owner', client: 'dummy-client', ...payload } }, app);
   const registrationSender = () => ({ id: chrome.runtime.id, frameId: 0, url: 'https://tcnet1.prometric.com/Registration.aspx', tab: { id: stored.currentTabId } });
-  return { stored, chrome, send, request, registrationSender };
+  return { stored, chrome, tabs, send, request, registrationSender };
 }
 
 function registrationItems() {
@@ -50,6 +51,44 @@ function registrationItems() {
   });
   return Prometric.prepare(rows, [0, 1]).items;
 }
+
+async function examItems(){
+  const rows=registrationItems().map((account,index)=>{const row=Array(13).fill('');row[0]='DUMMY-CODE-'+index;row[1]=account.email;row[3]=account.name;row[7]='Leadership';row[9]='DUMMY-USER-'+index;row[10]='DUMMY-PASSWORD';return row;});
+  return Promise.all(Exam.prepare(rows,[0,1],[],{}).items.map(async account=>{const {originalCredentials,...safe}=account;return {...safe,credentialsHash:await Prometric.credentialsHash(originalCredentials)};}));
+}
+
+test('result jobs isolate app and Prometric tabs and retain scores until durable acknowledgment',async()=>{
+  const fixture=extensionFixture(),items=await examItems(),app={id:fixture.chrome.runtime.id,frameId:0,url:'https://trainf.vercel.app/',tab:{id:10}};
+  const request=(type,extra={},sender=app)=>fixture.send({action:'ibtaExamRequest',payload:{owner:'dummy-owner',client:'dummy-client',type,...extra}},sender);
+  assert.equal((await request('START',{items})).ok,true);
+  const examSender=()=>({id:fixture.chrome.runtime.id,frameId:0,url:'https://tcnet1.prometric.com/User/Welcome.aspx',tab:{id:fixture.stored.ibtaExamRun.examTab}});
+  const record=(account,extra,sender=examSender())=>fixture.send({action:'ibtaExamRecord',run:fixture.stored.ibtaExamRun.id,id:account.id,...extra},sender);
+  assert.equal((await request('PING')).run.items[0].password,undefined,'Polling cannot disclose queued credentials');
+  fixture.stored.queue=[{status:'failed'}];fixture.stored.queueIndex=0;fixture.stored.isRunning=false;
+  await fixture.chrome.contextMenus.onClicked.listener({menuItemId:'resume_queue'});
+  assert.equal(fixture.stored.isRunning,false,'Popup registration cannot resume during a results job');
+  assert.equal((await fixture.request({type:'START',items:registrationItems()})).error,'BUSY');
+  assert.equal((await record(items[0],{loggedIn:true,username:items[0].username},{...examSender(),tab:{id:999}})).error,'FORBIDDEN');
+  assert.equal((await record(items[0],{loggedIn:true,username:items[0].username})).ok,true);
+  const scoreSender={...examSender(),url:'https://tcnet1.prometric.com/Candidate/ManageReviewScores.aspx'};
+  assert.equal((await record(items[0],{rawScore:'Pass (88.2%)',examTitle:'Sales Arabic'},scoreSender)).error,'INVALID_RESULT');
+  assert.equal((await record(items[0],{rawScore:'Pass (88.2%)',examTitle:'Leadership Arabic'},scoreSender)).ok,true);
+  assert.equal(fixture.stored.ibtaExamRun.items[0].status,'done');assert.equal(fixture.stored.ibtaExamRun.items[0].password,undefined);
+  assert.equal((await request('ACK',{run:fixture.stored.ibtaExamRun.id,ids:[items[0].id]},{...app,tab:{id:11}})).error,'OUTDATED');
+  fixture.tabs.set(10,{id:10});
+  assert.equal((await request('RECOVER',{}, {...app,tab:{id:11}})).error,'ACTIVE_TAB','Another tab cannot take over an open app tab');
+  await request('STOP',{run:fixture.stored.ibtaExamRun.id});
+  assert.equal(fixture.stored.ibtaExamRun.items[0].score,'88.2%');assert.equal(fixture.stored.ibtaExamRun.items[0].status,'done','Stop retains unsaved confirmed scores');
+  assert.equal(fixture.stored.ibtaExamRun.items[1].password,undefined,'Stop discards pending account credentials');
+  assert.equal((await record(items[1],{rawScore:'Fail (60%)',examTitle:'Leadership Arabic'},scoreSender)).error,'FORBIDDEN');
+  assert.equal((await request('START',{items})).error,'BUSY');
+  await request('ACK',{run:fixture.stored.ibtaExamRun.id,ids:[items[0].id]});
+  assert.equal(fixture.stored.ibtaExamRun.items[0].status,'saved');assert.equal((await request('START',{items})).ok,true);
+  fixture.tabs.delete(10);
+  const recovered=await request('RECOVER',{}, {...app,tab:{id:11}});
+  assert.equal(recovered.run.appTab,11);assert.equal(recovered.run.items[0].password,undefined,'Closed-tab recovery does not expose queued passwords');
+  assert.equal((await request('STOP',{run:recovered.run.id})).error,'OUTDATED','The old app tab cannot control a recovered batch');
+});
 
 test('sheet import rejects unexpected URLs and fetches a valid CSV without cookies', async () => {
   const requests = [];
