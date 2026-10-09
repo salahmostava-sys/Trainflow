@@ -58,6 +58,10 @@ export function TraineesScreen({ active = false }: { active?: boolean }) {
             <input id="sheet-org" type="search" />
             <input id="sheet-date" type="search" />
             <select id="sheet-result"></select>
+            <label className="sheet-empty-rows-filter">
+              <input type="checkbox" id="sheet-show-empty-rows" />
+              <span id="sheet-show-empty-rows-label">عرض الصفوف الفارغة</span>
+            </label>
             <label
               className="sheet-duplicates-filter"
               id="sheet-duplicates-filter"

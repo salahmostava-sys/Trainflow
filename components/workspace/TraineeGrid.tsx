@@ -31,6 +31,7 @@ export interface GridRow {
   viewRow: number;
   sourceRow: number;
   height?: number;
+  group?: { title: string; countLabel: string };
   cells: (GridCell | { gap: true; count: number; width: number })[];
   onSelect: React.MouseEventHandler<HTMLButtonElement>;
   onPointerDown: React.PointerEventHandler<HTMLButtonElement>;
@@ -252,50 +253,65 @@ export function TraineeRows({
     <>
       {top > 0 && <Spacer height={top} columns={columnCount} edge="top" />}
       {rows.map((row) => (
-        <tr
-          key={row.viewRow}
-          aria-rowindex={row.viewRow + 2}
-          data-row-height={row.height ? "" : undefined}
-          style={
-            row.height
-              ? ({
-                  "--custom-row-height": row.height + "px",
-                } as React.CSSProperties)
-              : undefined
-          }
-        >
-          <th className="sheet-rownum" scope="row" data-rowv={row.viewRow}>
-            <button
-              type="button"
-              onClick={row.onSelect}
-              onPointerDown={row.onPointerDown}
-            >
-              {row.sourceRow + 1}
-            </button>
-            <div
-              className="sheet-row-resizer"
-              data-resizer-row={row.viewRow}
-              title={row.resizeTitle}
-              onPointerDown={row.onResize}
-              onDoubleClick={row.onResetHeight}
-            />
-          </th>
-          {row.cells.map((cell, index) =>
-            "gap" in cell ? (
-              <td
-                key={"gap-" + index}
-                className="sheet-column-spacer"
-                colSpan={cell.count}
-                aria-hidden="true"
-                style={
-                  { "--gap-width": cell.width + "px" } as React.CSSProperties
-                }
-              />
-            ) : (
-              <TraineeCell key={cell.column} {...cell} />
-            ),
+        <React.Fragment key={row.viewRow}>
+          {row.group && (
+            <tr className="sheet-day-separator">
+              <th colSpan={columnCount} scope="rowgroup">
+                <div className="sheet-day-label">
+                  <span className="sheet-day-title" dir="auto" title={row.group.title}>
+                    {row.group.title}
+                  </span>
+                  <span className="sheet-day-count" dir="auto">
+                    {row.group.countLabel}
+                  </span>
+                </div>
+              </th>
+            </tr>
           )}
-        </tr>
+          <tr
+            aria-rowindex={row.viewRow + 2}
+            data-row-height={row.height ? "" : undefined}
+            style={
+              row.height
+                ? ({
+                    "--custom-row-height": row.height + "px",
+                  } as React.CSSProperties)
+                : undefined
+            }
+          >
+            <th className="sheet-rownum" scope="row" data-rowv={row.viewRow}>
+              <button
+                type="button"
+                onClick={row.onSelect}
+                onPointerDown={row.onPointerDown}
+              >
+                {row.sourceRow + 1}
+              </button>
+              <div
+                className="sheet-row-resizer"
+                data-resizer-row={row.viewRow}
+                title={row.resizeTitle}
+                onPointerDown={row.onResize}
+                onDoubleClick={row.onResetHeight}
+              />
+            </th>
+            {row.cells.map((cell, index) =>
+              "gap" in cell ? (
+                <td
+                  key={"gap-" + index}
+                  className="sheet-column-spacer"
+                  colSpan={cell.count}
+                  aria-hidden="true"
+                  style={
+                    { "--gap-width": cell.width + "px" } as React.CSSProperties
+                  }
+                />
+              ) : (
+                <TraineeCell key={cell.column} {...cell} />
+              ),
+            )}
+          </tr>
+        </React.Fragment>
       ))}
       {bottom > 0 && (
         <Spacer height={bottom} columns={columnCount} edge="bottom" />

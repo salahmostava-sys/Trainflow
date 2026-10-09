@@ -20,6 +20,8 @@ const Trainees=(()=>{
   let extraSelections=[],selectionKind='cell';
   let formatting=D.defaultFormat(),duplicateIds=new Map();
   let rowOffsets=[0],rowHeights=new Map(),drawnStart=-1,drawnEnd=-1,drawnColumns='',scrollFrame=0;
+  const DAY_HEADER_HEIGHT=40;
+  let dayHeaders=new Map(),collapsedRows=new Set();
   let visibleCache=null,columnOptionsKey='',headersKey='',mergeCacheFormat=null,mergeCache=[];
   let excelTools=null,prometricTools=null,examResultTools=null,certificateTools=null,formulaCache=new Map();
   const searchRows=new WeakMap();
@@ -39,7 +41,7 @@ const Trainees=(()=>{
     restoringPosition=true;
     try{
       const r=view.indexOf(Math.min(saved.row,totalInputRows()-1)),first=view.indexOf(Math.min(saved.firstRow,totalInputRows()-1)),cols=visibleCols();
-      extraSelections=[];anchor=cursor={r:Math.max(0,r),c:cols.includes(saved.column)?saved.column:cols[0]};
+      extraSelections=[];anchor=cursor={r:adjacentVisibleRow(Math.max(0,r)-1,1),c:cols.includes(saved.column)?saved.column:cols[0]};
       const scroll=$('sheet-grid').parentElement;
       scroll.scrollTop=(rowOffsets[Math.max(0,first)]||0)+(Number.isFinite(saved.offset)?Math.max(0,Math.min(saved.offset,400)):0);
       scroll.scrollLeft=Number.isFinite(saved.left)?saved.left:0;drawRows(true);
@@ -507,7 +509,7 @@ const Trainees=(()=>{
       let col=0;if(match)for(const letter of match[1])col=col*26+letter.charCodeAt(0)-64;
       const row=match?Number(match[2])-1:-1;col--;
       if(!match||row<0||row>=totalInputRows()||col<0||col>=labels.length||!visibleCols().includes(col)){message(()=>tr('اكتب عنوان خلية موجودة وعمود ظاهر، مثل D150.','Enter an existing cell in a visible column, such as D150.'),true);return;}
-      commitEdit();clearFilters();render();focusCell(row,col);
+      commitEdit();clearFilters();render();focusCell(view.indexOf(row),col);
     });
     $('sheet-owner')?.addEventListener('change',async()=>{const next=$('sheet-owner').value;$('sheet-owner').value=owner;await switchOwner(next);});
     if($('sheet-mode'))$('sheet-mode').onclick=()=>setMode('sheet');if($('sheet-codes-mode'))$('sheet-codes-mode').onclick=()=>setMode('codes');
@@ -543,6 +545,7 @@ const Trainees=(()=>{
       }
     };
     $('sheet-clear-filters').onclick=()=>{commitEdit();clearFilters();render();};
+    $('sheet-show-empty-rows').onchange=()=>{commitEdit();stopSelectionDrag();render();if(collapsedRows.has(cursor.r)){cursor=anchor={r:adjacentVisibleRow(cursor.r,1),c:cursor.c};paint();}};
     const grid=$('sheet-grid');
     const contentInput=$('sheet-cell-content');
     contentInput.addEventListener('focus',()=>{
@@ -552,7 +555,7 @@ const Trainees=(()=>{
     });
     contentInput.addEventListener('keydown',e=>{
       if(e.isComposing)return;
-      if(e.key==='Enter'||e.key==='Escape'){e.preventDefault();commitEdit(e.key==='Escape');focusCell(cursor.r+(e.key==='Enter'?1:0),cursor.c);}
+      if(e.key==='Enter'||e.key==='Escape'){e.preventDefault();commitEdit(e.key==='Escape');focusCell(e.key==='Enter'?adjacentVisibleRow(cursor.r,1):cursor.r,cursor.c);}
     });
     grid.parentElement.addEventListener('scroll',()=>{queueDraw();schedulePosition();},{passive:true});
     touchPointer.addEventListener('change',()=>{commitEdit();applyExcelView();resetRowHeights();rebuildRowOffsets();drawRows(true);});
@@ -657,6 +660,8 @@ const Trainees=(()=>{
   function translate(){
     ($('sidebar-trainees-label')||$('trainees-tab')).textContent=tr('المتدربون','Trainees');if(!initialized)return;
     $('sheet-cell-content').placeholder=tr('محتوى الخلية المحددة','Selected cell content');$('sheet-cell-content').setAttribute('aria-label',tr('محتوى الخلية المحددة','Selected cell content'));
+    $('sheet-show-empty-rows-label').textContent=tr('عرض الصفوف الفارغة','Show empty rows');
+    $('sheet-show-empty-rows').title=tr('الفاصل يعتمد على الصفوف الفارغة، وليس اختلاف تاريخ المتدرب','Groups follow blank rows, not changes in trainee dates');
     if($('sheet-more-tools'))$('sheet-more-tools').textContent=tr('التنسيق وأدوات إضافية','Formatting & more tools');
     $('sheet-zoom-label').textContent=tr('زوم الجدول','Table zoom');
   $('sheet-row-size-label').textContent=tr('حجم الصف','Row size');
@@ -802,7 +807,7 @@ const Trainees=(()=>{
     if(formatting.hiddenRows?.length){const hidden=new Set(formatting.hiddenRows);view=view.filter(r=>!hidden.has(r));}
   }
   function render(){
-    if(!initialized)return;hideDuplicateHint();clearTimeout(detailTimer);formulaCache.clear();const oldView=view;buildView();if(oldView.length!==view.length||oldView.some((r,i)=>r!==view[i]))extraSelections=[];
+    if(!initialized)return;pendingRender=false;hideDuplicateHint();clearTimeout(detailTimer);formulaCache.clear();const oldView=view;buildView();buildDayLayout();if(oldView.length!==view.length||oldView.some((r,i)=>r!==view[i]))extraSelections=[];
     const scroll=$('sheet-grid').parentElement,scrollTop=scroll.scrollTop,scrollLeft=scroll.scrollLeft;
     const cols=visibleCols();if(!cols.includes(cursor.c))cursor.c=cols[0];if(!cols.includes(anchor.c))anchor.c=cursor.c;
     $('panel-trainees').dir=formatting.direction;
@@ -858,9 +863,35 @@ const Trainees=(()=>{
   function resetRowHeights(){
     rowHeights.clear();for(const [key,style]of Object.entries(formatting.styles)){const r=Number(key.split(':')[0]),height=Math.max((style.height||0)*excelView.zoom/100,style.rotation?70:0);if(height)rowHeights.set(r,Math.max(rowHeights.get(r)||0,height));}
   }
+  function dayDateLabel(raw){
+    const digits=raw.replace(/[٠-٩]/g,digit=>String(digit.charCodeAt(0)-1632)).replace(/[۰-۹]/g,digit=>String(digit.charCodeAt(0)-1776));
+    const iso=digits.match(/(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/),local=digits.match(/(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})/);
+    if(!iso&&!local)return raw;
+    const [year,month,day]=iso?iso.slice(1).map(Number):[Number(local[3]),Number(local[2]),Number(local[1])],date=new Date(Date.UTC(year,month-1,day));
+    if(date.getUTCFullYear()!==year||date.getUTCMonth()!==month-1||date.getUTCDate()!==day)return raw;
+    const weekday=new Intl.DateTimeFormat(currentLang==='ar'?'ar-EG':'en-GB',{weekday:'long',timeZone:'UTC'}).format(date);
+    return weekday+tr(' الموافق ',' · ')+date.toLocaleDateString('en-GB',{timeZone:'UTC'});
+  }
+  function buildDayLayout(){
+    dayHeaders=new Map();collapsedRows=new Set();if(filtered())return;
+    const groups=D.dayGroups(cells,formatting.styles);let groupIndex=0,seen=-1,number=0;
+    for(let v=0;v<view.length;v++){
+      const source=view[v];while(groupIndex<groups.length&&source>groups[groupIndex].end)groupIndex++;
+      const group=groups[groupIndex];if(!group)break;
+      if(source<group.start){if(groupIndex>0&&!$('sheet-show-empty-rows').checked)collapsedRows.add(v);continue;}
+      if(seen===groupIndex)continue;seen=groupIndex;if(!group.count)continue;number++;
+      const title=group.date?dayDateLabel(group.date):tr('مجموعة بيانات ','Data group ')+number;
+      dayHeaders.set(v,{title,countLabel:tr(' · صفوف بها بيانات: ',' · Rows with data: ')+group.count});
+    }
+  }
+  function adjacentVisibleRow(from,direction){
+    let row=Math.max(0,Math.min(view.length-1,from+direction));
+    while(collapsedRows.has(row))row+=direction;
+    return row;
+  }
   function rebuildRowOffsets(){
     const estimate=Math.max((excelView.wrap?rowSize*4/3+8:displayRowHeight()+1)*excelView.zoom/100,formatting.fontSize*excelView.zoom/100*(excelView.wrap?1.5:1.2),touchPointer.matches?44:0);
-    rowOffsets=new Float64Array(view.length+1);for(let r=0;r<view.length;r++)rowOffsets[r+1]=rowOffsets[r]+(rowHeights.get(view[r])||estimate);
+    rowOffsets=new Float64Array(view.length+1);for(let r=0;r<view.length;r++)rowOffsets[r+1]=rowOffsets[r]+(collapsedRows.has(r)?0:(rowHeights.get(view[r])||estimate))+(dayHeaders.has(r)?DAY_HEADER_HEIGHT:0);
   }
   function rowAtOffset(offset){let low=0,high=view.length;while(low<high){const mid=(low+high)>>1;if(rowOffsets[mid+1]<=offset)low=mid+1;else high=mid;}return Math.min(low,Math.max(0,view.length-1));}
   let forceDraw=false,pendingRender=false;
@@ -892,13 +923,16 @@ const Trainees=(()=>{
       return;
     }
     const height=scroll.clientHeight||400,head=grid.querySelector('thead').getBoundingClientRect().height||36;
+    scroll.style.setProperty('--sheet-group-width',scroll.clientWidth+'px');
+    scroll.style.setProperty('--sheet-day-header-height',DAY_HEADER_HEIGHT+'px');
     const first=rowAtOffset(Math.max(0,scroll.scrollTop-head)),start=view.length<=100?0:Math.max(0,first-8),end=view.length<=100?view.length:Math.min(view.length,rowAtOffset(scroll.scrollTop+height)+10);
     const merges=sheetMerges(),segments=columnWindow(cols,merges,start,end),columnKey=segments.map(s=>s.gap?'gap:'+s.count+':'+s.width:s.c).join(',');
     if(!force&&start===drawnStart&&end===drawnEnd&&columnKey===drawnColumns){updateVisibleRows();return;}
     const hadFocus=grid.contains(document.activeElement),previousTop=scroll.scrollTop,previousLeft=scroll.scrollLeft;commitEdit();drawnStart=start;drawnEnd=end;drawnColumns=columnKey;
     const rows=[];
     for(let v=start;v<end;v++){
-      const idx=view[v],row={viewRow:v,sourceRow:idx,height:rowHeights.get(idx),cells:[],
+      if(collapsedRows.has(v))continue;
+      const idx=view[v],row={viewRow:v,sourceRow:idx,height:rowHeights.get(idx),group:dayHeaders.get(v),cells:[],
         resizeTitle:tr('اسحب لتعديل ارتفاع الصف · انقر مرتين لاستعادة الارتفاع الافتراضي','Drag to change row height · Double-click to reset'),
         onResize:e=>initRowResize(e,idx),onResetHeight:e=>{e.stopPropagation();commitEdit();saveRowHeight(idx,null);},
         onSelect:e=>{if(!skipSelectionClick&&!dragMoved)selectRow(v,e);skipSelectionClick=false;dragMoved=false;},
@@ -1266,6 +1300,7 @@ const Trainees=(()=>{
   function selectCell(r,c,extend=false,additive=false){startSelection({r,c},{r,c},extend,additive);$('sheet-grid').querySelector(`td[data-v="${r}"][data-col="${c}"]`)?.focus();}
   function focusCell(r,c,extend=false){
     r=Math.max(0,Math.min(view.length-1,r));c=Math.max(0,Math.min(colCount()-1,c));if(!visibleCols().includes(c))c=visibleCols()[0];
+    if(collapsedRows.has(r)){$('sheet-show-empty-rows').checked=true;render();}
     const grid=$('sheet-grid'),scroll=grid.parentElement;
     if(r<drawnStart||r>=drawnEnd){commitEdit();scroll.scrollTop=rowOffsets[r]||0;drawRows(true);}
     if(!grid.querySelector(`td[data-v="${r}"][data-col="${c}"]`)){commitEdit();const header=grid.querySelector(`thead th[data-col="${c}"]`),box=header?.getBoundingClientRect(),viewport=scroll.getBoundingClientRect();if(box){if(box.right>viewport.right)scroll.scrollLeft+=box.right-viewport.right;else if(box.left<viewport.left+46)scroll.scrollLeft+=box.left-viewport.left-46;}drawRows(true);}selectCell(r,c,extend);
@@ -1298,10 +1333,10 @@ const Trainees=(()=>{
     duplicateIds=D.duplicates(cells);decorateCell(edit.el,edit.index,edit.column);
     if(edit.column===4){$('sheet-grid').querySelectorAll('td[data-col="4"]').forEach(td=>decorateCell(td,view[+td.dataset.v],4));}
     paint();
-    if(forceDraw)queueDraw(true);
+    if(forceDraw||pendingRender)queueDraw(true);
   }
   function change(next,redraw=true,nextFormat=formatting){
-    if(!loaded)return;history.push(snapshot());if(history.length>30)history.shift();future=[];cells=next;updateLastDataRow();formatting=D.format(nextFormat);formulaCache.clear();revision++;schedule();if(redraw)render();else{$('sheet-undo').disabled=false;$('sheet-redo').disabled=true;}
+    if(!loaded)return;history.push(snapshot());if(history.length>30)history.shift();future=[];cells=next;updateLastDataRow();formatting=D.format(nextFormat);formulaCache.clear();revision++;schedule();if(redraw)render();else{pendingRender=true;$('sheet-undo').disabled=false;$('sheet-redo').disabled=true;}
   }
   function undo(redo){commitEdit();const from=redo?future:history,to=redo?history:future;if(!from.length)return;to.push(snapshot());const next=from.pop();cells=next.cells;formatting=D.format(next.format);cellAlignments={...next.alignments};saveAlignments();revision++;schedule();render();if(view.length)focusCell(cursor.r,cursor.c);}
   function schedule(){clearTimeout(timer);message(()=>tr('تعديلات غير محفوظة…','Unsaved changes…'));const saveWhenIdle=()=>{if(editing?.el.dataset.composing==='true'){timer=setTimeout(saveWhenIdle,900);return;}flush(true);};timer=setTimeout(saveWhenIdle,900);}
@@ -1428,7 +1463,7 @@ const Trainees=(()=>{
     if(e.target.matches('select')){if(e.key==='Tab'){e.preventDefault();const td=e.target.closest('td');extraSelections=[];cursor=anchor={r:+td.dataset.v,c:+td.dataset.col};moveTab(e.shiftKey);}return;}
     if(editing){
       if(e.key==='Escape'){e.preventDefault();commitEdit(true);focusCell(cursor.r,cursor.c);}
-      else if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();commitEdit();render();focusCell(cursor.r+1,cursor.c);}
+      else if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();commitEdit();render();focusCell(adjacentVisibleRow(cursor.r,1),cursor.c);}
       else if(e.key==='Tab'){e.preventDefault();commitEdit();render();moveTab(e.shiftKey);}
       return;
     }
@@ -1439,13 +1474,13 @@ const Trainees=(()=>{
     if((e.ctrlKey||e.metaKey)&&(e.key.toLowerCase()==='f'||e.key.toLowerCase()==='h')){e.preventDefault();openFindDialog(e.key.toLowerCase()==='h');return;}
     const sign=formatting.direction==='rtl'?-1:1,cols=visibleCols();
     const moves={ArrowDown:[1,0],ArrowUp:[-1,0],ArrowRight:[0,sign],ArrowLeft:[0,-sign]};
-    if(moves[e.key]){e.preventDefault();const [r,c]=moves[e.key];const col=cols[Math.max(0,Math.min(cols.length-1,cols.indexOf(cursor.c)+c))];focusCell(cursor.r+r,col,e.shiftKey);return;}
+    if(moves[e.key]){e.preventDefault();const [r,c]=moves[e.key];const col=cols[Math.max(0,Math.min(cols.length-1,cols.indexOf(cursor.c)+c))];focusCell(r?adjacentVisibleRow(cursor.r,r):cursor.r,col,e.shiftKey);return;}
     if(e.key==='Tab'){e.preventDefault();moveTab(e.shiftKey);return;}
-    if(e.key==='Enter'){e.preventDefault();focusCell(cursor.r+(e.shiftKey?-1:1),cursor.c);return;}
+    if(e.key==='Enter'){e.preventDefault();focusCell(adjacentVisibleRow(cursor.r,e.shiftKey?-1:1),cursor.c);return;}
     if(e.key==='Delete'||e.key==='Backspace'){e.preventDefault();clearSelection();return;}
     const td=e.target.closest('td[data-col]');if(td&&(e.key==='F2'||(e.key.length===1&&!e.ctrlKey&&!e.metaKey&&!e.altKey))){e.preventDefault();beginEdit(td,e.key==='F2'?undefined:e.key);}
   }
-  function moveTab(back){const cols=visibleCols();let r=cursor.r,c=cols.indexOf(cursor.c)+(back?-1:1);if(c>=cols.length){c=0;r++;}if(c<0){c=cols.length-1;r--;}focusCell(r,cols[c]);}
+  function moveTab(back){const cols=visibleCols();let r=cursor.r,c=cols.indexOf(cursor.c)+(back?-1:1);if(c>=cols.length){c=0;r=adjacentVisibleRow(r,1);}if(c<0){c=cols.length-1;r=adjacentVisibleRow(r,-1);}focusCell(r,cols[c]);}
   function setMode(next){commitEdit();mode=next;$('sheet-workspace')&&($('sheet-workspace').hidden=mode!=='sheet');$('sheet-code-workspace')&&($('sheet-code-workspace').hidden=mode!=='codes');$('sheet-mode')?.setAttribute('aria-selected',String(mode==='sheet'));$('sheet-codes-mode')?.setAttribute('aria-selected',String(mode==='codes'));if(mode==='codes')renderCodes();}
   function renderCodes(){
     if(!initialized)return;
