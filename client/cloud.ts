@@ -2,6 +2,24 @@
 const Cloud = (() => {
   const SUPABASE_URL = "https://xaeffreqwtozsgqajzpc.supabase.co";
   const KEY = "sb_publishable_TB0SB3SNFP1ygpRvMoeSGg_s8o0mHeO";
+  const REMEMBER_KEY = "trainflow_remember_me";
+  const sessionStore = () =>
+    localStorage.getItem(REMEMBER_KEY) === "1" ? localStorage : sessionStorage;
+  const authStorage = {
+    getItem(key: string) {
+      return sessionStore().getItem(key);
+    },
+    setItem(key: string, serializedSession: string) {
+      const selected = sessionStore();
+      const previous = selected === localStorage ? sessionStorage : localStorage;
+      selected.setItem(key, serializedSession);
+      previous.removeItem(key);
+    },
+    removeItem(key: string) {
+      localStorage.removeItem(key);
+      sessionStorage.removeItem(key);
+    },
+  };
   async function serverFetch(
     input: RequestInfo | URL,
     init?: RequestInit,
@@ -944,20 +962,19 @@ const Cloud = (() => {
     }
     setStatus("dbConnected");
   }
-  async function authenticate(signup: boolean) {
+  async function authenticate() {
+    if ($("auth-actions").inert) return;
     const email = $("auth-email").value.trim(),
       password = $("auth-password").value;
     setAuthStatus("authConnecting");
     $("auth-actions").inert = true;
     try {
       if (!email || password.length < 8) throw Error("IBTA_AUTH_INVALID_INPUT");
-      const result = signup
-        ? await client.auth.signUp({ email, password })
-        : await client.auth.signInWithPassword({ email, password });
+      localStorage.setItem(REMEMBER_KEY, $("auth-remember").checked ? "1" : "0");
+      const result = await client.auth.signInWithPassword({ email, password });
       if (result.error) throw result.error;
       $("auth-password").value = "";
       if (result.data.session) await enter(result.data.session);
-      else setAuthStatus("authSignupRequested");
     } catch (e) {
       setAuthStatus("error", e);
     } finally {
@@ -1270,19 +1287,19 @@ const Cloud = (() => {
       currentLang === "ar" ? "جارٍ تحميل مساحة العمل…" : "Loading workspace…";
     try {
       if (!window.supabase) throw Error("IBTA_LIBRARY_LOAD_FAILED");
+      $("auth-remember").checked = localStorage.getItem(REMEMBER_KEY) === "1";
       client = window.supabase.createClient(SUPABASE_URL, KEY, {
         global: { fetch: serverFetch },
         auth: {
-          storage: sessionStorage,
+          storage: authStorage,
           persistSession: true,
           detectSessionInUrl: false,
         },
       });
       $("auth-form").addEventListener("submit", (e) => {
         e.preventDefault();
-        authenticate(false);
+        authenticate();
       });
-      $("sign-up").addEventListener("click", () => authenticate(true));
       $("import-legacy").addEventListener("click", importLegacy);
       $("export-data").addEventListener("click", exportData);
       $("export-codes-csv").addEventListener("click", exportCodesCsv);

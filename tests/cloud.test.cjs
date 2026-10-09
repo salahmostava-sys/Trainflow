@@ -10,7 +10,10 @@ const views=require('../tools/workspace-source.cjs').loadTsx(path.join(__dirname
 let eventPrototype=Object.getPrototypeOf(document.createElement('button'));while(!Object.hasOwn(eventPrototype,'addEventListener'))eventPrototype=Object.getPrototypeOf(eventPrototype);
 const nativeListen=eventPrototype.addEventListener;
 eventPrototype.addEventListener=function(event,listener,...args){this.listeners||={};this.listeners[event]=listener;return nativeListen.call(this,event,listener,...args);};
-const els=new Proxy({}, {get:(_,id)=>document.getElementById(id)}),storage=new Map(),events=[];
+const els=new Proxy({}, {get:(_,id)=>document.getElementById(id)}),storage=new Map(),tabStorage=new Map(),events=[];
+const browserStorage=entries=>({getItem:key=>entries.get(key)||null,setItem:(key,value)=>entries.set(key,value),removeItem:key=>entries.delete(key)});
+let sdkStorage,storedSessionMode=false;
+const authTokenKey='sb-test-auth-token';
 const documentListeners={};const documentListen=document.addEventListener.bind(document);
 document.addEventListener=(event,listener,...args)=>{documentListeners[event]=listener;return documentListen(event,listener,...args);};
 const fire=async(element,type)=>{global.IS_REACT_ACT_ENVIRONMENT=true;try{await React.act(async()=>{element.dispatchEvent(new domWindow.Event(type,{bubbles:true,cancelable:true}));});}finally{delete global.IS_REACT_ACT_ENVIRONMENT;}};
@@ -26,7 +29,7 @@ const initialSessionRead=new Promise(resolve=>{releaseInitialSession=resolve;});
 const accessToken='header.'+Buffer.from(JSON.stringify({amr:[{method:'password',timestamp:Math.floor(Date.now()/1000)}]})).toString('base64url')+'.signature';
 let membersReadError=false;
 const client={
-  auth:{getSession:async()=>{if(firstSessionRead){firstSessionRead=false;await initialSessionRead;}return sessionReadError?{error:Error('NETWORK')}:{data:{session:{user:clone(authUser),access_token:accessToken}}};},onAuthStateChange(fn){authListener=fn;},signOut:async()=>{signOuts++;authListener?.('SIGNED_OUT',null);return {};},updateUser:async args=>{events.push({name:'auth_update',args:clone(args)});if(args.data)authUser.user_metadata={...authUser.user_metadata,...args.data};return {data:{user:clone(authUser)}};}},
+  auth:{getSession:async()=>{if(firstSessionRead){firstSessionRead=false;await initialSessionRead;}return sessionReadError?{error:Error('NETWORK')}:{data:{session:storedSessionMode?JSON.parse(await sdkStorage.getItem(authTokenKey)||'null'):{user:clone(authUser),access_token:accessToken}}};},onAuthStateChange(fn){authListener=fn;},signInWithPassword:async()=>{storedSessionMode=true;const session={user:clone(authUser),access_token:accessToken};await sdkStorage.setItem(authTokenKey,JSON.stringify(session));return {data:{session}};},signOut:async()=>{signOuts++;await sdkStorage.removeItem(authTokenKey);authListener?.('SIGNED_OUT',null);return {};},updateUser:async args=>{events.push({name:'auth_update',args:clone(args)});if(args.data)authUser.user_metadata={...authUser.user_metadata,...args.data};return {data:{user:clone(authUser)}};}},
   from(table){
     if(table==='ibta_trainee_sheets'){const filters=[];const selected=()=>db.traineeSheets.filter(row=>filters.every(([key,value])=>row[key]===value));return {select(){return this;},eq(key,value){filters.push([key,value]);return this;},order(){return this;},maybeSingle:async()=>({data:clone(selected()[0]||null)}),then(resolve,reject){return Promise.resolve({data:clone(selected()),error:null}).then(resolve,reject);},range:async(from,to)=>({data:clone(selected().slice(from,to+1)),error:null})};}
     if(table==='ibta_audit')return {select(){return this;},order(){return this;},limit:async()=>({data:clone(db.auditEvents)})};
@@ -101,7 +104,7 @@ const client={
     return {};
   }
 };
-const ctx=vm.createContext({document,URL,Blob,localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v)},sessionStorage:{},window:{WorkspaceViews:views,matchMedia:()=>({matches:false}),URL:{createObjectURL(blob){backupBlobs.push(blob);return 'blob:backup-test';},revokeObjectURL(){}},supabase:{createClient:()=>client},addEventListener(name,fn){windowListeners[name]=fn;}},navigator:{clipboard:{writeText:async text=>{if(clipboardFails)throw Error('denied');events.push({name:'clipboard',text});}}},setInterval(){},setTimeout(){},clearTimeout(){},confirm:()=>true,location:{reload(){}}});
+const ctx=vm.createContext({document,URL,Blob,localStorage:browserStorage(storage),sessionStorage:browserStorage(tabStorage),window:{WorkspaceViews:views,matchMedia:()=>({matches:false}),URL:{createObjectURL(blob){backupBlobs.push(blob);return 'blob:backup-test';},revokeObjectURL(){}},supabase:{createClient:(_url,_key,options)=>{sdkStorage=options.auth.storage;return client;}},addEventListener(name,fn){windowListeners[name]=fn;}},navigator:{clipboard:{writeText:async text=>{if(clipboardFails)throw Error('denied');events.push({name:'clipboard',text});}}},setInterval(){},setTimeout(){},clearTimeout(){},confirm:()=>true,location:{reload(){}}});
 ctx.atob=atob;
 ctx.matchMedia=domWindow.matchMedia.bind(domWindow);
 vm.runInContext(fs.readFileSync(path.join(__dirname,'../session-policy.js'),'utf8'),ctx);
@@ -408,12 +411,28 @@ for(const key of usedKeys) assert(englishKeys.includes(key),`Missing translation
   const allocation=db.codes.find(r=>r.code==='TRAINEE-ALLOCATE');assert.equal(allocation.owner_id,'user-1');assert.equal(allocation.used_by,'user-1');assert.ok(allocation.used_on);
   await assert.rejects(run("Cloud.claimTraineeCode('NONEXISTENT','user-1')"));
   for(const name of ['inventoryReportSnapshot','inventoryDelivery','inventoryDeliveryEligible'])assert.equal(run('typeof Cloud.'+name),'undefined','Removed delivery APIs are absent');
-  let resets=0,flushes=0;
+  assert.equal(els['sign-up'],null,'The login page no longer offers account creation');
+  const login=async remember=>{els['auth-remember'].checked=remember;els['auth-email'].value=authUser.email;els['auth-password'].value='PASSWORD-NOT-TO-STORE';await fire(els['auth-form'],'submit');await new Promise(setImmediate);assert.equal(els['auth-actions'].inert,false);assert.equal(els.app.hidden,false);};
+  await login(false);
+  assert.ok(tabStorage.has(authTokenKey));assert.equal(storage.has(authTokenKey),false);
+  tabStorage.clear();await run('Cloud.boot()');assert.equal(els['auth-box'].hidden,false,'Unremembered sign-in does not survive a closed browser tab');
+  await login(true);
+  assert.ok(storage.has(authTokenKey));assert.equal(tabStorage.has(authTokenKey),false);
+  assert.equal(els['auth-password'].value,'');assert.ok(!JSON.stringify([...storage,...tabStorage]).includes('PASSWORD-NOT-TO-STORE'),'Remember me stores the SDK session, never the entered password');
+  tabStorage.clear();await run('Cloud.boot()');assert.equal(els.app.hidden,false,'A remembered sign-in restores after tab storage is cleared');assert.equal(els['auth-remember'].checked,true);
+  await els['sign-out'].listeners.click();assert.equal(storage.has(authTokenKey),false);assert.equal(tabStorage.has(authTokenKey),false);assert.equal(els['auth-box'].hidden,false,'Explicit logout removes the remembered session');
+  await login(false);assert.ok(tabStorage.has(authTokenKey));assert.equal(storage.has(authTokenKey),false,'Unchecking remember me removes persistent login');
+  storage.set('trainflow_remember_me','1');await sdkStorage.setItem(authTokenKey,tabStorage.get(authTokenKey));
+  assert.ok(storage.has(authTokenKey));assert.equal(tabStorage.has(authTokenKey),false,'An SDK refresh follows the current device preference, including changes from another tab');
+  await login(true);assert.ok(storage.has(authTokenKey));assert.equal(tabStorage.has(authTokenKey),false);
+  console.log('PASS: optional remembered sign-in, fresh-tab restoration, logout cleanup and no password storage');
+  const priorSignOuts=signOuts;let resets=0,flushes=0;
   ctx.Trainees={flush:async()=>{flushes++;return false;},hasDraft:()=>true,reset(){resets++;}};
   ctx.testExpiry=ctx.SessionPolicy.expiresAt(accessToken);
   vm.runInContext('Date.now=()=>testExpiry;',ctx);
   windowListeners.focus();await new Promise(setImmediate);
-  assert.equal(signOuts,1,'Daily cutoff signs out even when saving fails');
+  assert.equal(signOuts,priorSignOuts+1,'Daily cutoff signs out even when saving fails');
+  assert.equal(storage.has(authTokenKey),false,'Daily cutoff removes remembered sessions');assert.equal(tabStorage.has(authTokenKey),false);
   assert.equal(flushes,1);assert.equal(resets,0,'Failed saves retain the draft in memory');
   assert.equal(els.app.hidden,true);assert.equal(els['auth-box'].hidden,false);
   assert.match(els['auth-message'].textContent,/5 مساءً/);

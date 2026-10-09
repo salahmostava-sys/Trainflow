@@ -5,7 +5,7 @@ const fs=require('node:fs'),vm=require('node:vm');
 test('an unavailable API never retries a database mutation directly', async()=>{
   const requests=[];
   let sdkFetch;
-  const context=vm.createContext({URL,Request,Response,console,currentLang:'en',t:key=>key,sessionStorage:{},
+  const context=vm.createContext({URL,Request,Response,console,currentLang:'en',t:key=>key,sessionStorage:{},localStorage:{getItem:()=>null},
     location:{origin:'https://workspace.invalid'},
     document:{getElementById:()=>({addEventListener(){}}),addEventListener(){}},setInterval(){},
     window:{addEventListener(){},supabase:{createClient(_url,_key,options){sdkFetch=options.global.fetch;return {auth:{onAuthStateChange(){},getSession:async()=>({data:{session:null}})}};}}},

@@ -142,16 +142,10 @@ export function LoginScreen() {
                   <path d="M19 12H5m6-6-6 6 6 6"></path>
                 </svg>
               </button>
-              <div className="auth-register">
-                <span data-i18n="authNoAccount">ليس لديك حساب؟</span>{" "}
-                <button
-                  type="button"
-                  id="sign-up"
-                  data-i18n="authCreateAccount"
-                >
-                  إنشاء حساب
-                </button>
-              </div>
+              <label className="auth-remember" htmlFor="auth-remember">
+                <input type="checkbox" id="auth-remember" />
+                <span data-i18n="authRememberMe">تذكرني</span>
+              </label>
             </div>
           </form>
           <p id="auth-message" role="status" aria-live="polite"></p>
