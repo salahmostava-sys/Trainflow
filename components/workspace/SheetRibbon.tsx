@@ -383,12 +383,6 @@ export function SheetRibbon() {
                   <option value="36">{"36"}</option>
                 </select>
               </label>
-              <button id="sheet-columns-title" type="button">
-                {"عرض وإظهار الأعمدة"}
-              </button>
-              <button type="button" id="sheet-freeze" aria-pressed="false">
-                {"تثبيت أول عمود"}
-              </button>
               <label>
                 <span id="sheet-direction-label">{"الاتجاه"}</span>
                 <select id="sheet-direction">
@@ -399,10 +393,10 @@ export function SheetRibbon() {
               <small
                 id="sheet-local-note"
                 className="sheet-local-note"
-                title="التنسيق يُحفظ مع الجدول؛ الزوم وتثبيت الأعمدة وعرضها تفضيلات لهذا الجهاز."
+                title="التنسيق وأبعاد الأعمدة تُحفظ مع الجدول؛ الزوم تفضيل لهذا الجهاز."
               >
                 {
-                  "التنسيق يُحفظ مع الجدول؛ الزوم وتثبيت الأعمدة وعرضها تفضيلات لهذا الجهاز."
+                  "التنسيق وأبعاد الأعمدة تُحفظ مع الجدول؛ الزوم تفضيل لهذا الجهاز."
                 }
               </small>
             </div>

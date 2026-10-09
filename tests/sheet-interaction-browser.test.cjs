@@ -5,6 +5,7 @@ const assert=require('node:assert/strict'),path=require('node:path'),{spawn}=req
     await new Promise((resolve,reject)=>{server.stdout.once('data',resolve);server.once('error',reject);});
     browser=await chromium.launch({channel:'msedge',headless:true});
     const context=await browser.newContext({viewport:{width:1500,height:1000},permissions:['clipboard-read','clipboard-write']}),page=await context.newPage(),errors=[];
+    const columns=require('./sheet-column-helper.cjs')(page);
     page.on('pageerror',error=>errors.push(error.message));
     await page.goto('http://127.0.0.1:4215/');await page.locator('#trainees-tab').click();
     await page.waitForFunction(()=>document.getElementById('sheet-status').textContent==='تم الحفظ');
@@ -27,7 +28,7 @@ const assert=require('node:assert/strict'),path=require('node:path'),{spawn}=req
     assert.equal(await cell(1,3).textContent(),'DUMMY STUDENT 1');
     await page.locator('#sheet-address').fill('N3');await page.locator('#sheet-address').press('Enter');
     assert.equal(await content.inputValue(),'5');await content.focus();assert.equal(await content.inputValue(),'=2+3');await content.press('Escape');
-    await page.locator('#sheet-columns-title').click();await page.locator('[data-column-toggle="1"]').uncheck();await page.locator('#sheet-columns-close').click();
+    await columns.hide(1);
     await page.locator('th[data-rowv="0"] button').click();await page.keyboard.press('Control+c');
     const expected=await page.evaluate(()=>previewSheets.get('demo-admin').cells[0].slice(0,19));
     await page.waitForFunction(async text=>await navigator.clipboard.readText()===text,expected.join('\t'));
@@ -47,7 +48,7 @@ const assert=require('node:assert/strict'),path=require('node:path'),{spawn}=req
     await page.locator('th[data-rowv="0"] button').click();await page.locator('th[data-rowv="1"] button').click({modifiers:['Shift']});await page.keyboard.press('Control+c');
     await page.waitForFunction(async()=> (await navigator.clipboard.readText()).split('\r\n').length===2);
     assert.equal((await page.evaluate(()=>navigator.clipboard.readText())).split('\r\n').length,2,'A row range copies both records');
-    await page.locator('#sheet-columns-title').click();await page.locator('[data-column-toggle="1"]').check();await page.locator('#sheet-columns-close').click();
+    await columns.showAll();
     const settle=()=>page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
     for(const direction of ['ltr','rtl']){
       await page.locator('#sheet-direction').selectOption(direction);await go('D1');

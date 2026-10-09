@@ -9,6 +9,7 @@ const {spawn}=require('node:child_process');
   try{
     const context=await browser.newContext({viewport:{width:1500,height:1000}}),page=await context.newPage(),errors=[];
     require('./sheet-toolbar-helper.cjs')(page);
+    const columns=require('./sheet-column-helper.cjs')(page);
     const switchLanguage=async()=>{if(!await page.locator('#lang-btn').isVisible())await page.locator('#sidebar-toggle').click();await page.locator('#lang-btn').click();if(await page.locator('#sidebar-backdrop').isVisible())await page.locator('#sidebar-backdrop').click({position:{x:10,y:10}});};
     page.on('pageerror',error=>errors.push(error.message));
     const worksheets=require('./worksheet-ui-helper.cjs')(page);await page.goto('http://127.0.0.1:4174/');
@@ -70,12 +71,11 @@ const {spawn}=require('node:child_process');
     assert.equal(await cell(0,2).evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(255, 242, 204)');
     await page.locator('#sheet-font-plus').click();assert.equal(await page.locator('#sheet-font-size').textContent(),'21 px');assert.equal(await cell(0,2).evaluate(el=>getComputedStyle(el).fontSize),'21px');
     await page.locator('#sheet-font-minus').click();assert.equal(await cell(0,2).evaluate(el=>getComputedStyle(el).fontSize),'20px');
-    await page.locator('#sheet-columns-title').click();
-    const columnWidth=page.locator('[data-column-width="2"]');await columnWidth.fill('300');await columnWidth.press('Enter');
+    await columns.width(2,300);
     assert.ok(Math.abs((await cell(0,2).boundingBox()).width-300)<1,'Typed column width changes the actual grid');
-    await columnWidth.fill('900');await columnWidth.press('Enter');assert.ok(Math.abs((await cell(0,2).boundingBox()).width-300)<1,'An out-of-range width cannot overwrite the saved width');
-    await columnWidth.fill('');await columnWidth.press('Enter');assert.ok(Math.abs((await cell(0,2).boundingBox()).width-220)<1,'Clearing the width restores the default');
-    await columnWidth.fill('300');await columnWidth.press('Enter');await page.locator('#sheet-columns-close').click();
+    await columns.width(2,900);assert.ok(Math.abs((await cell(0,2).boundingBox()).width-300)<1,'An out-of-range width cannot overwrite the saved width');
+    await page.locator('.sheet-col-resizer[data-resizer-col="2"]').dblclick();assert.ok(Math.abs((await cell(0,2).boundingBox()).width-220)<1,'Resetting the width restores the default');
+    await columns.width(2,300);
     for(const direction of ['ltr','rtl']){
       await page.locator('#sheet-direction').selectOption(direction);
       const handle=page.locator('.sheet-col-resizer[data-resizer-col="2"]');await handle.scrollIntoViewIfNeeded();
@@ -83,10 +83,10 @@ const {spawn}=require('node:child_process');
       await page.mouse.move(grip.x+grip.width/2,grip.y+grip.height/2);await page.mouse.down();await page.mouse.move(grip.x+grip.width/2+(direction==='rtl'?-30:30),grip.y+grip.height/2);await page.mouse.up();
       assert.ok(Math.abs((await cell(0,2).boundingBox()).width-before-30)<1,'Dragging resizes the column in '+direction+' direction');
     }
-    await page.locator('#sheet-columns-title').click();await columnWidth.fill('300');await columnWidth.press('Enter');await page.locator('#sheet-columns-close').click();
+    await columns.width(2,300);
     await page.locator('#sheet-direction').selectOption('rtl');
     assert.equal(await page.locator('.sheet-scroll').evaluate(el=>getComputedStyle(el).direction),'rtl');
-    await page.locator('#sheet-columns-title').click();await page.locator('[data-column-toggle="1"]').uncheck();await page.locator('#sheet-columns-close').click();
+    await columns.hide(1);
     assert.equal(await cell(0,1).count(),0,'Hidden columns must not be rendered');
     await cell(0,0).click();await page.keyboard.press('Tab');assert.equal(await page.locator('td:focus').getAttribute('data-col'),'2','Tab skips hidden columns');
     await page.keyboard.press('ArrowRight');assert.equal(await page.locator('td:focus').getAttribute('data-col'),'0','RTL arrows follow visual order');

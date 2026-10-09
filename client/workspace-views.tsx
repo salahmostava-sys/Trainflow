@@ -43,10 +43,7 @@ import {
   ReportPreview,
 } from "../components/workspace/ReportViews";
 import { CommandLabel } from "../components/workspace/CommandLabel";
-import {
-  ColumnChoices,
-  SortLevels,
-} from "../components/workspace/SheetControls";
+import { SortLevels } from "../components/workspace/SheetControls";
 import {
   DetailRecords,
   DuplicateHint,
@@ -106,12 +103,6 @@ export const WorkspaceViews = {
     props: React.ComponentProps<typeof CommandLabel>,
   ) {
     renderView(container, <CommandLabel {...props} />);
-  },
-  columnChoices(
-    container: Element,
-    props: React.ComponentProps<typeof ColumnChoices>,
-  ) {
-    renderView(container, <ColumnChoices {...props} />);
   },
   sortLevels(
     container: Element,

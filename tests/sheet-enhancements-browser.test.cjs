@@ -7,6 +7,7 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),path
     browser=await chromium.launch({headless:true,channel:'msedge'});
     const page=await browser.newPage({viewport:{width:1500,height:1000}}),errors=[];
     require('./sheet-toolbar-helper.cjs')(page);
+    const columns=require('./sheet-column-helper.cjs')(page);
     page.on('pageerror',e=>errors.push(e.message));page.on('dialog',d=>d.accept());
     let releaseStartup;const startupGate=new Promise(resolve=>{releaseStartup=resolve;});
     await page.route('**/session-policy.js',async route=>{await startupGate;await route.continue();});
@@ -142,7 +143,7 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),path
     await page.evaluate(()=>{DEFAULT_KEYCODES=[{title:'Sales',lang:'Arabic',code:'LIVE-SALES-AR',category:'Foundation'},{title:'Sales',lang:'English',code:'LIVE-SALES-EN',category:'Foundation'}];state.keycodeOverrides['LIVE-SALES-AR']='Review-category';(state.categoryLabels||={})['Review-category']='فئة المراجعة';PROMETRIC_ACCOUNT='demo-prometric-account';PROMETRIC_PASSWORD='demo-prometric-password';PROMETRIC_LOGIN_URL='https://tcnet1.prometric.com/Login.aspx?ClientNameSingleSite=demo';});
     await paste(0,0,['CODE','hidden@example.invalid','متدرب','Trainee','123','050','Org','محترف الأعمال المعتمد في المبيعات CBP-S','04/10/2026','trainee-user','demo-password','ناجح','AD'].join('\t'));
     await page.locator('#sheet-save').click();await page.waitForFunction(()=>!Trainees.hasDraft());
-    await page.locator('#sheet-columns-title').click();await page.locator('[data-column-toggle="1"]').uncheck();await page.locator('#sheet-columns-close').click();
+    await columns.hide(1);
     await cell(0,9).hover();await page.waitForTimeout(750);assert.equal(await page.locator('#sheet-trainee-dialog').isVisible(),false,'Username no longer opens details');
     await cell(0,3).hover();await page.waitForTimeout(750);assert.equal(await page.locator('#sheet-trainee-dialog').isVisible(),false,'Hover does not open trainee details');
     await cell(0,3).click();await page.waitForTimeout(350);assert.equal(await page.locator('#sheet-trainee-dialog').isVisible(),false,'Single click only selects the name');

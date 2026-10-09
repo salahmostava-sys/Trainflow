@@ -38,7 +38,7 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),path
     await page.locator('#sheet-redo').click();await go('SF3068');assert.equal(await page.locator('td.sheet-current').textContent(),'Changed last');
     await go('IQ1');assert.equal(await page.locator('td.sheet-current').getAttribute('colspan'),'4','A far-column merge stays intact');await aligned();
     await go('SF11');assert.ok(await page.locator('td.sheet-current').evaluate(el=>el.getBoundingClientRect().height)>=60);
-    await page.locator('#sheet-freeze').click();await go('SF100');assert.equal(await page.locator('td[data-v="99"][data-col="0"]').count(),1,'Frozen first column stays mounted');
+    await go('SF100');assert.equal(await page.locator('td[data-v="99"][data-col="0"]').count(),0,'Off-screen first columns are virtualized without freezing');
     await page.locator('#sheet-direction').selectOption('rtl');await go('C100');assert.equal(await page.locator('td.sheet-current').textContent(),'Trainee 99');await aligned();
     await go('SF2000');assert.equal(await page.locator('td.sheet-current').textContent(),'Last 1999');await aligned();
     await page.locator('#sheet-zoom-in').click();await go('SF3068');await aligned();
@@ -55,6 +55,6 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),path
     assert.ok(Math.abs(await page.locator('.sheet-scroll').evaluate(el=>el.scrollTop)-bottom)<40,'Background refresh preserves the bottom scroll position');
     await page.waitForFunction(()=>!Trainees.hasDraft());
     assert.ok(await page.locator('.sheet-scroll').evaluate(el=>el.scrollTop)>bottom-40,'Autosave never returns the user to the first row');
-    assert.deepEqual(errors,[]);console.log('PASS: 3068 × 500 viewport, distant cells/merges, undo, save, frozen column, RTL alignment, zoom, resize during editing and mobile');
+    assert.deepEqual(errors,[]);console.log('PASS: 3068 × 500 viewport, distant cells/merges, undo, save, column virtualization, RTL alignment, zoom, resize during editing and mobile');
   }finally{await browser?.close();server.kill();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

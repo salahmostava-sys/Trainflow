@@ -9,6 +9,7 @@ const {spawn}=require('node:child_process');
   try{
     const page=await browser.newPage({viewport:{width:1500,height:1000}}),errors=[];
     require('./sheet-toolbar-helper.cjs')(page);
+    await page.addInitScript(()=>localStorage.setItem('ibta_sheet_view',JSON.stringify({freeze:true,wrap:false,zoom:100})));
     page.on('pageerror',e=>errors.push(e.message));await page.goto('http://127.0.0.1:4176/');await page.locator('#trainees-tab').click();
     await page.waitForFunction(()=>document.getElementById('sheet-status').textContent==='تم الحفظ');
     const editCell=page.locator('td[data-v="0"][data-col="2"]');
@@ -20,7 +21,7 @@ const {spawn}=require('node:child_process');
     assert.equal(await editCell.textContent(),'اختبار الحفظ التلقائي','Autosave persists before leaving the edited cell');
     assert.equal(await page.locator('#sheet-add-1000').count(),0);
     await page.locator('#sheet-add-bulk-btn').click();
-    await page.locator('#sheet-freeze').click();assert.equal(await page.locator('#sheet-grid').evaluate(el=>el.classList.contains('sheet-freeze-column')),true);
+    assert.equal(await page.locator('#sheet-freeze,#sheet-columns-title,#sheet-columns-dialog,.sheet-frozen-cell,.sheet-freeze-column').count(),0,'Old frozen-column preferences cannot restore removed controls or pin a column');
     await page.locator('#sheet-address').fill('D150');await page.locator('#sheet-address').press('Enter');
     assert.equal(await page.locator('td.sheet-current').getAttribute('data-col'),'3');
     assert.equal(await page.locator('td.sheet-current').getAttribute('data-v'),'149');

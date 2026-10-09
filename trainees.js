@@ -22,7 +22,7 @@ const Trainees=(()=>{
   let rowOffsets=[0],rowHeights=new Map(),drawnStart=-1,drawnEnd=-1,drawnColumns='',scrollFrame=0;
   const DAY_HEADER_HEIGHT=40;
   let dayHeaders=new Map(),collapsedRows=new Set();
-  let visibleCache=null,columnOptionsKey='',headersKey='',mergeCacheFormat=null,mergeCache=[];
+  let visibleCache=null,headersKey='',mergeCacheFormat=null,mergeCache=[];
   let excelTools=null,prometricTools=null,examResultTools=null,certificateTools=null,formulaCache=new Map();
   const searchRows=new WeakMap();
   let lastDataRow=-1;
@@ -50,7 +50,7 @@ const Trainees=(()=>{
   }
   function updateLastDataRow(){lastDataRow=cells.length-1;while(lastDataRow>=0&&!cells[lastDataRow].some(Boolean))lastDataRow--;}
   const totalInputRows=()=>Math.min(D.MAX_ROWS,Math.max(cells.length,lastDataRow+1001,(formatting.daySeparators?.at(-1)??-1)+1));
-  let excelView={wrap:false,freeze:false,zoom:100};
+  let excelView={wrap:false,zoom:100};
   let rowSize=15;
   try{const savedRowSize=Number(localStorage.getItem('ibta_trainee_row_size'));if([15,21,28,36].includes(savedRowSize))rowSize=savedRowSize;}catch{}
   let expandedView=false,previousViewZoom=null;
@@ -66,7 +66,7 @@ const Trainees=(()=>{
     $('sheet-row-size').value=String(rowSize);applyExcelView();
     resetRowHeights();rebuildRowOffsets();drawRows(true);
   }
-  try{const pref=JSON.parse(localStorage.getItem('ibta_sheet_view')||'{}');excelView={wrap:pref.wrap===true,freeze:pref.freeze===true,zoom:Number.isInteger(pref.zoom)&&pref.zoom>=50&&pref.zoom<=200?pref.zoom:100};}catch{}
+  try{const pref=JSON.parse(localStorage.getItem('ibta_sheet_view')||'{}');excelView={wrap:pref.wrap===true,zoom:Number.isInteger(pref.zoom)&&pref.zoom>=50&&pref.zoom<=200?pref.zoom:100};}catch{}
   function setZoom(value){
     if(expandedView)previousViewZoom=null;
     const previous=excelView.zoom,scroll=$('sheet-grid').parentElement,numeric=Number(value);
@@ -97,10 +97,6 @@ const Trainees=(()=>{
     $('sheet-zoom-slider').value=String(excelView.zoom);if(document.activeElement!==$('sheet-zoom-reset'))$('sheet-zoom-reset').value=excelView.zoom+'%';
     $('sheet-zoom-out').disabled=excelView.zoom<=50;$('sheet-zoom-in').disabled=excelView.zoom>=200;
     grid.classList.toggle('sheet-wrap-text',excelView.wrap);
-    grid.classList.toggle('sheet-freeze-column',excelView.freeze);
-    grid.querySelectorAll('.sheet-frozen-cell').forEach(el=>el.classList.remove('sheet-frozen-cell'));
-    const first=visibleCols()[0];grid.querySelectorAll('[data-col="'+first+'"]').forEach(el=>el.classList.add('sheet-frozen-cell'));
-    for(const key of ['freeze'])$('sheet-'+key)?.setAttribute('aria-pressed',String(excelView[key]));
   }
   let hoverTimer,hoverHideTimer,detailTimer,hoverCell=null,detailKey='',detailPage=0;
   let colWidths={};
@@ -489,7 +485,6 @@ const Trainees=(()=>{
     if(initialized)return;initialized=true;
     setTimeout(()=>TraineeReports.mount($('sheet-workspace'),()=>({owner,sheetId,rows:cells}),async()=>{commitEdit();return await flush();}),0);
 
-    for(const key of ['freeze'])$('sheet-'+key).onclick=()=>{commitEdit();excelView[key]=!excelView[key];saveExcelView();applyExcelView();resetRowHeights();rebuildRowOffsets();drawRows(true);};
     $('sheet-row-size').value=String(rowSize);$('sheet-row-size').onchange=()=>setRowSize($('sheet-row-size').value);
     const zoomTools=$('sheet-workspace').querySelector('.sheet-zoom-tools');
 
@@ -677,13 +672,13 @@ const Trainees=(()=>{
       'sheet-title':['جدول المتدربين','Trainee sheet'],'sheet-subtitle':['جدول خاص بكل مستخدم · حفظ تلقائي','A private sheet for each user · Autosave'],
       'sheet-expanded':['عرض موسّع · 45 صف','Expanded view · 45 rows'],'sheet-expanded-close':['رجوع للعرض العادي','Exit expanded view'],'sheet-expanded-tools':['الأدوات','Tools'],
       'sheet-owner-label':['عرض بيانات المستخدم','View user'],'sheet-mode':['المتدربون','Trainees'],'sheet-codes-mode':['أكواد المستخدم','User codes'],
-      'sheet-local-note':['التنسيق يُحفظ مع الجدول؛ الزوم وتثبيت الأعمدة وعرضها تفضيلات لهذا الجهاز.','Formatting is saved with the sheet; zoom, frozen columns and widths are preferences for this device.'],'sheet-value-label':['قيمة','Value'],'sheet-add':['+ إضافة صف','+ Add row'],'sheet-wrap':['التفاف النص','Wrap text'],'sheet-freeze':['تثبيت أول عمود','Freeze first column'],
+      'sheet-local-note':['التنسيق وأبعاد الأعمدة تُحفظ مع الجدول؛ الزوم تفضيل لهذا الجهاز.','Formatting and column widths are saved with the sheet; zoom is a preference for this device.'],'sheet-value-label':['قيمة','Value'],'sheet-add':['+ إضافة صف','+ Add row'],'sheet-wrap':['التفاف النص','Wrap text'],
       'sheet-add-prefix':['إضافة','Add'],'sheet-add-suffix':['صف في الأسفل','more rows at bottom'],'sheet-add-bulk-btn':['+ إضافة','+ Add'],
       'sheet-delete':['حذف صف','Delete row'],'sheet-add-col':['+ إضافة عمود','+ Add column'],'sheet-delete-col':['حذف عمود','Delete column'],'sheet-undo':['تراجع','Undo'],'sheet-redo':['إعادة','Redo'],
       'sheet-select-all':['تحديد الكل','Select all'],'sheet-copy':['نسخ الجدول','Copy sheet'],'sheet-save':['حفظ الآن','Save now'],'sheet-reload':['إعادة تحميل','Reload'],'sheet-clear-filters':['مسح الفلاتر','Clear filters'],
       'sheet-help':['للكتابة: انقر مرتين أو ابدأ الكتابة · اسحب أو Shift + نقر لتحديد نطاق · Ctrl+C / Ctrl+V · Tab والأسهم للتنقل','Double-click or type to edit · Drag or Shift+click selects a range · Ctrl+C / Ctrl+V · Tab and arrow navigation'],
       'sheet-owned':['أكواد المستخدم','User codes'],'sheet-pool':['المخزون غير المخصص','Unassigned stock'],'sheet-code-refresh':['تحديث الأكواد','Refresh codes']
-      ,'sheet-columns-title':['عرض وإظهار الأعمدة','Column widths and visibility'],'sheet-fill-label':['لون الخلية','Cell fill'],'sheet-text-color-label':['لون الخط','Text color'],
+      ,'sheet-fill-label':['لون الخلية','Cell fill'],'sheet-text-color-label':['لون الخط','Text color'],
       'sheet-clear-format':['مسح التنسيق','Clear formatting'],'sheet-direction-label':['الاتجاه','Direction'],'sheet-selection-size-label':['حجم المحدد','Selection size'],
       'sheet-duplicates-label':['الإقامات المكررة فقط','Duplicate IDs only'],
       'sheet-find-btn':['🔍 بحث واستبدال','🔍 Find & Replace'],
@@ -819,7 +814,6 @@ const Trainees=(()=>{
     $('sheet-grid').parentElement.dir=formatting.direction;
     $('sheet-direction').value=formatting.direction;$('sheet-font-size').textContent=formatting.fontSize+' px';
     $('sheet-font-minus').disabled=formatting.fontSize<=10;$('sheet-font-plus').disabled=formatting.fontSize>=32;
-    renderColumnOptions();
     applySavedColWidths();
     const grid=$('sheet-grid'),thead=grid.querySelector('thead'),tbody=grid.querySelector('tbody');
     const nextHeadersKey=JSON.stringify([currentLang,cols,allLabels()]);
@@ -940,7 +934,6 @@ const Trainees=(()=>{
     if(cols.length<=80)return cols.map(c=>({c}));
     const grid=$('sheet-grid'),scroll=grid.parentElement,rect=scroll.getBoundingClientRect(),widths=new Map(),shown=new Set();
     grid.querySelectorAll('thead th[data-col]').forEach(th=>{const c=+th.dataset.col,box=th.getBoundingClientRect();widths.set(c,box.width);if(box.right>=rect.left-320&&box.left<=rect.right+320)shown.add(c);});
-    if(excelView.freeze)shown.add(cols[0]);
     // Keep a merge intact when any part intersects the row/column viewport.
     for(const m of merges)if(m.r<end&&m.endR>=start&&cols.some(c=>shown.has(c)&&c>=m.c&&c<=m.endC))for(const c of cols)if(c>=m.c&&c<=m.endC)shown.add(c);
     const segments=[];for(const c of cols){if(shown.has(c))segments.push({c});else{const last=segments[segments.length-1];if(last?.gap){last.count++;last.width+=widths.get(c)||160;}else segments.push({gap:true,count:1,width:widths.get(c)||160});}}return segments;
@@ -1148,14 +1141,6 @@ const Trainees=(()=>{
       $('sheet-detail-prev').disabled=detailPage===0;$('sheet-detail-next').disabled=(detailPage+1)*50>=count;
       $('sheet-detail-prev').setAttribute('aria-label',tr('السابق','Previous'));$('sheet-detail-next').setAttribute('aria-label',tr('التالي','Next'));
     }
-  }
-  function renderColumnOptions(){
-    const key=JSON.stringify([currentLang,allLabels(),formatting.hidden,formatting.widths]);if(columnOptionsKey===key)return;columnOptionsKey=key;
-    window.WorkspaceViews.columnChoices($('sheet-column-options'),{showLabel:tr('إظهار الكل','Show all'),widthLabel:tr('عرض العمود بالبكسل','Column width in pixels'),autoLabel:tr('تلقائي','Auto'),
-      showAll:()=>{commitEdit();const next=D.format(formatting);next.hidden=[];change(cells,true,next);},
-      columns:labels.map((pair,column)=>({column,label:tr(...pair),width:formatting.widths?.[column],checked:!formatting.hidden.includes(column),disabled:!formatting.hidden.includes(column)&&visibleCols().length===1})),
-      setWidth:(column,width)=>{commitEdit();if(width===null)resetColumnWidth(column);else{setColumnWidth(column,width);saveColumnWidths();}},
-      toggle:(column,visible)=>{commitEdit();const next=D.format(formatting);next.hidden=visible?next.hidden.filter(index=>index!==column):[...next.hidden,column];change(cells,true,next);}});
   }
   function adjustFont(delta){commitEdit();const next=D.format(formatting);next.fontSize=Math.max(10,Math.min(32,next.fontSize+delta));change(cells,true,next);}
   function formatSelection(style){

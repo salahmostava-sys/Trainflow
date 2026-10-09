@@ -9,6 +9,7 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=r
     const preview=launch(['tools/design-preview.cjs'],{IBTA_PREVIEW_PORT:String(previewPort)});await new Promise(resolve=>preview.stdout.once('data',resolve));
     browser=await chromium.launch({headless:true,channel:'msedge'});const page=await browser.newPage({viewport:{width:1366,height:900}}),reference=await browser.newPage({viewport:{width:1366,height:900}}),errors=[];
     page.on('pageerror',error=>errors.push(error.message));
+    const columns=require('./sheet-column-helper.cjs')(page);
     page.on('console',message=>{if(message.type()==='error'&&/Minified React error|hydration|ReactDOM|flushSync/.test(message.text()))errors.push(message.text());});
     assert.equal(fs.existsSync(path.join(root,'public/workspace/index.html')),false,'Production builds use Next pages without an HTML intermediate');
     const classic=await page.request.get('http://localhost:'+port+'/classic',{maxRedirects:0});
@@ -41,7 +42,8 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=r
     await page.evaluate(()=>document.getElementById('external-paste-target').remove());
     for(const column of [1,2,3]){await page.locator('td[data-v="0"][data-col="'+column+'"]').dblclick();await page.locator('#sheet-trainee-dialog').waitFor({state:'visible'});assert.match(await page.locator('#sheet-trainee-record').textContent(),/EXISTING TRAINEE/);await page.locator('#sheet-trainee-dialog .sheet-detail-close').click();}
     await page.evaluate(()=>uiTestDatabase.sheets['ui-admin'].cells[0][3]='');await page.locator('#sheet-reload').click();await page.waitForFunction(()=>document.getElementById('sheet-status').textContent==='تم الحفظ');await page.locator('td[data-v="0"][data-col="2"]').dblclick();await page.locator('#sheet-trainee-dialog').waitFor({state:'visible'});assert.match(await page.locator('#sheet-trainee-title').textContent(),/متدرب تجريبي$/,'Arabic-only trainees can open their details');await page.keyboard.press('Escape');
-    await page.locator('#sheet-columns-title').click();const widthInput=page.locator('[data-column-width="2"]');await widthInput.fill('280');await widthInput.press('Enter');assert.ok(Math.abs((await page.locator('td[data-v="0"][data-col="2"]').boundingBox()).width-280)<1);await page.screenshot({path:path.join(root,'artifacts/next-column-widths.png')});await page.locator('#sheet-columns-close').click();
+    assert.equal(await page.locator('#sheet-freeze,#sheet-columns-title,#sheet-columns-dialog').count(),0);
+    await columns.width(2,280);assert.ok(Math.abs((await page.locator('td[data-v="0"][data-col="2"]').boundingBox()).width-280)<1);await page.screenshot({path:path.join(root,'artifacts/next-column-widths.png')});
     await page.locator('#sheet-xlsx-import').click();assert.equal(await page.locator('#sheet-xlsx-mode option').count(),3);await page.keyboard.press('Escape');
     assert.equal(await page.locator('#prometric-registration-script').getAttribute('data-extension')?.then(value=>value.startsWith('/workspace/trainflow-prometric.zip')),true);
     await page.screenshot({path:path.join(root,'artifacts/next-classic-trainees.png')});
