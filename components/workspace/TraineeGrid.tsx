@@ -31,7 +31,12 @@ export interface GridRow {
   viewRow: number;
   sourceRow: number;
   height?: number;
-  group?: { title: string; countLabel: string };
+  group?: {
+    title: string;
+    countLabel: string;
+    removeLabel?: string;
+    onRemove?: () => void;
+  };
   cells: (GridCell | { gap: true; count: number; width: number })[];
   onSelect: React.MouseEventHandler<HTMLButtonElement>;
   onPointerDown: React.PointerEventHandler<HTMLButtonElement>;
@@ -264,6 +269,17 @@ export function TraineeRows({
                   <span className="sheet-day-count" dir="auto">
                     {row.group.countLabel}
                   </span>
+                  {row.group.onRemove && (
+                    <button
+                      type="button"
+                      className="sheet-remove-separator"
+                      aria-label={row.group.removeLabel}
+                      title={row.group.removeLabel}
+                      onClick={row.group.onRemove}
+                    >
+                      ×
+                    </button>
+                  )}
                 </div>
               </th>
             </tr>

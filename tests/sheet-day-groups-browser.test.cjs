@@ -79,6 +79,43 @@ const assert=require('node:assert/strict'),path=require('node:path'),{spawn}=req
     assert.ok(countBox.x>=mobile.x&&countBox.x+countBox.width<=mobile.x+mobile.width,'The count remains visible on narrow screens');
     const fs=require('node:fs');fs.mkdirSync(path.resolve(__dirname,'../artifacts'),{recursive:true});
     await page.screenshot({path:path.resolve(__dirname,'../artifacts/day-groups-mobile.png')});
-    assert.deepEqual(errors,[]);console.log('PASS: blank-row day groups, mixed dates, counts, compact gaps, safe navigation, persistence, filters and virtual scrolling');
+    await page.setViewportSize({width:1500,height:1000});await groupOption.uncheck();
+    await page.waitForFunction(()=>document.getElementById('sheet-status').textContent==='تم الحفظ');
+    const manualRows=await page.evaluate(()=>{
+      const rows=Array.from({length:5},()=>TraineeData.blank());
+      for(const [index,name,date]of [[0,'TUESDAY','2026-10-06'],[1,'LATE MONDAY','2026-10-05'],[3,'WEDNESDAY','2026-10-07'],[4,'THURSDAY','2026-10-08']]){rows[index][3]=name;rows[index][8]=date;}
+      previewSheets.set('demo-admin',{cells:rows,version:0,format:{}});return rows;
+    });
+    await page.locator('#sheet-reload').click();await page.waitForFunction(()=>document.querySelector('td[data-v="4"][data-col="3"]')?.textContent==='THURSDAY');await go('D1');
+    await page.locator('#sheet-add-separator').click();await go('D4');await page.locator('#sheet-add-separator').click();
+    await page.waitForFunction(()=>previewSheets.get('demo-admin').format.daySeparators?.join(',')==='0,3');
+    assert.equal(await groupOption.isChecked(),false,'Manual separators do not require automatic grouping');
+    assert.equal(await headers.count(),2);assert.match(await headers.first().textContent(),/الثلاثاء.*: 2/);assert.match(await headers.nth(1).textContent(),/الأربعاء.*: 2/);
+    assert.equal(await cell(2,3).count(),1,'Manual separators keep blank rows unless compact display is requested');
+    assert.deepEqual(await page.evaluate(()=>previewSheets.get('demo-admin').cells),manualRows,'Adding separators never inserts fake trainee rows or changes copied dates');
+    await page.locator('#sheet-add-separator').click();assert.equal(await headers.count(),2,'Adding the same boundary twice does not duplicate it');
+    await page.locator('#sheet-reload').click();await headers.nth(1).waitFor();
+    assert.equal(await headers.count(),2,'Manual boundaries survive reloading the shared worksheet');
+    await page.locator('.sheet-remove-separator').first().click();await page.waitForFunction(()=>previewSheets.get('demo-admin').format.daySeparators?.join(',')==='3');
+    assert.equal(await headers.count(),1);await page.locator('#sheet-undo').click();await headers.nth(1).waitFor();
+    await go('D4');await cell(3,3).click({button:'right'});await page.locator('#sheet-context-menu [data-action="insert-above"]').click();
+    await page.waitForFunction(()=>previewSheets.get('demo-admin').format.daySeparators?.join(',')==='0,4');
+    assert.equal(await page.evaluate(()=>previewSheets.get('demo-admin').cells[4][3]),'WEDNESDAY','The separator follows its original row after insertion');
+    await page.locator('#sheet-undo').click();await groupOption.check();
+    assert.equal(await headers.count(),2,'Compacting gaps keeps manually chosen boundaries');assert.equal(await cell(2,3).count(),0);
+    await groupOption.uncheck();assert.equal(await headers.count(),2);await cell(2,3).waitFor();
+    await page.waitForFunction(()=>previewSheets.get('demo-admin').format.daySeparators?.join(',')==='0,3');
+    await page.locator('#sheet-search').fill('WEDNESDAY');await page.waitForFunction(()=>!document.querySelector('.sheet-day-label'));
+    await page.locator('#sheet-add-separator').click();assert.deepEqual(await page.evaluate(()=>previewSheets.get('demo-admin').format.daySeparators),[0,3],'Filtered coordinates cannot create misleading boundaries');
+    await page.locator('#sheet-clear-filters').click();await headers.nth(1).waitFor();
+    await page.setViewportSize({width:390,height:844});await go('D1');
+    assert.equal(await page.locator('#sheet-add-separator').isVisible(),true);assert.equal(await page.locator('.sheet-remove-separator').first().isVisible(),true);
+    const manualViewport=await page.locator('.sheet-scroll').boundingBox();
+    for(const selector of ['.sheet-day-title','.sheet-day-count','.sheet-remove-separator']){
+      const box=await page.locator(selector).first().boundingBox();
+      assert.ok(box.width>=32&&box.x>=manualViewport.x&&box.x+box.width<=manualViewport.x+manualViewport.width,'Manual group date, count and remove control fit the mobile viewport: '+selector);
+    }
+    await page.screenshot({path:path.resolve(__dirname,'../artifacts/manual-day-separators-mobile.png')});
+    assert.deepEqual(errors,[]);console.log('PASS: opt-in compact groups and manual separators, mixed dates, counts, save/reload, undo, row insertion, filters and mobile');
   }finally{await browser?.close();server.kill();}
 })().catch(error=>{console.error(error);process.exitCode=1;});

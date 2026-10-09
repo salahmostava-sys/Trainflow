@@ -1,6 +1,22 @@
 const assert=require('node:assert/strict');
 const D=require('../trainees-core.js');
 {
+  const row=(name,date='')=>{const cells=D.blank();cells[3]=name;cells[8]=date;return cells;};
+  const rows=[row('TUESDAY','2026-10-06'),row('LATE MONDAY','2026-10-05'),D.blank(),row('WEDNESDAY','2026-10-07'),row('NEXT','2026-10-08')];
+  const fmt=D.format({daySeparators:[3,0,3,-1,1.5,'2',D.MAX_ROWS]});
+  assert.deepEqual(fmt.daySeparators,[0,3]);
+  assert.deepEqual(D.format(JSON.parse(JSON.stringify(fmt))).daySeparators,[0,3],'Shared sheet formatting retains explicit boundaries');
+  assert.deepEqual(D.manualDayGroups(rows,[0,3,8]),[
+    {start:0,end:2,count:2,date:'2026-10-06'},
+    {start:3,end:7,count:2,date:'2026-10-07'},
+    {start:8,end:8,count:0,date:''}
+  ],'Only explicit boundaries split manual groups; blank rows and mixed dates stay together');
+  assert.deepEqual(D.removeRows(rows,fmt,new Set([1,3])).format.daySeparators,[0,2],'Deleting a boundary row keeps its separator before the next surviving row');
+  assert.deepEqual(D.removeRows(rows,D.format({daySeparators:[0,1,3]}),new Set([0,1,2])).format.daySeparators,[0],'Adjacent boundaries coalesce after deleting their contents');
+  assert.deepEqual(D.shiftCells(rows,fmt,[1,1,0,12],true,'down',13).format.daySeparators,[0,4],'Whole-row cell insertion moves boundaries with rows');
+  assert.deepEqual(D.shiftCells(rows,fmt,[1,1,3,3],true,'down',13).format.daySeparators,[0,3],'Partial-cell shifts keep row boundaries in place');
+}
+{
   const row=(name,date='')=>{const cells=D.blank(20);cells[3]=name;cells[8]=date;return cells;};
   const rows=[D.blank(20),row('TUESDAY','2026-10-06'),row('LATE MONDAY','2026-10-05'),D.blank(20),D.blank(20),row('WEDNESDAY','2026-10-07'),row('SAME DAY AFTER GAP','2026-10-07')];
   rows.splice(6,0,D.blank(20));rows.push(D.blank(20));

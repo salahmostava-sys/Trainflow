@@ -53,6 +53,7 @@ const TraineeExcel=(()=>{
       const s=state();if(ranges(s).length>1){h.message(()=>tr('اختر منطقة واحدة متجاورة للدمج.','Select one contiguous range to merge.'),true);return;}if(s.filtered){h.message(()=>tr('امسح الفلاتر والفرز قبل الدمج.','Clear filters and sorting before merging.'),true);return;}const [r1,r2,c1,c2]=s.bounds,a=s.view[r1],b=s.view[r2];
       if(mode==='selection'){mutate((cells,fmt)=>{for(const r of rows(s)){for(const c of columns(s)){const key=r+':'+c,v=fmt.styles[key]||{};delete v.centerAcross;fmt.styles[key]=v;}fmt.styles[r+':'+c1]={...fmt.styles[r+':'+c1],align:'center',centerAcross:c2-c1+1};}});return;}
       if(mode!=='unmerge'&&r1===r2&&c1===c2)return;
+      if(!['unmerge','selection','across'].includes(mode)&&s.formatting.daySeparators?.some(r=>r>a&&r<=b)){h.message(()=>tr('أزل الفاصل بين الصفوف قبل دمجها.','Remove the separator between these rows before merging.'),true);return;}
       const occupied=rows(s).some(r=>columns(s).some(c=>(r!==a||c!==c1)&&s.cells[r]?.[c]));
       if(mode!=='unmerge'&&occupied){
         const ok=await (window.AppDialog?AppDialog.confirm({

@@ -49,7 +49,7 @@ const Trainees=(()=>{
     }finally{restoringPosition=false;}
   }
   function updateLastDataRow(){lastDataRow=cells.length-1;while(lastDataRow>=0&&!cells[lastDataRow].some(Boolean))lastDataRow--;}
-  const totalInputRows=()=>Math.min(D.MAX_ROWS,Math.max(cells.length,lastDataRow+1001));
+  const totalInputRows=()=>Math.min(D.MAX_ROWS,Math.max(cells.length,lastDataRow+1001,(formatting.daySeparators?.at(-1)??-1)+1));
   let excelView={wrap:false,freeze:false,zoom:100};
   let rowSize=15;
   try{const savedRowSize=Number(localStorage.getItem('ibta_trainee_row_size'));if([15,21,28,36].includes(savedRowSize))rowSize=savedRowSize;}catch{}
@@ -139,6 +139,7 @@ const Trainees=(()=>{
   }
   function shiftStylesOnInsert(fmt,insertIdx){
     const next=D.format(fmt);next.styles={};
+    if(next.daySeparators)next.daySeparators=next.daySeparators.map(r=>r>=insertIdx?r+1:r).filter(r=>r<D.MAX_ROWS);
     for(const [key,style]of Object.entries(fmt.styles)){
       const [r,c]=key.split(':').map(Number);
       const target=r>=insertIdx?r+1:r;
@@ -170,6 +171,7 @@ const Trainees=(()=>{
     next.splice(targetIdx,0,...Array.from({length:count},()=>D.blank(colCount())));
     const nextFmt=D.format(formatting);nextFmt.styles={};for(const [key,v]of Object.entries(formatting.styles)){const [r,c]=key.split(':').map(Number);const value={...v};if(value.mergeRows&&r<targetIdx&&r+value.mergeRows>targetIdx)value.mergeRows+=count;nextFmt.styles[(r>=targetIdx?r+count:r)+':'+c]=value;}
     if(nextFmt.hiddenRows)nextFmt.hiddenRows=nextFmt.hiddenRows.map(r=>r>=targetIdx?r+count:r);
+    if(nextFmt.daySeparators)nextFmt.daySeparators=nextFmt.daySeparators.map(r=>r>=targetIdx?r+count:r).filter(r=>r<D.MAX_ROWS);
     change(next,true,nextFmt);
     focusCell(pos==='above'?cursor.r:cursor.r+1,cursor.c);
     message(()=>tr('تم إدراج صف جديد','New row inserted'));
@@ -546,6 +548,7 @@ const Trainees=(()=>{
     };
     $('sheet-clear-filters').onclick=()=>{commitEdit();clearFilters();render();};
     $('sheet-group-days').onchange=()=>{commitEdit();stopSelectionDrag();render();if(collapsedRows.has(cursor.r)){cursor=anchor={r:adjacentVisibleRow(cursor.r,1),c:cursor.c};paint();}};
+    $('sheet-add-separator').onclick=addDaySeparator;
     const grid=$('sheet-grid');
     const contentInput=$('sheet-cell-content');
     contentInput.addEventListener('focus',()=>{
@@ -661,7 +664,8 @@ const Trainees=(()=>{
     ($('sidebar-trainees-label')||$('trainees-tab')).textContent=tr('المتدربون','Trainees');if(!initialized)return;
     $('sheet-cell-content').placeholder=tr('محتوى الخلية المحددة','Selected cell content');$('sheet-cell-content').setAttribute('aria-label',tr('محتوى الخلية المحددة','Selected cell content'));
     $('sheet-group-days-label').textContent=tr('فواصل الأيام واختصار الصفوف الفارغة','Day separators and compact empty rows');
-    $('sheet-group-days').title=tr('خيار عرض فقط؛ إلغاؤه يعيد جميع الصفوف الأصلية','Display option only; turn off to restore all original rows');
+    $('sheet-add-separator').textContent=tr('إضافة فاصل قبل الصف المحدد','Add separator before selected row');
+    $('sheet-group-days').title=tr('خيار عرض فقط؛ إلغاؤه يعيد الصفوف الفارغة. الفواصل اليدوية تبقى ظاهرة.','Display option only; turn off to restore empty rows. Manual separators remain visible.');
     if($('sheet-more-tools'))$('sheet-more-tools').textContent=tr('التنسيق وأدوات إضافية','Formatting & more tools');
     $('sheet-zoom-label').textContent=tr('زوم الجدول','Table zoom');
   $('sheet-row-size-label').textContent=tr('حجم الصف','Row size');
@@ -873,7 +877,9 @@ const Trainees=(()=>{
     return weekday+tr(' الموافق ',' · ')+date.toLocaleDateString('en-GB',{timeZone:'UTC'});
   }
   function buildDayLayout(){
-    dayHeaders=new Map();collapsedRows=new Set();if(filtered()||!$('sheet-group-days').checked)return;
+    dayHeaders=new Map();collapsedRows=new Set();if(filtered())return;
+    if(formatting.daySeparators?.length){buildManualDayLayout();return;}
+    if(!$('sheet-group-days').checked)return;
     const groups=D.dayGroups(cells,formatting.styles);let groupIndex=0,seen=-1,number=0;
     for(let v=0;v<view.length;v++){
       const source=view[v];while(groupIndex<groups.length&&source>groups[groupIndex].end)groupIndex++;
@@ -882,6 +888,37 @@ const Trainees=(()=>{
       if(seen===groupIndex)continue;seen=groupIndex;if(!group.count)continue;number++;
       const title=group.date?dayDateLabel(group.date):tr('مجموعة بيانات ','Data group ')+number;
       dayHeaders.set(v,{title,countLabel:tr(' · صفوف بها بيانات: ',' · Rows with data: ')+group.count});
+    }
+  }
+  function addDaySeparator(){
+    commitEdit();if(!loaded||loading||worksheetBusy)return;
+    if(filtered()){message(()=>tr('امسح الفلاتر والفرز قبل إضافة فاصل.','Clear filters and sorting before adding a separator.'),true);return;}
+    const source=view[cursor.r];if(source===undefined)return;
+    if(sheetMerges().some(m=>m.r<source&&m.endR>=source)){message(()=>tr('ألغِ دمج الخلايا الممتدة بين الصفوف قبل إضافة الفاصل.','Unmerge cells spanning this boundary before adding a separator.'),true);return;}
+    if(formatting.daySeparators?.includes(source)){message(()=>tr('يوجد فاصل قبل هذا الصف بالفعل.','This row already has a separator.'));return;}
+    const next=D.format(formatting);next.daySeparators=[...(next.daySeparators||[]),source];
+    change(cells,true,next);focusCell(cursor.r,cursor.c);
+    message(()=>tr('تمت إضافة الفاصل قبل الصف ','Separator added before row ')+(source+1));
+  }
+  function removeDaySeparator(source){
+    commitEdit();if(!loaded||loading||worksheetBusy)return;
+    const next=D.format(formatting);next.daySeparators=next.daySeparators.filter(r=>r!==source);
+    change(cells,true,next);
+  }
+  function buildManualDayLayout(){
+    const groups=D.manualDayGroups(cells,formatting.daySeparators);let at=0,seen=-1;
+    for(let v=0;v<view.length;v++){
+      const source=view[v];while(at+1<groups.length&&source>groups[at].end)at++;
+      const group=groups[at];if(source<group.start||source>group.end||seen===at)continue;seen=at;
+      const title=group.date?dayDateLabel(group.date):tr('مجموعة بيانات ','Data group ')+(at+1);
+      dayHeaders.set(v,{title,countLabel:tr(' · صفوف بها بيانات: ',' · Rows with data: ')+group.count,
+        removeLabel:tr('إزالة هذا الفاصل','Remove this separator'),onRemove:()=>removeDaySeparator(group.start)});
+    }
+    if(!$('sheet-group-days').checked)return;
+    const occupied=D.dayGroups(cells,formatting.styles);let block=0;
+    for(let v=0;v<view.length;v++){
+      const source=view[v];while(block<occupied.length&&source>occupied[block].end)block++;
+      if(source>=groups[0].start&&source<cells.length&&!dayHeaders.has(v)&&(!occupied[block]||source<occupied[block].start))collapsedRows.add(v);
     }
   }
   function adjacentVisibleRow(from,direction){

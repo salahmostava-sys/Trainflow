@@ -40,6 +40,7 @@
     if(Number.isInteger(value.fontSize)&&value.fontSize>=10&&value.fontSize<=32)out.fontSize=value.fontSize;
     if(Array.isArray(value.hidden))out.hidden=[...new Set(value.hidden.filter(c=>Number.isInteger(c)&&c>=0&&c<MAX_COLS))];
     if(Array.isArray(value.hiddenRows))out.hiddenRows=[...new Set(value.hiddenRows.filter(r=>Number.isInteger(r)&&r>=0&&r<MAX_ROWS))];
+    if(Array.isArray(value.daySeparators))out.daySeparators=[...new Set(value.daySeparators.filter(r=>Number.isInteger(r)&&r>=0&&r<MAX_ROWS))].sort((a,b)=>a-b);
     if(Number.isInteger(value.defaultWidth)&&value.defaultWidth>=40&&value.defaultWidth<=800)out.defaultWidth=value.defaultWidth;
     if(value.widths&&typeof value.widths==='object'){out.widths={};for(const [c,w]of Object.entries(value.widths))if(/^(0|[1-9]\d*)$/.test(c)&&Number(c)<MAX_COLS&&Number.isInteger(w)&&w>=40&&w<=800)out.widths[c]=w;}
     if(value.headers&&typeof value.headers==='object'){
@@ -72,9 +73,26 @@
     const next=format(formatting),mapping=new Map();let at=0;
     rows.forEach((_,i)=>{if(!indices.has(i))mapping.set(i,at++);});next.styles={};
     const removed=[...indices].filter(i=>i<rows.length).length;
+    if(next.daySeparators){
+      const deleted=[...indices].filter(r=>r<rows.length).sort((a,b)=>a-b);let before=0;
+      next.daySeparators=[...new Set(next.daySeparators.map(r=>{while(before<deleted.length&&deleted[before]<r)before++;return r-before;}))];
+    }
     if(next.hiddenRows)next.hiddenRows=next.hiddenRows.filter(r=>!indices.has(r)).map(r=>r>=rows.length?r-removed:mapping.get(r)).filter(r=>r!==undefined);
     for(const [key,style]of Object.entries(formatting.styles)){const [r,c]=key.split(':').map(Number);const target=r>=rows.length?r-removed:mapping.get(r);if(target!==undefined){const v={...style};if(v.mergeRows)v.mergeRows=Math.max(1,v.mergeRows-[...indices].filter(i=>i>=r&&i<r+v.mergeRows).length);next.styles[target+':'+c]=v;}}
     return {cells:rows.filter((_,i)=>!indices.has(i)),format:next};
+  }
+  function manualDayGroups(rows,separators){
+    // Boundaries, including empty groups and trailing input rows, belong to the
+    // sheet rather than to dates copied into individual trainee cells.
+    return separators.map((start,index)=>{
+      const end=(separators[index+1]??Math.max(rows.length,start+1))-1;
+      let count=0,date='';
+      for(let r=start;r<=end&&r<rows.length;r++){
+        if(!rows[r].some(cell=>cell.trim()))continue;
+        count++;if(!date)date=(rows[r][8]||'').trim();
+      }
+      return {start,end,count,date};
+    });
   }
   function normalize(rows){
     if(!Array.isArray(rows)||rows.length>MAX_ROWS)throw Error('ROW_LIMIT');
@@ -174,6 +192,7 @@
       if(horizontal){if(r<r1||r>r2||c<c1)return [r,c];if(insert)return [r,c+w];if(c<=c2)return null;return [r,c-w];}
       if(c<c1||c>c2||r<r1)return [r,c];if(insert)return [r+h,c];if(r<=r2)return null;return [r-h,c];
     },fmt=format(formatting),next=rows.map(row=>[...row]);
+    if(!horizontal&&c1===0&&c2===width-1&&fmt.daySeparators)fmt.daySeparators=[...new Set(fmt.daySeparators.map(r=>r<r1?r:insert?r+h:r<=r2?r1:r-h).filter(r=>r<MAX_ROWS))];
     const valid=target=>target&&target[0]<MAX_ROWS&&target[1]<MAX_COLS;
     for(let r=0;r<rows.length;r++)for(let c=0;c<rows[r].length;c++){const target=map(r,c);if(insert&&!valid(target)&&rows[r][c])throw Error('SHIFT_OVERFLOW');if(target&&(target[0]!==r||target[1]!==c)||!target)next[r][c]='';}
     for(let r=0;r<rows.length;r++)for(let c=0;c<rows[r].length;c++){const target=map(r,c);if(!valid(target)||!rows[r][c])continue;while(next.length<=target[0])next.push(blank(width));while(next[target[0]].length<=target[1])next[target[0]].push('');next[target[0]][target[1]]=rows[r][c];}
@@ -266,7 +285,7 @@
   function eachSelected(ranges,view,cols,run){
     const columns=selectionColumns(ranges,cols);for(const r of selectionRows(ranges,view.length))for(const c of columns)if(selectedCell(ranges,r,c))run(view[r],c,r);
   }
-  const api={BASE_WIDTH,WIDTH,MAX_ROWS,MAX_COLS,MAX_CELL,blank,dayGroups,normalize,storage,parse,tsv,paste,pasteMapped,result:normalizeResult,defaultFormat,format,idKey,duplicates,removeRows,deleteCells,shiftCells,applyBorders,BORDER_STYLES,BORDER_SIDES,borderCss,borderImage,courseKeycode,columns,address,letter,number,formulaValue,shiftFormula,selectedCell,selectionRows,selectionColumns,eachSelected};
+  const api={BASE_WIDTH,WIDTH,MAX_ROWS,MAX_COLS,MAX_CELL,blank,dayGroups,manualDayGroups,normalize,storage,parse,tsv,paste,pasteMapped,result:normalizeResult,defaultFormat,format,idKey,duplicates,removeRows,deleteCells,shiftCells,applyBorders,BORDER_STYLES,BORDER_SIDES,borderCss,borderImage,courseKeycode,columns,address,letter,number,formulaValue,shiftFormula,selectedCell,selectionRows,selectionColumns,eachSelected};
   if(typeof module!=='undefined'&&module.exports)module.exports=api;
   else root.TraineeData=api;
 })(globalThis);
