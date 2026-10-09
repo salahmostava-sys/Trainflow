@@ -32,15 +32,6 @@ export function TraineesScreen({ active = false }: { active?: boolean }) {
             id="sheet-report-panel"
             className="sheet-tools sheet-report-panel"
           />
-          <div className="sheet-day-options">
-              <button type="button" id="sheet-add-separator">
-                إضافة فاصل قبل الصف المحدد
-              </button>
-            <label dir="auto">
-              <input type="checkbox" id="sheet-group-days" />
-              <span id="sheet-group-days-label">فواصل الأيام واختصار الصفوف الفارغة</span>
-            </label>
-          </div>
           <SheetRibbon />
           <div className="sheet-filters">
             <div className="sheet-search-group">

@@ -11,21 +11,6 @@
   function borderCss(style,side){const edge=style.borders?.[side];if(!edge)return null;if(edge.style==='none')return '0';const width=edge.style==='hair'?0.5:edge.style==='double'||edge.style==='thick'?3:edge.style.startsWith('medium')?2:1;return width+'px '+(edge.style==='double'?'double':edge.style==='dotted'?'dotted':/dash/i.test(edge.style)?'dashed':'solid')+' '+edge.color;}
   function borderImage(style){const edges=['diagonalUp','diagonalDown'].map(side=>[side,style.borders?.[side]]).filter(([,edge])=>edge&&edge.style!=='none');if(!edges.length)return '';const lines=edges.map(([side,edge])=>'<line x1="0" y1="'+(side==='diagonalUp'?100:0)+'" x2="100" y2="'+(side==='diagonalUp'?0:100)+'" stroke="'+edge.color+'" stroke-width="'+(edge.style==='thick'?3:edge.style.startsWith('medium')?2:1)+'" vector-effect="non-scaling-stroke" '+(/dash/i.test(edge.style)?'stroke-dasharray="5 3"':edge.style==='dotted'?'stroke-dasharray="1 3"':'')+'/>').join('');return 'url("data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" preserveAspectRatio="none">'+lines+'</svg>')+'")';}
   const blank=(w=BASE_WIDTH)=>Array(Math.max(BASE_WIDTH,w)).fill('');
-  function dayGroups(rows,styles={}){
-    // Empty/leading/trailing gaps, mixed dates and blank cells covered by merges
-    // must preserve source indices: these groups describe display, never storage.
-    const mergeEnds=new Map();
-    for(const [key,style]of Object.entries(styles))if(style.mergeRows>1){const start=Number(key.split(':')[0]);mergeEnds.set(start,Math.max(mergeEnds.get(start)||0,start+style.mergeRows-1));}
-    const groups=[];let group=null,mergedThrough=-1;
-    for(let r=0;r<rows.length;r++){
-      mergedThrough=Math.max(mergedThrough,mergeEnds.get(r)??-1);
-      const occupied=rows[r].some(cell=>cell.trim()),date=(rows[r][8]||'').trim();
-      if(!occupied&&r>mergedThrough){group=null;continue;}
-      if(!group){group={start:r,end:r,count:0,date:''};groups.push(group);}
-      group.end=r;if(occupied)group.count++;if(!group.date&&date)group.date=date;
-    }
-    return groups;
-  }
   function normalizeResult(value){
     const key=value.trim().toLocaleLowerCase();
     if(['pass','passed','success','ناجح','ناجه','ناجحة'].includes(key))return 'ناجح';
@@ -285,7 +270,7 @@
   function eachSelected(ranges,view,cols,run){
     const columns=selectionColumns(ranges,cols);for(const r of selectionRows(ranges,view.length))for(const c of columns)if(selectedCell(ranges,r,c))run(view[r],c,r);
   }
-  const api={BASE_WIDTH,WIDTH,MAX_ROWS,MAX_COLS,MAX_CELL,blank,dayGroups,manualDayGroups,normalize,storage,parse,tsv,paste,pasteMapped,result:normalizeResult,defaultFormat,format,idKey,duplicates,removeRows,deleteCells,shiftCells,applyBorders,BORDER_STYLES,BORDER_SIDES,borderCss,borderImage,courseKeycode,columns,address,letter,number,formulaValue,shiftFormula,selectedCell,selectionRows,selectionColumns,eachSelected};
+  const api={BASE_WIDTH,WIDTH,MAX_ROWS,MAX_COLS,MAX_CELL,blank,manualDayGroups,normalize,storage,parse,tsv,paste,pasteMapped,result:normalizeResult,defaultFormat,format,idKey,duplicates,removeRows,deleteCells,shiftCells,applyBorders,BORDER_STYLES,BORDER_SIDES,borderCss,borderImage,courseKeycode,columns,address,letter,number,formulaValue,shiftFormula,selectedCell,selectionRows,selectionColumns,eachSelected};
   if(typeof module!=='undefined'&&module.exports)module.exports=api;
   else root.TraineeData=api;
 })(globalThis);

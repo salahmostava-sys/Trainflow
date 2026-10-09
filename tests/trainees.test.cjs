@@ -16,22 +16,6 @@ const D=require('../trainees-core.js');
   assert.deepEqual(D.shiftCells(rows,fmt,[1,1,0,12],true,'down',13).format.daySeparators,[0,4],'Whole-row cell insertion moves boundaries with rows');
   assert.deepEqual(D.shiftCells(rows,fmt,[1,1,3,3],true,'down',13).format.daySeparators,[0,3],'Partial-cell shifts keep row boundaries in place');
 }
-{
-  const row=(name,date='')=>{const cells=D.blank(20);cells[3]=name;cells[8]=date;return cells;};
-  const rows=[D.blank(20),row('TUESDAY','2026-10-06'),row('LATE MONDAY','2026-10-05'),D.blank(20),D.blank(20),row('WEDNESDAY','2026-10-07'),row('SAME DAY AFTER GAP','2026-10-07')];
-  rows.splice(6,0,D.blank(20));rows.push(D.blank(20));
-  const original=JSON.stringify(rows);
-  assert.deepEqual(D.dayGroups(rows),[
-    {start:1,end:2,count:2,date:'2026-10-06'},
-    {start:5,end:5,count:1,date:'2026-10-07'},
-    {start:7,end:7,count:1,date:'2026-10-07'}
-  ],'Only blank rows split groups, including when consecutive groups share a date');
-  assert.equal(JSON.stringify(rows),original,'Display grouping never changes dates, row order or blank rows');
-  const custom=row('');custom[19]='CUSTOM FIELD ONLY';const whitespace=row('  ');
-  assert.deepEqual(D.dayGroups([row('NO DATE'),custom,row('FIRST DATE','2026-10-08'),whitespace]),[{start:0,end:2,count:3,date:'2026-10-08'}],'Custom data counts, whitespace does not, and the first available date titles the block');
-  assert.deepEqual(D.dayGroups([row('MERGED','2026-10-06'),D.blank(),row('NEXT','2026-10-07')],{'0:3':{mergeRows:2}}),[{start:0,end:2,count:2,date:'2026-10-06'}],'A blank row belonging to a vertical merge is not a separator');
-  for(const empty of [[],[D.blank()],[D.blank(),D.blank()]])assert.deepEqual(D.dayGroups(empty),[]);
-}
 const courseFixtures=[['CBP-M','Marketing','التسويق'],['CBP-S','Sales','المبيعات'],['CBP-CS','Customer Service','خدمة العملاء'],['CBP-AI','Artificial Intelligence','الذكاء الاصطناعي'],['CBP-L','Leadership','القيادة الإدارية'],['CBP-PM','Project Management','إدارة المشاريع'],['CBP-CYBP','CYBP','ريادة الاعمال'],['CBP-ME','Employee Motivation','تحفيز الموظفين'],['CBP-CM','Conflict Management','إدارة النزاعات'],['CBP-LTC','Leading Through Change','القيادة خلال التغيير'],['CBP-ES','Executive Secretarial','السكرتارية التنفيذية'],['CBP-AB','Accounting and Budgeting','المحاسبة والميزانية'],['CBP-BC','Business Communication','اتصالات الاعمال'],['CBP-CMPR','Crisis Management and Public Relations','إدارة الأزمات في العلاقات العامة'],['CBP-ECM','Event and Conference Management','إدارة الفعاليات والحشود'],['CBP-TOT','Training of Trainers','تدريب المدربين'],['CBP-BM','Business Management','إدارة الاعمال']];
 courseFixtures.push(
   ['CBP-BE','Business Etiquette','سلوكيات الأعمال'],
