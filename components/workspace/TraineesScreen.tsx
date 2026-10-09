@@ -32,6 +32,12 @@ export function TraineesScreen({ active = false }: { active?: boolean }) {
             id="sheet-report-panel"
             className="sheet-tools sheet-report-panel"
           />
+          <div className="sheet-day-options">
+            <label dir="auto">
+              <input type="checkbox" id="sheet-group-days" />
+              <span id="sheet-group-days-label">فواصل الأيام واختصار الصفوف الفارغة</span>
+            </label>
+          </div>
           <SheetRibbon />
           <div className="sheet-filters">
             <div className="sheet-search-group">
@@ -58,10 +64,6 @@ export function TraineesScreen({ active = false }: { active?: boolean }) {
             <input id="sheet-org" type="search" />
             <input id="sheet-date" type="search" />
             <select id="sheet-result"></select>
-            <label className="sheet-empty-rows-filter">
-              <input type="checkbox" id="sheet-show-empty-rows" />
-              <span id="sheet-show-empty-rows-label">عرض الصفوف الفارغة</span>
-            </label>
             <label
               className="sheet-duplicates-filter"
               id="sheet-duplicates-filter"

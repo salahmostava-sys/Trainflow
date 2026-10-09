@@ -545,7 +545,7 @@ const Trainees=(()=>{
       }
     };
     $('sheet-clear-filters').onclick=()=>{commitEdit();clearFilters();render();};
-    $('sheet-show-empty-rows').onchange=()=>{commitEdit();stopSelectionDrag();render();if(collapsedRows.has(cursor.r)){cursor=anchor={r:adjacentVisibleRow(cursor.r,1),c:cursor.c};paint();}};
+    $('sheet-group-days').onchange=()=>{commitEdit();stopSelectionDrag();render();if(collapsedRows.has(cursor.r)){cursor=anchor={r:adjacentVisibleRow(cursor.r,1),c:cursor.c};paint();}};
     const grid=$('sheet-grid');
     const contentInput=$('sheet-cell-content');
     contentInput.addEventListener('focus',()=>{
@@ -660,8 +660,8 @@ const Trainees=(()=>{
   function translate(){
     ($('sidebar-trainees-label')||$('trainees-tab')).textContent=tr('المتدربون','Trainees');if(!initialized)return;
     $('sheet-cell-content').placeholder=tr('محتوى الخلية المحددة','Selected cell content');$('sheet-cell-content').setAttribute('aria-label',tr('محتوى الخلية المحددة','Selected cell content'));
-    $('sheet-show-empty-rows-label').textContent=tr('عرض الصفوف الفارغة','Show empty rows');
-    $('sheet-show-empty-rows').title=tr('الفاصل يعتمد على الصفوف الفارغة، وليس اختلاف تاريخ المتدرب','Groups follow blank rows, not changes in trainee dates');
+    $('sheet-group-days-label').textContent=tr('فواصل الأيام واختصار الصفوف الفارغة','Day separators and compact empty rows');
+    $('sheet-group-days').title=tr('خيار عرض فقط؛ إلغاؤه يعيد جميع الصفوف الأصلية','Display option only; turn off to restore all original rows');
     if($('sheet-more-tools'))$('sheet-more-tools').textContent=tr('التنسيق وأدوات إضافية','Formatting & more tools');
     $('sheet-zoom-label').textContent=tr('زوم الجدول','Table zoom');
   $('sheet-row-size-label').textContent=tr('حجم الصف','Row size');
@@ -873,12 +873,12 @@ const Trainees=(()=>{
     return weekday+tr(' الموافق ',' · ')+date.toLocaleDateString('en-GB',{timeZone:'UTC'});
   }
   function buildDayLayout(){
-    dayHeaders=new Map();collapsedRows=new Set();if(filtered())return;
+    dayHeaders=new Map();collapsedRows=new Set();if(filtered()||!$('sheet-group-days').checked)return;
     const groups=D.dayGroups(cells,formatting.styles);let groupIndex=0,seen=-1,number=0;
     for(let v=0;v<view.length;v++){
       const source=view[v];while(groupIndex<groups.length&&source>groups[groupIndex].end)groupIndex++;
       const group=groups[groupIndex];if(!group)break;
-      if(source<group.start){if(groupIndex>0&&!$('sheet-show-empty-rows').checked)collapsedRows.add(v);continue;}
+      if(source<group.start){if(groupIndex>0)collapsedRows.add(v);continue;}
       if(seen===groupIndex)continue;seen=groupIndex;if(!group.count)continue;number++;
       const title=group.date?dayDateLabel(group.date):tr('مجموعة بيانات ','Data group ')+number;
       dayHeaders.set(v,{title,countLabel:tr(' · صفوف بها بيانات: ',' · Rows with data: ')+group.count});
@@ -1300,7 +1300,7 @@ const Trainees=(()=>{
   function selectCell(r,c,extend=false,additive=false){startSelection({r,c},{r,c},extend,additive);$('sheet-grid').querySelector(`td[data-v="${r}"][data-col="${c}"]`)?.focus();}
   function focusCell(r,c,extend=false){
     r=Math.max(0,Math.min(view.length-1,r));c=Math.max(0,Math.min(colCount()-1,c));if(!visibleCols().includes(c))c=visibleCols()[0];
-    if(collapsedRows.has(r)){$('sheet-show-empty-rows').checked=true;render();}
+    if(collapsedRows.has(r)){$('sheet-group-days').checked=false;render();}
     const grid=$('sheet-grid'),scroll=grid.parentElement;
     if(r<drawnStart||r>=drawnEnd){commitEdit();scroll.scrollTop=rowOffsets[r]||0;drawRows(true);}
     if(!grid.querySelector(`td[data-v="${r}"][data-col="${c}"]`)){commitEdit();const header=grid.querySelector(`thead th[data-col="${c}"]`),box=header?.getBoundingClientRect(),viewport=scroll.getBoundingClientRect();if(box){if(box.right>viewport.right)scroll.scrollLeft+=box.right-viewport.right;else if(box.left<viewport.left+46)scroll.scrollLeft+=box.left-viewport.left-46;}drawRows(true);}selectCell(r,c,extend);
