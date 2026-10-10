@@ -205,7 +205,7 @@ document.getElementById('themeToggle')?.addEventListener('click', async () => {
 });
 
 chrome.storage.local.get(['lightMode'], ({ lightMode }) => {
-  if (lightMode !== undefined) applyTheme(lightMode);
+  applyTheme(lightMode ?? true);
 });
 
 // -- Speed Toggle ---

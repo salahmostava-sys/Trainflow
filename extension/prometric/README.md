@@ -1,4 +1,4 @@
-# TrainFlow — Prometric 4.2.2
+# TrainFlow — Prometric 4.2.3
 
 Integrated from the user's Prometric Auto Register 4.0 source (Salah Mostafa,
 ISC license). Its original popup, registration steps, generation pattern,
@@ -9,6 +9,8 @@ Production origin: **https://trainf.vercel.app/**. Updated 8 October 2026. Confi
 The toolbar, extension manager, notifications and popup use the same TrainFlow
 logo. Replace the installed extension files in their existing folder and reload
 the extension to update cached Chrome icons while keeping saved settings.
+
+The popup opens in Light mode on first use. Switching Light/Dark saves your choice for later openings.
 
 ## Fetch exam results
 
