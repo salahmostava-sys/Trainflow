@@ -16,11 +16,8 @@ function doPost(e) {
     var worksheet=p.sheet||'00000000-0000-0000-0000-000000000001';
     if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(worksheet))throw Error('معرّف الشيت غير صالح');
     var sheets=read('ibta_trainee_sheets?select=cells&owner_id=eq.'+encodeURIComponent(p.owner)+'&sheet_id=eq.'+encodeURIComponent(worksheet));
-    var sourceCells=sheets.length===1?sheets[0].cells:(Array.isArray(p.rows)?p.rows:null);
-    if(!sourceCells&&sheets.length!==1){
-      try{var anySheet=read('ibta_trainee_sheets?select=cells&owner_id=eq.'+encodeURIComponent(p.owner)+'&limit=1');if(anySheet.length===1)sourceCells=anySheet[0].cells;}catch(e){}
-    }
-    if(!sourceCells)throw Error('جدول المتدربين غير موجود أو غير مسموح لحسابك');
+    if(sheets.length!==1)throw Error('جدول المتدربين غير موجود أو غير مسموح لحسابك');
+    var sourceCells=sheets[0].cells;
     var codes=[],offset=0;
     do{var batch=read('ibta_codes?select=code,used_at,used_on&owner_id=eq.'+encodeURIComponent(p.owner)+'&used_on=not.is.null&order=code&limit=1000&offset='+offset);codes=codes.concat(batch);offset+=batch.length;}while(batch.length===1000);
     var normalize=v=>String(v||'').trim().toUpperCase(),lookup=new Map();

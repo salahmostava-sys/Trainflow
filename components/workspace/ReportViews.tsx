@@ -7,6 +7,7 @@ interface ReportPreviewProps {
   missing: number;
   columns: Record<ReportKind, [string, number | null][]>;
   language: string;
+  copy(rows: string[][]): Promise<boolean>;
   upload(
     kind: ReportKind,
     status: (message: string, failed?: boolean) => void,
@@ -113,23 +114,17 @@ export function ReportPreview(props: ReportPreviewProps) {
   };
   const copyReport = async () => {
     const headers = props.columns[kind].map(([heading]) => heading);
-    const lines = [
-      headers.join("\t"),
+    const reportRows = [
+      headers,
       ...records.map((row) =>
         props.columns[kind]
           .map(([, column]) =>
             column === null ? reportDate : String(row[column] || ""),
-          )
-          .join("\t"),
+          ),
       ),
     ];
     try {
-      const helper = (window as unknown as { copyText?: (t: string) => Promise<boolean> }).copyText;
-      if (typeof helper === "function") {
-        await helper(lines.join("\n"));
-      } else if (navigator.clipboard) {
-        await navigator.clipboard.writeText(lines.join("\n"));
-      }
+      if (!(await props.copy(reportRows))) throw new Error("Clipboard copy failed");
       setStatus({
         message: tr(
           "تم نسخ بيانات التقرير — يمكنك لصقها مباشرة في Google Sheets.",

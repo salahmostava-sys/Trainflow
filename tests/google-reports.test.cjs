@@ -2,7 +2,7 @@ const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/st
 const headers=['رقم الهاتف','VOUCHER','الاسم باللغة العربية','تاريخ الإختبار','الحالة','حالة الإرسال'];
 const owner='aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 const row=(code,result)=>[code,'email','اسم','Name','001234','050123','','','','secret','secret',result,'private'];
-let rows=[row('PASS','ناجح'),row('FAIL','راسب')],written=[],destination='sheet',reads=0,paths=[];
+let rows=[row('PASS','ناجح'),row('FAIL','راسب')],written=[],destination='sheet',reads=0,paths=[],sheetRecords,readStatus=200;
 const props={SUPABASE_URL:'https://example.supabase.co',SUPABASE_PUBLISHABLE_KEY:'public',SUCCESS_ID:'sheet',OPERATIONS_ID:'other'};
 const range={getDisplayValues:()=>[headers],copyTo(){},setNumberFormat(){},setValues(v){written=v;}};
 const tab={getName:()=> 'تقرير الناجحين',getLastRow:()=>1,getLastColumn:()=>headers.length,getRange:()=>range,getMaxRows:()=>100,insertRowsAfter(){}};
@@ -12,11 +12,21 @@ const context={Map,Set,Date,JSON,String,Number,Error,encodeURIComponent,
   Utilities:{formatDate:()=> '2026-10-01'},
   HtmlService:{createHtmlOutput:v=>v},
   SpreadsheetApp:{openById:id=>{assert.equal(id,destination);return {getSheets:()=>[tab],getSheetByName:name=>name===tab.getName()?tab:null};},CopyPasteType:{},flush(){}},
-  UrlFetchApp:{fetch:url=>{reads++;paths.push(url);return {getResponseCode:()=>200,getContentText:()=>JSON.stringify(url.includes('trainee')?[{cells:rows}]:[{code:'PASS',used_at:'2026-10-01T07:00:00Z'},{code:'FAIL',used_at:'2026-10-01T07:00:00Z'}])};}}
+  UrlFetchApp:{fetch:url=>{reads++;paths.push(url);return {getResponseCode:()=>readStatus,getContentText:()=>JSON.stringify(url.includes('trainee')?(url.includes('&limit=1')?[{cells:rows}]:(sheetRecords??[{cells:rows}])):[{code:'PASS',used_at:'2026-10-01T07:00:00Z'},{code:'FAIL',used_at:'2026-10-01T07:00:00Z'}])};}}
 };
 vm.createContext(context);vm.runInContext(fs.readFileSync('tools/google-reports.gs','utf8'),context);
 const send=(overrides={})=>context.doPost({parameter:{payload:JSON.stringify({owner,token:'token',date:'2026-10-01',kind:'success',destination:'https://docs.google.com/spreadsheets/d/sheet/edit',...overrides})}});
 assert.match(send(),/تمت إضافة 1/);assert.ok(paths[0].includes('sheet_id=eq.00000000-0000-0000-0000-000000000001'));const independent='bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';paths=[];assert.match(send({sheet:independent}),/تمت إضافة 1/);assert.ok(paths[0].includes('sheet_id=eq.'+independent));const invalidReads=reads;assert.match(send({sheet:'bad'}),/معرّف الشيت غير صالح/);assert.equal(reads,invalidReads);assert.equal(written.length,1);assert.deepEqual(Array.from(written[0]),['050123','PASS','اسم','01/10/2026','ناجح','']);assert.ok(!JSON.stringify(written).includes('secret'));
+const submittedRow=row('PASS','ناجح');submittedRow[2]='UNSAVED NAME';
+written=[];assert.match(send({rows:[submittedRow]}),/تمت إضافة 1/);assert.equal(written[0][2],'اسم','Only the saved worksheet supplies report values');
+// Missing or ambiguous worksheets must reject both legacy row payloads and other-sheet fallbacks.
+for(const records of [[],[{cells:rows},{cells:rows}]]){
+  sheetRecords=records;
+  for(const payload of [{},{rows:[submittedRow]}]){
+    written=[];assert.match(send({sheet:independent,...payload}),/جدول المتدربين غير موجود أو غير مسموح لحسابك/);assert.equal(written.length,0);
+  }
+}
+sheetRecords=undefined;readStatus=403;written=[];assert.match(send({rows:[submittedRow]}),/تعذر قراءة البيانات/);assert.equal(written.length,0);readStatus=200;
 for(const heading of ['\u200fVOU\u200bCHER\ufeff',' V O U C H E R ','voucher','VOUCHER\n']){headers[1]=heading;written=[];assert.match(send(),/تمت إضافة 1/);assert.equal(written[0][1],'PASS','Voucher matching and output mapping use the same normalization');}
 headers[1]='VOUCHER';const originalHeaders=headers.slice();
 for(const heading of ['الإسم باللغة العربية','الإِسْم باللغة العربية','الا\u0654سم باللغة العربية','الاـسم باللغة العربية']){headers[2]=heading;written=[];assert.match(send(),/تمت إضافة 1/);assert.equal(written[0][2],'اسم');}

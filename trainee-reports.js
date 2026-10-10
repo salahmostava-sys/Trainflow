@@ -30,7 +30,7 @@ const TraineeReports=(()=>{
   const day=value=>{if(!value)return '';const d=new Date(value);return Number.isNaN(+d)?'':new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Riyadh',year:'numeric',month:'2-digit',day:'2-digit'}).format(d);};
   function previewReport(rows,date,missing,doUpload,onDateChange){
     const root=document.getElementById('sheet-report-preview-root');
-    window.WorkspaceViews.reportPreview(root,{rows,date,missing,columns:reportColumns,language:currentLang,upload:doUpload,close:()=>window.WorkspaceViews.clear(root),onDateChange});
+    window.WorkspaceViews.reportPreview(root,{rows,date,missing,columns:reportColumns,language:currentLang,copy:reportRows=>copyText(TraineeData.tsv(reportRows)),upload:doUpload,close:()=>window.WorkspaceViews.clear(root),onDateChange});
   }
   function mount(host,source,save){
     setupSettings();const panel=document.getElementById('sheet-report-panel');window.WorkspaceViews.reportPanel(panel);
@@ -57,7 +57,7 @@ const TraineeReports=(()=>{
     async function doUpload(action,onStatus,context){
       if(busy)return;
       const prefs=preferences();
-      const {owner,sheetId,rows}=source(),date=context?.date||field('date').value;
+      const {owner,sheetId}=source(),date=context?.date||field('date').value;
       const targetOwner=Cloud.userId()||owner;
       if(context&&(owner!==context.owner||sheetId!==context.sheetId)){onStatus?.(tr('تغيّر الشيت؛ أغلق المعاينة وافتحها مجددًا.','The worksheet changed; close and reopen the preview.'),true);return;}
       if(!targetOwner||!date){const msg=tr('اختر المستخدم والتاريخ أولًا.','Choose the user and date first.');if(onStatus)onStatus(msg,true);status.textContent=msg;return;}
@@ -67,7 +67,7 @@ const TraineeReports=(()=>{
       if(onStatus)onStatus(tr('جارٍ تجهيز وحفظ البيانات…','Preparing and saving data…'));
       try{if(!await save())throw Error(tr('تعذر حفظ الجدول. حاول مرة أخرى.','Could not save the sheet. Please retry.'));const session=await Cloud.reportSession();
         const form=document.createElement('form');form.method='POST';form.action=bridge.href;form.target=target;
-        const payload={token:session.token,owner:targetOwner,sheet:sheetId,date,kind:action,destination:prefs[action],rows:context?.matched||rows};
+        const payload={token:session.token,owner:targetOwner,sheet:sheetId,date,kind:action,destination:prefs[action]};
         const input=document.createElement('input');input.type='hidden';input.name='payload';input.value=JSON.stringify(payload);form.append(input);document.body.append(form);form.submit();form.remove();
         const doneMsg=tr('تم إرسال التقرير — راجع نتيجة الرفع في نافذة جوجل.','Report submitted — Check upload result in Google window.');
         if(onStatus)onStatus(doneMsg);status.textContent=doneMsg;
@@ -85,7 +85,7 @@ const TraineeReports=(()=>{
         const vouchers=new Set(matched.map(r=>(r[0]||'').trim().toUpperCase()));
         const missingCount=codes.filter(c=>!vouchers.has(c.code.trim().toUpperCase())).length;
         status.textContent=tr('المحاولات: ','Attempts: ')+matched.length+tr(' — الناجحون: ',' — Passed: ')+matched.filter(r=>r[11]==='ناجح').length+tr(' — بدون نتيجة: ',' — No result: ')+matched.filter(r=>!r[11]).length+tr(' — أكواد بدون متدرب: ',' — Vouchers without trainee: ')+missingCount;
-        previewReport(matched,targetDate,missingCount,(kind,onStatus,uploadDate)=>doUpload(kind,onStatus,{owner,sheetId,date:uploadDate||targetDate,matched}),showForDate);
+        previewReport(matched,targetDate,missingCount,(kind,onStatus,uploadDate)=>doUpload(kind,onStatus,{owner,sheetId,date:uploadDate||targetDate}),showForDate);
       }
       const initialDate=field('date').value;
       if(!owner||!initialDate){status.textContent=tr('اختر المستخدم والتاريخ أولًا.','Choose the user and date first.');return;}
