@@ -136,16 +136,16 @@ export function LoginScreen() {
               </svg>
             </div>
             <div id="auth-actions">
+              <label className="auth-remember" htmlFor="auth-remember">
+                <input type="checkbox" id="auth-remember" />
+                <span data-i18n="authRememberMe">تذكرني</span>
+              </label>
               <button className="auth-submit" type="submit">
                 <span data-i18n="authSignIn">تسجيل الدخول</span>
                 <svg viewBox="0 0 24 24" aria-hidden="true">
                   <path d="M19 12H5m6-6-6 6 6 6"></path>
                 </svg>
               </button>
-              <label className="auth-remember" htmlFor="auth-remember">
-                <input type="checkbox" id="auth-remember" />
-                <span data-i18n="authRememberMe">تذكرني</span>
-              </label>
             </div>
           </form>
           <p id="auth-message" role="status" aria-live="polite"></p>
