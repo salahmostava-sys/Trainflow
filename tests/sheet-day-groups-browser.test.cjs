@@ -39,7 +39,7 @@ const assert=require('node:assert/strict'),path=require('node:path'),{spawn}=req
     await page.waitForFunction(()=>[...document.querySelectorAll('.sheet-day-label')].some(el=>el.textContent.includes('الجمعة الموافق 09/10/2026')));
     await page.locator('.sheet-scroll').evaluate(scroll=>{scroll.scrollTop=7000;});await page.waitForFunction(()=>Number(document.querySelector('tbody th[data-rowv]')?.dataset.rowv)>240);
     for(const direction of ['ltr','rtl']){
-      await page.locator('#sheet-direction').selectOption(direction);await go('CV1');const viewport=await page.locator('.sheet-scroll').boundingBox();
+      await page.locator('#sheet-direction').selectOption(direction);await go('T1');const viewport=await page.locator('.sheet-scroll').boundingBox();
       for(const selector of ['.sheet-day-title','.sheet-day-count','.sheet-remove-separator']){const box=await page.locator(selector).first().boundingBox();assert.ok(box.width>=32&&box.x>=viewport.x&&box.x+box.width<=viewport.x+viewport.width,'Saved separator content fits after horizontal scrolling in '+direction);}
     }
     await page.setViewportSize({width:390,height:844});if(await page.locator('#sidebar-backdrop').isVisible())await page.locator('#sidebar-backdrop').click({position:{x:10,y:10}});await go('D1');

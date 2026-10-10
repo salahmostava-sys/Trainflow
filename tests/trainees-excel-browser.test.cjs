@@ -41,14 +41,15 @@ const {spawn}=require('node:child_process');
     assert.equal(await page.locator('#sheet-prev,#sheet-next,#sheet-page-size').count(),0,'Pagination controls are removed');
     assert.equal(await page.locator('#sheet-grid').getAttribute('aria-rowcount'),'4069','All 3068 data rows, 1000 empty input rows and the header belong to one continuous grid');
     assert.ok(await page.locator('#sheet-grid tbody th[data-rowv]').count()<100,'Only viewport rows are mounted to keep thousands of records responsive');
-    assert.equal(await page.locator('#sheet-grid thead th[data-col]').count(),500);
-    assert.ok(await page.locator('#sheet-grid td[data-col]').count()<40000,'3068 rows by 500 columns never create a million DOM cells');
+    assert.equal(await page.locator('#sheet-grid thead th[data-col]').count(),20,'Legacy headers do not expand the visible grid');
+    assert.ok(await page.locator('#sheet-grid td[data-col]').count()<2000,'Only viewport rows within 20 visible columns are mounted');
     assert.doesNotMatch(await page.locator('#sheet-count').textContent(),/Page|صفحة/);
     await page.locator('#sheet-address').fill('C3068');await page.locator('#sheet-address').press('Enter');
     assert.equal(await page.locator('td.sheet-current').getAttribute('data-v'),'3067','Last row is reachable without changing pages');
     assert.equal(await page.locator('td[data-v="3067"][data-col="2"]').textContent(),'متدرب 3068');
     await page.keyboard.press('F2');await page.keyboard.press('Control+a');await page.keyboard.insertText('آخر صف');await page.keyboard.press('Enter');
     await page.waitForFunction(()=>!Trainees.hasDraft());assert.equal(await page.evaluate(()=>previewSheets.get('demo-admin').cells[3067][2]),'آخر صف');
+    assert.equal(await page.evaluate(()=>previewSheets.get('demo-admin').format.headers[499]),'Last column','Saving visible edits preserves legacy headers');
     // The old design fixture omits reports and some non-trainee page globals.
     const fixtureErrors=new Set(['codes is not defined',"Cannot read properties of null (reading 'addEventListener')",'TraineeReports is not defined']);
     assert.deepEqual(errors.filter(message=>!fixtureErrors.has(message)),[]);

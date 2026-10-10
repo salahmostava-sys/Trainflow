@@ -4,7 +4,9 @@ const Trainees=(()=>{
   const D=TraineeData,$=id=>document.getElementById(id);
   const baseLabels=[['الكود','Code'],['البريد الإلكتروني','Email'],['الاسم بالعربي','Arabic name'],['الاسم بالإنجليزي','English name'],['رقم الهوية / الإقامة','National / Iqama ID'],['الجوال','Phone'],['الجهة','Organization'],['الاختبار','Exam'],['تاريخ الاختبار','Exam date'],['اسم المستخدم','Username'],['كلمة المرور','Password'],['النتيجة','Result'],['AnyDesk ID','AnyDesk ID']];
   function colLetter(c){let s='';c++;while(c>0){const m=(c-1)%26;s=String.fromCharCode(65+m)+s;c=Math.floor((c-m)/26);}return s;}
-  function colCount(){let count=52;if(cells&&cells.length&&cells[0]&&cells[0].length>count)count=cells[0].length;if(formatting&&formatting.headers){for(const k of Object.keys(formatting.headers)){const idx=Number(k);if(idx>=count)count=idx+1;}}return Math.min(D.MAX_COLS,count);}
+  const DISPLAY_COLS=20;
+  // Stored columns remain available to whole-row copy, exports and subsequent saves.
+  function colCount(){let count=DISPLAY_COLS;if(cells&&cells.length&&cells[0]&&cells[0].length>count)count=cells[0].length;if(formatting&&formatting.headers){for(const k of Object.keys(formatting.headers)){const idx=Number(k);if(idx>=count)count=idx+1;}}return Math.min(D.MAX_COLS,count);}
   function getColLabel(c){if(formatting&&formatting.headers&&formatting.headers[c])return [formatting.headers[c],formatting.headers[c]];if(c<baseLabels.length)return baseLabels[c];const l=colLetter(c);return ['عمود '+l,'Column '+l];}
   function allLabels(){const n=colCount(),res=[];for(let c=0;c<n;c++)res.push(getColLabel(c));return res;}
   const labels=new Proxy(baseLabels,{get(target,prop){if(prop==='length')return colCount();if(prop==='map')return fn=>allLabels().map(fn);if(prop==='forEach')return fn=>allLabels().forEach(fn);if(prop==='filter')return fn=>allLabels().filter(fn);if(prop==='slice')return (s,e)=>allLabels().slice(s,e);if(typeof prop==='string'&&/^\d+$/.test(prop)){return getColLabel(Number(prop));}return target[prop];}});
@@ -222,7 +224,9 @@ const Trainees=(()=>{
     if(idx===undefined){idx=cells.length;r=Math.max(0,view.length);}
     const width=Math.max(...values.map(v=>v.length));
     const availCols=columns.filter(col=>col>=c);
-    const targets=Array.from({length:width},(_,col)=>col<availCols.length?availCols[col]:(colCount()+col-availCols.length)),maxTargetCol=Math.max(...targets);
+    const overflowStart=(availCols.at(-1)??c-1)+1;
+    const targets=Array.from({length:width},(_,col)=>col<availCols.length?availCols[col]:overflowStart+col-availCols.length);
+    const maxTargetCol=targets.filter(col=>visibleCols().includes(col)).at(-1)??c;
     const valuesWithBlanks=values.map(row=>Array.from({length:width},(_,col)=>row[col]||''));
     const next=D.pasteMapped(cells,valuesWithBlanks,idx,targets);
     extraSelections=[];selectionKind='cell';change(next);anchor={r,c};cursor={r:Math.max(0,r+values.length-1),c:maxTargetCol};paint();
@@ -463,7 +467,7 @@ const Trainees=(()=>{
     const cancel=()=>{cleanup();if(token===epoch)render();};
     document.addEventListener('pointermove',move);document.addEventListener('pointerup',finish);document.addEventListener('pointercancel',cancel);
   }
-  const visibleCols=()=>{const width=cells[0]?.length||0;if(visibleCache?.format===formatting&&visibleCache.width===width)return visibleCache.cols;const hidden=new Set(formatting.hidden),cols=Array.from({length:colCount()},(_,c)=>c).filter(c=>!hidden.has(c));visibleCache={format:formatting,width,cols};return cols;};
+  const visibleCols=()=>{if(visibleCache?.format===formatting)return visibleCache.cols;const hidden=new Set(formatting.hidden),cols=Array.from({length:DISPLAY_COLS},(_,c)=>c).filter(c=>!hidden.has(c));visibleCache={format:formatting,cols};return cols;};
   // Every data mutation creates a new matrix, so history can retain the old matrix safely.
   const snapshot=()=>({cells,format:D.format(formatting),alignments:{...cellAlignments}});
   function node(tag,text,attrs={}){const el=document.createElement(tag);if(text!==undefined)el.textContent=text;for(const [key,value]of Object.entries(attrs))el.setAttribute(key,value);return el;}
@@ -562,7 +566,7 @@ const Trainees=(()=>{
           excelView.zoom=zoom;applyExcelView();resetRowHeights();rebuildRowOffsets();const top=rowOffsets[first]+offset*zoom/previous;scroll.scrollTop=top;scroll.scrollLeft=left*zoom/previous;drawRows(true);const measuredTop=rowOffsets[first]+offset*zoom/previous;if(Math.abs(scroll.scrollTop-measuredTop)>1){scroll.scrollTop=measuredTop;drawRows(true);}
         }
       }
-      if(view.length>100||visibleCols().length>80||expandedView)queueDraw();
+      if(view.length>100||expandedView)queueDraw();
     }).observe(grid.parentElement);
     initDuplicateDetails();
     initTraineeDetails();
@@ -571,7 +575,7 @@ const Trainees=(()=>{
     grid.addEventListener('pointerdown',e=>{const td=e.target.closest('td[data-col]');if(e.target.closest('select')){commitEdit();if(td){extraSelections=[];cursor=anchor={r:+td.dataset.v,c:+td.dataset.col};paint();}return;}if(e.button!==0||e.pointerType==='touch'||!td||editing?.el===td)return;e.preventDefault();dragging=true;dragMoved=false;skipSelectionClick=true;selectCell(+td.dataset.v,+td.dataset.col,e.shiftKey,e.ctrlKey||e.metaKey);trackDragPointer(e);});
     grid.addEventListener('pointerover',e=>{
       if(columnDragging){const th=e.target.closest('thead th[data-col]');if(th&&!e.target.closest('.sheet-col-resizer')){const c=+th.dataset.col;if(c!==cursor.c){dragMoved=true;cursor={r:0,c};paint();}}return;}
-      if(rowDragging){const th=e.target.closest('th[data-rowv]');if(th){const rv=+th.dataset.rowv;if(rv!==cursor.r){dragMoved=true;cursor={r:rv,c:colCount()-1};paint();}}return;}
+      if(rowDragging){const th=e.target.closest('th[data-rowv]');if(th){const rv=+th.dataset.rowv;if(rv!==cursor.r){dragMoved=true;cursor={r:rv,c:0};paint();}}return;}
       const td=e.target.closest('td[data-col]');if(!dragging||!td)return;const r=+td.dataset.v,c=+td.dataset.col;if(r!==cursor.r||c!==cursor.c){dragMoved=true;cursor={r,c};paint();}
     });
     document.addEventListener('pointermove',e=>{if(!dragging&&!rowDragging&&!columnDragging)return;if(!(e.buttons&1)){stopSelectionDrag();return;}trackDragPointer(e);});
@@ -894,14 +898,6 @@ const Trainees=(()=>{
   function sheetMerges(){
     if(mergeCacheFormat!==formatting){mergeCacheFormat=formatting;mergeCache=Object.entries(formatting.styles).filter(([,s])=>(s.mergeCols||1)>1||(s.mergeRows||1)>1).map(([key,s])=>{const [r,c]=key.split(':').map(Number);return {r,c,endR:r+(s.mergeRows||1)-1,endC:c+(s.mergeCols||1)-1};});}return filtered()?[]:mergeCache;
   }
-  function columnWindow(cols,merges,start,end){
-    if(cols.length<=80)return cols.map(c=>({c}));
-    const grid=$('sheet-grid'),scroll=grid.parentElement,rect=scroll.getBoundingClientRect(),widths=new Map(),shown=new Set();
-    grid.querySelectorAll('thead th[data-col]').forEach(th=>{const c=+th.dataset.col,box=th.getBoundingClientRect();widths.set(c,box.width);if(box.right>=rect.left-320&&box.left<=rect.right+320)shown.add(c);});
-    // Keep a merge intact when any part intersects the row/column viewport.
-    for(const m of merges)if(m.r<end&&m.endR>=start&&cols.some(c=>shown.has(c)&&c>=m.c&&c<=m.endC))for(const c of cols)if(c>=m.c&&c<=m.endC)shown.add(c);
-    const segments=[];for(const c of cols){if(shown.has(c))segments.push({c});else{const last=segments[segments.length-1];if(last?.gap){last.count++;last.width+=widths.get(c)||160;}else segments.push({gap:true,count:1,width:widths.get(c)||160});}}return segments;
-  }
   function drawRows(force=false){
     if(!initialized||editing&&!force)return;const grid=$('sheet-grid'),scroll=grid.parentElement,tbody=grid.querySelector('tbody'),cols=visibleCols();
     if(view.length===0){
@@ -920,7 +916,7 @@ const Trainees=(()=>{
     scroll.style.setProperty('--sheet-group-width',scroll.clientWidth+'px');
     scroll.style.setProperty('--sheet-day-header-height',DAY_HEADER_HEIGHT+'px');
     const first=rowAtOffset(Math.max(0,scroll.scrollTop-head)),start=view.length<=100?0:Math.max(0,first-8),end=view.length<=100?view.length:Math.min(view.length,rowAtOffset(scroll.scrollTop+height)+10);
-    const merges=sheetMerges(),segments=columnWindow(cols,merges,start,end),columnKey=segments.map(s=>s.gap?'gap:'+s.count+':'+s.width:s.c).join(',');
+    const merges=sheetMerges(),columnKey=cols.join(',');
     if(!force&&start===drawnStart&&end===drawnEnd&&columnKey===drawnColumns){updateVisibleRows();return;}
     const hadFocus=grid.contains(document.activeElement),previousTop=scroll.scrollTop,previousLeft=scroll.scrollLeft;commitEdit();drawnStart=start;drawnEnd=end;drawnColumns=columnKey;
     const rows=[];
@@ -931,9 +927,8 @@ const Trainees=(()=>{
         onSelect:e=>{if(!skipSelectionClick&&!dragMoved)selectRow(v,e);skipSelectionClick=false;dragMoved=false;},
         onPointerDown:e=>{if(e.button!==0||e.pointerType==='touch')return;e.preventDefault();e.stopPropagation();rowDragging=true;dragMoved=false;skipSelectionClick=true;selectRow(v,e);trackDragPointer(e);}
       };
-      for(const segment of segments){
-        if(segment.gap){row.cells.push(segment);continue;}
-        const c=segment.c,merge=merges.find(m=>idx>=m.r&&idx<=m.endR&&c>=m.c&&c<=m.endC);
+      for(const c of cols){
+        const merge=merges.find(m=>idx>=m.r&&idx<=m.endR&&c>=m.c&&c<=m.endC);
         const firstMergeCol=merge&&cols.find(x=>x>=merge.c&&x<=merge.endC);
         if(merge&&(c!==firstMergeCol||v!==Math.max(start,merge.r)))continue;
         const source=merge?merge.r:idx,column=merge?merge.c:c;
@@ -989,8 +984,8 @@ const Trainees=(()=>{
   const detailKeycode=keycode=>({label:'Key Code',value:keycode?.code||'',empty:tr('لا يوجد Key Code مطابق','No matching Key Code'),className:'sheet-detail-keycode',direction:'ltr'});
   function detailFields(row,includeKeycode=true){
     const fields=[];
-    labels.forEach((pair,column)=>{
-      if(column>=baseLabels.length&&!row[column]&&!formatting.headers[column])return;
+    let end=row.length;while(end>0&&!row[end-1].trim())end--;
+    labels.slice(0,end).forEach((pair,column)=>{
       const keycode=column===7?D.courseKeycode(row[column],DEFAULT_KEYCODES):null;
       const field={label:column===7?tr('الدورة','Course'):tr(...pair),copyName:tr(...pair),value:row[column]||'',className:({7:'sheet-detail-course',9:'sheet-detail-username',10:'sheet-detail-password',11:'sheet-detail-result'})[column]||'',result:column===11?detailResult(row[column]):undefined};
       if(column===7&&!keycode)field.note=tr('لا يوجد Key Code مطابق','No matching Key Code');
@@ -1015,7 +1010,7 @@ const Trainees=(()=>{
       hideDuplicateHint();dialog.dir=currentLang==='ar'?'rtl':'ltr';
       $('sheet-trainee-title').textContent=tr('بيانات المتدرب — ','Trainee details — ')+name;
       const fields=detailFields(row,false),voucher=fields[0],loginDisplay=PROMETRIC_LOGIN_URL.replace(/(\/Login).+$/i,'$1…');
-      const credentials=fields.splice(fields.findIndex(field=>field.className==='sheet-detail-username'),2);
+      const credentials=[];for(const name of ['sheet-detail-username','sheet-detail-password']){const at=fields.findIndex(field=>field.className===name);if(at>=0)credentials.push(...fields.splice(at,1));}
       fields.unshift({label:'Prometric login link',value:PROMETRIC_LOGIN_URL,display:loginDisplay,className:'sheet-detail-login',direction:'ltr',empty:tr('غير محدد','Not configured')},...credentials,detailKeycode(D.courseKeycode(row[7],DEFAULT_KEYCODES)),...[['Prometric Account',PROMETRIC_ACCOUNT],['Prometric Password',PROMETRIC_PASSWORD]].map(([label,value])=>({label,value,direction:'ltr',empty:tr('غير محدد','Not configured')})));
       const refreshRecord=()=>{if(dialog.open&&activeIndex===index&&activeEpoch===epoch)show(index);};
       const exam=D.courseKeycode(row[7],DEFAULT_KEYCODES),category=exam&&(state.keycodeOverrides?.[exam.code]||exam.category),codeCategory=category&&getLinkedCodesCat(category);
@@ -1158,7 +1153,7 @@ const Trainees=(()=>{
     const y=columnDragging?headBox.top+headBox.height/2:Math.max(viewport.top+2,Math.min(viewport.bottom-2,dragPointer.y));
     const cell=document.elementFromPoint(x,y)?.closest(columnDragging?'thead th[data-col]':rowDragging?'th[data-rowv]':'td[data-col]');
     if(!cell||!grid.contains(cell))return;
-    const next={r:columnDragging?0:Number(rowDragging?cell.dataset.rowv:cell.dataset.v),c:rowDragging?colCount()-1:Number(cell.dataset.col)};
+    const next={r:columnDragging?0:Number(rowDragging?cell.dataset.rowv:cell.dataset.v),c:rowDragging?0:Number(cell.dataset.col)};
     if(next.r!==cursor.r||next.c!==cursor.c){dragMoved=true;cursor=next;paint();schedulePosition();}
   }
   function scrollDragSelection(){
@@ -1175,7 +1170,7 @@ const Trainees=(()=>{
     dragScrollFrame=requestAnimationFrame(scrollDragSelection);
   }
   function selectColumn(c,e){startSelection({r:Math.max(0,view.length-1),c},{r:0,c},e.shiftKey,e.ctrlKey||e.metaKey,'column');$('sheet-grid').querySelector(`td[data-v="0"][data-col="${c}"]`)?.focus();}
-  function selectRow(r,e){startSelection({r,c:0},{r,c:colCount()-1},e.shiftKey,e.ctrlKey||e.metaKey,'row');const grid=$('sheet-grid');grid.tabIndex=-1;grid.focus({preventScroll:true});}
+  function selectRow(r,e){startSelection({r,c:colCount()-1},{r,c:0},e.shiftKey,e.ctrlKey||e.metaKey,'row');const grid=$('sheet-grid');grid.tabIndex=-1;grid.focus({preventScroll:true});}
   function selectAll(){
     if(!loaded||!view.length)return;
     commitEdit();

@@ -79,7 +79,7 @@ const TraineeExcel=(()=>{
     const sortDialog=$('sheet-sort-dialog'),sortLevels=$('sheet-sort-levels');
     $('sheet-sort-cancel').onclick=()=>sortDialog.close();
     $('sheet-sort-apply').onclick=()=>{const rules=[...sortLevels.children].map(el=>({column:Number(el.firstChild.value),direction:Number(el.lastChild.value)}));if(new Set(rules.map(x=>x.column)).size!==rules.length){h.message(()=>tr('اختر أعمدة مختلفة لمستويات الفرز.','Choose different columns for sort levels.'),true);return;}h.customSort(rules);sortDialog.close();};
-    const resetSortLevels=()=>{const s=state();window.WorkspaceViews.sortLevels(sortLevels,{columns:s.labels.map((pair,column)=>({value:column,label:D.letter(column)+' · '+tr(...pair)})),initialColumns:[s.cursor.c],labels:{column:tr('العمود','Column'),order:tr('الترتيب','Order'),ascending:tr('تصاعدي A → Z','A to Z'),descending:tr('تنازلي Z → A','Z to A'),remove:tr('حذف المستوى','Remove Level')}});};
+    const resetSortLevels=()=>{const s=state();window.WorkspaceViews.sortLevels(sortLevels,{columns:s.cols.map(column=>({value:column,label:D.letter(column)+' · '+tr(...s.labels[column])})),initialColumns:[s.cursor.c],labels:{column:tr('العمود','Column'),order:tr('الترتيب','Order'),ascending:tr('تصاعدي A → Z','A to Z'),descending:tr('تنازلي Z → A','Z to A'),remove:tr('حذف المستوى','Remove Level')}});};
     dropdown({id:'sheet-sort-menu',ar:'الفرز والفلترة',en:'Sort & Filter',controls:[
       action('sheet-sort-menu-ascending','فرز من A إلى Z','Sort A to Z',()=>h.sort(state().cursor.c,1)),action('sheet-sort-menu-descending','فرز من Z إلى A','Sort Z to A',()=>h.sort(state().cursor.c,-1)),
       action('sheet-sort-menu-custom','فرز مخصص…','Custom Sort…',()=>{resetSortLevels();closeMenus();sortDialog.showModal();}),
