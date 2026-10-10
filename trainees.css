@@ -169,6 +169,13 @@
 .sheet-report-preview button.sheet-primary:disabled{background:#93c5fd;border-color:#93c5fd;opacity:.5}
 .sheet-report-preview button:disabled{opacity:.45;cursor:default}
 .sheet-report-preview button:focus-visible,.sheet-report-preview-table:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.sheet-report-preview-controls{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin:12px 0 16px;padding:10px 14px;background:#f8fafc;border:1px solid var(--border);border-radius:10px}
+.sheet-report-preview-controls .sheet-report-preview-info{margin:0;font-size:13px;font-weight:600;color:var(--text)}
+.sheet-report-date-changer{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:600}
+.sheet-report-date-changer input[type=date]{padding:5px 10px;border:1.5px solid #cbd5e1;border-radius:7px;background:#fff;color:#0f172a;font:inherit;font-size:13px;cursor:pointer}
+.sheet-report-date-changer input[type=date]:focus{outline:none;border-color:#2563eb;box-shadow:0 0 0 3px rgba(37,99,235,0.12)}
+.sheet-report-copy-btn{font-size:12.5px!important;display:inline-flex;align-items:center;gap:6px;background:#f1f5f9!important}
+.sheet-report-copy-btn:hover{background:#e2e8f0!important}
 .sheet-report-preview-info{font-size:13px;margin:14px 0}
 .sheet-report-preview-status{font-size:13px;margin:8px 0;font-weight:600;padding:6px 10px;border-radius:6px;background:#f8fafc}
 .sheet-report-preview-note{font-size:12px;color:var(--muted);line-height:1.7;margin:12px 0}

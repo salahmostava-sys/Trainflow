@@ -10,8 +10,10 @@ interface ReportPreviewProps {
   upload(
     kind: ReportKind,
     status: (message: string, failed?: boolean) => void,
+    date?: string,
   ): Promise<void>;
   close(): void;
+  onDateChange?(date: string): void;
 }
 
 export function ReportPanel() {
@@ -100,11 +102,46 @@ export function ReportPreview(props: ReportPreviewProps) {
     setUploading(true);
     setStatus({ message: "" });
     try {
-      await props.upload(kind, (message, failed) =>
-        setStatus({ message, failed }),
+      await props.upload(
+        kind,
+        (message, failed) => setStatus({ message, failed }),
+        props.date,
       );
     } finally {
       setUploading(false);
+    }
+  };
+  const copyReport = async () => {
+    const headers = props.columns[kind].map(([heading]) => heading);
+    const lines = [
+      headers.join("\t"),
+      ...records.map((row) =>
+        props.columns[kind]
+          .map(([, column]) =>
+            column === null ? reportDate : String(row[column] || ""),
+          )
+          .join("\t"),
+      ),
+    ];
+    try {
+      const helper = (window as unknown as { copyText?: (t: string) => Promise<boolean> }).copyText;
+      if (typeof helper === "function") {
+        await helper(lines.join("\n"));
+      } else if (navigator.clipboard) {
+        await navigator.clipboard.writeText(lines.join("\n"));
+      }
+      setStatus({
+        message: tr(
+          "تم نسخ بيانات التقرير — يمكنك لصقها مباشرة في Google Sheets.",
+          "Report data copied — You can paste it directly into Google Sheets.",
+        ),
+        failed: false,
+      });
+    } catch {
+      setStatus({
+        message: tr("تعذر نسخ البيانات.", "Could not copy data."),
+        failed: true,
+      });
     }
   };
   const uploadButton = (
@@ -152,14 +189,33 @@ export function ReportPreview(props: ReportPreviewProps) {
           {tr("إغلاق", "Close")}
         </button>
       </div>
-      <p className="sheet-report-preview-info">
-        {tr("تاريخ التقرير: ", "Report date: ") +
-          reportDate +
-          tr(" — المحاولات: ", " — Attempts: ") +
-          props.rows.length +
-          tr(" — الناجحون: ", " — Passed: ") +
-          passed.length}
-      </p>
+      <div className="sheet-report-preview-controls">
+        <p className="sheet-report-preview-info">
+          {tr("تاريخ التقرير: ", "Report date: ") +
+            reportDate +
+            tr(" — المحاولات: ", " — Attempts: ") +
+            props.rows.length +
+            tr(" — الناجحون: ", " — Passed: ") +
+            passed.length}
+        </p>
+        <div className="sheet-report-date-changer">
+          <label htmlFor="sheet-report-dialog-date">
+            <span>📅 {tr("تغيير تاريخ التقرير:", "Change report date:")}</span>
+          </label>
+          <input
+            id="sheet-report-dialog-date"
+            type="date"
+            className="sheet-report-date-input"
+            value={props.date}
+            disabled={uploading}
+            onChange={(e) => {
+              if (e.target.value && props.onDateChange) {
+                props.onDateChange(e.target.value);
+              }
+            }}
+          />
+        </div>
+      </div>
       <div
         className="sheet-report-preview-tabs"
         role="group"
@@ -182,7 +238,17 @@ export function ReportPreview(props: ReportPreviewProps) {
               : tr("تقرير الناجحين", "Successful trainees report")}
           </button>
         ))}
-        <span style={{ marginInlineStart: "auto" }}>{uploadButton}</span>
+        <span style={{ marginInlineStart: "auto", display: "inline-flex", gap: "8px" }}>
+          <button
+            type="button"
+            className="sheet-report-copy-btn"
+            disabled={uploading || !records.length}
+            onClick={() => void copyReport()}
+          >
+            📋 {tr("نسخ بيانات التقرير", "Copy report data")}
+          </button>
+          {uploadButton}
+        </span>
       </div>
       <p
         className="sheet-report-preview-status ops-status"

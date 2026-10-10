@@ -28,9 +28,9 @@ const TraineeReports=(()=>{
     copy.onclick=async()=>{if(await copyText(values.value))status.textContent=tr('تم النسخ. أضف كل اسم وقيمة في Script properties.','Copied. Add each name and value in Script properties.');};translate();
   }
   const day=value=>{if(!value)return '';const d=new Date(value);return Number.isNaN(+d)?'':new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Riyadh',year:'numeric',month:'2-digit',day:'2-digit'}).format(d);};
-  function previewReport(rows,date,missing,doUpload){
+  function previewReport(rows,date,missing,doUpload,onDateChange){
     const root=document.getElementById('sheet-report-preview-root');
-    window.WorkspaceViews.reportPreview(root,{rows,date,missing,columns:reportColumns,language:currentLang,upload:doUpload,close:()=>window.WorkspaceViews.clear(root)});
+    window.WorkspaceViews.reportPreview(root,{rows,date,missing,columns:reportColumns,language:currentLang,upload:doUpload,close:()=>window.WorkspaceViews.clear(root),onDateChange});
   }
   function mount(host,source,save){
     setupSettings();const panel=document.getElementById('sheet-report-panel');window.WorkspaceViews.reportPanel(panel);
@@ -38,7 +38,10 @@ const TraineeReports=(()=>{
     panel.syncExpanded=active=>{const target=active?toolbar:actions;if(target)traineeActions.forEach(button=>target.append(button));};panel.syncExpanded(host.classList.contains('sheet-expanded-view'));
     const field=name=>panel.querySelector('[data-field="'+name+'"]')||document.getElementById('settings-report-'+name),status=panel.querySelector('p');
     const title=panel.querySelector('strong');title.dataset.ar='تقارير جوجل اليومية';title.dataset.en='Daily Google reports';
-    let busy=false;const ready=panel.querySelector('.sheet-report-state'),dateButton=panel.querySelector('[data-action="date"]'),picker=panel.querySelector('[popover]');dateButton.popoverTargetElement=picker;field('date').onchange=()=>{panel.updateReady();picker.hidePopover();};panel.querySelector('[data-action="apply-date"]').onclick=()=>picker.hidePopover();
+    let busy=false;const ready=panel.querySelector('.sheet-report-state'),dateButton=panel.querySelector('[data-action="date"]'),picker=panel.querySelector('[popover]');dateButton.popoverTargetElement=picker;
+    dateButton.addEventListener('click',()=>{try{if(typeof field('date').showPicker==='function')field('date').showPicker();}catch{}});
+    field('date').onchange=()=>{panel.updateReady();try{picker?.hidePopover?.();}catch{}};
+    panel.querySelector('[data-action="apply-date"]').onclick=()=>{try{picker?.hidePopover?.();}catch{}};
     panel.updateReady=()=>{
       dateButton.textContent=tr('تاريخ التقرير: ','Report date: ')+field('date').value.split('-').reverse().join('/');
       const prefs=preferences(),bridge=bridgeUrl(prefs.bridge);
@@ -71,13 +74,21 @@ const TraineeReports=(()=>{
     }
     panel.addEventListener('click',async e=>{
       const action=e.target.dataset.action;if(action!=='preview'||busy)return;
-      const {owner,sheetId,rows}=source(),date=field('date').value;
-      if(!owner||!date){status.textContent=tr('اختر المستخدم والتاريخ أولًا.','Choose the user and date first.');return;}
-      const codes=Cloud.codeSnapshot().filter(c=>c.owner_id===owner&&(c.used_at?day(c.used_at):String(c.used_on||'').split('/').reverse().join('-'))===date),map=new Map(codes.map(c=>[c.code.trim().toUpperCase(),c]));
-      const matched=rows.filter(r=>map.has((r[0]||'').trim().toUpperCase()));
-      const vouchers=new Set(matched.map(r=>(r[0]||'').trim().toUpperCase()));
-      status.textContent=tr('المحاولات: ','Attempts: ')+matched.length+tr(' — الناجحون: ',' — Passed: ')+matched.filter(r=>r[11]==='ناجح').length+tr(' — بدون نتيجة: ',' — No result: ')+matched.filter(r=>!r[11]).length+tr(' — أكواد بدون متدرب: ',' — Vouchers without trainee: ')+codes.filter(c=>!vouchers.has(c.code.trim().toUpperCase())).length;
-      previewReport(matched,date,codes.filter(c=>!vouchers.has(c.code.trim().toUpperCase())).length,(kind,onStatus)=>doUpload(kind,onStatus,{owner,sheetId,date}));
+      const {owner,sheetId,rows}=source();
+      function showForDate(targetDate){
+        if(!targetDate)return;
+        field('date').value=targetDate;
+        panel.updateReady();
+        const codes=Cloud.codeSnapshot().filter(c=>c.owner_id===owner&&(c.used_at?day(c.used_at):String(c.used_on||'').split('/').reverse().join('-'))===targetDate),map=new Map(codes.map(c=>[c.code.trim().toUpperCase(),c]));
+        const matched=rows.filter(r=>map.has((r[0]||'').trim().toUpperCase()));
+        const vouchers=new Set(matched.map(r=>(r[0]||'').trim().toUpperCase()));
+        const missingCount=codes.filter(c=>!vouchers.has(c.code.trim().toUpperCase())).length;
+        status.textContent=tr('المحاولات: ','Attempts: ')+matched.length+tr(' — الناجحون: ',' — Passed: ')+matched.filter(r=>r[11]==='ناجح').length+tr(' — بدون نتيجة: ',' — No result: ')+matched.filter(r=>!r[11]).length+tr(' — أكواد بدون متدرب: ',' — Vouchers without trainee: ')+missingCount;
+        previewReport(matched,targetDate,missingCount,(kind,onStatus,uploadDate)=>doUpload(kind,onStatus,{owner,sheetId,date:uploadDate||targetDate}),showForDate);
+      }
+      const initialDate=field('date').value;
+      if(!owner||!initialDate){status.textContent=tr('اختر المستخدم والتاريخ أولًا.','Choose the user and date first.');return;}
+      showForDate(initialDate);
     });
   }
   for(const event of ['online','offline'])window.addEventListener(event,()=>panels.forEach(panel=>panel.updateReady()));
