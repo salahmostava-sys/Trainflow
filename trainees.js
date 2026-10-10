@@ -487,7 +487,7 @@ const Trainees=(()=>{
   };
   function init(){
     if(initialized)return;initialized=true;
-    setTimeout(()=>TraineeReports.mount($('sheet-workspace'),()=>({owner,sheetId,rows:cells}),async()=>{commitEdit();return await flush();}),0);
+    setTimeout(()=>TraineeReports.mount($('sheet-workspace'),()=>({owner:owner||Cloud.userId(),sheetId,rows:cells}),async()=>{commitEdit();return await flush(false,true);}),0);
 
     $('sheet-row-size').value=String(rowSize);$('sheet-row-size').onchange=()=>setRowSize($('sheet-row-size').value);
     const zoomTools=$('sheet-workspace').querySelector('.sheet-zoom-tools');
@@ -1320,10 +1320,10 @@ const Trainees=(()=>{
   function undo(redo){commitEdit();const from=redo?future:history,to=redo?history:future;if(!from.length)return;to.push(snapshot());const next=from.pop();cells=next.cells;formatting=D.format(next.format);cellAlignments={...next.alignments};saveAlignments();revision++;schedule();render();if(view.length)focusCell(cursor.r,cursor.c);}
   function schedule(){clearTimeout(timer);message(()=>tr('تعديلات غير محفوظة…','Unsaved changes…'));const saveWhenIdle=()=>{if(editing?.el.dataset.composing==='true'){timer=setTimeout(saveWhenIdle,900);return;}flush(true);};timer=setTimeout(saveWhenIdle,900);}
   function hasDraft(){return !!editing||revision!==savedRevision||!!saving;}
-  async function flush(keepEditing=false){
-    commitEdit(false,keepEditing);clearTimeout(timer);if(saving){const ok=await saving;if(!ok)return false;return flush(keepEditing);}
-    if(!loaded||revision===savedRevision)return true;
-    const token=epoch,snapshot=revision,saveOwner=owner,saveSheet=sheetId,data=D.storage(cells),saveFormat=D.format(formatting);
+  async function flush(keepEditing=false,force=false){
+    commitEdit(false,keepEditing);clearTimeout(timer);if(saving){const ok=await saving;if(!ok)return false;return flush(keepEditing,force);}
+    if(!loaded||(!force&&revision===savedRevision&&version>0))return true;
+    const token=epoch,snapshot=revision,saveOwner=owner||Cloud.userId(),saveSheet=sheetId,data=D.storage(cells),saveFormat=D.format(formatting);
     message(()=>tr('جارٍ الحفظ…','Saving…'));
     saving=(async()=>{
       try{const result=await Cloud.saveTrainees(saveOwner,data,version,saveFormat,saveSheet);if(token!==epoch)return false;version=Number(result);savedRevision=snapshot;message(()=>revision===savedRevision?tr('تم الحفظ','Saved'):tr('تعديلات غير محفوظة…','Unsaved changes…'));return true;}

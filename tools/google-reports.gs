@@ -16,12 +16,16 @@ function doPost(e) {
     var worksheet=p.sheet||'00000000-0000-0000-0000-000000000001';
     if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(worksheet))throw Error('معرّف الشيت غير صالح');
     var sheets=read('ibta_trainee_sheets?select=cells&owner_id=eq.'+encodeURIComponent(p.owner)+'&sheet_id=eq.'+encodeURIComponent(worksheet));
-    if(sheets.length!==1)throw Error('جدول المتدربين غير موجود أو غير مسموح لحسابك');
+    var sourceCells=sheets.length===1?sheets[0].cells:(Array.isArray(p.rows)?p.rows:null);
+    if(!sourceCells&&sheets.length!==1){
+      try{var anySheet=read('ibta_trainee_sheets?select=cells&owner_id=eq.'+encodeURIComponent(p.owner)+'&limit=1');if(anySheet.length===1)sourceCells=anySheet[0].cells;}catch(e){}
+    }
+    if(!sourceCells)throw Error('جدول المتدربين غير موجود أو غير مسموح لحسابك');
     var codes=[],offset=0;
     do{var batch=read('ibta_codes?select=code,used_at,used_on&owner_id=eq.'+encodeURIComponent(p.owner)+'&used_on=not.is.null&order=code&limit=1000&offset='+offset);codes=codes.concat(batch);offset+=batch.length;}while(batch.length===1000);
     var normalize=v=>String(v||'').trim().toUpperCase(),lookup=new Map();
     codes.forEach(c=>{var date=c.used_at?Utilities.formatDate(new Date(c.used_at),'Asia/Riyadh','yyyy-MM-dd'):String(c.used_on||'').split('/').reverse().join('-');if(date===p.date)lookup.set(normalize(c.code),c);});
-    var attempts=sheets[0].cells.filter(r=>lookup.has(normalize(r[0]))),seen=new Set();
+    var attempts=sourceCells.filter(r=>lookup.has(normalize(r[0]))),seen=new Set();
     attempts.forEach(r=>{var id=normalize(r[0]);if(seen.has(id))throw Error('نفس Voucher موجود في أكثر من صف؛ صحح التكرار أولًا');seen.add(id);});
     var missing=codes.filter(c=>lookup.has(normalize(c.code))&&!seen.has(normalize(c.code))).length;
     if(p.kind==='success')attempts=attempts.filter(r=>r[11]==='ناجح');

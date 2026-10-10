@@ -57,16 +57,17 @@ const TraineeReports=(()=>{
     async function doUpload(action,onStatus,context){
       if(busy)return;
       const prefs=preferences();
-      const {owner,sheetId}=source(),date=context?.date||field('date').value;
+      const {owner,sheetId,rows}=source(),date=context?.date||field('date').value;
+      const targetOwner=Cloud.userId()||owner;
       if(context&&(owner!==context.owner||sheetId!==context.sheetId)){onStatus?.(tr('تغيّر الشيت؛ أغلق المعاينة وافتحها مجددًا.','The worksheet changed; close and reopen the preview.'),true);return;}
-      if(!owner||!date){const msg=tr('اختر المستخدم والتاريخ أولًا.','Choose the user and date first.');if(onStatus)onStatus(msg,true);status.textContent=msg;return;}
+      if(!targetOwner||!date){const msg=tr('اختر المستخدم والتاريخ أولًا.','Choose the user and date first.');if(onStatus)onStatus(msg,true);status.textContent=msg;return;}
       let bridge;try{bridge=new URL(prefs.bridge);if(bridge.origin!=='https://script.google.com'||!/^\/macros\/s\/[^/]+\/exec$/.test(bridge.pathname))throw Error();if(!sheetUrl(prefs[action]))throw Error();}catch{const msg=tr('أضف الروابط من الإعدادات ← تقارير جوجل أولًا.','Add links in Settings → Google reports first.');if(onStatus)onStatus(msg,true);status.textContent=msg;return;}
       const target='ibta_report_'+Date.now(),tab=window.open('about:blank',target);if(!tab){const msg=tr('اسمح بفتح نافذة التقرير ثم حاول مجددًا.','Allow the report popup and retry.');if(onStatus)onStatus(msg,true);status.textContent=msg;return;}
       busy=true;panel.updateReady();
       if(onStatus)onStatus(tr('جارٍ تجهيز وحفظ البيانات…','Preparing and saving data…'));
       try{if(!await save())throw Error(tr('تعذر حفظ الجدول. حاول مرة أخرى.','Could not save the sheet. Please retry.'));const session=await Cloud.reportSession();
         const form=document.createElement('form');form.method='POST';form.action=bridge.href;form.target=target;
-        const payload={token:session.token,owner,sheet:sheetId,date,kind:action,destination:prefs[action]};
+        const payload={token:session.token,owner:targetOwner,sheet:sheetId,date,kind:action,destination:prefs[action],rows:context?.matched||rows};
         const input=document.createElement('input');input.type='hidden';input.name='payload';input.value=JSON.stringify(payload);form.append(input);document.body.append(form);form.submit();form.remove();
         const doneMsg=tr('تم إرسال التقرير — راجع نتيجة الرفع في نافذة جوجل.','Report submitted — Check upload result in Google window.');
         if(onStatus)onStatus(doneMsg);status.textContent=doneMsg;
@@ -84,7 +85,7 @@ const TraineeReports=(()=>{
         const vouchers=new Set(matched.map(r=>(r[0]||'').trim().toUpperCase()));
         const missingCount=codes.filter(c=>!vouchers.has(c.code.trim().toUpperCase())).length;
         status.textContent=tr('المحاولات: ','Attempts: ')+matched.length+tr(' — الناجحون: ',' — Passed: ')+matched.filter(r=>r[11]==='ناجح').length+tr(' — بدون نتيجة: ',' — No result: ')+matched.filter(r=>!r[11]).length+tr(' — أكواد بدون متدرب: ',' — Vouchers without trainee: ')+missingCount;
-        previewReport(matched,targetDate,missingCount,(kind,onStatus,uploadDate)=>doUpload(kind,onStatus,{owner,sheetId,date:uploadDate||targetDate}),showForDate);
+        previewReport(matched,targetDate,missingCount,(kind,onStatus,uploadDate)=>doUpload(kind,onStatus,{owner,sheetId,date:uploadDate||targetDate,matched}),showForDate);
       }
       const initialDate=field('date').value;
       if(!owner||!initialDate){status.textContent=tr('اختر المستخدم والتاريخ أولًا.','Choose the user and date first.');return;}
