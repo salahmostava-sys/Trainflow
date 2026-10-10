@@ -742,6 +742,14 @@ function activateSettingsTab(id) {
   rememberWorkspaceView({ settingsTab: id });
   window.TRAINFLOW_PANEL_CHANGED?.();
   if (id === 'profile') updateSettingsProfileHero();
+  if (id === 'extensions') updateSettingsExtensionDownload();
+}
+
+function updateSettingsExtensionDownload() {
+  const link = document.getElementById('settings-download-prometric');
+  if (!link) return;
+  const script = document.getElementById('prometric-registration-script');
+  link.href = script?.dataset?.extension || '/workspace/trainflow-prometric.zip';
 }
 
 const settingsDesktop=matchMedia('(min-width:761px)');

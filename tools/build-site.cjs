@@ -43,6 +43,10 @@ for(const file of fs.readdirSync(path.join(root,'extension/prometric'))){let byt
 prometricZip.generateAsync({type:'nodebuffer',compression:'DEFLATE'}).then(prometricBytes=>{
   fs.writeFileSync(path.join(output,'trainflow-prometric.zip'),prometricBytes);
   fs.writeFileSync(path.join(output,'ibta-prometric.zip'),prometricBytes);
+  if(next){
+    fs.writeFileSync(path.join(root,'public/trainflow-prometric.zip'),prometricBytes);
+    fs.writeFileSync(path.join(root,'public/ibta-prometric.zip'),prometricBytes);
+  }
   html=html.replaceAll('"trainflow-prometric.zip"','"trainflow-prometric.zip?v='+fingerprint('trainflow-prometric.zip',prometricBytes)+'"');
   if(!next)fs.writeFileSync(path.join(output,'index.html'),html);
   if(next){

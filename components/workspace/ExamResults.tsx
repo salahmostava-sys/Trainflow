@@ -5,7 +5,7 @@ export function ExamResultsDialog() {
     <div className="sheet-file-header"><h3 id="sheet-exam-title" /><button type="button" id="sheet-exam-close">×</button></div>
     <p id="sheet-exam-connection" role="status" />
     <p id="sheet-exam-help" />
-    <a id="sheet-exam-download" href="trainflow-prometric.zip" download />
+    <a id="sheet-exam-download" href="/workspace/trainflow-prometric.zip" download="trainflow-prometric.zip" />
     <p id="sheet-exam-summary" role="status" />
     <div id="sheet-exam-preview" className="sheet-file-preview" />
     <div className="sheet-dialog-footer">

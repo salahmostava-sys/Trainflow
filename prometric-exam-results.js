@@ -76,7 +76,7 @@ const TraineeExamResults=(()=>{
     }
     function reset(){dialog.close();context=plan=run=null;blocked.clear();lastError='';for(const request of pending.values()){clearTimeout(request.timer);request.reject(Error('OUTDATED'));}pending.clear();draw();}
     control('open').onclick=open;control('close').onclick=()=>dialog.close();control('start').onclick=start;control('refresh').onclick=poll;control('stop').onclick=()=>run&&action('STOP',{run:run.id});control('recover').onclick=()=>action('RECOVER');
-    control('download').href=$('prometric-registration-script')?.dataset.extension||'trainflow-prometric.zip';
+    control('download').href=$('prometric-registration-script')?.dataset.extension||'/workspace/trainflow-prometric.zip';
     window.addEventListener('message',event=>{const message=event.data;if(event.source!==window||event.origin!==location.origin||message?.channel!=='IBTA_PROMETRIC_EXAM_EXTENSION')return;if(message.changed){poll();return;}const request=pending.get(message.id);if(!request)return;pending.delete(message.id);clearTimeout(request.timer);request.resolve(message.payload);});
     setInterval(poll,5000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)poll();});translate();
     return {reset,translate,poll};

@@ -741,8 +741,8 @@ export function SettingsScreen({ active = false }: { active?: boolean }) {
             <a
               className="settings-extension-download"
               id="settings-download-prometric"
-              href="trainflow-prometric.zip"
-              download=""
+              href="/workspace/trainflow-prometric.zip"
+              download="trainflow-prometric.zip"
               data-i18n="extensionPrometricDownload"
             >
               Download Prometric extension
