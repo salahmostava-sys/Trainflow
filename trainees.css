@@ -113,7 +113,10 @@
 #sheet-workspace .sheet-fx{font:italic 18px Georgia,serif;color:#64748b;border-inline-start:1px solid #cbd5e1;padding-inline-start:9px}
 #sheet-workspace #sheet-formula{height:28px;background:#fff;border:1px solid #cbd5e1;padding:3px 8px;border-radius:2px;min-width:0}
 #sheet-workspace .sheet-scroll{max-height:65vh}
-#sheet-workspace .sheet-grid th,#sheet-workspace .sheet-grid td{height:28px;border-color:#d9dee0}
+#sheet-workspace .sheet-grid th,#sheet-workspace .sheet-grid td{height:28px;border:0;border-right:1px solid #d9dee0;border-bottom:1px solid #d9dee0}
+#sheet-extension-update{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:10px 14px;background:#fff7ed;color:#9a3412;border-bottom:1px solid #fed7aa;font-size:13px}
+#sheet-extension-update a{color:inherit;font-weight:700;text-decoration:underline}
+.sheet-prometric-dialog [data-update=true]{color:#9a3412;background:#fff7ed;padding:10px;border-radius:6px}
 #sheet-workspace .sheet-grid thead th{height:36px;background:#ffffff;font-size:11px}
 #sheet-workspace .sheet-grid .sheet-rownum{background:#ffffff;color:#475569;font-size:11px}
 #sheet-workspace .sheet-grid td{padding:3px 7px}

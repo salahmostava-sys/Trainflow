@@ -15,6 +15,10 @@ export function TraineesScreen({ active = false }: { active?: boolean }) {
           </div>
         </div>
         <div id="sheet-workspace" className="sheet-card">
+          <div id="sheet-extension-update" role="status" hidden>
+            <span id="sheet-extension-update-message" />
+            <a id="sheet-extension-update-download" download />
+          </div>
           <div className="sheet-expanded-bar">
             <button type="button" id="sheet-expanded-close">
               {"رجوع للعرض العادي"}

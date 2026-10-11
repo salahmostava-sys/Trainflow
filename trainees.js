@@ -959,9 +959,8 @@ const Trainees=(()=>{
   }
   function cellView(index,column){
     const raw=cells[index]?.[column]||'',format=formatting.styles[index+':'+column]||{},align=getCellAlign(index,column);
-    const style={backgroundColor:format.bg||'',color:format.color||'',fontSize:'calc('+(format.size||formatting.fontSize)+'px * var(--sheet-zoom,1))',fontWeight:format.bold?'700':'',fontFamily:format.font?format.font+', sans-serif':'',fontStyle:format.italic?'italic':'',textDecoration:[format.underline?'underline':'',format.strike?'line-through':''].filter(Boolean).join(' '),verticalAlign:format.valign||'middle',whiteSpace:typeof format.wrap==='boolean'?(format.wrap?'pre-wrap':'nowrap'):'',textIndent:format.indent?format.indent*8+'px':'',overflowWrap:format.wrap?'anywhere':'',backgroundImage:D.borderImage(format),backgroundSize:'100% 100%',textAlign:align||''};
+    const style={backgroundColor:format.bg||'',color:format.color||'',fontSize:'calc('+(format.size||formatting.fontSize)+'px * var(--sheet-zoom,1))',fontWeight:format.bold?'700':'',fontFamily:format.font?format.font+', sans-serif':'',fontStyle:format.italic?'italic':'',textDecoration:[format.underline?'underline':'',format.strike?'line-through':''].filter(Boolean).join(' '),verticalAlign:format.valign||'middle',whiteSpace:typeof format.wrap==='boolean'?(format.wrap?'pre-wrap':'nowrap'):'',textIndent:format.indent?format.indent*8+'px':'',overflowWrap:format.wrap?'anywhere':'',textAlign:align||''};
     if(column>=baseLabels.length)style['--col-w']='calc(var(--col-w-'+column+',160px) * var(--sheet-zoom,1))';
-    for(const side of ['Top','Bottom','Left','Right'])style['border'+side]=D.borderCss(format,side.toLowerCase())??(format['border'+side]===true?'1px solid #475569':format['border'+side]===false||format.border==='none'?'0':format.border==='all'||format.border==='outline'||format.border===side.toLowerCase()?'1px solid #475569':'');
     if(format.height){style.height=format.height*excelView.zoom/100+'px';style.minHeight=style.height;}
     const textStyle={},classes=[];
     if(format.centerAcross){classes.push('sheet-center-across-anchor');const parts=visibleCols().filter(c=>c>=column&&c<column+format.centerAcross);textStyle.width='calc(('+parts.map(c=>'var(--col-w-'+c+','+(colWidths[c]||formatting.defaultWidth||160)+'px)').join(' + ')+') * var(--sheet-zoom,1))';}
@@ -1366,7 +1365,7 @@ const Trainees=(()=>{
         const value=cells[idx]?.[c]||'',style=formatting.styles[idx+':'+c]||{},result=c===11?({'ناجح':['#00b050','#ffffff'],'راسب':['#ff0000','#ffffff'],'لم يدخل':['#ffff00','#000000']}[value]):null,duplicate=c===4&&duplicateIds.has(D.idKey(value));
         td.textContent=value;if(wholeRows)continue;
         Object.assign(td.style,{backgroundColor:duplicate?'#ffc7ce':result?.[0]||style.bg||'#ffffff',color:duplicate?'#9c0006':result?.[1]||style.color||'#16324f',fontWeight:style.bold||result?'700':'400',fontSize:(style.size||formatting.fontSize)+'px',fontFamily:style.font||'IBM Plex Sans Arabic',fontStyle:style.italic?'italic':'normal',textDecoration:[style.underline?'underline':'',style.strike?'line-through':''].filter(Boolean).join(' ')||'none',textAlign:getCellAlign(idx,c)||(formatting.direction==='rtl'?'right':'left'),verticalAlign:style.valign||'middle',whiteSpace:style.wrap===false?'nowrap':'pre-wrap',direction:formatting.direction,textIndent:(style.indent||0)*8+'px'});
-        for(const side of ['Top','Bottom','Left','Right'])td.style['border'+side]=D.borderCss(style,side.toLowerCase())??(style['border'+side]===true?'1px solid #475569':style['border'+side]===false||style.border==='none'?'0':style.border==='all'||style.border==='outline'||style.border===side.toLowerCase()?'1px solid #475569':'1px solid #dbe7f7');td.style.backgroundImage=D.borderImage(style);td.style.backgroundSize='100% 100%';
+        td.style.border='1px solid #d9dee0';
       }
     }
     return table.outerHTML;

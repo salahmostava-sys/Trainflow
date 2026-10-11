@@ -8,15 +8,17 @@ const assert=require('node:assert/strict'),path=require('node:path'),{spawn}=req
     const page=await browser.newPage({viewport:{width:1500,height:1000}}),errors=[];
     page.on('pageerror',error=>errors.push(error.message));
     // The extension transport is the boundary; this fixture never opens Prometric or creates accounts.
-    await page.addInitScript(()=>{
+    const requiredVersion=require('../extension/prometric/manifest.json').version;
+    await page.addInitScript(requiredVersion=>{
       window.registrationStarts=[];
+      window.fixtureExtensionVersion=requiredVersion;
       window.addEventListener('message',event=>{
-        if(event.data?.channel!=='IBTA_PROMETRIC_APP')return;
+        if(!['IBTA_PROMETRIC_APP','IBTA_PROMETRIC_EXAM_APP'].includes(event.data?.channel))return;
         const request=event.data,payload=request.payload;
         if(payload.type==='START')window.registrationStarts.push(payload.items);
-        window.postMessage({channel:'IBTA_PROMETRIC_EXTENSION',id:request.id,payload:{ok:true,version:'4.2.3',capabilities:{retake:true},busy:false,run:null}},location.origin);
+        window.postMessage({channel:request.channel==='IBTA_PROMETRIC_APP'?'IBTA_PROMETRIC_EXTENSION':'IBTA_PROMETRIC_EXAM_EXTENSION',id:request.id,payload:{ok:true,version:window.fixtureExtensionVersion,capabilities:{retake:true,examResults:true},busy:false,run:null}},location.origin);
       });
-    });
+    },requiredVersion);
     await page.goto('http://127.0.0.1:4222/');await page.locator('#trainees-tab').click();
     const saved=()=>page.waitForFunction(()=>document.getElementById('sheet-status').textContent==='تم الحفظ');await saved();
     await page.evaluate(()=>{
@@ -29,8 +31,22 @@ const assert=require('node:assert/strict'),path=require('node:path'),{spawn}=req
     });
     await page.locator('#sheet-reload').click();await saved();
     const dialog=page.locator('#sheet-prometric-dialog'),preview=page.locator('#sheet-prometric-preview'),comparison=page.locator('#sheet-prometric-account-comparison');
-    const open=async row=>{await page.locator(`td[data-v="${row}"][data-col="3"]`).click();await page.locator('#sheet-prometric-open').click();await page.waitForFunction(()=>document.getElementById('sheet-prometric-connection').textContent.includes('الإضافة متصلة'));};
+    const open=async row=>{await page.locator(`td[data-v="${row}"][data-col="3"]`).click();await page.locator('#sheet-prometric-open').click();await page.waitForFunction(()=>{const connection=document.getElementById('sheet-prometric-connection');return connection.textContent.includes('الإضافة متصلة')||connection.dataset.update==='true';});};
     await open(2);
+    const updateNotice=page.locator('#sheet-extension-update');
+    assert.equal(await updateNotice.isVisible(),false,'Matching extension versions need no update');
+    for(const installed of ['4.1.0','99.0.0']){
+      await page.evaluate(version=>window.fixtureExtensionVersion=version,installed);await page.locator('#sheet-prometric-refresh').click();
+      await page.waitForFunction(version=>document.getElementById('sheet-extension-update-message').textContent.includes(version),installed);
+      assert.match(await page.locator('#sheet-prometric-connection').textContent(),new RegExp(requiredVersion.replaceAll('.','\\.')));
+      assert.equal(await page.locator('#sheet-prometric-download').isVisible(),true,'Mismatched installed versions expose the update download');
+      assert.match(await page.locator('#sheet-extension-update-download').getAttribute('href'),/trainflow-prometric\.zip/);
+      await page.locator('#sheet-prometric-close').click();assert.equal(await updateNotice.isVisible(),true,'Update notice remains visible above the table');
+      await page.locator('#sheet-exam-open').click();await page.waitForFunction(version=>document.getElementById('sheet-exam-connection').textContent.includes(version),installed);
+      assert.match(await page.locator('#sheet-exam-connection').textContent(),new RegExp(requiredVersion.replaceAll('.','\\.')));
+      assert.equal(await page.locator('#sheet-exam-download').isVisible(),true);await page.locator('#sheet-exam-close').click();await open(2);
+    }
+    await page.evaluate(version=>window.fixtureExtensionVersion=version,requiredVersion);await page.locator('#sheet-prometric-refresh').click();await updateNotice.waitFor({state:'hidden'});
     assert.match(await page.locator('#sheet-prometric-summary').textContent(),/جاهز للتسجيل: 0 · حسابات محفوظة: 1/);
     assert.equal(await preview.locator('tbody tr').getAttribute('class'),'sheet-prometric-existing-account');
     assert.notEqual(await preview.locator('tbody td').first().evaluate(el=>getComputedStyle(el).backgroundColor),'rgba(0, 0, 0, 0)');

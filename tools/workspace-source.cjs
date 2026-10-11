@@ -25,6 +25,7 @@ const sources = [
     src: "prometric-registration.js",
     id: "prometric-registration-script",
     "data-extension": "trainflow-prometric.zip",
+    "data-version": require('../extension/prometric/manifest.json').version,
   },
   { src: "trainees-xlsx.js" },
   {
