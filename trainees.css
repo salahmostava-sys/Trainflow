@@ -114,7 +114,8 @@
 #sheet-workspace #sheet-formula{height:28px;background:#fff;border:1px solid #cbd5e1;padding:3px 8px;border-radius:2px;min-width:0}
 #sheet-workspace .sheet-scroll{max-height:65vh}
 #sheet-workspace .sheet-grid th,#sheet-workspace .sheet-grid td{height:28px;border:0;border-right:1px solid #d9dee0;border-bottom:1px solid #d9dee0}
-#panel-trainees #sheet-workspace .sheet-grid th,#panel-trainees #sheet-workspace .sheet-grid td,#panel-trainees #sheet-workspace .sheet-grid button,#panel-trainees #sheet-workspace .sheet-grid select{font-family:var(--sheet-font-family,Calibri),sans-serif!important;font-size:calc(var(--sheet-font-size,13px) * var(--sheet-zoom,1))!important}
+#panel-trainees #sheet-workspace .sheet-grid th,#panel-trainees #sheet-workspace .sheet-grid button{font-family:Calibri,sans-serif!important;font-size:calc(var(--sheet-font-size,13px) * var(--sheet-zoom,1))!important}
+#panel-trainees #sheet-workspace .sheet-grid select{font-family:inherit!important;font-size:inherit!important}
 #sheet-extension-update{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:10px 14px;background:#fff7ed;color:#9a3412;border-bottom:1px solid #fed7aa;font-size:13px}
 #sheet-extension-update a{color:inherit;font-weight:700;text-decoration:underline}
 .sheet-prometric-dialog [data-update=true]{color:#9a3412;background:#fff7ed;padding:10px;border-radius:6px}
@@ -295,6 +296,7 @@
 .sheet-ribbon-command-row{display:flex;flex-wrap:nowrap;align-items:center;gap:4px;min-height:30px;padding:0;border:0;overflow-x:auto;scrollbar-width:thin;max-width:100%;min-width:0}
 .sheet-ribbon-format-row{display:flex;flex-wrap:nowrap;align-items:center;gap:4px;min-height:30px;padding:0;border:0;overflow-x:auto;scrollbar-width:thin;max-width:100%;min-width:0}
 #sheet-workspace #sheet-prometric-open{background:#107c41!important;border-color:#107c41!important;color:#fff!important;font-weight:700!important}
+#sheet-workspace .sheet-prometric-actions{display:flex;align-items:center;gap:8px}
 #sheet-workspace #sheet-prometric-open:hover{background:#0b6334!important;border-color:#0b6334!important}
 #sheet-workspace .sheet-clean-toolbar .sheet-ribbon-panel .sheet-ribbon-group{display:inline-flex!important;align-items:center;padding:0;border:0;min-width:0;max-width:none;gap:4px;justify-content:flex-start;flex:0 0 auto!important}
 #sheet-workspace .sheet-ribbon-panel .sheet-ribbon-group:last-child{border:0}

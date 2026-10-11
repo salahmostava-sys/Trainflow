@@ -6,7 +6,7 @@
   // edits, undo history and pending saves instead of copying every cell.
   const validatedSheets=new WeakSet(),validatedRows=new WeakSet();
   const storageRows=new WeakMap();
-  const GRID_FONT=Object.freeze({family:'Calibri',size:13});
+  const DEFAULT_FONT=Object.freeze({family:'Calibri',size:13});
   const BORDER_STYLES=['none','hair','dotted','dashDotDot','dashDot','dashed','thin','mediumDashed','mediumDashDotDot','mediumDashDot','medium','thick','double'];
   const BORDER_SIDES=['top','bottom','left','right','diagonalUp','diagonalDown'];
   function borderCss(style,side){const edge=style.borders?.[side];if(!edge)return null;if(edge.style==='none')return '0';const width=edge.style==='hair'?0.5:edge.style==='double'||edge.style==='thick'?3:edge.style.startsWith('medium')?2:1;return width+'px '+(edge.style==='double'?'double':edge.style==='dotted'?'dotted':/dash/i.test(edge.style)?'dashed':'solid')+' '+edge.color;}
@@ -19,7 +19,7 @@
     if(['absent','not attended','no show','no-show','لم يدخل'].includes(key))return 'لم يدخل';
     return value;
   }
-  const defaultFormat=()=>({direction:'ltr',fontSize:GRID_FONT.size,hidden:[],styles:{},headers:{}});
+  const defaultFormat=()=>({direction:'ltr',fontSize:DEFAULT_FONT.size,hidden:[],styles:{},headers:{}});
   function format(value){
     const out=defaultFormat();if(!value||typeof value!=='object')return out;
     if(['rtl','ltr'].includes(value.direction))out.direction=value.direction;
@@ -271,7 +271,7 @@
   function eachSelected(ranges,view,cols,run){
     const columns=selectionColumns(ranges,cols);for(const r of selectionRows(ranges,view.length))for(const c of columns)if(selectedCell(ranges,r,c))run(view[r],c,r);
   }
-  const api={GRID_FONT,BASE_WIDTH,WIDTH,MAX_ROWS,MAX_COLS,MAX_CELL,blank,manualDayGroups,normalize,storage,parse,tsv,paste,pasteMapped,result:normalizeResult,defaultFormat,format,idKey,duplicates,removeRows,deleteCells,shiftCells,applyBorders,BORDER_STYLES,BORDER_SIDES,borderCss,borderImage,courseKeycode,columns,address,letter,number,formulaValue,shiftFormula,selectedCell,selectionRows,selectionColumns,eachSelected};
+  const api={DEFAULT_FONT,BASE_WIDTH,WIDTH,MAX_ROWS,MAX_COLS,MAX_CELL,blank,manualDayGroups,normalize,storage,parse,tsv,paste,pasteMapped,result:normalizeResult,defaultFormat,format,idKey,duplicates,removeRows,deleteCells,shiftCells,applyBorders,BORDER_STYLES,BORDER_SIDES,borderCss,borderImage,courseKeycode,columns,address,letter,number,formulaValue,shiftFormula,selectedCell,selectionRows,selectionColumns,eachSelected};
   if(typeof module!=='undefined'&&module.exports)module.exports=api;
   else root.TraineeData=api;
 })(globalThis);

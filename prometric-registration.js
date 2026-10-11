@@ -27,7 +27,7 @@ const TraineePrometric=(()=>{
     $('sheet-prometric-comparison-close').onclick=()=>{comparisonRow=null;draw();};
     reuseAccountButton.onclick=reuseAccount;
     close.setAttribute('aria-label',tr('إغلاق','Close'));close.onclick=()=>dialog.close();start.onclick=startRegistration;refresh.onclick=()=>poll(true);stop.onclick=stopRegistration;recover.onclick=recoverResults;
-    const openButton=$('sheet-prometric-open');openButton.onclick=()=>open();$('sheet-workspace').querySelector('.sheet-ribbon-top .sheet-ribbon-actions').append(openButton);
+    const openButton=$('sheet-prometric-open');openButton.onclick=()=>open();
     function translate(){
       title.textContent=tr('تسجيل المتدربين في Prometric','Prometric trainee registration');openButton.textContent=tr('تسجيل Prometric','Prometric registration');start.textContent=tr('إنشاء الحسابات','Create accounts');refresh.textContent=tr('تحديث الحالة','Refresh status');stop.textContent=tr('إيقاف التسجيل','Stop registration');download.textContent=tr('تحميل إضافة Prometric المتصلة بالنظام','Download the TrainFlow-connected Prometric extension');instructions.textContent=tr('فك ZIP في مجلد ثابت، ثم حمّله من chrome://extensions باستخدام Load unpacked. عطّل نسخة Prometric القديمة، وأعد تحميل TrainFlow وPrometric في نفس Chrome. الإضافة تستخدم إعدادات التسجيل المحفوظة فيها.','Extract ZIP to a permanent folder and use Load unpacked at chrome://extensions. Disable the old Prometric extension, then reload TrainFlow and Prometric in the same Chrome profile. Registration uses the settings saved in the extension.');draw();
       recover.textContent=tr('استعادة نتائج التبويب المغلق','Recover results from a closed tab');
