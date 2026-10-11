@@ -21,6 +21,9 @@ const {spawn}=require('node:child_process');
     await paste(0,0,values.join('\t')+'\r\n'+values.map((v,i)=>i===2?'متدرب ثانٍ':v).join('\t'));
     await page.locator('#sheet-save').click();await page.waitForFunction(()=>!Trainees.hasDraft());
     assert.equal(await cell(0,12).textContent(),'001234567');
+    for(const locator of [cell(0,2),cell(0,11).locator('select'),page.locator('thead th[data-col="2"]'),page.locator('th.sheet-rownum button').first()]){
+      const font=await locator.evaluate(el=>({family:getComputedStyle(el).fontFamily,size:getComputedStyle(el).fontSize}));assert.match(font.family,/Calibri/);assert.equal(font.size,'13px');
+    }
     await cell(0,0).click();await cell(1,1).click({modifiers:['Shift']});
     assert.equal(await page.locator('.sheet-selected').count(),4,'Shift+click selects a rectangle');
     const copied=await cell(0,0).evaluate(el=>{const data=new DataTransfer();el.dispatchEvent(new ClipboardEvent('copy',{clipboardData:data,bubbles:true,cancelable:true}));return data.getData('text/plain');});
@@ -63,14 +66,14 @@ const {spawn}=require('node:child_process');
     await page.waitForTimeout(1100);assert.equal(await cell(0,1).getAttribute('contenteditable'),'true');
     await page.keyboard.press('Escape');await page.locator('#sheet-save').click();await page.waitForFunction(()=>!Trainees.hasDraft());
     // Formatting must persist with each owner's sheet and participate in undo.
-    await cell(0,2).click();await page.locator('#sheet-selection-size').selectOption('20');
+    await cell(0,2).click();assert.equal(await page.locator('#sheet-selection-size').isDisabled(),true);
     await page.locator('#sheet-fill').evaluate(el=>{el.value='#fff2cc';el.dispatchEvent(new Event('change',{bubbles:true}));});
     await page.locator('#sheet-text-color').evaluate(el=>{el.value='#112233';el.dispatchEvent(new Event('change',{bubbles:true}));});
     await page.locator('#sheet-bold').click();
-    assert.equal(await cell(0,2).evaluate(el=>getComputedStyle(el).fontSize),'20px');
+    assert.equal(await cell(0,2).evaluate(el=>getComputedStyle(el).fontSize),'13px');
     assert.equal(await cell(0,2).evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(255, 242, 204)');
-    await page.locator('#sheet-font-plus').click();assert.equal(await page.locator('#sheet-font-size').textContent(),'21 px');assert.equal(await cell(0,2).evaluate(el=>getComputedStyle(el).fontSize),'21px');
-    await page.locator('#sheet-font-minus').click();assert.equal(await cell(0,2).evaluate(el=>getComputedStyle(el).fontSize),'20px');
+    assert.equal(await page.locator('#sheet-font-plus').isDisabled(),true);assert.equal(await page.locator('#sheet-font-size').textContent(),'13 px');
+    assert.equal(await page.locator('#sheet-font-minus').isDisabled(),true);assert.equal(await cell(0,2).evaluate(el=>getComputedStyle(el).fontSize),'13px');
     await columns.width(2,300);
     assert.ok(Math.abs((await cell(0,2).boundingBox()).width-300)<1,'Typed column width changes the actual grid');
     await columns.width(2,900);assert.ok(Math.abs((await cell(0,2).boundingBox()).width-300)<1,'An out-of-range width cannot overwrite the saved width');
@@ -92,7 +95,7 @@ const {spawn}=require('node:child_process');
     await page.keyboard.press('ArrowRight');assert.equal(await page.locator('td:focus').getAttribute('data-col'),'0','RTL arrows follow visual order');
     await page.locator('#sheet-save').click();await page.waitForFunction(()=>!Trainees.hasDraft());await page.locator('#sheet-reload').click();
     await page.waitForFunction(()=>!document.getElementById('sheet-workspace').inert);
-    assert.equal(await cell(0,1).count(),0);assert.equal(await cell(0,2).evaluate(el=>getComputedStyle(el).fontSize),'20px');
+    assert.equal(await cell(0,1).count(),0);assert.equal(await cell(0,2).evaluate(el=>getComputedStyle(el).fontSize),'13px');
     assert.ok(Math.abs((await cell(0,2).boundingBox()).width-300)<1,'Column widths survive saving and reloading');
     assert.equal(await page.locator('#sheet-direction').inputValue(),'rtl');
     await paste(0,0,'DEMO-001\tلصق مع عمود مخفي');assert.equal(await cell(0,2).textContent(),'لصق مع عمود مخفي');
@@ -101,8 +104,8 @@ const {spawn}=require('node:child_process');
     await page.locator('#sheet-undo').click();
     // Formatting stays attached to rows through deletion and undo.
     await page.locator('#sheet-grid tbody .sheet-rownum button').first().click();page.once('dialog',d=>d.accept());await page.locator('#sheet-delete').click();
-    assert.notEqual(await cell(0,2).evaluate(el=>getComputedStyle(el).fontSize),'20px');
-    await page.locator('#sheet-undo').click();assert.equal(await cell(0,2).evaluate(el=>getComputedStyle(el).fontSize),'20px');
+    assert.notEqual(await cell(0,2).evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(255, 242, 204)');
+    await page.locator('#sheet-undo').click();assert.equal(await cell(0,2).evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(255, 242, 204)');
     await worksheets.switchTo('demo-user');
 
     assert.equal(await cell(0,1).count(),1);assert.equal(await page.locator('#sheet-direction').inputValue(),'ltr');
