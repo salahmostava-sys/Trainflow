@@ -10,7 +10,7 @@ Updated 6 October 2026. Start with the [project overview](../README.md) or [live
 | [Operations](operations-guide.md) | Accounts, private sheets, multiple selections, colored copy/export and backups |
 | [Deployment](deployment.md) | Vercel, local verification, extension updates, domain retirement and rollback |
 | [JavaScript API](javascript-server.md) | Authentication, validation and the shared server handler |
-| [Google reports](google-reports.md) | Apps Script properties, tab names, header rows and upload preview |
+| [Copy reports](copy-reports.md) | Daily operations and passed reports, independent column choices and clipboard copying |
 | [Prometric extension](../extension/prometric/README.md) | Chrome installation, selected-row registration and result recovery |
 
 ## Historical reviews

@@ -1,6 +1,6 @@
 # TrainFlow — training and exam operations
 
-Updated 6 October 2026.
+Updated 11 October 2026.
 
 Connected project: `xaeffreqwtozsgqajzpc` (TrainFlow). The existing Muhimmat project was not changed.
 
@@ -92,7 +92,7 @@ The single trainee dialog starts with **Prometric login link → Keycode → Pro
 
 The trainee sheet starts with 52 visible columns (A–AZ); the original 13 retain their labels, and additional columns accept new data. **Add column** extends it to the existing 500-column limit. Right-click a cell or rectangular selection to delete cells and shift the remaining row data physically left or right, including hidden columns. Values, formatting and alignment move together, and Undo restores them. Double-click a nonempty English name cell to show a floating read-only record, including hidden fields and populated extra columns. Hover and single click do not open it. F2 edits the name. It stays open during background translation/data redraws and scrolling, retaining its record and scroll position. Close it with ×, an outside click or Escape. Account switching and sign-out still dismiss it.
 
-The application requires manual sign-in again at **17:00 Asia/Riyadh** every day. A sign-in at or after 17:00 lasts until the following day's cutoff. Token refresh does not extend this deadline. The browser timer and visibility/focus checks hide the application at expiry; the API worker also rejects expired sessions. Saving is attempted shortly before the cutoff. Failed sheet saves retain their draft in the open page and require signing back in with the same account; keep that page open until saved. This application/API rule does not change Supabase's separately accessible REST API or the Google reports bridge.
+The application requires manual sign-in again at **17:00 Asia/Riyadh** every day. A sign-in at or after 17:00 lasts until the following day's cutoff. Token refresh does not extend this deadline. The browser timer and visibility/focus checks hide the application at expiry; the API worker also rejects expired sessions. Saving is attempted shortly before the cutoff. Failed sheet saves retain their draft in the open page and require signing back in with the same account; keep that page open until saved. This application/API rule does not change Supabase's separately accessible REST API.
 
 Vercel deploys main using pnpm build and the Next.js framework configuration. Public assets contain the existing publishable project key, not a service-role key or operational records. Use the Vercel address for Auth redirects and the updated Chrome extensions. See the deployment guide for verification and domain retirement.
 
@@ -197,11 +197,11 @@ On VOUCHERS, use **Export vouchers** beside the report controls. Choose **Unused
 
 The file includes Code, Category, Status, Used on, Time and Notes. Used rows retain the screen's usage-day fill and contrasting text; the code is struck through. Unused rows are white. Values are text so leading zeros and formula-like notes remain literal. The older CSV export in Settings cannot carry colors.
 
-## Certificate correction and Google reports
+## Certificate correction and report copying
 
 Use **Certificate name change** in the trainee toolbar, enter the new English name and review the export. The file is **Certificate Data Change Sheet.xlsx**. It includes the existing English name, username, matched exam title, voucher, date, grade, new name and fixed center name **Al-Alameya For Business Solutions**; it has no password column.
 
-Google configuration belongs to **Settings → Google reports**. The trainee toolbar keeps the date, preview and upload actions alongside certificate/Prometric controls. Preview contains the exact two report shapes, paged every 50 rows. Actual target-sheet duplicate suppression happens during upload. Follow the [Google setup guide](google-reports.md) to configure file IDs, tab names and header row.
+The trainee toolbar has **Copy operations report** and **Copy successful trainees report**, with a report date. Rows are matched to the signed-in worksheet owner’s vouchers used on that date in Asia/Riyadh. Successful-trainee reports include only passed rows. **Settings → Report columns** selects columns independently for each report and saves the choices with the account across devices. Copy includes cell values only, without headers, in worksheet column order; embedded tabs, line breaks and quotes are preserved. See [Copy reports](copy-reports.md). The old preview, upload and Google connector setup have been removed.
 
 Download Prometric 4.1.3 from **Settings → Extensions**. Replace files in the installed extension’s folder and reload it for the current Vercel origin. Automatic chain copy has been removed; copying a keycode does not automatically claim a voucher.
 

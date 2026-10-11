@@ -391,7 +391,6 @@ export function TraineesScreen({ active = false }: { active?: boolean }) {
       />
       <SheetToolDialogs />
       <TraineeDetailDialogs />
-      <div id="sheet-report-preview-root" />
     </>
   );
 }

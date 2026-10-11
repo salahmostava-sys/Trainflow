@@ -42,7 +42,7 @@ The sidebar stays on the **right** in both languages. Open or close it with the 
 | Voucher export | A visible Export vouchers button; unused only or all vouchers, all categories or the current category, with usage colors |
 | Prometric | Preview selected trainees, register through the Chrome extension and recover confirmed results after interrupted saves |
 | Certificate correction | Enter the new English name and download Certificate Data Change Sheet.xlsx without a password column |
-| Google reports | Preview operations and successful-trainee rows before uploading through your configured Apps Script connector |
+| Daily reports | Copy operations or successful-trainee data directly, with separate account-saved column choices |
 | Inventory | Supervisor balances, receipt allocations and a stock summary ready to copy |
 | Team and recovery | Approved accounts, role enforcement, audit history and private JSON backup/restore |
 
@@ -85,8 +85,7 @@ flowchart LR
     API --> DB[(Existing database with RLS)]
     UI --> Files[Local Excel worker and clipboard]
     UI --> Chrome[Prometric registration extension]
-    UI --> Reports[Google Apps Script]
-    Reports --> Sheets[Google Sheets]
+    UI --> Reports[Local daily report clipboard]
 ~~~
 
 React renders maintained TSX components for the login, sidebar and six workspace screens. Each page selects its initial panel. Navigation saves trainee edits before loading the destination document; a failed save keeps the current page and draft. Settings tabs use browser history within the page. Existing JavaScript spreadsheet and integration engines operate through typed boundaries while their migration continues. The TypeScript API forwards only the signed-in user's JWT.
@@ -102,7 +101,7 @@ The existing Supabase project, accounts, ibta_* tables, sheet versions and permi
 | workspace.js, workspace.css, root JS/CSS | Shared commands, styles and tested spreadsheet engines |
 | server/api.ts | Typed authenticated API; worker.mjs is a compatibility entry for local checks |
 | extension/ | Prometric registration Chrome extension |
-| tools/ | Asset packaging, synthetic preview and Google connector |
+| tools/ | Asset packaging and synthetic preview |
 | database.sql, migrations/, supabase/migrations/ | Original schema and reviewed incremental SQL changes |
 | tests/, .github/workflows/ | Unit, integration, browser and CI checks |
 | docs/, ARCHITECTURE.md | User guides and technical documentation |
@@ -122,7 +121,7 @@ node tests/sheet-enhancements-browser.test.cjs
 node tests/daily-reports-browser.test.cjs
 ~~~
 
-The broader pnpm test:browser command includes legacy preview suites; some older account-switch scenarios still reference the removed owner selector. Use the current focused suites above and review any legacy failures before treating the whole browser run as passing. SQL checks require a separate authenticated database session. Mocked browser checks do not prove a live Google upload, real Prometric registration.
+The broader pnpm test:browser command includes legacy preview suites; some older account-switch scenarios still reference the removed owner selector. Use the current focused suites above and review any legacy failures before treating the whole browser run as passing. SQL checks require a separate authenticated database session. Mocked browser checks do not prove real Prometric registration.
 
 ## Deploy and maintain
 
@@ -144,7 +143,7 @@ Current administrator backups use trainflow-backup; older ibta-ops-backup files 
 | System design and ownership | [Architecture](ARCHITECTURE.md) |
 | Local builds, Vercel and rollback | [Deployment](docs/deployment.md) |
 | API authentication and limits | [JavaScript server](docs/javascript-server.md) |
-| Google Sheets setup and missing headers | [Google reports](docs/google-reports.md) |
+| Daily reports and copied columns | [Copy reports](docs/copy-reports.md) |
 | Chrome registration and recovery | [Prometric extension](extension/prometric/README.md) |
 
-Updated **6 October 2026**. Dated audit documents record earlier reviews; their observations are historical.
+Updated **11 October 2026**. Dated audit documents record earlier reviews; their observations are historical.

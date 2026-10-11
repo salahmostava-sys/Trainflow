@@ -35,4 +35,4 @@ The border editor provides 13 graphical line choices, color/Automatic, None/Outl
 
 Existing Google Apps Script deployments need the new Code.gs downloaded from Settings, followed by New version in the existing deployment. Saving Script properties alone does not replace deployed code. This update is required for reports from independent worksheets; the frontend cannot publish the user's Google script.
 
-See [operations](operations-guide.md), [Google reports](google-reports.md), [deployment](deployment.md) and the [documentation index](README.md).
+See [operations](operations-guide.md), [Copy reports](copy-reports.md), [deployment](deployment.md) and the [documentation index](README.md).

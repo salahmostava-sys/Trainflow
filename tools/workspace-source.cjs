@@ -36,11 +36,7 @@ const sources = [
   { src: "trainees-excel.js" },
   { src: "certificate-name.js" },
   { src: "trainees.js" },
-  {
-    src: "trainee-reports.js",
-    id: "trainee-reports-script",
-    "data-connector": "google-reports.gs",
-  },
+  { src: "trainee-reports.js" },
   { src: "codes-export.js" },
 ];
 const loadTsx = (filename, cache = new Map()) => {

@@ -10,7 +10,6 @@ const unitTests = [
   'tests/trainees-performance.test.cjs',
   'tests/sheet-delete.test.cjs',
   'tests/session-policy.test.cjs',
-  'tests/google-reports.test.cjs',
   'tests/server.test.mjs',
   'tests/prometric.test.cjs',
   'tests/prometric-session.test.cjs',

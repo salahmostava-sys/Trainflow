@@ -27,9 +27,8 @@ let worker=fs.readFileSync(path.join(root,'trainees-xlsx-worker.js'),'utf8');
 for(const file of ['trainees-xlsx.js','exceljs-4.4.0.min.js']){const data=file.startsWith('exceljs')?vendor:fs.readFileSync(path.join(root,file));worker=worker.replaceAll("'"+file+"'","'"+file+'?v='+createHash('sha256').update(data).digest('hex').slice(0,12)+"'");}
 fs.writeFileSync(path.join(output,'trainees-xlsx-worker.js'),worker);
 html=html.replaceAll('"trainees-xlsx-worker.js"','"trainees-xlsx-worker.js?v='+fingerprint('trainees-xlsx-worker.js',worker)+'"');
-const connector=fs.readFileSync(path.join(root,'tools/google-reports.gs'));
-fs.writeFileSync(path.join(output,'google-reports.gs'),connector);
-html=html.replaceAll('"google-reports.gs"','"google-reports.gs?v='+fingerprint('google-reports.gs',connector)+'"');
+// Remove the retired connector from incremental builds as well as clean deployments.
+fs.rmSync(path.join(output,'google-reports.gs'),{force:true});
 for(const file of files){
   const hash=fingerprint(file,fs.readFileSync(path.join(root,file)));
   html=html.replaceAll('"'+file+'"','"'+file+'?v='+hash+'"');fs.copyFileSync(path.join(root,file),path.join(output,file));
@@ -52,7 +51,7 @@ prometricZip.generateAsync({type:'nodebuffer',compression:'DEFLATE'}).then(prome
   if(next){
     const asset=value=>/^(?:https?:|\/)/i.test(value)?value:'/workspace/'+value+(hashes.has(value)?'?v='+hashes.get(value):'');
     const languageBootstrap=fs.readFileSync(path.join(root,'client/language-bootstrap.js'),'utf8');
-    const workspaceScripts=sources.map(descriptor=>Object.fromEntries(Object.entries(descriptor).map(([key,value])=>[key,['src','data-worker','data-extension','data-connector'].includes(key)?asset(value):value])));
+    const workspaceScripts=sources.map(descriptor=>Object.fromEntries(Object.entries(descriptor).map(([key,value])=>[key,['src','data-worker','data-extension'].includes(key)?asset(value):value])));
     fs.mkdirSync(path.join(root,'generated'),{recursive:true});
     fs.writeFileSync(path.join(root,'generated/workspace-assets.ts'),Object.entries({workspaceScripts,languageBootstrap}).map(([name,value])=>'export const '+name+' = '+JSON.stringify(value)+';').join('\n')+'\n');
   }

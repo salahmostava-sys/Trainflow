@@ -17,8 +17,7 @@ flowchart TB
     Prometric[Prometric website]
     XLSX[Local Excel worker]
     Files[Excel and JSON files]
-    Reports[Google Apps Script report bridge]
-    Sheets[Google Sheets]
+    Clipboard[Daily report clipboard]
 
     Team --> UI
     UI -->|Sign-in and refresh| Auth
@@ -29,9 +28,7 @@ flowchart TB
     PRO --> Prometric
     UI <-->|Import and export| XLSX
     XLSX <--> Files
-    UI -->|User-triggered report submission| Reports
-    Reports -->|User JWT and RLS| DB
-    Reports --> Sheets
+    UI -->|Selected report columns, copied locally| Clipboard
 ```
 
 The browser is the working surface. The server checks operational requests, while PostgreSQL policies and functions enforce ownership and atomic updates. Extensions execute only the external website actions that need a logged-in browser.
@@ -52,13 +49,12 @@ The browser is the working surface. The server checks operational requests, whil
 | `trainees-xlsx.js`, `trainees-xlsx-worker.js`, `trainees-files.js` | Local Excel import/export and file previews |
 | `certificate-name.js` | Certificate name correction preview and export |
 | `prometric-core.js`, `prometric-registration.js` | Registration eligibility, job preview and extension coordination |
-| `trainee-reports.js` | Daily report preparation and Google report submission |
+| `trainee-reports.js` | Daily worksheet report copying with account column preferences |
 | `session-policy.js` | Shared daily sign-in policy used by browser and API |
 | `server/api.ts` | Typed API, caller JWT, membership validation, role/owner checks and bounded JSON writes |
 | `extension/prometric/` | Manifest V3 registration extension and TrainFlow page bridge |
 | `tools/build-site.cjs`, `tools/prepare-runtime.cjs`, `tools/workspace-source.cjs` | Compile typed assets, render maintained TSX for synthetic previews/static exports, hash assets and package extensions |
 | `tools/design-preview.cjs` | UI preview with synthetic data; no production writes |
-| `tools/google-reports.gs` | Google Apps Script bridge for existing report spreadsheets |
 | `database.sql`, `migrations/`, `supabase/migrations/` | Original schema and incremental database changes |
 | `tests/`, `database-tests.sql` | Unit, API, browser and SQL regression checks |
 | `docs/` | Operations, deployment and integration documentation |
@@ -120,7 +116,7 @@ The inventory page combines team balances, supervisor balances and category tota
 
 ### Exchange files and daily reports
 
-Excel conversion uses a local Web Worker and bundled ExcelJS. JSON application backups use `trainflow-backup` and version 4; the restore path also accepts `ibta-ops-backup`. Google report submission uses the Apps Script bridge, reads authorized source data and appends matching report columns with voucher-based deduplication.
+Excel conversion uses a local Web Worker and bundled ExcelJS. JSON application backups use `trainflow-backup` and version 4; the restore path also accepts `ibta-ops-backup`. Daily operations and successful-trainee reports copy selected columns from the current private worksheet as TSV, without headers. Rows match vouchers used on the selected Riyadh date; successful reports include only passed rows. Column preferences are stored in the signed-in account’s Auth metadata. No report bridge or external upload is used.
 
 ## API and trust boundaries
 
@@ -132,7 +128,7 @@ Excel conversion uses a local Web Worker and bundled ExcelJS. JSON application b
 
 The worker rejects foreign origins, missing/invalid tokens, inactive memberships, disallowed routes, unsuitable methods and malformed/oversized JSON. It forwards the caller's JWT rather than using a service-role key. Operational responses use `Cache-Control: no-store`.
 
-Supabase REST remains reachable by authenticated clients, including the report bridge. Database RLS remains necessary even with the worker. Display names in Auth metadata do not grant privileges. Extension bridges validate the page origin, message source and channel.
+Supabase REST remains reachable by authenticated clients. Database RLS remains necessary even with the worker. Display names in Auth metadata do not grant privileges. Extension bridges validate the page origin, message source and channel.
 
 Only device preferences remain in browser local storage. Authentication uses session storage and daily sign-in rules. Registration results also have extension-local storage. Operational records are persisted in PostgreSQL.
 
@@ -188,7 +184,7 @@ For a faulty frontend deployment, roll back through Vercel or revert the Git com
 - [Operations guide](docs/operations-guide.md)
 - [Deployment and maintenance](docs/deployment.md)
 - [JavaScript API details](docs/javascript-server.md)
-- [Google reports setup](docs/google-reports.md)
+- [Copy reports](docs/copy-reports.md)
 - [Documentation index](docs/README.md)
 
 ## Independent worksheets and voucher names — 6 October 2026

@@ -85,7 +85,6 @@ const Trainees=(()=>{
     expandedView=active;$('sheet-workspace').classList.toggle('sheet-expanded-view',active);document.body.classList.toggle('sheet-expanded-open',active);
     $('sheet-expanded').setAttribute('aria-pressed',String(active));$('sheet-workspace').classList.remove('sheet-expanded-tools');$('sheet-expanded-tools').setAttribute('aria-pressed','false');
     excelTools?.syncRibbon();
-    if(typeof TraineeReports!=='undefined')TraineeReports.syncExpanded?.(active);
     if(active){previousViewZoom=excelView.zoom;excelView.zoom=expandedZoom();}else{excelView.zoom=previousViewZoom??excelView.zoom;previousViewZoom=null;}
     applyExcelView();resetRowHeights();rebuildRowOffsets();const top=rowOffsets[first]+offset*excelView.zoom/oldZoom;scroll.scrollTop=top;scroll.scrollLeft=left*excelView.zoom/oldZoom;drawRows(true);
     const measuredTop=rowOffsets[first]+offset*excelView.zoom/oldZoom;if(Math.abs(scroll.scrollTop-measuredTop)>1){scroll.scrollTop=measuredTop;drawRows(true);}
@@ -487,7 +486,7 @@ const Trainees=(()=>{
   };
   function init(){
     if(initialized)return;initialized=true;
-    setTimeout(()=>TraineeReports.mount($('sheet-workspace'),()=>({owner:owner||Cloud.userId(),sheetId,rows:cells}),async()=>{commitEdit();return await flush(false,true);}),0);
+    setTimeout(()=>TraineeReports.mount(()=>({owner,sheetId,rows:cells,loaded:loaded&&!loading&&!worksheetBusy}),commitEdit),0);
 
     $('sheet-row-size').value=String(rowSize);$('sheet-row-size').onchange=()=>setRowSize($('sheet-row-size').value);
     const zoomTools=$('sheet-workspace').querySelector('.sheet-zoom-tools');
@@ -1496,7 +1495,7 @@ const Trainees=(()=>{
   }
   function reset(){sheetTools?.close();sheetId=FIRST_SHEET;worksheets=[];worksheetBusy=false;prometricTools?.reset();examResultTools?.reset();certificateTools?.reset();setExpandedView(false);excelTools?.closeFiles();closeDuplicateDetails();closeContextMenu();$('sheet-find-dialog')?.close();clearTimeout(timer);epoch++;owner='';cells=[];formatting=D.defaultFormat();loaded=false;loading=false;editing=null;history=[];future=[];revision=savedRevision=0;if(initialized){$('sheet-cell-content').value='';$('sheet-cell-content').title='';if($('sheet-selection-stats')){$('sheet-selection-stats').textContent='';$('sheet-selection-stats').hidden=true;}render();if($('sheet-owner'))window.WorkspaceViews.options($('sheet-owner'),{options:[]});window.WorkspaceViews.clear($('sheet-code-list'));$('sheet-workspace').inert=true;}}
   function suspend(){prometricTools?.reset();examResultTools?.reset();certificateTools?.reset();setExpandedView(false);excelTools?.closeFiles();closeDuplicateDetails();closeContextMenu();$('sheet-find-dialog')?.close();clearTimeout(timer);}
-  return {open,translate,hasDraft,flush,reset,suspend,savePosition};
+  return {open,translate,hasDraft,flush,reset,suspend,savePosition,reportColumnLabels:()=>allLabels().slice(0,DISPLAY_COLS).map(pair=>tr(...pair))};
 })();
 window.TRAINFLOW_ENGINE = Trainees;
 Trainees.translate();

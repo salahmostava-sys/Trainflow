@@ -38,10 +38,7 @@ import {
   RegistrationPreview,
 } from "../components/workspace/SheetFeatureViews";
 import { ReportSettings } from "../components/workspace/ReportSettings";
-import {
-  ReportPanel,
-  ReportPreview,
-} from "../components/workspace/ReportViews";
+import { ReportPanel } from "../components/workspace/ReportViews";
 import { CommandLabel } from "../components/workspace/CommandLabel";
 import { SortLevels } from "../components/workspace/SheetControls";
 import {
@@ -117,16 +114,10 @@ export const WorkspaceViews = {
     container: Element,
     props: React.ComponentProps<typeof ReportSettings>,
   ) {
-    renderView(container, <ReportSettings {...props} />);
+    renderView(container, <ReportSettings key={props.owner} {...props} />);
   },
   reportPanel(container: Element) {
     renderView(container, <ReportPanel />);
-  },
-  reportPreview(
-    container: Element,
-    props: React.ComponentProps<typeof ReportPreview>,
-  ) {
-    renderView(container, <ReportPreview {...props} />);
   },
   prometricDialog(
     container: Element,

@@ -104,29 +104,29 @@ test.skip('keyboard exam ordering persists and cannot move past either boundary 
   assert.equal(await rows.first().locator('.kc-exam-order').first().isDisabled(),true);
 });
 
-test('report destinations follow the signed-in account on a fresh browser and isolate other accounts',{timeout:30000},async t=>{
+test('report column choices follow the signed-in account on a fresh browser and isolate other accounts',{timeout:30000},async t=>{
   const page=await openWorkspace(t);await navigate(page,'settings');await page.locator('#settings-tab-reports').click();
-  const links={operations:'https://docs.google.com/spreadsheets/d/account-operations/edit',success:'https://docs.google.com/spreadsheets/d/account-success/edit',bridge:'https://script.google.com/macros/s/account-connector/exec'};
-  for(const [name,link]of Object.entries(links))await page.locator('#settings-report-'+name).fill(link);
+  const columns={operations:[1,3,6],success:[2,11]};
+  for(const [kind,selected]of Object.entries(columns)){
+    for(let column=0;column<20;column++)await page.locator('#settings-report-'+kind+' input[value="'+column+'"]').setChecked(selected.includes(column));
+  }
   await page.locator('#settings-report-save').click();await page.waitForFunction(()=>document.getElementById('settings-report-status').textContent.includes('تم حفظ'));
-  const database=await page.evaluate(()=>uiTestDatabase);assert.deepEqual(database.accountMetadata['ui-admin'].report_destinations,links);
-  for(const variant of ['same-account','other-account','legacy-browser']){
-    const otherAccount=variant==='other-account',legacyBrowser=variant==='legacy-browser';
+  const database=await page.evaluate(()=>uiTestDatabase);assert.deepEqual(database.accountMetadata['ui-admin'].report_columns,columns);
+  for(const otherAccount of [false,true]){
     const context=await browser.newContext({viewport:{width:1440,height:1000}});t.after(()=>context.close());
     await context.route('**/*',route=>new URL(route.request().url()).origin===origin?route.continue():route.abort());
-    await context.addInitScript(({database,otherAccount,legacyBrowser,links})=>{
+    await context.addInitScript(({database,otherAccount})=>{
       if(otherAccount){window.uiTestUser={id:'other-user',email:'other@example.invalid',user_metadata:{}};database.members.push({user_id:'other-user',email:'other@example.invalid',active:true,role:'admin'});}
-      if(legacyBrowser){delete database.accountMetadata['ui-admin'].report_destinations;localStorage.setItem('ibta_report_destinations',JSON.stringify(links));}
       sessionStorage.setItem('test-sdk-database',JSON.stringify(database));
-    },{database,otherAccount,legacyBrowser,links});
+    },{database,otherAccount});
     const remote=await context.newPage();await remote.goto(origin+'/settings');await remote.locator('#settings-tab-reports').click();
-    if(legacyBrowser)await remote.waitForFunction(()=>uiTestDatabase.accountMetadata?.['ui-admin']?.report_destinations?.operations?.includes('account-operations'));
-    for(const [name,link]of Object.entries(links))assert.equal(await remote.locator('#settings-report-'+name).inputValue(),otherAccount?'':link,'Account settings load without local browser preferences');
-    assert.equal(await remote.evaluate(()=>localStorage.getItem('ibta_report_destinations')),null);
+    const expected=otherAccount?{operations:[0,1,2,3,4,5,6,7,8,11],success:[0,2,8,11]}:columns;
+    for(const [kind,selected]of Object.entries(expected))assert.deepEqual(await remote.locator('#settings-report-'+kind+' input:checked').evaluateAll(inputs=>inputs.map(input=>Number(input.value))),selected,'Account choices load on a new browser without leaking to other users');
   }
-  await page.evaluate(()=>{uiTestDatabase.authSaveError='NETWORK';});await page.locator('#settings-report-operations').fill('https://docs.google.com/spreadsheets/d/unsaved/edit');await page.locator('#settings-report-save').click();
+  await page.evaluate(()=>{uiTestDatabase.authSaveError='NETWORK';});await page.locator('#settings-report-operations input[value="12"]').check();await page.locator('#settings-report-save').click();
   await page.waitForFunction(()=>document.getElementById('settings-report-status').textContent.includes('تعذر'));
-  assert.equal(await page.locator('#settings-report-operations').inputValue(),'https://docs.google.com/spreadsheets/d/unsaved/edit');assert.deepEqual(await page.evaluate(()=>Cloud.reportDestinations()),links,'Failed saves preserve the last account configuration');
+  assert.equal(await page.locator('#settings-report-operations input[value="12"]').isChecked(),true,'Failed saves retain the editable draft');
+  assert.deepEqual(await page.evaluate(()=>Cloud.reportColumns()),columns,'Failed saves preserve the last account configuration');
 });
 
 test('settings side tabs follow vertical keyboard navigation and adapt on mobile',{timeout:30000},async t=>{
@@ -254,7 +254,7 @@ test('duplicate details keep mixed-direction labels and long values in separate 
     uiTestDatabase.settings.payload.keycodes=[{code:keycode,title:course,lang:'Arabic',category:'Foundation'}];
     const cells=[
       ['VOUCHER-1','first@example.invalid','الاسم العربي الطويل للمتدرب الأول','FIRST STUDENT','1080424995','0501234567','جامعة أم القرى',course,'2026-10-08','STUDENT1','PASSWORD1','ناجح',anydesk],
-      ['','second@example.invalid','الاسم العربي الثاني','SECOND STUDENT','1080424995','','',course,'','','','لم يدخل','']
+      ['','second@example.invalid','الاسم العربي الثاني','SECOND STUDENT','1080424995','','',course,'','','','لم يدخل',anydesk]
     ];
     uiTestDatabase.sheets['ui-admin']={sheet_id:'00000000-0000-0000-0000-000000000001',sheet_name:'Sheet 1',sheet_hidden:false,sheet_order:0,cells,version:1,format:{}};
     await Cloud.refresh();

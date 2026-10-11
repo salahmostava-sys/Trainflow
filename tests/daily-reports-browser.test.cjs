@@ -1,39 +1,95 @@
-const {chromium}=require('playwright'),{spawn}=require('node:child_process'),path=require('node:path'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const {chromium}=require('playwright');
+const {spawn}=require('node:child_process');
+const path=require('node:path'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+
 (async()=>{
- const next=process.env.TRAINFLOW_REPORTS_NEXT==='1';const server=spawn(process.execPath,next?[require.resolve('next/dist/bin/next'),'start','-p','4198']:[path.join(__dirname,'../tools/design-preview.cjs')],{env:{...process.env,IBTA_PREVIEW_PORT:'4198'},stdio:['ignore','pipe','inherit']});let browser;
- try{
-  await new Promise((resolve,reject)=>{server.stdout.on('data',data=>{if(!next||data.toString().includes('Ready'))resolve();});server.once('error',reject);});browser=await chromium.launch({headless:true,channel:'msedge'});const page=await browser.newPage({viewport:{width:1366,height:768}}),errors=[],requests=[];page.on('pageerror',e=>errors.push(e.message));page.on('request',r=>requests.push(r.url()));if(next){const source=fs.readFileSync(path.join(__dirname,'../tools/design-preview.cjs'),'utf8'),mock=vm.runInNewContext(source.match(/const mock=(`[^]*?`);/)[1]);await page.route('**/workspace/cloud.js*',route=>route.fulfill({contentType:'text/javascript',body:mock}));await page.route('https://cdn.jsdelivr.net/**',route=>route.fulfill({contentType:'text/javascript',body:'window.supabase={};'}));}await page.goto('http://localhost:4198');await page.locator('#app').waitFor({state:'visible'});await page.locator('#account-menu-btn').click();await page.locator('#settings-btn').click();await page.locator('#settings-tab-reports').click();assert.equal(await page.locator('#settings-report-operations').isVisible(),true);
-  await page.locator('#settings-report-operations').fill('https://docs.google.com/spreadsheets/d/operations-fixture/edit');await page.locator('#settings-report-success').fill('https://docs.google.com/spreadsheets/d/success-fixture/edit');await page.locator('#settings-report-bridge').fill('https://example.invalid/not-approved');await page.locator('#settings-report-save').click();assert.match(await page.locator('#settings-report-status').textContent(),/Apps Script/);await page.locator('#settings-report-bridge').fill('https://script.google.com/macros/s/connector-fixture/exec');await page.locator('#settings-report-save').click();assert.match(await page.locator('#settings-report-status').textContent(),/تم حفظ/);
-  assert.equal(await page.locator('.sheet-report-state').textContent(),'متصل');await page.context().setOffline(true);await page.waitForFunction(()=>document.querySelector('.sheet-report-state').textContent==='غير متصل');await page.context().setOffline(false);await page.waitForFunction(()=>document.querySelector('.sheet-report-state').textContent==='متصل');
-  await page.locator('#settings-report-guide summary').click();await page.evaluate(()=>{Cloud.reportSession=async()=>({url:'https://example.supabase.co',key:'sb_publishable_fixture',token:'SESSION_TOKEN_NEVER_COPY'});window.copyText=async text=>{window.reportCopiedText=text;return true;};});await page.locator('#report-project-properties-open').click();const properties=await page.locator('#report-project-properties').inputValue();assert.match(properties,/SUPABASE_PUBLISHABLE_KEY = sb_publishable_fixture/);assert.match(properties,/OPERATIONS_ID = operations-fixture/);assert.match(properties,/SUCCESS_ID = success-fixture/);assert.doesNotMatch(properties,/SESSION_TOKEN_NEVER_COPY|service_role/);await page.locator('#report-project-properties-copy').click();assert.equal(await page.evaluate(()=>window.reportCopiedText),properties);await page.locator('#report-copy-headers-success').click();assert.equal(await page.evaluate(()=>window.reportCopiedText),'VOUCHER\tالاسم باللغة العربية\tتاريخ الإختبار\tالحالة');await page.locator('#report-connector-copy').click();await page.waitForFunction(()=>window.reportCopiedText?.includes('function doPost'));assert.match(await page.evaluate(()=>window.reportCopiedText),/function doPost/);const ready=page.waitForEvent('download');await page.locator('#report-connector-download').click();const download=await ready;assert.equal(download.suggestedFilename(),'Code.gs');assert.equal(fs.readFileSync(await download.path(),'utf8'),fs.readFileSync(path.join(__dirname,'../tools/google-reports.gs'),'utf8'));await page.screenshot({path:path.join(__dirname,'../artifacts/google-reports-settings.png')});
-  await page.reload();await page.locator('#app').waitFor({state:'visible'});await page.locator('nav.tabs [data-tab][data-tab=settings]').click();await page.locator('#settings-tab-reports').click();assert.equal(await page.locator('#settings-report-success').inputValue(),'https://docs.google.com/spreadsheets/d/success-fixture/edit');await page.locator('#trainees-tab').click();await page.waitForFunction(()=>document.getElementById('sheet-status').textContent===(currentLang==='ar'?'تم الحفظ':'Saved'));assert.equal(await page.locator('.sheet-report-panel input[type=url]').count(),0,'Destination fields moved out of the sheet');assert.equal(await page.locator('.sheet-report-panel .sheet-report-actions button').count(),4);
-  await page.evaluate(()=>{const row=Array(13).fill('');row[0]='PASS-VOUCHER';row[1]='trainee@example.invalid';row[2]='اسم "المتدرب"\nالسطر الثاني\tتكملة';row[3]='<img src=x onerror=alert(1)>';row[4]='001234';row[5]='050123';row[6]='Example organization';row[7]='Leadership';row[8]='wrong exam date';row[9]='PRIVATE USER';row[10]='PRIVATE PASSWORD';row[11]='ناجح';const fail=[...row];fail[0]='FAIL-VOUCHER';fail[11]='راسب';previewSheets.set('demo-admin',{cells:[row,fail],version:0});previewCodes.push({code:'PASS-VOUCHER',owner_id:'demo-admin',used_on:'05/10/2026'},{code:'FAIL-VOUCHER',owner_id:'demo-admin',used_on:'05/10/2026'},{code:'OTHER-VOUCHER',owner_id:'demo-user',used_on:'05/10/2026'});Cloud.reportSession=async()=>({token:'SESSION_POST_ONLY'});});await page.locator('#sheet-reload').click();await page.waitForFunction(()=>document.getElementById('sheet-status').textContent==='تم الحفظ');await page.locator('.sheet-report-panel [data-action=date]').click();await page.locator('.sheet-report-panel [data-field=date]').fill('2026-10-05');await page.locator('.sheet-report-panel [data-action=preview]').click();assert.match(await page.locator('.sheet-report-panel>p').textContent(),/المحاولات: 2 — الناجحون: 1/);
-  const preview=page.locator('#sheet-report-preview');await preview.waitFor({state:'visible'});
-  assert.equal(await preview.locator('tbody tr').count(),2);assert.equal(await preview.locator('thead th').count(),10);
-  assert.deepEqual(await preview.locator('tbody tr').first().locator('td').allTextContents(),['PASS-VOUCHER','trainee@example.invalid','اسم "المتدرب"\nالسطر الثاني\tتكملة','<img src=x onerror=alert(1)>','001234','050123','Example organization','Leadership','05/10/2026','ناجح']);
-  assert.equal(await preview.locator('img').count(),0,'Preview values are text, never HTML');assert.doesNotMatch(await preview.textContent(),/PRIVATE USER|PRIVATE PASSWORD|SESSION_POST_ONLY|wrong exam date/);
-  const previewDate=await preview.locator('.sheet-report-preview-info').textContent();assert.match(previewDate,/05\/10\/2026/);
-  assert.equal(await preview.locator('[data-report-kind=operations]').getAttribute('aria-pressed'),'true');assert.equal(await preview.locator('.sheet-report-preview-warning').isVisible(),false);
-  await preview.locator('[data-report-kind=success]').click();assert.equal(await preview.locator('thead th').count(),4);assert.deepEqual(await preview.locator('tbody tr td').allTextContents(),['PASS-VOUCHER','اسم "المتدرب"\nالسطر الثاني\tتكملة','05/10/2026','ناجح']);
-  assert.match(await preview.locator('.sheet-report-preview-note').textContent(),/الموجودة مسبقًا/);assert.equal(await preview.locator('.sheet-report-preview-footer button').nth(1).isDisabled(),true);
-  await page.evaluate(()=>{Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async text=>{window.reportCopiedText=text;}}});document.execCommand=()=>false;});
-  await preview.locator('.sheet-report-copy-btn').click();
-  assert.deepEqual(await page.evaluate(()=>TraineeData.parse(window.reportCopiedText)),[['VOUCHER','الاسم باللغة العربية','تاريخ الإختبار','الحالة'],['PASS-VOUCHER','اسم "المتدرب"\nالسطر الثاني\tتكملة','05/10/2026','ناجح']]);
-  for(const clipboardState of ['rejected','unavailable']){
-    await page.evaluate(state=>{Object.defineProperty(navigator,'clipboard',{configurable:true,value:state==='unavailable'?undefined:{writeText:async()=>{throw new DOMException('Denied','NotAllowedError');}}});},clipboardState);
-    await preview.locator('.sheet-report-copy-btn').click();await page.waitForFunction(()=>document.querySelector('.sheet-report-preview-status').textContent==='تعذر نسخ البيانات.');
-  }
-  await page.setViewportSize({width:390,height:844});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);assert.equal(await preview.evaluate(el=>el.getBoundingClientRect().width<=innerWidth),true);await page.screenshot({path:path.join(__dirname,'../artifacts/google-reports-preview-mobile.png')});
-  await page.setViewportSize({width:1366,height:768});await preview.locator('[data-report-kind=operations]').click();await page.screenshot({path:path.join(__dirname,'../artifacts/google-reports-preview.png')});await page.keyboard.press('Escape');assert.equal(await preview.count(),0);
+  const next=process.env.TRAINFLOW_REPORTS_NEXT==='1';
+  const server=spawn(process.execPath,next?[require.resolve('next/dist/bin/next'),'start','-p','4198']:[path.join(__dirname,'../tools/design-preview.cjs')],{env:{...process.env,IBTA_PREVIEW_PORT:'4198'},stdio:['ignore','pipe','inherit']});
+  let browser;
+  try{
+    await new Promise((resolve,reject)=>{server.stdout.on('data',chunk=>{if(!next||chunk.toString().includes('Ready'))resolve();});server.once('error',reject);});
+    browser=await chromium.launch({headless:true,channel:'msedge'});
+    const page=await browser.newPage({viewport:{width:1366,height:900}}),errors=[],requests=[],popups=[];
+    page.on('pageerror',error=>errors.push(error.message));page.on('request',request=>requests.push(request.url()));page.on('popup',popup=>popups.push(popup));
+    if(next){
+      const source=fs.readFileSync(path.join(__dirname,'../tools/design-preview.cjs'),'utf8'),mock=vm.runInNewContext(source.match(/const mock=(\x60[^]*?\x60);/)[1]);
+      await page.route('**/workspace/cloud.js*',route=>route.fulfill({contentType:'text/javascript',body:mock}));
+      await page.route('https://cdn.jsdelivr.net/**',route=>route.fulfill({contentType:'text/javascript',body:'window.supabase={};'}));
+    }
+    await page.goto('http://localhost:4198');await page.locator('#app').waitFor({state:'visible'});
+    await page.locator('#trainees-tab').click();
+    await page.waitForFunction(()=>document.getElementById('sheet-status').textContent==='تم الحفظ');
+    await page.evaluate(()=>{
+      const passed=Array(20).fill('');
+      Object.assign(passed,{0:'PASS-VOUCHER',1:'trainee@example.invalid',2:'اسم "المتدرب"\nالسطر الثاني\tتكملة',3:'<img src=x onerror=alert(1)>',4:'001234',5:'050123',6:'Organization',7:'Leadership',8:'06/10/2026',9:'PRIVATE USER',10:'PRIVATE PASSWORD',11:'ناجح',12:'001122',19:'آخر عمود'});
+      const record=(code,result)=>{const row=[...passed];row[0]=code;row[11]=result;return row;};
+      previewSheets.set('demo-admin',{cells:[passed,record('FAIL-VOUCHER','راسب'),record('NO-RESULT',''),record('OTHER-OWNER','ناجح'),record('OTHER-DAY','ناجح'),record('UNUSED','ناجح'),[]],format:{headers:{19:'ملاحظات التقرير'}},version:1});
+      previewCodes.push(
+        {code:'PASS-VOUCHER',owner_id:'demo-admin',used_at:'2026-10-04T21:30:00Z'},
+        {code:'FAIL-VOUCHER',owner_id:'demo-admin',used_on:'05/10/2026'},
+        {code:'NO-RESULT',owner_id:'demo-admin',used_on:'05/10/2026'},
+        {code:'OTHER-OWNER',owner_id:'demo-user',used_on:'05/10/2026'},
+        {code:'OTHER-DAY',owner_id:'demo-admin',used_at:'2026-10-05T21:30:00Z'},
+        {code:'UNUSED',owner_id:'demo-admin',used_on:null},
+      );
+      Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async text=>{window.reportCopiedText=text;}}});
+      document.execCommand=()=>false;
+    });
+    await page.locator('#sheet-reload').click();await page.waitForFunction(()=>document.getElementById('sheet-status').textContent==='تم الحفظ');
+    const panel=page.locator('#sheet-report-panel'),status=panel.locator('p');
+    await panel.locator('[data-field=date]').fill('2026-10-05');
+    await panel.locator('[data-action=operations]').click();
+    const defaultOperations=await page.evaluate(()=>TraineeData.parse(window.reportCopiedText));
+    assert.equal(defaultOperations.length,3,'Daily operations exclude unused codes, other owners and other Riyadh dates');
+    assert.equal(defaultOperations[0].length,10);assert.equal(defaultOperations[0][0],'PASS-VOUCHER','Copy has no header row');
+    assert.equal(defaultOperations[0][2],'اسم "المتدرب"\nالسطر الثاني\tتكملة','Multiline/tab/quoted cells survive TSV');
+    assert.equal(defaultOperations[0][4],'001234');assert.equal(defaultOperations[0][8],'06/10/2026','Copy preserves the exam-date cell');
+    assert.doesNotMatch(await page.evaluate(()=>window.reportCopiedText),/PRIVATE USER|PRIVATE PASSWORD/);
+    await panel.locator('[data-action=success]').click();
+    assert.deepEqual(await page.evaluate(()=>TraineeData.parse(window.reportCopiedText)),[['PASS-VOUCHER','اسم "المتدرب"\nالسطر الثاني\tتكملة','06/10/2026','ناجح']]);
+    assert.match(await status.textContent(),/تم نسخ 1 صف/);
 
-  let payload;await page.context().route('https://script.google.com/macros/s/connector-fixture/exec',async route=>{const request=route.request();assert.equal(request.method(),'POST');payload=JSON.parse(new URLSearchParams(request.postData()).get('payload'));await route.fulfill({contentType:'text/html',body:'Fixture upload received'});});const popup=page.waitForEvent('popup');await page.locator('.sheet-report-panel [data-action=preview]').click();await preview.locator('[data-report-kind=success]').click();await preview.locator('.sheet-report-upload-btn').first().click();const tab=await popup;await tab.waitForLoadState();await page.waitForFunction(()=>document.querySelector('.sheet-report-panel>p').textContent.includes('نافذة جوجل')||document.querySelector('.sheet-report-preview-status')?.textContent.includes('نافذة جوجل'));assert.equal(payload.date,'2026-10-05');assert.equal(payload.kind,'success');assert.equal(payload.owner,'demo-admin');assert.equal(payload.destination,'https://docs.google.com/spreadsheets/d/success-fixture/edit');assert.equal(payload.token,'SESSION_POST_ONLY');assert.equal(Object.hasOwn(payload,'rows'),false,'Upload requests contain no trainee rows');assert.doesNotMatch(JSON.stringify(payload),/PRIVATE NAME|PRIVATE PASSWORD|PRIVATE USER/);assert.equal(requests.some(url=>url.includes('SESSION_POST_ONLY')),false);assert.doesNotMatch(await page.evaluate(()=>JSON.stringify(localStorage)),/SESSION_POST_ONLY|SESSION_TOKEN_NEVER_COPY/);await tab.close();await page.screenshot({path:path.join(__dirname,'../artifacts/google-reports-buttons.png')});await page.keyboard.press('Escape');
+    await page.locator('nav.tabs [data-tab=settings]').click();await page.locator('#settings-tab-reports').click();
+    assert.equal(await page.locator('#settings-report-bridge').count(),0);assert.equal(await page.locator('#settings-report-guide').count(),0);
+    assert.equal(await page.locator('#settings-report-operations input').count(),20);
+    assert.match(await page.locator('#settings-report-operations label').last().textContent(),/T — ملاحظات التقرير/);
+    const chosen={operations:[3,12,19],success:[0,2,11]};
+    for(const [kind,columns]of Object.entries(chosen)){
+      const checkboxes=page.locator('#settings-report-'+kind+' input[type=checkbox]');
+      for(let column=0;column<20;column++)await checkboxes.nth(column).setChecked(columns.includes(column));
+    }
+    await page.locator('#settings-report-save').click();await page.waitForFunction(()=>document.getElementById('settings-report-status').textContent.includes('تم حفظ'));
+    await page.screenshot({path:path.join(__dirname,'../artifacts/report-copy-columns.png')});
+    await page.locator('#trainees-tab').click();
+    await panel.locator('[data-action=operations]').click();
+    assert.deepEqual(await page.evaluate(()=>TraineeData.parse(window.reportCopiedText)),Array(3).fill(['<img src=x onerror=alert(1)>','001122','آخر عمود']),'Only the selected operations columns are copied');
+    await panel.locator('[data-action=success]').click();
+    const successfulCopy=await page.evaluate(()=>window.reportCopiedText);
+    assert.deepEqual(await page.evaluate(()=>TraineeData.parse(window.reportCopiedText)),[['PASS-VOUCHER','اسم "المتدرب"\nالسطر الثاني\tتكملة','ناجح']],'Successful report has its own column selection');
+    assert.equal(await page.locator('#sheet-report-preview-root').count(),0);
+    assert.equal(popups.length,0);assert.equal(requests.some(url=>url.includes('script.google.com')),false);
 
-  await page.evaluate(()=>{const rows=previewSheets.get('demo-admin').cells;rows.push([...rows[0]]);for(let i=0;i<55;i++){const row=[...rows[0]];row[0]='PAGING-'+i;row[11]='راسب';rows.push(row);previewCodes.push({code:row[0],owner_id:'demo-admin',used_on:'05/10/2026'});}previewCodes.push({code:'NO-TRAINEE',owner_id:'demo-admin',used_on:'05/10/2026'});});
-  await page.locator('#sheet-reload').click();await page.waitForFunction(()=>document.getElementById('sheet-status').textContent==='تم الحفظ');await page.locator('.sheet-report-panel [data-action=preview]').click();
-  assert.equal(await preview.locator('tbody tr').count(),50);assert.match(await preview.locator('.sheet-report-preview-warning').textContent(),/مكرر/);assert.match(await preview.locator('.sheet-report-preview-warning').textContent(),/بدون بيانات متدرب: 1/);
-  await preview.locator('.sheet-report-preview-footer button').nth(1).click();assert.equal(await preview.locator('tbody tr').count(),8);assert.match(await preview.locator('.sheet-report-preview-footer span').textContent(),/51–58/);await preview.locator('[data-report-kind=success]').click();assert.equal(await preview.locator('tbody tr').count(),2,'Switching reports resets pagination');await preview.locator('.sheet-report-preview-close').click();
-  await page.evaluate(()=>{currentLang='en';applyLanguage();});assert.equal(await page.locator('.sheet-report-panel [data-action=preview]').textContent(),'Preview report');assert.equal(await page.locator('.sheet-report-state').textContent(),'Connected');
-  await page.locator('.sheet-report-panel [data-action=date]').click();await page.locator('.sheet-report-panel [data-field=date]').fill('2026-09-01');await page.locator('.sheet-report-panel [data-action=preview]').click();assert.equal(await preview.getAttribute('dir'),'ltr');assert.equal(await preview.locator('.sheet-report-preview-empty').textContent(),'No records for this report on the selected date.');assert.equal(await preview.locator('table').isVisible(),false);await page.mouse.click(1,1);assert.equal(await preview.count(),0,'Backdrop closes preview');
-  await page.locator('nav.tabs [data-tab][data-tab=settings]').click();await page.locator('#settings-tab-reports').click();assert.equal(await page.locator('#settings-tab-reports').getAttribute('aria-selected'),'true');await page.evaluate(()=>{currentLang='en';applyLanguage();});assert.equal(await page.locator('#settings-report-save').textContent(),'Save report settings');await page.setViewportSize({width:390,height:844});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);assert.deepEqual(errors,[]);console.log('PASS: report settings migration, validation, guide, public-only properties, connector download/copy, button date picker, report value previews, passed filtering, pagination, empty states, duplicate warnings, safe text, private fields, approved POST and responsive language/refresh');
- }finally{await browser?.close();server.kill();}
-})().catch(e=>{console.error(e);process.exitCode=1;});
+    for(const clipboardState of ['rejected','unavailable']){
+      await page.evaluate(state=>{Object.defineProperty(navigator,'clipboard',{configurable:true,value:state==='unavailable'?undefined:{writeText:async()=>{throw new DOMException('Denied','NotAllowedError');}}});},clipboardState);
+      await panel.locator('[data-action=success]').click();assert.match(await status.textContent(),/تعذر نسخ/);
+    }
+    await panel.locator('[data-field=date]').fill('2026-09-01');await panel.locator('[data-action=operations]').click();
+    assert.match(await status.textContent(),/لا توجد بيانات/);assert.equal(await page.evaluate(()=>window.reportCopiedText),successfulCopy,'Empty/failed copies leave the clipboard intact');
+    await page.locator('#sheet-expanded').click();assert.equal(await panel.locator('[data-action=success]').isVisible(),true,'Copy controls remain accessible in expanded mode');await page.locator('#sheet-expanded-close').click();
+
+    await page.locator('nav.tabs [data-tab=settings]').click();await page.locator('#settings-tab-reports').click();
+    for(const column of chosen.operations)await page.locator('#settings-report-operations input[value="'+column+'"]').uncheck();
+    await page.locator('#settings-report-save').click();assert.match(await page.locator('#settings-report-status').textContent(),/عمودًا واحدًا/);
+    assert.deepEqual(await page.evaluate(()=>Cloud.reportColumns()),chosen,'An empty column selection cannot overwrite saved preferences');
+    await page.reload();await page.locator('#app').waitFor({state:'visible'});await page.locator('nav.tabs [data-tab=settings]').click();await page.locator('#settings-tab-reports').click();
+    for(const [kind,columns]of Object.entries(chosen))assert.deepEqual(await page.locator('#settings-report-'+kind+' input:checked').evaluateAll(inputs=>inputs.map(input=>Number(input.value))),columns,'Column choices survive reload');
+    await page.evaluate(()=>{currentLang='en';applyLanguage();});
+    assert.equal(await page.locator('#settings-report-save').textContent(),'Save report columns');
+    await page.setViewportSize({width:390,height:844});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+    await page.screenshot({path:path.join(__dirname,'../artifacts/report-copy-columns-mobile.png')});
+    await page.locator('#trainees-tab').click();assert.equal(await panel.locator('[data-action=operations]').textContent(),'Copy operations report');
+    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+    assert.deepEqual(errors,[]);
+    console.log('PASS: direct daily report copying, independent account column choices, passed filtering, Riyadh dates, raw multiline values, no preview/upload, clipboard failures, expanded/mobile layout and reload.');
+  }finally{await browser?.close();server.kill();}
+})().catch(error=>{console.error(error);process.exitCode=1;});

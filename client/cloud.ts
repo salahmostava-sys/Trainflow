@@ -697,16 +697,16 @@ const Cloud = (() => {
       return false;
     }
   }
-  async function saveReportDestinations(destinations: {
-    operations: string;
-    success: string;
-    bridge: string;
-  }) {
+  async function saveReportColumns(columns: Record<"operations" | "success", number[]>) {
     if (!ready) return false;
+    if (!(["operations", "success"] as const).every(kind =>
+      Array.isArray(columns?.[kind]) && columns[kind].length > 0 && columns[kind].length <= 20 &&
+      columns[kind].every(index => Number.isInteger(index) && index >= 0 && index < 20),
+    )) return false;
     const editingUser = user.id;
     try {
       const { data, error } = await client.auth.updateUser({
-        data: { report_destinations: destinations },
+        data: { report_columns: columns, report_destinations: null },
       });
       if (error) throw error;
       if (!ready || user.id !== editingUser) return false;
@@ -1468,8 +1468,8 @@ const Cloud = (() => {
     copyCode,
     claimTraineeCode,
     saveVoucherName,
-    saveReportDestinations,
-    reportDestinations: () => ready ? user?.user_metadata?.report_destinations || null : undefined,
+    saveReportColumns,
+    reportColumns: () => ready ? user?.user_metadata?.report_columns || null : undefined,
     editCode,
     decorate,
     refresh,
@@ -1482,12 +1482,6 @@ const Cloud = (() => {
     auditEvents,
     exportCodesCsv,
     changeSupervisorStock,
-    reportSession: async () => {
-      if (!ready) throw Error("AUTH_REQUIRED");
-      const { data, error } = await client.auth.getSession();
-      if (error || !data.session) throw Error("AUTH_REQUIRED");
-      return { token: data.session.access_token, url: SUPABASE_URL, key: KEY };
-    },
     readTrainees,
     saveTrainees,
     listTraineeSheets,
