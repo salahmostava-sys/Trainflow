@@ -135,6 +135,15 @@ Invalid emails, incomplete English names and duplicate row identities prevent
 creation. Changes to a row's identity or credentials invalidate its replacement choice. Batches
 support up to 5,000 selected trainees and run sequentially in one dedicated tab.
 
+Saved accounts in older rows of the current worksheet also mark the selected row red
+and prevent automatic registration. Matching uses the normalized ID; when an ID is
+missing, both email and English name must match, without conflicting IDs. Choose
+**Compare account details** to see the current and saved records through **AnyDesk ID**.
+If several rows have accounts, select which saved account to compare. **Use this account
+in the current row** saves only its username and password into the selected row; the
+older record and the rest of the current row remain unchanged. Creating a different
+account requires choosing **Create a new account** explicitly for that row.
+
 Download the integrated extension from this dialog, extract it to a permanent
 folder, disable the old Prometric extension, and Load unpacked in the same Chrome
 profile as TrainFlow. Reload both websites. The extension retains the original popup

@@ -5,7 +5,8 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
   try{
     await new Promise((resolve,reject)=>{server.stdout.once('data',resolve);server.once('error',reject);});
     const template=await(await fetch('http://127.0.0.1:4193/')).text(),makeRow=(name,email,id,user='')=>{const r=Array(52).fill('');r[1]=email;r[3]=name;r[4]=id;r[7]='CBP-L';r[9]=user;return r;};
-    let fixtureRows=[makeRow('ALPHA STUDENT','alpha@example.invalid','0001'),makeRow('EXISTING STUDENT','existing@example.invalid','0002','KEEP-USER'),makeRow('BETA STUDENT','beta@example.invalid','0003')],fixtureVersion=0;
+    // The source worksheet already exists; the simulated outage starts when saving registration results.
+    let fixtureRows=[makeRow('ALPHA STUDENT','alpha@example.invalid','0001'),makeRow('EXISTING STUDENT','existing@example.invalid','0002','KEEP-USER'),makeRow('BETA STUDENT','beta@example.invalid','0003')],fixtureVersion=1;
     const profile=fs.mkdtempSync(path.join(artifacts,'prometric-flow-'));
     ctx=await chromium.launchPersistentContext(profile,{channel:'msedge',headless:true,viewport:{width:1500,height:1000},args:['--disable-extensions-except='+extension,'--load-extension='+extension,'--host-resolver-rules=MAP trainf.vercel.app 127.0.0.1, MAP tcnet1.prometric.com 127.0.0.1']});
     const created=[],profiles=[],submitted=[];

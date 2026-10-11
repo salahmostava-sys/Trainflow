@@ -10,6 +10,23 @@ const existing=[...a];existing[9]='KEEP';assert.equal(P.locate([existing],result
 assert.equal(P.prepare([a,[...a]],[0,1]).items.length,0,'Duplicate row identities require manual review');
 assert.equal(P.prepare([a,trainee(a[3],a[1],a[4],'CBP-M')],[0,1]).items.length,2,'Different exam rows remain separate registrations');
 assert.equal(P.indexRows(Array.from({length:3068},(_,i)=>trainee('TEST STUDENT '+i,'test'+i+'@example.invalid',String(i)))).size,3068);
+// Regression: an account in an older exam row was treated as a new registration.
+const oldAccount=trainee('SAVED STUDENT','saved@example.invalid','1060354287');oldAccount[9]='SAVED-USER';oldAccount[10]='SAVED-PASSWORD';
+for(const [name,email,id,expected] of [
+  ['CHANGED STUDENT','changed@example.invalid','١٠٦٠٣٥٤٢٨٧',true],
+  ['SAVED STUDENT','SAVED@EXAMPLE.INVALID','',true],
+  ['SAVED STUDENT','saved@example.invalid','1000000002',false],
+  ['OTHER STUDENT','saved@example.invalid','',false],
+  ['SAVED STUDENT','','',false],
+]){
+  const current=trainee(name,email,id,'CBP-M'),prepared=P.prepare([oldAccount,current],[1]);
+  assert.equal(prepared.skipped.some(item=>item.reason==='existing'),expected,'Historical accounts require matching identity');
+  if(expected){
+    const choices=new Map([[1,{fingerprint:P.fingerprint(current),credentials:P.credentials(current)}]]);
+    assert.equal(P.prepare([oldAccount,current],[1],choices).items.length,1,'Creating a different account requires an explicit choice');
+    current[9]='MANUAL-USER';assert.equal(P.prepare([oldAccount,current],[1],choices).items.length,0,'Editing credentials invalidates the new-account choice');
+  }
+}
 (async()=>{
   const savedAlpha=[...a],savedBeta=[...b];savedAlpha[9]='ALPHA-OLD';savedAlpha[10]='ALPHA-PASSWORD';
   const accountChoices=new Map([[0,{fingerprint:P.fingerprint(savedAlpha),credentials:P.credentials(savedAlpha)}]]);

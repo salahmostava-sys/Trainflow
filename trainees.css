@@ -227,10 +227,10 @@
 .sheet-detail-course-meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:7px;font-size:12px}
 .sheet-detail-keycode{font-weight:700;overflow-wrap:anywhere}
 .sheet-detail-category{padding:2px 7px;border:1px solid var(--border);border-radius:5px;font-size:11px}
-.sheet-duplicate-dialog button.sheet-detail-copy-value{border:0;background:transparent;padding:3px 0;border-radius:3px;font:inherit;color:inherit;text-align:left;white-space:pre-wrap;overflow-wrap:anywhere;max-width:100%;line-height:1.6}
+.sheet-duplicate-dialog button.sheet-detail-copy-value,.sheet-prometric-dialog button.sheet-detail-copy-value{border:0;background:transparent;padding:3px 0;border-radius:3px;font:inherit;color:inherit;text-align:left;white-space:pre-wrap;overflow-wrap:anywhere;max-width:100%;line-height:1.6}
 .sheet-detail-copy-value::after{content:none}
-.sheet-duplicate-dialog button.sheet-detail-copy-value:hover{color:var(--blue-600);text-decoration:underline}
-.sheet-duplicate-dialog button.sheet-detail-copy-value:focus-visible{outline:2px solid var(--blue);outline-offset:3px}
+.sheet-duplicate-dialog button.sheet-detail-copy-value:hover,.sheet-prometric-dialog button.sheet-detail-copy-value:hover{color:var(--blue-600);text-decoration:underline}
+.sheet-duplicate-dialog button.sheet-detail-copy-value:focus-visible,.sheet-prometric-dialog button.sheet-detail-copy-value:focus-visible{outline:2px solid var(--blue);outline-offset:3px}
 .sheet-duplicate-dialog button.sheet-detail-category{border:0;padding:3px 0;font-size:inherit}
 .sheet-detail-record dl{direction:rtl;align-items:start}
 .sheet-detail-record dt{min-width:0;text-align:right;overflow-wrap:anywhere}
@@ -238,7 +238,7 @@
 .sheet-trainee-dialog .sheet-detail-record dl{direction:rtl;grid-template-columns:140px minmax(0,1fr);gap:10px var(--space-lg);align-items:start;font-size:var(--type-body);line-height:1.6}
 .sheet-trainee-dialog button.sheet-detail-copy-value{display:block;width:100%;text-align:left;box-sizing:border-box}
 .sheet-trainee-dialog button.sheet-detail-login{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.sheet-duplicate-dialog button.sheet-detail-course,.sheet-duplicate-dialog button.sheet-detail-course:hover{color:#b91c1c}
+.sheet-duplicate-dialog button.sheet-detail-course,.sheet-duplicate-dialog button.sheet-detail-course:hover,.sheet-prometric-dialog button.sheet-detail-course,.sheet-prometric-dialog button.sheet-detail-course:hover{color:#b91c1c}
 .sheet-trainee-dialog .sheet-detail-result[data-result=pass]{background:transparent!important;color:#008a3d!important}
 .sheet-detail-result[data-result=fail]{background:#ff0000!important;color:#ffffff!important}
 .sheet-detail-record button.sheet-detail-result[data-result=fail]{width:auto;display:inline-block;padding:2px 6px}
@@ -422,6 +422,17 @@
 .sheet-prometric-row-choice{display:grid;gap:6px;min-width:150px}
 .sheet-prometric-row-choice select,.sheet-prometric-row-choice button{width:100%;font-size:12px;min-height:34px}
 .sheet-prometric-row-choice select:focus-visible,.sheet-prometric-row-choice button:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.sheet-prometric-existing-account td{background:#fff1f2;color:#9f1239}
+.sheet-prometric-existing-account td:first-child{border-inline-start:3px solid #dc2626}
+#sheet-prometric-account-comparison{margin:14px 0;padding:12px;border:1px solid #fda4af;border-radius:10px;background:#fff7f7}
+#sheet-prometric-account-comparison[hidden]{display:none}
+.sheet-prometric-comparison-header{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.sheet-prometric-comparison-header h4{margin:0;color:#9f1239;flex:1}
+.sheet-prometric-comparison-header select{max-width:100%;min-width:0}
+#sheet-prometric-account-records{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-bottom:12px}
+#sheet-prometric-account-records .sheet-detail-record{min-width:0;max-width:none;width:100%}
+#sheet-prometric-account-records .sheet-detail-record dl{grid-template-columns:110px minmax(0,1fr);gap:10px 14px;line-height:1.6}
+@media(max-width:680px){#sheet-prometric-account-records{grid-template-columns:1fr}}
 .sheet-prometric-pagination{display:flex;align-items:center;justify-content:center;gap:12px;margin:10px 0}
 .sheet-prometric-pagination span{font-size:12px;white-space:nowrap}
 #sheet-exam-dialog{overscroll-behavior:contain}

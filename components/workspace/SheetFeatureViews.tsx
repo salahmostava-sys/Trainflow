@@ -210,6 +210,15 @@ export function PrometricDialog({ extensionURL }: { extensionURL: string }) {
       <p id="sheet-prometric-summary" role="status" />
       <p id="sheet-prometric-account-help" hidden />
       <div id="sheet-prometric-preview" className="sheet-file-preview" />
+      <section id="sheet-prometric-account-comparison" hidden>
+        <div className="sheet-prometric-comparison-header">
+          <h4 id="sheet-prometric-comparison-title" />
+          <select id="sheet-prometric-account-source" />
+          <button type="button" id="sheet-prometric-comparison-close">×</button>
+        </div>
+        <div id="sheet-prometric-account-records" />
+        <button type="button" id="sheet-prometric-reuse-account" />
+      </section>
       <div className="sheet-prometric-actions">
         <button
           type="button"
@@ -234,6 +243,7 @@ export function RegistrationPreview({
   changeAccount,
   changePage,
   copyAccount,
+  inspectAccount,
 }: {
   rows: {
     row: number;
@@ -241,6 +251,7 @@ export function RegistrationPreview({
     email: string;
     username: string;
     hasAccount: boolean;
+    hasOwnAccount: boolean;
     mode: string;
     status: string;
   }[];
@@ -253,12 +264,14 @@ export function RegistrationPreview({
     previous: string;
     next: string;
     page: string;
+    inspect: string;
   };
   page: number;
   disabled: boolean;
   changeAccount(row: number, mode: string): void;
   changePage(page: number): void;
   copyAccount(row: number): Promise<void>;
+  inspectAccount(row: number): void;
 }) {
   if (!rows.length) return null;
   const pageSize = 50,
@@ -272,7 +285,7 @@ export function RegistrationPreview({
         </thead>
         <tbody>
           {rows.slice(currentPage * pageSize, (currentPage + 1) * pageSize).map((row) => (
-            <tr key={row.row}>
+            <tr key={row.row} className={row.hasAccount ? "sheet-prometric-existing-account" : undefined}>
               <td>{row.row + 1}</td>
               <td>{row.name}</td>
               <td><bdi>{row.email}</bdi></td>
@@ -289,14 +302,17 @@ export function RegistrationPreview({
                       <option value="reuse">{labels.reuse}</option>
                       <option value="new">{labels.create}</option>
                     </select>
-                    <button
+                    <button type="button" disabled={disabled} onClick={() => inspectAccount(row.row)}>
+                      {labels.inspect}
+                    </button>
+                    {row.hasOwnAccount && <button
                       type="button"
                       aria-label={labels.copy + " " + (row.row + 1)}
                       disabled={disabled}
                       onClick={() => { void copyAccount(row.row); }}
                     >
                       {labels.copy}
-                    </button>
+                    </button>}
                   </div>
                 ) : labels.create}
               </td>

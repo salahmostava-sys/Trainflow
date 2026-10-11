@@ -636,7 +636,7 @@ const Trainees=(()=>{
       flush,sort:(column,direction)=>{commitEdit();sortRules=[];sortCol=column;sortDir=direction;render();},customSort:rules=>{commitEdit();sortRules=rules;sortCol=-1;render();},
       resetSort:()=>{sortRules=[];sortCol=-1;render();},clearFilters:()=>{clearFilters();render();},setColumnWidth,saveColumnWidths,resetColumnWidth});
     if(typeof TraineePrometric!=='undefined')prometricTools=TraineePrometric.mount({D,$,tr,node,
-      state:()=>({cells,view,owner:workspaceIdentity(),epoch,user:Cloud.userId(),loaded:loaded&&!loading,editing:!!editing,bounds:bounds(),selectedRows:selectedRows().map(r=>view[r])}),commitEdit,change,flush,focusCell,message});
+      state:()=>({cells,view,owner:workspaceIdentity(),epoch,user:Cloud.userId(),loaded:loaded&&!loading,editing:!!editing,bounds:bounds(),selectedRows:selectedRows().map(r=>view[r])}),commitEdit,change,flush,focusCell,message,accountDetails:accountDetailFields,detailViewProps});
     if(typeof TraineeExamResults!=='undefined')examResultTools=TraineeExamResults.mount({$,tr,
       state:()=>({cells,formatting,owner:workspaceIdentity(),epoch,user:Cloud.userId(),loaded:loaded&&!loading&&!worksheetBusy,editing:!!editing,selectedRows:selectedRows().map(r=>view[r])}),catalog:()=>DEFAULT_KEYCODES,commitEdit,change,flush});
     if(typeof TraineeCertificate!=='undefined')certificateTools=TraineeCertificate.mount({D,$,tr,node,
@@ -982,9 +982,9 @@ const Trainees=(()=>{
   let traineeHoverTimer;
   const detailResult=value=>value==='ناجح'?'pass':value==='راسب'?'fail':value==='لم يدخل'?'absent':'';
   const detailKeycode=keycode=>({label:'Key Code',value:keycode?.code||'',empty:tr('لا يوجد Key Code مطابق','No matching Key Code'),className:'sheet-detail-keycode',direction:'ltr'});
-  function detailFields(row,includeKeycode=true){
+  function detailFields(row,includeKeycode=true,fieldCount){
     const fields=[];
-    let end=row.length;while(end>0&&!row[end-1].trim())end--;
+    let end=fieldCount??row.length;if(fieldCount===undefined)while(end>0&&!row[end-1].trim())end--;
     labels.slice(0,end).forEach((pair,column)=>{
       const keycode=column===7?D.courseKeycode(row[column],DEFAULT_KEYCODES):null;
       const field={label:column===7?tr('الدورة','Course'):tr(...pair),copyName:tr(...pair),value:row[column]||'',className:({7:'sheet-detail-course',9:'sheet-detail-username',10:'sheet-detail-password',11:'sheet-detail-result'})[column]||'',result:column===11?detailResult(row[column]):undefined};
@@ -998,6 +998,13 @@ const Trainees=(()=>{
     });return fields;
   }
   const detailViewProps=()=>({copyLabel:tr('نسخ ','Copy '),copyTitle:tr('اضغط لنسخ ','Click to copy '),copy:async value=>{if(await copyText(value))showToast(tr('تم النسخ','Copied'));else showToast(tr('تعذر النسخ. حاول مرة أخرى.','Could not copy. Please retry.'));}});
+  function accountDetailFields(row){
+    const fields=detailFields(row,true,D.BASE_WIDTH);
+    if(!fields.some(field=>field.className==='sheet-detail-keycode')){
+      const course=fields.findIndex(field=>field.className==='sheet-detail-course');delete fields[course].note;
+      fields.splice(course+1,0,detailKeycode(null),{label:tr('الفئة','Category'),value:'',empty:tr('فئة غير محددة','No category'),className:'sheet-detail-category'});
+    }return fields;
+  }
   function closeTraineeDetails(){clearTimeout(traineeHoverTimer);const dialog=$('sheet-trainee-dialog');if(dialog?.open)dialog.close();}
   const isTraineeDetailCell=td=>[1,2,3].includes(+td.dataset.col)&&!!cells[view[+td.dataset.v]]?.[+td.dataset.col]?.trim();
   function initTraineeDetails(){
