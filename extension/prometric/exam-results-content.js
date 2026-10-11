@@ -45,8 +45,9 @@
       const extracted=PrometricScores.report(document,context.examTitles,context.examLanguage);
       return report(context,extracted.error?extracted:{rawScore:(extracted.result==='ناجح'?'Pass':'Fail')+' ('+extracted.score+')',examTitle:extracted.examTitle,testDate:extracted.testDate});
     }
-    const links=[...document.querySelectorAll('a[href]')],caption=link=>(link.getAttribute('aria-label')||link.textContent).replace(/\s+/g,' ').trim().toLowerCase();
-    const target=links.find(link=>caption(link)==='history')||links.find(link=>caption(link)==='review scores')||[...document.querySelectorAll('[id^="NavigationMenu"] a[href]')].find(link=>caption(link)==='take test');
+    const controls=[...document.querySelectorAll('a[href],button,input[type="button"],input[type="submit"],[role="button"]')];
+    const caption=control=>(control.getAttribute('aria-label')||(control.tagName==='INPUT'?control.value:control.textContent)).replace(/\s+/g,' ').trim().toLowerCase();
+    const target=controls.find(control=>caption(control)==='history')||controls.find(control=>caption(control)==='review scores')||[...document.querySelectorAll('[id^="NavigationMenu"] a[href]')].find(link=>caption(link)==='take test');
     if(!target)return report(context,{error:'REPORT_UNAVAILABLE'});
     const navigation=attemptKey(context)+':'+location.pathname+':'+caption(target);
     if(sessionStorage.getItem('trainflow-score-navigation')===navigation)return;

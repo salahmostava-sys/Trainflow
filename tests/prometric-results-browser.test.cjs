@@ -7,17 +7,23 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
     await new Promise((resolve,reject)=>{server.stdout.once('data',resolve);server.once('error',reject);});
     const template=await(await fetch('http://127.0.0.1:4198/')).text();
     const makeRow=(name,code,user)=>{const row=Array(52).fill('');row[0]=code;row[1]=name.toLowerCase()+'@example.invalid';row[3]=name+' STUDENT';row[7]='CBP-L';row[9]=user;row[10]='Dummy-Pass';row[13]='KEEP CUSTOM';return row;};
+    // The worksheet is already saved; the simulated outage applies to saving fetched results.
     const rows=[makeRow('ALPHA','DUMMY-1','DUMMY-ALPHA'),makeRow('BETA','DUMMY-2','DUMMY-BETA'),makeRow('NO-CODE','','DUMMY-NO-CODE'),makeRow('UNSELECTED','DUMMY-4','DUMMY-OTHER')];
     context=await chromium.launchPersistentContext(fs.mkdtempSync(path.join(artifacts,'prometric-results-')),{channel:'msedge',headless:true,viewport:{width:1440,height:1000},args:['--disable-extensions-except='+extension,'--load-extension='+extension,'--host-resolver-rules=MAP trainf.vercel.app 127.0.0.1, MAP tcnet1.prometric.com 127.0.0.1']});
-    const logins=[],errors=[];let account='DUMMY-OUTSIDER',signouts=0,candidateVisited=false,forceSessionExpiry=false;
+    const logins=[],errors=[],examActions=[];let account='DUMMY-OUTSIDER',signouts=0,candidateVisited=false,forceSessionExpiry=false;
     await context.exposeBinding('fixtureLogin',(_,credentials)=>{logins.push(credentials);account=credentials.username;candidateVisited=false;});
     await context.exposeBinding('fixtureLogout',()=>{account='';signouts++;});
+    await context.exposeBinding('fixtureExamAction',(_,action)=>examActions.push(action));
     const profile=()=>'<a id="UserProfileHyperLink">'+account+'</a><a id="SignOutLinkButton" href="#" onclick="fixtureLogout().then(()=>location.href=\'/Login.aspx?ClientNameSingleSite=ibtamea\');return false">Sign Out</a>';
     function prometricFixture(url){
       let body='';
       if(url.pathname==='/Login.aspx')body=account?profile():'<input id="PageContent_UserNameTextbox_txtTextBox" placeholder="Username"><input id="PageContent_PasswordTextbox_txtTextBox" type="password"><button id="PageContent_SignInButton" onclick="document.body.append(document.createElement(\'progress\'));fixtureLogin({username:document.getElementById(\'PageContent_UserNameTextbox_txtTextBox\').value,password:document.getElementById(\'PageContent_PasswordTextbox_txtTextBox\').value}).then(()=>setTimeout(()=>location.href=\'/User/Welcome.aspx\',250))">Sign In</button>';
       else if(url.pathname==='/User/Welcome.aspx')body=profile()+'<nav id="NavigationMenu"><span>Candidate</span><a href="/fixture-take-test" style="display:none">Take Test</a></nav>';
-      else if(url.pathname==='/fixture-take-test'){candidateVisited=true;body=profile()+'<a href="/Candidate/ManageReviewScores.aspx">History</a>';}
+      else if(url.pathname==='/fixture-take-test'){
+        candidateVisited=true;
+        const history=account==='DUMMY-ALPHA'?'<a href="/Candidate/ManageReviewScores.aspx">History</a>':forceSessionExpiry?'<button onclick="location.href=\'/Candidate/ManageReviewScores.aspx\'">History</button>':'<input type="submit" value="History">';
+        body=profile()+'<button onclick="fixtureExamAction(\'Take\')">Take</button><input type="button" value="Resume" onclick="fixtureExamAction(\'Resume\')"><h2>Review Scores</h2><form action="/Candidate/ManageReviewScores.aspx">'+history+'</form>';
+      }
       else if(url.pathname==='/Candidate/ManageReviewScores.aspx')body=candidateVisited&&!forceSessionExpiry?profile()+'<table id="PageContent_ManageReviewScoresGridView_gridView"><tr><th>Test Title</th><th>Your Score</th></tr><tr><td title="TEST TITLE">Sales Arabic</td><td title="YOUR SCORE">Pass (99%)</td></tr><tr><td title="TEST TITLE">Leadership English</td><td title="DATE">October 7, 2026</td><td title="YOUR SCORE">'+(account==='DUMMY-ALPHA'?'Pass (88.2%)':'Fail (61%)')+'</td></tr></table>':'<p>Your Session has been timed out! Please login again.</p><input id="PageContent_LoginButton" type="button" value="Login">';
       else throw Error('Unexpected Prometric navigation: '+url.pathname);
       return '<!doctype html><html><body>'+body+'</body></html>';
@@ -26,7 +32,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
       const url=new URL(route.request().url());
       if(url.origin==='https://tcnet1.prometric.com')return route.fulfill({contentType:'text/html; charset=utf-8',body:prometricFixture(url)});
       if(url.origin==='https://trainf.vercel.app'){
-        if(url.pathname==='/')return route.fulfill({contentType:'text/html; charset=utf-8',body:template.replace('const previewSheets=new Map(window.previewInitialSheets||[]);','const previewSheets=new Map([["demo-admin",'+JSON.stringify({cells:rows,version:0,format:{direction:'rtl',headers:{13:'Custom'}}})+']]);')});
+        if(url.pathname==='/')return route.fulfill({contentType:'text/html; charset=utf-8',body:template.replace('const previewSheets=new Map(window.previewInitialSheets||[]);','const previewSheets=new Map([["demo-admin",'+JSON.stringify({cells:rows,version:1,format:{direction:'rtl',headers:{13:'Custom'}}})+']]);')});
         const filename=url.pathname.slice(1),previewAsset=require('../tools/preview-assets.cjs')[filename];
         if(previewAsset)return route.fulfill({contentType:'text/javascript',body:fs.readFileSync(previewAsset,'utf8')});
         if(/^[a-z][a-z0-9-]*\.(js|css)$/.test(filename)&&fs.existsSync(path.join(root,filename)))return route.fulfill({contentType:filename.endsWith('.css')?'text/css':'text/javascript',body:fs.readFileSync(path.join(root,filename),'utf8')});
@@ -88,6 +94,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
     await page.waitForFunction(()=>document.getElementById('sheet-exam-results').textContent.includes('تمت المراجعة دون كتابة'));
     const reviewed=await worker.evaluate(()=>chrome.storage.local.get('ibtaExamRun'));assert.equal(reviewed.ibtaExamRun.items[50].status,'reviewed');
     assert.deepEqual(await page.evaluate(()=>previewSheets.get('demo-admin').cells),saved.cells,'Reviewing a missing row never writes to another row');
-    assert.deepEqual(errors,[]);console.log('PASS: real extension sign-in, account isolation, selected coded rows, explicit scores, failed-save retention and durable acknowledgment');
+    assert.deepEqual(examActions,[],'History links, submit inputs and buttons never trigger Take or Resume');
+    assert.deepEqual(errors,[]);console.log('PASS: real extension sign-in, History links and buttons, no exam actions, account isolation, selected coded rows, explicit scores, failed-save retention and durable acknowledgment');
   }finally{await context?.close();server.kill();}
 })().catch(error=>{console.error(error);process.exitCode=1;});

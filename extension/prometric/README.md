@@ -1,10 +1,10 @@
-# TrainFlow — Prometric 4.2.3
+# TrainFlow — Prometric 4.2.4
 
 Integrated from the user's Prometric Auto Register 4.0 source (Salah Mostafa,
 ISC license). Its original popup, registration steps, generation pattern,
 address defaults and import/export tools are retained.
 
-Production origin: **https://trainf.vercel.app/**. Updated 8 October 2026. Configured exclusively for the Vercel production origin.
+Production origin: **https://trainf.vercel.app/**. Updated 11 October 2026. Configured exclusively for the Vercel production origin.
 
 The toolbar, extension manager, notifications and popup use the same TrainFlow
 logo. Replace the installed extension files in their existing folder and reload
@@ -23,7 +23,8 @@ columns. Each account's credentials are removed from this results queue after it
 finishes. Confirmed scores remain recoverable until TrainFlow acknowledges its cloud save.
 
 Results follow **Candidate → Take Test → History / Review Scores**, using the site's
-navigation links. An expired session is reported separately from a mismatched account.
+navigation links or its History / Review Scores buttons, including submit inputs.
+Take and Resume exam buttons are never used. An expired session is reported separately from a mismatched account.
 The last failed account tab remains open for inspection; retrying closes that old tab.
 Previously visited documents cannot receive the next trainee's credentials.
 
