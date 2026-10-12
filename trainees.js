@@ -200,6 +200,92 @@ const Trainees=(()=>{
     const next=D.removeRows(cells,formatting,ids);change(next.cells,true,next.format);
     message(()=>tr(ids.size>1?'تم حذف الصفوف المحددة':'تم حذف الصف المحدد',ids.size>1?'Selected rows deleted':'Selected row deleted'));
   }
+  function addSeparatorRow(){
+    commitEdit();
+    if(!loaded||loading||worksheetBusy)return;
+    if(filtered()){
+      message(()=>tr('امسح الفلاتر والفرز قبل إضافة فاصل.','Clear filters and sorting before adding a separator.'),true);
+      return;
+    }
+    const vr=cursor.r;
+    if(vr<0||vr>=view.length){
+      message(()=>tr('حدد صفًا أولاً لإضافة فاصل.','Select a row first to add a separator.'),true);
+      return;
+    }
+    const r=view[vr];
+    const currentRow=cells[r];
+    const hasContent=Boolean(currentRow&&currentRow.some(cell=>cell&&typeof cell==='string'&&cell.trim()!==''));
+    if(hasContent){
+      message(()=>tr('الصف يجب أن يكون فارغًا لإضافة فاصل.','The row must be empty to add a separator.'),true);
+      return;
+    }
+    const totalCols=colCount();
+    let count=0;
+    let date='';
+    for(let i=r+1;i<cells.length;i++){
+      const rowStyle=formatting.styles[i+':0'];
+      const isNextSeparator=Boolean(
+        (rowStyle?.mergeCols&&rowStyle.mergeCols>=totalCols)||
+        formatting.daySeparators?.includes(i)
+      );
+      if(isNextSeparator)break;
+      const row=cells[i];
+      if(row&&row.some(cell=>cell&&typeof cell==='string'&&cell.trim()!=='')){
+        count++;
+        if(!date){
+          const d=(row[8]||'').trim();
+          if(d)date=d;
+        }
+      }
+    }
+    if(!date){
+      for(let i=r+1;i<cells.length;i++){
+        const rowStyle=formatting.styles[i+':0'];
+        if((rowStyle?.mergeCols&&rowStyle.mergeCols>=totalCols)||formatting.daySeparators?.includes(i))break;
+        const row=cells[i];
+        if(!row)continue;
+        for(let c=0;c<row.length;c++){
+          const val=(row[c]||'').trim();
+          if(/^\d{4}-\d{1,2}-\d{1,2}$|^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4}$/.test(val)){
+            date=val;
+            break;
+          }
+        }
+        if(date)break;
+      }
+    }
+    const formattedDate=date?dayDateLabel(date):'';
+    let text='';
+    if(formattedDate){
+      text=tr('التاريخ: '+formattedDate+' — عدد الصفوف: '+count,'Date: '+formattedDate+' — Rows: '+count);
+    }else{
+      text=tr('فاصل — عدد الصفوف: '+count,'Separator — Rows: '+count);
+    }
+    const nextCells=D.paste(cells,[[text]],r,0);
+    const nextFmt=D.format(formatting);
+    for(const [k,v]of Object.entries(nextFmt.styles)){
+      const [rowIdx]=k.split(':').map(Number);
+      if(rowIdx===r){
+        delete v.mergeRows;
+        delete v.mergeCols;
+        delete v.centerAcross;
+      }
+    }
+    nextFmt.styles[r+':0']={
+      ...nextFmt.styles[r+':0'],
+      mergeCols:totalCols,
+      mergeRows:1,
+      align:'center',
+      valign:'middle',
+      bold:true,
+      bg:'#dbeafe',
+      color:'#1e40af',
+      size:13
+    };
+    change(nextCells,true,nextFmt);
+    flush();
+    message(()=>tr('تمت إضافة الفاصل ودمج الصف بنجاح ✨','Separator added and row merged successfully ✨'));
+  }
   async function cutSelection(){
     if(editing)return;
     if(await copySelection()){clearSelection();message(()=>tr('تم القص إلى الحافظة','Cut to clipboard'));}
@@ -532,6 +618,7 @@ const Trainees=(()=>{
     $('sheet-selection-size').onchange=()=>formatSelection({size:Number($('sheet-selection-size').value)});
     $('sheet-undo').onclick=()=>undo(false);$('sheet-redo').onclick=()=>undo(true);
     $('sheet-select-all').onclick=()=>selectAll();
+    if($('sheet-add-separator-btn'))$('sheet-add-separator-btn').onclick=addSeparatorRow;
     ['sheet-search','sheet-org','sheet-date','sheet-result'].forEach(id=>$(id).addEventListener('input',()=>{commitEdit();extraSelections=[];anchor=cursor={r:0,c:0};render();}));
     $('sheet-duplicates-only').onchange=()=>{
       commitEdit();
@@ -673,7 +760,7 @@ const Trainees=(()=>{
       'sheet-local-note':['التنسيق وأبعاد الأعمدة تُحفظ مع الجدول؛ الزوم تفضيل لهذا الجهاز.','Formatting and column widths are saved with the sheet; zoom is a preference for this device.'],'sheet-value-label':['قيمة','Value'],'sheet-add':['+ إضافة صف','+ Add row'],'sheet-wrap':['التفاف النص','Wrap text'],
       'sheet-add-prefix':['إضافة','Add'],'sheet-add-suffix':['صف في الأسفل','more rows at bottom'],'sheet-add-bulk-btn':['+ إضافة','+ Add'],
       'sheet-delete':['حذف صف','Delete row'],'sheet-add-col':['+ إضافة عمود','+ Add column'],'sheet-delete-col':['حذف عمود','Delete column'],'sheet-undo':['تراجع','Undo'],'sheet-redo':['إعادة','Redo'],
-      'sheet-select-all':['تحديد الكل','Select all'],'sheet-copy':['نسخ الجدول','Copy sheet'],'sheet-save':['حفظ الآن','Save now'],'sheet-reload':['إعادة تحميل','Reload'],'sheet-clear-filters':['مسح الفلاتر','Clear filters'],
+      'sheet-select-all':['تحديد الكل','Select all'],'sheet-add-separator-btn':['إضافة فاصل','Add separator'],'sheet-copy':['نسخ الجدول','Copy sheet'],'sheet-save':['حفظ الآن','Save now'],'sheet-reload':['إعادة تحميل','Reload'],'sheet-clear-filters':['مسح الفلاتر','Clear filters'],
       'sheet-help':['للكتابة: انقر مرتين أو ابدأ الكتابة · اسحب أو Shift + نقر لتحديد نطاق · Ctrl+C / Ctrl+V · Tab والأسهم للتنقل','Double-click or type to edit · Drag or Shift+click selects a range · Ctrl+C / Ctrl+V · Tab and arrow navigation'],
       'sheet-owned':['أكواد المستخدم','User codes'],'sheet-pool':['المخزون غير المخصص','Unassigned stock'],'sheet-code-refresh':['تحديث الأكواد','Refresh codes']
       ,'sheet-fill-label':['لون الخلية','Cell fill'],'sheet-text-color-label':['لون الخط','Text color'],
@@ -698,6 +785,7 @@ const Trainees=(()=>{
     $('sheet-align-center')&&($('sheet-align-center').title=tr('توسيط','Align center'));
     $('sheet-align-left')&&($('sheet-align-left').title=tr('محاذاة لليسار','Align left'));
     if($('sheet-select-all'))$('sheet-select-all').title=tr('تحديد الجدول بالكامل (Ctrl+A)','Select entire sheet (Ctrl+A)');
+    if($('sheet-add-separator-btn'))$('sheet-add-separator-btn').title=tr('إضافة فاصل ودمج الصف الحالي','Add separator and merge current row');
     if($('sheet-copy'))$('sheet-copy').title=tr('نسخ كل الأعمدة بما فيها المخفية','Copy every column, including hidden columns');
     updateContextMenuTranslations();
     excelTools?.translate();
@@ -1563,7 +1651,7 @@ const Trainees=(()=>{
     }
     return false;
   }
-  return {open,translate,hasDraft,flush,reset,suspend,savePosition,reportColumnLabels:()=>allLabels().slice(0,DISPLAY_COLS).map(pair=>tr(...pair)),hasCode,removeCode};
+  return {open,translate,hasDraft,flush,reset,suspend,savePosition,reportColumnLabels:()=>allLabels().slice(0,DISPLAY_COLS).map(pair=>tr(...pair)),hasCode,removeCode,addSeparatorRow};
 })();
 window.TRAINFLOW_ENGINE = Trainees;
 Trainees.translate();

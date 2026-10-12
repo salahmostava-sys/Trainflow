@@ -283,6 +283,8 @@
 #sheet-workspace .sheet-clean-toolbar button.sheet-primary:hover{background:#1d4ed8;border-color:#1e40af}
 #sheet-workspace .sheet-clean-toolbar #sheet-xlsx-export,#sheet-workspace .sheet-clean-toolbar #sheet-xlsx-import{color:#15803d;border-color:#bbf7d0;background:#f0fdf4;font-weight:600}
 #sheet-workspace .sheet-clean-toolbar #sheet-xlsx-export:hover,#sheet-workspace .sheet-clean-toolbar #sheet-xlsx-import:hover{background:#dcfce7;border-color:#86efac;color:#166534}
+#sheet-workspace .sheet-clean-toolbar #sheet-add-separator-btn{color:#1e40af;border-color:#bfdbfe;background:#eff6ff;font-weight:600}
+#sheet-workspace .sheet-clean-toolbar #sheet-add-separator-btn:hover{background:#dbeafe;border-color:#93c5fd;color:#1d4ed8}
 #sheet-workspace .sheet-clean-toolbar button:hover{background:#f8fafc;color:#0f172a;border-color:#cbd5e1}
 #sheet-workspace .sheet-clean-toolbar button[aria-pressed=true]{background:#eff6ff!important;border-color:#3b82f6!important;color:#1d4ed8!important}
 #sheet-workspace .sheet-clean-toolbar label{display:inline-flex;align-items:center;gap:4px;font-size:var(--type-caption);color:#475569;font-weight:500;margin:0;white-space:nowrap}

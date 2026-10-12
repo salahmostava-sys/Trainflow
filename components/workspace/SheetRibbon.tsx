@@ -47,6 +47,13 @@ export function SheetRibbon() {
           >
             {"تحديد الكل"}
           </button>
+          <button
+            type="button"
+            id="sheet-add-separator-btn"
+            title="إضافة فاصل ودمج الصف الحالي"
+          >
+            {"إضافة فاصل"}
+          </button>
           <span className="sheet-ribbon-divider" aria-hidden="true"></span>
           <button type="button" id="sheet-save">
             {"حفظ الآن"}
