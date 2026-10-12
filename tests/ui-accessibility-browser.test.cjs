@@ -209,7 +209,7 @@ test('compact operational pages remove empty width and keep inventory copying re
   await copy.click();await page.waitForFunction(()=>uiTestCopies.length===2);
   assert.match(await page.evaluate(()=>uiTestCopies[1]),/^\*Date: [^\n]+\*\n\n\*Codes with me\*\nFoundation: 1\n\n\*Codes with محمد\*\nFoundation: 10\n\n──────────────────\n\*Total codes\*\nFoundation: 11\n\n\s*\*Overall total: 11\*$/);
   await navigate(page,'trainees');await page.waitForFunction(()=>document.getElementById('sheet-status').textContent==='تم الحفظ');await page.locator('#sheet-prometric-open').click();
-  const registration=page.locator('#sheet-prometric-dialog');assert.ok((await registration.boundingBox()).width<=760,'Registration dialog has a compact desktop width');
+  const registration=page.locator('#sheet-prometric-dialog');assert.ok((await registration.boundingBox()).width<=1200,'Registration dialog has a spacious desktop width');
   await page.setViewportSize({width:390,height:844});assert.ok(await registration.evaluate(el=>{const box=el.getBoundingClientRect();return box.left>=0&&box.right<=innerWidth;}),'Registration dialog fits mobile');await page.keyboard.press('Escape');
 });
 

@@ -394,14 +394,15 @@
 .sheet-file-dialog input[type=file],.sheet-file-dialog select{font:inherit;padding:8px;border:1px solid #d7dfe8;border-radius:6px;background:#fff;max-width:100%;box-sizing:border-box}
 .sheet-file-dialog .sheet-file-checkbox{flex-direction:row;align-items:center}
 .sheet-file-dialog [hidden]{display:none!important}
-.sheet-prometric-dialog{width:min(760px,calc(100vw - 24px))}
+.sheet-prometric-dialog{width:min(1200px,calc(100vw - 32px));max-width:calc(100vw - 32px)}
 .sheet-prometric-dialog p{font-size:13px;line-height:1.65}
-.sheet-prometric-dialog .sheet-file-preview td{max-width:320px;white-space:normal;overflow-wrap:anywhere}
+.sheet-prometric-dialog .sheet-file-preview td{white-space:nowrap;overflow-wrap:normal}
+.sheet-prometric-dialog .sheet-file-preview th{white-space:nowrap}
 .sheet-prometric-setup{border:1px solid var(--border);padding:12px;border-radius:8px;background:#fff}
 .sheet-prometric-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.sheet-prometric-dialog .sheet-file-preview{max-height:220px}
-#sheet-prometric-preview table{width:100%;min-width:620px}
-.sheet-prometric-row-choice{display:grid;gap:6px;min-width:150px}
+.sheet-prometric-dialog .sheet-file-preview{max-height:min(380px,45vh)}
+#sheet-prometric-preview table{width:100%;min-width:max-content}
+.sheet-prometric-row-choice{display:grid;gap:6px;min-width:160px;white-space:nowrap}
 .sheet-prometric-row-choice select,.sheet-prometric-row-choice button{width:100%;font-size:12px;min-height:34px}
 .sheet-prometric-row-choice select:focus-visible,.sheet-prometric-row-choice button:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
 .sheet-prometric-existing-account td{background:#fff1f2;color:#9f1239}
