@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "TrainFlow — Prometric",
-  "version": "4.2.4",
+  "version": "4.2.5",
   "description": "Prometric registration and selected exam results linked to your TrainFlow trainee sheet",
   "permissions": [
     "tabs",

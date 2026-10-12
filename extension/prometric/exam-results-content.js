@@ -1,6 +1,6 @@
 /* Isolated extension world: login and score retrieval never start an exam. */
 (()=>{
-  'use strict';let running=false,inspectionTimer,loginSubmitted=false,signOutSubmitted=false;
+  'use strict';let running=false,inspectionTimer,scoreNavigationTimer,clickedNavigation='',directNavigationStarted=false,loginSubmitted=false,signOutSubmitted=false;
   const send=payload=>chrome.runtime.sendMessage(payload);
   const attemptKey=context=>context.run+':'+context.id;
   const accountName=()=>document.getElementById('UserProfileHyperLink')?.textContent.trim()||'';
@@ -40,6 +40,28 @@
     if(!button||count>=2)return report(context,{error:'WRONG_ACCOUNT'});
     signOutSubmitted=true;sessionStorage.setItem('trainflow-score-signout',attempt+':'+(count+1));sessionStorage.removeItem('trainflow-score-login');button.click();
   }
+  function openScoreHistory(context){
+    if(directNavigationStarted)return;
+    const attempt=attemptKey(context);
+    if(sessionStorage.getItem('trainflow-score-direct')===attempt)return report(context,{error:'REPORT_UNAVAILABLE'});
+    directNavigationStarted=true;
+    sessionStorage.setItem('trainflow-score-direct',attempt);
+    location.assign('/Candidate/ManageReviewScores.aspx');
+  }
+  function queueScoreNavigation(context){
+    const currentPage=location.pathname+location.search;
+    clearTimeout(scoreNavigationTimer);
+    // A TCNet postback can leave History on the same page without another DOM mutation.
+    scoreNavigationTimer=setTimeout(async()=>{
+      try{
+        const active=await send({action:'ibtaExamContext'});
+        if(location.pathname+location.search!==currentPage||document.getElementById('PageContent_ManageReviewScoresGridView_gridView'))return;
+        if(!active?.active||active.stage!=='scores'||attemptKey(active)!==attemptKey(context))return;
+        if(accountName().toLowerCase()!==active.username.toLowerCase())return;
+        await openScoreHistory(active);
+      }catch(error){console.warn('TrainFlow results navigation interrupted:',error.message);}
+    },2500);
+  }
   async function navigateScores(context){
     if(document.getElementById('PageContent_ManageReviewScoresGridView_gridView')){
       const extracted=PrometricScores.report(document,context.examTitles,context.examLanguage);
@@ -48,10 +70,19 @@
     const controls=[...document.querySelectorAll('a[href],button,input[type="button"],input[type="submit"],[role="button"]')];
     const caption=control=>(control.getAttribute('aria-label')||(control.tagName==='INPUT'?control.value:control.textContent)).replace(/\s+/g,' ').trim().toLowerCase();
     const target=controls.find(control=>caption(control)==='history')||controls.find(control=>caption(control)==='review scores')||[...document.querySelectorAll('[id^="NavigationMenu"] a[href]')].find(link=>caption(link)==='take test');
-    if(!target)return report(context,{error:'REPORT_UNAVAILABLE'});
+    if(!target){
+      if(/\/Candidate\/ManageReviewScores\.aspx$/i.test(location.pathname))return report(context,{error:'REPORT_UNAVAILABLE'});
+      return openScoreHistory(context);
+    }
     const navigation=attemptKey(context)+':'+location.pathname+':'+caption(target);
-    if(sessionStorage.getItem('trainflow-score-navigation')===navigation)return;
-    sessionStorage.setItem('trainflow-score-navigation',navigation);target.click();
+    if(sessionStorage.getItem('trainflow-score-navigation')===navigation){
+      if(clickedNavigation===navigation)return;
+      return openScoreHistory(context);
+    }
+    clickedNavigation=navigation;
+    sessionStorage.setItem('trainflow-score-navigation',navigation);
+    if(['history','review scores'].includes(caption(target)))queueScoreNavigation(context);
+    target.click();
   }
   new MutationObserver(()=>{clearTimeout(inspectionTimer);inspectionTimer=setTimeout(inspect,100);}).observe(document.body,{childList:true,subtree:true});
   inspect();

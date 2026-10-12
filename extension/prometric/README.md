@@ -1,10 +1,10 @@
-# TrainFlow — Prometric 4.2.4
+# TrainFlow — Prometric 4.2.5
 
 Integrated from the user's Prometric Auto Register 4.0 source (Salah Mostafa,
 ISC license). Its original popup, registration steps, generation pattern,
 address defaults and import/export tools are retained.
 
-Production origin: **https://trainf.vercel.app/**. Updated 11 October 2026. Configured exclusively for the Vercel production origin.
+Production origin: **https://trainf.vercel.app/**. Updated 12 October 2026. Configured exclusively for the Vercel production origin.
 
 The toolbar, extension manager, notifications and popup use the same TrainFlow
 logo. Replace the installed extension files in their existing folder and reload
@@ -24,6 +24,11 @@ finishes. Confirmed scores remain recoverable until TrainFlow acknowledges its c
 
 Results follow **Candidate → Take Test → History / Review Scores**, using the site's
 navigation links or its History / Review Scores buttons, including submit inputs.
+If clicking History leaves the page unchanged, the extension rechecks the active
+job and signed-in account, then opens the score-history page directly after 2.5 seconds.
+History postbacks that reload the Candidate page also resume at score history.
+Unrecognized Candidate navigation also falls back to that same read-only scores page.
+This direct fallback runs once per account attempt; redirects back to Candidate require manual review.
 Take and Resume exam buttons are never used. An expired session is reported separately from a mismatched account.
 The last failed account tab remains open for inspection; retrying closes that old tab.
 Previously visited documents cannot receive the next trainee's credentials.
