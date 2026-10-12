@@ -11,43 +11,38 @@ interface ReportSettingsProps {
   save(columns: ReportColumns): Promise<boolean>;
 }
 
+function cachedReportOrder(owner: string, kind: ReportKind, totalColumns: number): number[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const cached = JSON.parse(localStorage.getItem(`trainflow_report_order_${owner}`) || "null")?.[kind];
+    return Array.isArray(cached) ? cached.filter(
+      (column: unknown) => typeof column === "number" && Number.isInteger(column) && column >= 0 && column < totalColumns
+    ) : [];
+  } catch (error) {
+    // The account order remains usable when optional device storage is blocked or corrupt.
+    if (error instanceof DOMException || error instanceof SyntaxError) return [];
+    throw error;
+  }
+}
+
 export function ReportSettings(props: ReportSettingsProps) {
   const tr = (ar: string, en: string) => (props.language === "ar" ? ar : en);
   const preferencesKey = JSON.stringify(props.preferences);
 
-  const resolveInitialOrder = (kind: ReportKind, saved?: number[]): number[] => {
+  const resolveInitialOrder = (kind: ReportKind, saved: number[]): number[] => {
     const total = props.columns.length;
     const all = Array.from({ length: total }, (_, i) => i);
-    try {
-      const raw = localStorage.getItem(`trainflow_report_order_${props.owner}`);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed?.[kind])) {
-          const stored = parsed[kind].filter(
-            (c: unknown) => typeof c === "number" && c >= 0 && c < total
-          );
-          const unique = [...new Set(stored)];
-          if (unique.length > 0) {
-            const missing = all.filter((c) => !unique.includes(c));
-            return [...unique, ...missing];
-          }
-        }
-      }
-    } catch {}
-
-    const prefList = Array.isArray(saved)
-      ? saved.filter((c) => Number.isInteger(c) && c >= 0 && c < total)
-      : [];
-    const isSortedAscending = prefList.every(
-      (val, idx, arr) => idx === 0 || arr[idx - 1] < val
+    const savedColumns = [...new Set(saved.filter(
+      (column) => Number.isInteger(column) && column >= 0 && column < total
+    ))];
+    const cachedOrder = cachedReportOrder(props.owner, kind, total);
+    const orderedColumns = [...new Set([...cachedOrder, ...all])];
+    const selectedColumns = new Set(savedColumns);
+    let savedIndex = 0;
+    // Account preferences determine the copied order; cached slots retain unchecked columns.
+    return orderedColumns.map((column) =>
+      selectedColumns.has(column) ? savedColumns[savedIndex++] : column
     );
-    if (!isSortedAscending && prefList.length > 0) {
-      const unique = [...new Set(prefList)];
-      const missing = all.filter((c) => !unique.includes(c));
-      return [...unique, ...missing];
-    }
-
-    return all;
   };
 
   const [order, setOrder] = React.useState<Record<ReportKind, number[]>>(() => ({

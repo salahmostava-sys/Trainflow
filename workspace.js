@@ -1157,6 +1157,8 @@ function renderCodeGrid(){
       saveNotes:async notes=>{if(notes.trim())state.codeNotes[code]=notes;else delete state.codeNotes[code];await saveState();},
       unmark:async()=>{
         const isAr=currentLang==='ar';
+        const editingUser=Cloud.userId(),editingState=state;
+        const sameAccount=()=>Cloud.userId()===editingUser&&state===editingState;
         let choice=true;
         if(window.AppDialog){
           choice=await AppDialog.confirm({
@@ -1172,16 +1174,21 @@ function renderCodeGrid(){
         }else{
           choice=confirm(isAr?`إلغاء علامة الكود (${code})؟ موافق للإزالة من المتدربين أيضاً.`:`Unmark code (${code})?`);
         }
-        if(!choice)return;
-        delete state.usedCodes[code];
-        if(state.codeUseTimes)delete state.codeUseTimes[code];
-        if(!await saveState())return;
+        if(!choice||!sameAccount())return;
         let removedFromSheet=false;
         if(choice==='confirm'||choice===true){
-          if(typeof Trainees!=='undefined'&&Trainees.removeCode){
+          try{
             removedFromSheet=await Trainees.removeCode(code);
+          }catch{
+            if(!sameAccount())return;
+            showToast(isAr?'تعذر إزالة الكود من صفحة المتدربين. علامة الاستخدام لم تتغير؛ حاول مجددًا.':'Could not clear the code from trainees. Its usage mark is unchanged; please retry.');
+            return;
           }
         }
+        if(!sameAccount())return;
+        delete state.usedCodes[code];
+        if(state.codeUseTimes)delete state.codeUseTimes[code];
+        if(!await saveState()||Cloud.userId()!==editingUser)return;
         renderCodeGrid();
         if(choice==='confirm'||choice===true){
           showToast(removedFromSheet

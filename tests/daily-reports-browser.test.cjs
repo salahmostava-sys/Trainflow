@@ -83,6 +83,31 @@ const path=require('node:path'),assert=require('node:assert/strict'),fs=require(
     assert.deepEqual(await page.evaluate(()=>Cloud.reportColumns()),chosen,'An empty column selection cannot overwrite saved preferences');
     await page.reload();await page.locator('#app').waitFor({state:'visible'});await page.locator('nav.tabs [data-tab=settings]').click();await page.locator('#settings-tab-reports').click();
     for(const [kind,columns]of Object.entries(chosen))assert.deepEqual(await page.locator('#settings-report-'+kind+' input:checked').evaluateAll(inputs=>inputs.map(input=>Number(input.value))),columns,'Column choices survive reload');
+
+    // Regression: an old device cache must not override a newer account order.
+    const remoteOrder={operations:[0,5],success:[11,0,2]};
+    await page.evaluate(async columns=>{
+      const all=Array.from({length:20},(_,i)=>i);
+      localStorage.setItem('trainflow_report_order_'+Cloud.userId(),JSON.stringify({operations:[...all].reverse(),success:all}));
+      await Cloud.saveReportColumns(columns);TraineeReports.setupSettings();
+    },remoteOrder);
+    for(const [kind,columns]of Object.entries(remoteOrder)){
+      assert.deepEqual(await page.locator('#settings-report-'+kind+' input:checked').evaluateAll(inputs=>inputs.map(input=>Number(input.value))),columns,'Account order overrides stale device order');
+    }
+    await page.locator('#settings-report-save').click();
+    await page.waitForFunction(()=>document.getElementById('settings-report-status').textContent.includes('تم حفظ'));
+    assert.deepEqual(await page.evaluate(()=>Cloud.reportColumns()),remoteOrder,'Saving unchanged settings preserves the newer account order');
+
+    const successRows=page.locator('#settings-report-success .sheet-report-column-row');
+    await successRows.filter({has:page.locator('input[value="0"]')}).locator('.sheet-report-drag-handle').dragTo(successRows.filter({has:page.locator('input[value="11"]')}));
+    const draggedOrder=await page.locator('#settings-report-success input:checked').evaluateAll(inputs=>inputs.map(input=>Number(input.value)));
+    assert.deepEqual(draggedOrder,[0,11,2],'Dragging still changes the chosen report order');
+    await page.locator('#settings-report-save').click();
+    await page.waitForFunction(()=>Cloud.reportColumns().success.join(',')==='0,11,2');
+    await page.reload();await page.locator('#app').waitFor({state:'visible'});
+    await page.locator('nav.tabs [data-tab=settings]').click();await page.locator('#settings-tab-reports').click();
+    assert.deepEqual(await page.locator('#settings-report-success input:checked').evaluateAll(inputs=>inputs.map(input=>Number(input.value))),draggedOrder,'Dragged account order survives reload');
+
     await page.evaluate(()=>{currentLang='en';applyLanguage();});
     assert.equal(await page.locator('#settings-report-save').textContent(),'Save report columns');
     await page.setViewportSize({width:390,height:844});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);

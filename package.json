@@ -10,6 +10,7 @@
     "start": "next start",
     "lint": "next lint",
     "test:next": "node tests/next-workspace-browser.test.cjs",
+    "test:vouchers": "node tests/voucher-unmark-browser.test.cjs",
     "test:ui": "node tools/prepare-runtime.cjs && node tests/ui-accessibility-browser.test.cjs"
   },
   "dependencies": {
