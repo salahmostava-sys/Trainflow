@@ -40,13 +40,14 @@ declare global {
   type CloudSheetOptions = SheetActionOptions;
   var AppDialog: {
     confirm(options: {
-      title: string;
+      title?: string;
       message: string;
       confirmText?: string;
+      altText?: string;
       cancelText?: string;
       danger?: boolean;
       icon?: string;
-    }): Promise<boolean>;
+    }): Promise<boolean | string>;
   };
   var SessionPolicy: {
     expiresAt(token: string): number;

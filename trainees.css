@@ -674,6 +674,16 @@ body.sheet-expanded-open #workspace-sidebar,body.sheet-expanded-open #sidebar-ba
   color: #0f172a;
   border-color: #94a3b8;
 }
+.app-modal-btn-alt {
+  background: var(--surface, #ffffff);
+  border: 1px solid var(--border, #cbd5e1);
+  color: var(--text, #334155);
+}
+.app-modal-btn-alt:hover {
+  background: #f8fafc;
+  border-color: #94a3b8;
+  color: #0f172a;
+}
 .app-modal-btn-confirm {
   background: #2563eb;
   border: 1px solid #2563eb;

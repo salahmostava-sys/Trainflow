@@ -155,6 +155,12 @@ export function WorkspaceDialogs() {
               className="app-modal-btn app-modal-btn-cancel"
             ></button>
             <button
+              id="app-modal-alt"
+              type="button"
+              className="app-modal-btn app-modal-btn-alt"
+              hidden
+            ></button>
+            <button
               id="app-modal-confirm"
               type="button"
               className="app-modal-btn app-modal-btn-confirm"

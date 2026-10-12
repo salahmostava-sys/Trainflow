@@ -1155,7 +1155,42 @@ function renderCodeGrid(){
       copy:()=>Cloud.copyCode(code),select:selected=>{if(selected)selectedCodes.add(code);else selectedCodes.delete(code);updateBulkBar();},
       saveName:async name=>{const saved=await Cloud.saveVoucherName(code,name);if(saved)showToast(currentLang==='ar'?'تم حفظ اسم المتدرب':'Trainee name saved');return saved;},
       saveNotes:async notes=>{if(notes.trim())state.codeNotes[code]=notes;else delete state.codeNotes[code];await saveState();},
-      unmark:async()=>{delete state.usedCodes[code];if(await saveState()){renderCodeGrid();showToast(t('markRemoved'));}},
+      unmark:async()=>{
+        const isAr=currentLang==='ar';
+        let choice=true;
+        if(window.AppDialog){
+          choice=await AppDialog.confirm({
+            title:isAr?'إلغاء علامة الكود':'Unmark Voucher',
+            message:isAr
+              ?`هل تريد إزالة الكود (${code}) من صفحة المتدربين أيضًا، أم الاكتفاء بإلغاء علامة الاستخدام فقط؟`
+              :`Would you like to remove code (${code}) from the trainees worksheet, or only unmark it?`,
+            confirmText:isAr?'إزالة من المتدربين وإلغاء العلامة':'Remove from Trainees & Unmark',
+            altText:isAr?'إلغاء العلامة فقط':'Unmark Only',
+            cancelText:isAr?'تراجع':'Cancel',
+            icon:'warning'
+          });
+        }else{
+          choice=confirm(isAr?`إلغاء علامة الكود (${code})؟ موافق للإزالة من المتدربين أيضاً.`:`Unmark code (${code})?`);
+        }
+        if(!choice)return;
+        delete state.usedCodes[code];
+        if(state.codeUseTimes)delete state.codeUseTimes[code];
+        if(!await saveState())return;
+        let removedFromSheet=false;
+        if(choice==='confirm'||choice===true){
+          if(typeof Trainees!=='undefined'&&Trainees.removeCode){
+            removedFromSheet=await Trainees.removeCode(code);
+          }
+        }
+        renderCodeGrid();
+        if(choice==='confirm'||choice===true){
+          showToast(removedFromSheet
+            ?(isAr?'تم إلغاء العلامة وإزالة الكود من صفحة المتدربين':'Mark removed and code cleared from trainees sheet')
+            :(isAr?'تم إلغاء العلامة (الكود غير موجود في صفحة المتدربين)':'Mark removed (code was not in trainees sheet)'));
+        }else{
+          showToast(t('markRemoved'));
+        }
+      },
       remove:async()=>{if(!await confirmDelete(t('confirmDeleteCode')(code)))return;
         state.codesByCategory[activeCategory]=state.codesByCategory[activeCategory].filter(item=>item!==code);delete state.usedCodes[code];delete state.codeNotes[code];selectedCodes.delete(code);
         if(await saveState()){renderCodeGrid();showToast(t('codeDeleted'));}

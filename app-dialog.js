@@ -13,6 +13,18 @@
 
   function ensureDialogElements() {
     let dialog = document.getElementById('app-modal-dialog');
+    let altBtn = document.getElementById('app-modal-alt');
+    if (dialog && !altBtn) {
+      altBtn = document.createElement('button');
+      altBtn.id = 'app-modal-alt';
+      altBtn.type = 'button';
+      altBtn.className = 'app-modal-btn app-modal-btn-alt';
+      altBtn.hidden = true;
+      const actions = dialog.querySelector('.app-modal-actions');
+      if (actions) {
+        actions.insertBefore(altBtn, actions.lastElementChild);
+      }
+    }
     return {
       dialog,
       iconBadge: document.getElementById('app-modal-icon-badge'),
@@ -24,6 +36,7 @@
       unit: document.getElementById('app-modal-unit'),
       error: document.getElementById('app-modal-error'),
       cancelBtn: document.getElementById('app-modal-cancel'),
+      altBtn: altBtn || document.getElementById('app-modal-alt'),
       confirmBtn: document.getElementById('app-modal-confirm')
     };
   }
@@ -109,8 +122,16 @@
         els.confirmBtn.className = 'app-modal-btn ' + (options.danger ? 'app-modal-btn-danger' : 'app-modal-btn-confirm');
         els.cancelBtn.textContent = options.cancelText || defaultCancel;
 
+        if (options.altText && els.altBtn) {
+          els.altBtn.textContent = options.altText;
+          els.altBtn.hidden = false;
+          els.altBtn.onclick = () => closeDialog('alt');
+          els.confirmBtn.onclick = () => closeDialog('confirm');
+        } else {
+          if (els.altBtn) els.altBtn.hidden = true;
+          els.confirmBtn.onclick = () => closeDialog(true);
+        }
         els.cancelBtn.onclick = () => closeDialog(false);
-        els.confirmBtn.onclick = () => closeDialog(true);
 
         els.dialog.oncancel = e => {
           e.preventDefault();
@@ -184,6 +205,7 @@
 
         // Show prompt body
         els.body.hidden = false;
+        if (els.altBtn) els.altBtn.hidden = true;
         els.error.hidden = true;
         els.error.textContent = '';
 

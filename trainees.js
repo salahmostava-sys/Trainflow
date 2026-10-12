@@ -1498,8 +1498,72 @@ const Trainees=(()=>{
     finally{codeBusy=false;$('sheet-code-workspace').inert=false;if($('sheet-owner'))$('sheet-owner').disabled=false;}
   }
   function reset(){sheetTools?.close();sheetId=FIRST_SHEET;worksheets=[];worksheetBusy=false;prometricTools?.reset();examResultTools?.reset();certificateTools?.reset();setExpandedView(false);excelTools?.closeFiles();closeDuplicateDetails();closeContextMenu();$('sheet-find-dialog')?.close();clearTimeout(timer);epoch++;owner='';cells=[];formatting=D.defaultFormat();loaded=false;loading=false;editing=null;history=[];future=[];revision=savedRevision=0;if(initialized){$('sheet-cell-content').value='';$('sheet-cell-content').title='';if($('sheet-selection-stats')){$('sheet-selection-stats').textContent='';$('sheet-selection-stats').hidden=true;}render();if($('sheet-owner'))window.WorkspaceViews.options($('sheet-owner'),{options:[]});window.WorkspaceViews.clear($('sheet-code-list'));$('sheet-workspace').inert=true;}}
-  function suspend(){prometricTools?.reset();examResultTools?.reset();certificateTools?.reset();setExpandedView(false);excelTools?.closeFiles();closeDuplicateDetails();closeContextMenu();$('sheet-find-dialog')?.close();clearTimeout(timer);}
-  return {open,translate,hasDraft,flush,reset,suspend,savePosition,reportColumnLabels:()=>allLabels().slice(0,DISPLAY_COLS).map(pair=>tr(...pair))};
+  const cleanVoucher=s=>String(s||'').trim().toUpperCase().replace(/[\s-]/g,'');
+  function hasCode(code){
+    const target=String(code||'').trim().toUpperCase();
+    if(!target||!cells)return false;
+    const targetClean=cleanVoucher(target);
+    return cells.some(row=>{
+      if(!row)return false;
+      const cellVal=String(row[0]||'').trim().toUpperCase();
+      return cellVal===target||(cellVal&&cleanVoucher(cellVal)===targetClean);
+    });
+  }
+  async function removeCode(code){
+    const target=String(code||'').trim().toUpperCase();
+    if(!target)return false;
+    const targetClean=cleanVoucher(target);
+    const activeOwner=owner||Cloud.userId();
+    if(!activeOwner)return false;
+    if(!loaded){
+      try{await switchOwner(activeOwner);}catch{}
+    }
+    if(!loaded||!cells)return false;
+    let modified=false;
+    const next=cells.map(row=>{
+      if(!row)return row;
+      const cellVal=String(row[0]||'').trim().toUpperCase();
+      if(cellVal===target||(cellVal&&cleanVoucher(cellVal)===targetClean)){
+        modified=true;
+        const copy=[...row];
+        copy[0]='';
+        return copy;
+      }
+      return row;
+    });
+    if(modified){
+      change(next,true);
+      await flush();
+      return true;
+    }
+    if(worksheets&&worksheets.length>1&&activeOwner){
+      for(const ws of worksheets){
+        if(ws.sheet_id===sheetId)continue;
+        try{
+          const sheetData=await Cloud.readTrainees(activeOwner,ws.sheet_id);
+          const normalized=D.normalize(sheetData.cells);
+          let wsModified=false;
+          const updated=normalized.map(row=>{
+            if(!row)return row;
+            const cellVal=String(row[0]||'').trim().toUpperCase();
+            if(cellVal===target||(cellVal&&cleanVoucher(cellVal)===targetClean)){
+              wsModified=true;
+              const copy=[...row];
+              copy[0]='';
+              return copy;
+            }
+            return row;
+          });
+          if(wsModified){
+            await Cloud.saveTrainees(activeOwner,D.storage(updated),sheetData.version,D.format(sheetData.format),ws.sheet_id);
+            return true;
+          }
+        }catch{}
+      }
+    }
+    return false;
+  }
+  return {open,translate,hasDraft,flush,reset,suspend,savePosition,reportColumnLabels:()=>allLabels().slice(0,DISPLAY_COLS).map(pair=>tr(...pair)),hasCode,removeCode};
 })();
 window.TRAINFLOW_ENGINE = Trainees;
 Trainees.translate();
