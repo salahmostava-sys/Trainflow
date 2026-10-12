@@ -49,11 +49,13 @@ const TraineeReports=(()=>{
     const duplicateIds=worksheet.duplicateIds;
     const direction=formatting.direction||'rtl';
     const table=document.createElement('table');
+    table.setAttribute('border','1');
     table.style.borderCollapse='collapse';
     table.style.direction=direction;
     table.style.fontFamily='Calibri, Arial, sans-serif';
     table.style.fontSize='11pt';
     table.style.fontWeight='700';
+    table.style.border='1px solid #000000';
     for(const {row,index} of records){
       const tr=document.createElement('tr');
       table.appendChild(tr);
