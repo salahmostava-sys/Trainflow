@@ -67,8 +67,8 @@ const TraineeReports=(()=>{
         const hasName=Boolean(row[2]?.trim()||row[3]?.trim());
         const codeMissing=c===0&&hasName&&!value.trim();
         td.textContent=value;
-        const bg=duplicate?'#ffc7ce':codeMissing?'#ffc7ce':result?.[0]||style.bg||'#ffffff';
-        const color=duplicate?'#9c0006':codeMissing?'#9c0006':result?.[1]||style.color||'#000000';
+        const bg=duplicate?'#ffc7ce':codeMissing?'#ff0000':result?.[0]||style.bg||'#ffffff';
+        const color=duplicate?'#9c0006':codeMissing?'#ffffff':result?.[1]||style.color||'#000000';
         td.style.backgroundColor=bg;
         td.style.color=color;
         td.style.fontWeight='700';
