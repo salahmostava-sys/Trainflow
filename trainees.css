@@ -147,7 +147,8 @@
 .sheet-report-panel{display:flex!important;flex-wrap:wrap;align-items:center;gap:8px;padding:10px 12px}
 .sheet-report-actions{display:flex;flex:1 1 100%;min-width:0;flex-wrap:nowrap;align-items:center;gap:6px;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:thin;padding-bottom:3px}
 .sheet-report-actions>*{flex-shrink:0;white-space:nowrap}
-#sheet-workspace .sheet-report-actions>button{font-size:var(--type-caption);padding:7px 10px;min-height:var(--control-compact)}
+#sheet-workspace .sheet-report-actions>button,#sheet-workspace .sheet-report-actions .sheet-prometric-actions button{font-size:var(--type-caption);padding:7px 10px;min-height:var(--control-compact);height:var(--control-compact);box-sizing:border-box}
+#sheet-workspace .sheet-report-actions .sheet-prometric-actions{display:inline-flex;align-items:center;gap:6px}
 #sheet-workspace>.sheet-tools.sheet-report-panel{padding:8px 12px;gap:5px;align-items:center}
 .sheet-report-panel>p{flex-basis:100%;margin:0;font-size:12px;white-space:pre-line}
 .sheet-report-panel>p:empty{display:none}
@@ -637,7 +638,7 @@ body.sheet-expanded-open #workspace-sidebar,body.sheet-expanded-open #sidebar-ba
 }
 @media (max-width: 760px) {
   .sheet-report-actions{flex-wrap:wrap;overflow-x:visible}
-  .sheet-report-actions>button{flex:1 1 auto;max-width:100%}
+  .sheet-report-actions>button,.sheet-report-actions .sheet-prometric-actions button{flex:1 1 auto;max-width:100%}
   #sheet-workspace .sheet-clean-toolbar .sheet-ribbon-top .sheet-ribbon-actions{display:flex;flex:1 1 100%;flex-wrap:wrap;overflow:visible}
   #sheet-workspace .sheet-prometric-actions{flex:1 1 100%;flex-wrap:wrap}
 }
@@ -645,7 +646,7 @@ body.sheet-expanded-open #workspace-sidebar,body.sheet-expanded-open #sidebar-ba
   #panel-trainees #sheet-workspace .sheet-grid .sheet-rownum{width:45px;min-width:45px;padding:0!important}
   #panel-trainees #sheet-workspace .sheet-grid :is(th,td)[data-col="11"]{--col-w:max(45px,calc(var(--col-w-11,85px) * var(--sheet-zoom,1)))}
   #panel-trainees #sheet-workspace .sheet-clean-toolbar :is(button,select),
-  #panel-trainees #sheet-workspace .sheet-report-actions>button{
+  #panel-trainees #sheet-workspace .sheet-report-actions :is(button,select){
     min-width:44px;min-height:44px;height:44px;touch-action:manipulation;
   }
   #sheet-workspace :is(.sheet-style-group,.sheet-align-group,.sheet-valign-group){height:auto}

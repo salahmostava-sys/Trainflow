@@ -1,6 +1,7 @@
 import { TraineeDetailDialogs } from "./TraineeDetails";
 import { SheetRibbon } from "./SheetRibbon";
 import { SheetToolDialogs } from "./SheetToolDialogs";
+import { ReportPanel } from "./ReportViews";
 export function TraineesScreen({ active = false }: { active?: boolean }) {
   return (
     <>
@@ -35,7 +36,9 @@ export function TraineesScreen({ active = false }: { active?: boolean }) {
           <section
             id="sheet-report-panel"
             className="sheet-tools sheet-report-panel"
-          />
+          >
+            <ReportPanel />
+          </section>
           <SheetRibbon />
           <div className="sheet-filters">
             <div className="sheet-search-group">

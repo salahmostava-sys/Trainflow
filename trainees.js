@@ -486,7 +486,7 @@ const Trainees=(()=>{
   };
   function init(){
     if(initialized)return;initialized=true;
-    setTimeout(()=>TraineeReports.mount(()=>({owner,sheetId,rows:cells,loaded:loaded&&!loading&&!worksheetBusy}),commitEdit),0);
+    setTimeout(()=>TraineeReports.mount(()=>({owner,sheetId,rows:cells,formatting,duplicateIds,getCellAlign,loaded:loaded&&!loading&&!worksheetBusy}),commitEdit),0);
 
     $('sheet-row-size').value=String(rowSize);$('sheet-row-size').onchange=()=>setRowSize($('sheet-row-size').value);
     const zoomTools=$('sheet-workspace').querySelector('.sheet-zoom-tools');

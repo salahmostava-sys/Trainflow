@@ -4,7 +4,6 @@ export function SheetRibbon() {
     <div className="sheet-tools sheet-clean-toolbar">
       <div className="sheet-ribbon-top">
         <div className="sheet-ribbon-actions">
-          <button type="button" id="sheet-certificate-open" />
           <button
             id="sheet-ribbon-toggle"
             type="button"
@@ -55,10 +54,6 @@ export function SheetRibbon() {
           <button type="button" id="sheet-reload">
             {"إعادة تحميل"}
           </button>
-          <div className="sheet-prometric-actions">
-            <button type="button" id="sheet-prometric-open" />
-            <button type="button" id="sheet-exam-open" />
-          </div>
         </div>
         <span
           className="sheet-status"

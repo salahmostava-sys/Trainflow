@@ -30,11 +30,70 @@ const TraineeReports=(()=>{
     return Number.isNaN(+parsed)?'':new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Riyadh',year:'numeric',month:'2-digit',day:'2-digit'}).format(parsed);
   };
   const voucherKey=code=>String(code||'').trim().toUpperCase();
-  function dailyRows(worksheet,date){
+  function dailyRecords(worksheet,date){
     const codes=Cloud.codeSnapshot().filter(code=>code.owner_id===worksheet.owner&&
       (code.used_at?day(code.used_at):String(code.used_on||'').split('/').reverse().join('-'))===date);
     const vouchers=new Set(codes.map(code=>voucherKey(code.code)));
-    return worksheet.rows.filter(row=>vouchers.has(voucherKey(row[0])));
+    const matched=[];
+    (worksheet.rows||[]).forEach((row,index)=>{
+      if(vouchers.has(voucherKey(row[0]))) matched.push({row,index});
+    });
+    return matched;
+  }
+  function dailyRows(worksheet,date){
+    return dailyRecords(worksheet,date).map(r=>r.row);
+  }
+  function reportHtml(records,columns,worksheet){
+    const formatting=worksheet.formatting||{};
+    const styles=formatting.styles||{};
+    const duplicateIds=worksheet.duplicateIds;
+    const direction=formatting.direction||'rtl';
+    const defaultFont=typeof TraineeData!=='undefined'&&TraineeData.DEFAULT_FONT?.family?TraineeData.DEFAULT_FONT.family:'Arial, sans-serif';
+    const baseFontSize=formatting.fontSize||13;
+    const table=document.createElement('table');
+    table.style.borderCollapse='collapse';
+    table.style.direction=direction;
+    for(const {row,index} of records){
+      const tr=document.createElement('tr');
+      table.appendChild(tr);
+      for(const c of columns){
+        const td=document.createElement('td');
+        tr.appendChild(td);
+        const value=row[c]||'';
+        const style=styles[index+':'+c]||{};
+        const result=c===11?({'ناجح':['#00b050','#ffffff'],'راسب':['#ff0000','#ffffff'],'لم يدخل':['#ffff00','#000000']}[value]):null;
+        const duplicate=c===4&&duplicateIds&&(typeof duplicateIds.has==='function'?duplicateIds.has(typeof TraineeData!=='undefined'?TraineeData.idKey(value):String(value).trim()):false);
+        td.textContent=value;
+        const bg=duplicate?'#ffc7ce':result?.[0]||style.bg||'#ffffff';
+        const color=duplicate?'#9c0006':result?.[1]||style.color||'#16324f';
+        td.style.backgroundColor=bg;
+        td.style.color=color;
+        td.style.fontWeight=style.bold||result?'700':'400';
+        if(style.italic)td.style.fontStyle='italic';
+        if(style.underline||style.strike)td.style.textDecoration=[style.underline?'underline':'',style.strike?'line-through':''].filter(Boolean).join(' ');
+        td.style.fontSize=(style.size||baseFontSize)+'px';
+        td.style.fontFamily=style.font||defaultFont;
+        td.style.border='1px solid #d9dee0';
+        td.style.padding='6px 10px';
+        const align=worksheet.getCellAlign?worksheet.getCellAlign(index,c):style.align;
+        td.style.textAlign=align||(direction==='rtl'?'right':'left');
+        td.style.verticalAlign=style.valign||'middle';
+        td.style.whiteSpace=style.wrap===false?'nowrap':'pre-wrap';
+      }
+    }
+    return table.outerHTML;
+  }
+  async function copyReportData(text,html){
+    let copied=false;
+    if(navigator.clipboard?.write&&typeof ClipboardItem!=='undefined')try{
+      await navigator.clipboard.write([new ClipboardItem({
+        'text/plain':new Blob([text],{type:'text/plain'}),
+        'text/html':new Blob([html],{type:'text/html'})
+      })]);
+      copied=true;
+    }catch{}
+    if(!copied)copied=await copyText(text);
+    return copied;
   }
   async function copyReport({kind,source,commitEdit,date,status}){
     commitEdit();
@@ -43,16 +102,18 @@ const TraineeReports=(()=>{
       status.textContent=tr('انتظر تحميل الجدول واختر تاريخ التقرير أولًا.','Wait for the worksheet to load and choose a report date.');
       return;
     }
-    const rows=dailyRows(worksheet,date).filter(row=>kind==='operations'||row[11]==='ناجح');
-    if(!rows.length){
+    const records=dailyRecords(worksheet,date).filter(({row})=>kind==='operations'||row[11]==='ناجح');
+    if(!records.length){
       status.textContent=tr('لا توجد بيانات لهذا التقرير في التاريخ المختار.','No records for this report on the selected date.');
       return;
     }
     const columns=preferences()[kind];
     try{
-      const copied=await copyText(TraineeData.tsv(rows.map(row=>columns.map(column=>String(row[column]||'')))));
+      const tsv=TraineeData.tsv(records.map(({row})=>columns.map(column=>String(row[column]||''))));
+      const html=reportHtml(records,columns,worksheet);
+      const copied=await copyReportData(tsv,html);
       status.textContent=copied
-        ?tr('تم نسخ ','Copied ')+rows.length+tr(' صف — يمكنك اللصق مباشرة في التقرير.',' rows — paste directly into your report.')
+        ?tr('تم نسخ ','Copied ')+records.length+tr(' صف — يمكنك اللصق مباشرة في التقرير.',' rows — paste directly into your report.')
         :tr('تعذر نسخ البيانات. حاول مجددًا.','Could not copy data. Please retry.');
     }catch{
       status.textContent=tr('تعذر نسخ البيانات. حاول مجددًا.','Could not copy data. Please retry.');
@@ -60,7 +121,7 @@ const TraineeReports=(()=>{
   }
   function mount(source,commitEdit){
     reportPanel=document.getElementById('sheet-report-panel');
-    window.WorkspaceViews.reportPanel(reportPanel);
+    if(!reportPanel.querySelector('.sheet-report-actions'))window.WorkspaceViews.reportPanel(reportPanel);
     const date=reportPanel.querySelector('[data-field="date"]'),status=reportPanel.querySelector('p');
     date.value=day(new Date());
     date.onchange=()=>{status.textContent='';};
