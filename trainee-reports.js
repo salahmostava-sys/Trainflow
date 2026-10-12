@@ -9,7 +9,7 @@ const TraineeReports=(()=>{
     return Object.fromEntries(Object.keys(defaults).map(kind=>{
       const indexes=saved?.[kind];
       const valid=Array.isArray(indexes)&&indexes.length&&indexes.every(column=>Number.isInteger(column)&&column>=0&&column<20);
-      return [kind,valid?[...new Set(indexes)].sort((left,right)=>left-right):defaults[kind]];
+      return [kind,valid?[...new Set(indexes)]:defaults[kind]];
     }));
   }
   function setupSettings(){
@@ -63,9 +63,11 @@ const TraineeReports=(()=>{
         const style=styles[index+':'+c]||{};
         const result=c===11?({'ناجح':['#00b050','#ffffff'],'راسب':['#ff0000','#ffffff'],'لم يدخل':['#ffff00','#000000']}[value]):null;
         const duplicate=c===4&&duplicateIds&&(typeof duplicateIds.has==='function'?duplicateIds.has(typeof TraineeData!=='undefined'?TraineeData.idKey(value):String(value).trim()):false);
+        const hasName=Boolean(row[2]?.trim()||row[3]?.trim());
+        const codeMissing=c===0&&hasName&&!value.trim();
         td.textContent=value;
-        const bg=duplicate?'#ffc7ce':result?.[0]||style.bg||'#ffffff';
-        const color=duplicate?'#9c0006':result?.[1]||style.color||'#16324f';
+        const bg=duplicate?'#ffc7ce':codeMissing?'#ffc7ce':result?.[0]||style.bg||'#ffffff';
+        const color=duplicate?'#9c0006':codeMissing?'#9c0006':result?.[1]||style.color||'#16324f';
         td.style.backgroundColor=bg;
         td.style.color=color;
         td.style.fontWeight=style.bold||result?'700':'400';

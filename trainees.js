@@ -966,6 +966,8 @@ const Trainees=(()=>{
     if(align&&!format.centerAcross&&!format.rotation&&!(typeof format.wrap==='boolean'?format.wrap:excelView.wrap)){textStyle.display='flex';textStyle.justifyContent=align;}
     if(format.rotation){textStyle.display='inline-block';if(Math.abs(format.rotation)===90){textStyle.writingMode='vertical-rl';if(format.rotation===-90)textStyle.transform='rotate(180deg)';}else{textStyle.transform='rotate('+format.rotation+'deg)';style.height='70px';}}
     const duplicates=column===4&&duplicateIds.get(D.idKey(raw));if(duplicates)classes.push('sheet-id-duplicate');
+    const hasName=Boolean(cells[index]?.[2]?.trim()||cells[index]?.[3]?.trim());
+    if(column===0&&hasName&&!raw.trim())classes.push('sheet-code-missing');
     if(column===11&&['ناجح','راسب','لم يدخل'].includes(raw))classes.push(raw==='ناجح'?'sheet-result-pass':raw==='راسب'?'sheet-result-fail':'sheet-result-absent');
     return {raw,text:raw.startsWith('=')?String(D.formulaValue(cells,index,column,formulaCache)):raw,style,textStyle,className:classes.join(' '),align,
       duplicateLabel:duplicates?duplicates.length+'×':undefined,
@@ -1316,6 +1318,7 @@ const Trainees=(()=>{
     if(contentInput){render();return;}
     duplicateIds=D.duplicates(cells);decorateCell(edit.el,edit.index,edit.column);
     if(edit.column===4){$('sheet-grid').querySelectorAll('td[data-col="4"]').forEach(td=>decorateCell(td,view[+td.dataset.v],4));}
+    if(edit.column===2||edit.column===3){const codeTd=$('sheet-grid').querySelector('td[data-v="'+cursor.r+'"][data-col="0"]');if(codeTd)decorateCell(codeTd,edit.index,0);}
     paint();
     if(forceDraw||pendingRender)queueDraw(true);
   }
@@ -1362,8 +1365,9 @@ const Trainees=(()=>{
       for(const c of cols){
         const td=node('td');row.append(td);if(!isSelected(r,c))continue;
         const value=cells[idx]?.[c]||'',style=formatting.styles[idx+':'+c]||{},result=c===11?({'ناجح':['#00b050','#ffffff'],'راسب':['#ff0000','#ffffff'],'لم يدخل':['#ffff00','#000000']}[value]):null,duplicate=c===4&&duplicateIds.has(D.idKey(value));
+        const hasName=Boolean(cells[idx]?.[2]?.trim()||cells[idx]?.[3]?.trim()),codeMissing=c===0&&hasName&&!value.trim();
         td.textContent=value;if(wholeRows)continue;
-        Object.assign(td.style,{backgroundColor:duplicate?'#ffc7ce':result?.[0]||style.bg||'#ffffff',color:duplicate?'#9c0006':result?.[1]||style.color||'#16324f',fontWeight:style.bold||result?'700':'400',fontSize:(style.size||formatting.fontSize)+'px',fontFamily:style.font||D.DEFAULT_FONT.family,fontStyle:style.italic?'italic':'normal',textDecoration:[style.underline?'underline':'',style.strike?'line-through':''].filter(Boolean).join(' ')||'none',textAlign:getCellAlign(idx,c)||(formatting.direction==='rtl'?'right':'left'),verticalAlign:style.valign||'middle',whiteSpace:style.wrap===false?'nowrap':'pre-wrap',direction:formatting.direction,textIndent:(style.indent||0)*8+'px'});
+        Object.assign(td.style,{backgroundColor:duplicate?'#ffc7ce':codeMissing?'#ffc7ce':result?.[0]||style.bg||'#ffffff',color:duplicate?'#9c0006':codeMissing?'#9c0006':result?.[1]||style.color||'#16324f',fontWeight:style.bold||result?'700':'400',fontSize:(style.size||formatting.fontSize)+'px',fontFamily:style.font||D.DEFAULT_FONT.family,fontStyle:style.italic?'italic':'normal',textDecoration:[style.underline?'underline':'',style.strike?'line-through':''].filter(Boolean).join(' ')||'none',textAlign:getCellAlign(idx,c)||(formatting.direction==='rtl'?'right':'left'),verticalAlign:style.valign||'middle',whiteSpace:style.wrap===false?'nowrap':'pre-wrap',direction:formatting.direction,textIndent:(style.indent||0)*8+'px'});
         td.style.border='1px solid #d9dee0';
       }
     }
