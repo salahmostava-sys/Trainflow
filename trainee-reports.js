@@ -48,11 +48,12 @@ const TraineeReports=(()=>{
     const styles=formatting.styles||{};
     const duplicateIds=worksheet.duplicateIds;
     const direction=formatting.direction||'rtl';
-    const defaultFont=typeof TraineeData!=='undefined'&&TraineeData.DEFAULT_FONT?.family?TraineeData.DEFAULT_FONT.family:'Arial, sans-serif';
-    const baseFontSize=formatting.fontSize||13;
     const table=document.createElement('table');
     table.style.borderCollapse='collapse';
     table.style.direction=direction;
+    table.style.fontFamily='Calibri, Arial, sans-serif';
+    table.style.fontSize='11pt';
+    table.style.fontWeight='700';
     for(const {row,index} of records){
       const tr=document.createElement('tr');
       table.appendChild(tr);
@@ -67,20 +68,19 @@ const TraineeReports=(()=>{
         const codeMissing=c===0&&hasName&&!value.trim();
         td.textContent=value;
         const bg=duplicate?'#ffc7ce':codeMissing?'#ffc7ce':result?.[0]||style.bg||'#ffffff';
-        const color=duplicate?'#9c0006':codeMissing?'#9c0006':result?.[1]||style.color||'#16324f';
+        const color=duplicate?'#9c0006':codeMissing?'#9c0006':result?.[1]||style.color||'#000000';
         td.style.backgroundColor=bg;
         td.style.color=color;
-        td.style.fontWeight=style.bold||result?'700':'400';
+        td.style.fontWeight='700';
         if(style.italic)td.style.fontStyle='italic';
         if(style.underline||style.strike)td.style.textDecoration=[style.underline?'underline':'',style.strike?'line-through':''].filter(Boolean).join(' ');
-        td.style.fontSize=(style.size||baseFontSize)+'px';
-        td.style.fontFamily=style.font||defaultFont;
-        td.style.border='1px solid #d9dee0';
-        td.style.padding='6px 10px';
-        const align=worksheet.getCellAlign?worksheet.getCellAlign(index,c):style.align;
-        td.style.textAlign=align||(direction==='rtl'?'right':'left');
-        td.style.verticalAlign=style.valign||'middle';
-        td.style.whiteSpace=style.wrap===false?'nowrap':'pre-wrap';
+        td.style.fontSize='11pt';
+        td.style.fontFamily='Calibri, Arial, sans-serif';
+        td.style.border='1px solid #000000';
+        td.style.padding='4px 8px';
+        td.style.textAlign='center';
+        td.style.verticalAlign='middle';
+        td.style.whiteSpace=value.includes('\n')?'pre-wrap':'nowrap';
       }
     }
     return table.outerHTML;
