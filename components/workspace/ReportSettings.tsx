@@ -178,8 +178,8 @@ export function ReportSettings(props: ReportSettingsProps) {
       </p>
       <p>
         {tr(
-          "يُنسخ محتوى الخلايا بدون عناوين بالترتيب المحدد لكل تقرير أدناه. يمكنك سحب الصفوف أو استخدام أزرار التحريك (▲ ▼) لتقديم أي عمود في البداية كالجوال أو تأخيره حسب رغبتك.",
-          "Cell values are copied without headers in the chosen order below. You can drag rows or use the arrow buttons (▲ ▼) to place any column first, such as phone number, or adjust the order as desired."
+          "يُنسخ محتوى الخلايا بدون عناوين بالترتيب المحدد لكل تقرير أدناه. يمكنك سحب الصفوف وإفلاتها لتقديم أي عمود في البداية كالجوال أو تأخيره حسب رغبتك.",
+          "Cell values are copied without headers in the chosen order below. You can drag and drop rows to place any column first, such as phone number, or adjust the order as desired."
         )}
       </p>
       <form onSubmit={save}>
@@ -271,36 +271,6 @@ export function ReportSettings(props: ReportSettingsProps) {
                         </svg>
                       </span>
 
-                      <div className="sheet-report-order-buttons">
-                        <button
-                          type="button"
-                          className="sheet-report-order-btn"
-                          title={tr("تحريك لأعلى", "Move up")}
-                          aria-label={tr("تحريك لأعلى", "Move up")}
-                          disabled={saving || index === 0}
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            moveColumn(kind, index, index - 1);
-                          }}
-                        >
-                          ▲
-                        </button>
-                        <button
-                          type="button"
-                          className="sheet-report-order-btn"
-                          title={tr("تحريك لأسفل", "Move down")}
-                          aria-label={tr("تحريك لأسفل", "Move down")}
-                          disabled={saving || index === order[kind].length - 1}
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            moveColumn(kind, index, index + 1);
-                          }}
-                        >
-                          ▼
-                        </button>
-                      </div>
 
                       <label className="sheet-report-column-label">
                         <input

@@ -159,16 +159,14 @@
 .sheet-report-column-groups fieldset{min-width:0;border:1px solid var(--border);border-radius:10px;padding:16px}
 .sheet-report-column-groups legend{font-weight:700;padding:0 6px}
 .sheet-report-column-options{display:grid;gap:6px}
-.sheet-report-column-row{display:flex;align-items:center;gap:8px;padding:3px 6px;border-radius:8px;border:1px solid transparent;background:transparent;transition:background .15s,border-color .15s}
+.sheet-report-column-row{display:flex;align-items:center;gap:10px;padding:5px 8px;border-radius:8px;border:1px solid transparent;background:transparent;cursor:grab;transition:background .15s,border-color .15s,box-shadow .15s}
 .sheet-report-column-row:hover{background:#f8fafc;border-color:#e2e8f0}
-.sheet-report-column-row.sheet-row-drag-over{border-color:var(--blue);background:#eff6ff}
-.sheet-report-column-row.sheet-row-dragging{opacity:.4;border:1px dashed var(--blue)}
-.sheet-report-drag-handle{cursor:grab;color:#94a3b8;display:flex;align-items:center;justify-content:center;padding:2px;user-select:none;flex-shrink:0}
+.sheet-report-column-row:active{cursor:grabbing}
+.sheet-report-column-row.sheet-row-drag-over{border-color:var(--blue);background:#eff6ff;box-shadow:0 0 0 1px var(--blue)}
+.sheet-report-column-row.sheet-row-dragging{opacity:.35;border:1px dashed var(--blue);background:#f1f5f9}
+.sheet-report-drag-handle{cursor:grab;color:#94a3b8;display:flex;align-items:center;justify-content:center;padding:2px;user-select:none;flex-shrink:0;transition:color .15s}
+.sheet-report-column-row:hover .sheet-report-drag-handle{color:var(--blue)}
 .sheet-report-drag-handle:active{cursor:grabbing}
-.sheet-report-order-buttons{display:flex;flex-direction:row;gap:3px;align-items:center;flex-shrink:0}
-.sheet-report-order-btn{background:#ffffff;border:1px solid #cbd5e1;border-radius:4px;color:#475569;font-size:9px;padding:0;width:20px;height:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s,color .15s,border-color .15s}
-.sheet-report-order-btn:hover:not(:disabled){background:var(--blue);color:#ffffff;border-color:var(--blue)}
-.sheet-report-order-btn:disabled{opacity:.25;cursor:default;border-color:#e2e8f0}
 .sheet-report-column-label{display:flex;align-items:center;gap:8px;flex:1;min-height:32px;cursor:pointer;margin:0;overflow-wrap:anywhere}
 .sheet-report-column-text{display:inline-flex;align-items:center;gap:4px}
 .sheet-report-order-badge{display:inline-flex;align-items:center;justify-content:center;background:#dbeafe;color:#1e40af;font-size:11px;font-weight:700;border-radius:999px;padding:1px 7px;white-space:nowrap;margin-inline-start:auto;flex-shrink:0}
