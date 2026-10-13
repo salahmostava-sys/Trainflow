@@ -429,6 +429,10 @@
 .sheet-prometric-pagination{display:flex;align-items:center;justify-content:center;gap:12px;margin:10px 0}
 .sheet-prometric-pagination span{font-size:12px;white-space:nowrap}
 #sheet-exam-dialog{overscroll-behavior:contain}
+.sheet-exam-connection-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px;font-size:13px}
+#sheet-exam-connection{display:inline-flex;align-items:center;padding:4px 12px;border-radius:6px;background:#b91c1c;color:#fff;font-weight:700;white-space:nowrap}
+#sheet-exam-connection[data-connected="true"]{background:#15803d}
+#sheet-exam-download{color:var(--blue);text-underline-offset:3px}
 .sheet-exam-table{width:100%;font-variant-numeric:tabular-nums}
 @media(max-width:600px){
   .sheet-exam-table,.sheet-exam-table tbody,.sheet-exam-table tr{display:block}

@@ -56,7 +56,11 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
     await page.waitForFunction(()=>document.getElementById('sheet-status').textContent==='تم الحفظ');
     await page.locator('td[data-v="0"][data-col="3"]').click();await page.locator('td[data-v="2"][data-col="3"]').click({modifiers:['Shift']});
     await page.locator('#sheet-exam-open').click();await page.waitForFunction(()=>!document.getElementById('sheet-exam-start').disabled);
-    assert.match(await page.locator('#sheet-exam-summary').textContent(),/2.*1/);
+    assert.equal(await page.locator('#sheet-exam-connection').textContent(),'متصل');
+    assert.equal(await page.locator('#sheet-exam-connection').evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(21, 128, 61)');
+    assert.equal(await page.locator('#sheet-exam-download').isVisible(),false);
+    assert.equal(await page.locator('#sheet-exam-preview tbody tr').count(),3);
+    await page.screenshot({path:path.join(artifacts,'prometric-results-ready.png')});
     await page.locator('#sheet-exam-start').click();
     await page.waitForFunction(()=>document.getElementById('sheet-exam-results').textContent.includes('61%'),null,{timeout:30000});
     const pending=await worker.evaluate(()=>chrome.storage.local.get('ibtaExamRun'));

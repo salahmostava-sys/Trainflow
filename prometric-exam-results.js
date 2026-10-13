@@ -28,14 +28,17 @@ const TraineeExamResults=(()=>{
     }
     function draw(){
       if(!dialog.open)return;
-      const mismatch=connected&&!!version&&version!==requiredVersion;
-      control('connection').textContent=mismatch?tr('حدّث إضافة Prometric: الإصدار المثبت '+version+'، والإصدار المطلوب '+requiredVersion+'.','Update Prometric extension: installed '+version+', required '+requiredVersion+'.'):connected?(supported?tr('الإضافة متصلة','Extension connected'):reason('UPDATE_EXTENSION')):reason('DISCONNECTED');
-      control('connection').dataset.update=String(mismatch);
+      const needsUpdate=!!version&&(version!==requiredVersion||!supported),ready=connected&&supported&&!needsUpdate;
+      control('connection').textContent=ready?tr('متصل','Connected'):tr('غير متصل','Disconnected');
+      control('connection').dataset.connected=String(ready);
+      control('connection').dataset.update=String(needsUpdate);
+      control('download').hidden=!needsUpdate;
       const remote=!!plan?.items.length,absent=plan?.skipped.some(account=>account.reason==='code');
-      control('start').disabled=working||busy||remote&&(!connected||!supported)||!remote&&!absent||!same(h.state());control('stop').disabled=working||!run?.items.some(account=>account.status==='pending');control('recover').hidden=!recoverable;control('recover').disabled=working;control('refresh').disabled=working;
-      control('summary').textContent=plan?tr('جاهز للجلب: ','Ready: ')+plan.items.length+tr(' · تم تخطي: ',' · Skipped: ')+plan.skipped.length:'';
+      control('start').disabled=working||busy||remote&&!ready||!remote&&!absent||!same(h.state());control('stop').disabled=working||!run?.items.some(account=>account.status==='pending');control('recover').hidden=!recoverable;control('recover').disabled=working;control('refresh').disabled=working;
       table(control('preview'),plan?[...plan.items.map(account=>({...account,status:tr('جاهز لجلب النتيجة','Ready to fetch result')})),...plan.skipped.map(account=>({...account,id:'skip-'+account.row,status:reason(account.reason)}))].sort((a,b)=>a.row-b.row).map(account=>({id:account.id,row:account.row,name:account.name,status:account.status,score:'',exam:h.state().cells[account.row]?.[7]||'',date:''})):[]);
       control('status').textContent=lastError||(Number.isInteger(run?.examTab)&&run.items.at(-1)?.status==='failed'?tr('تبويب آخر حساب فشل متروك مفتوحًا؛ راجعه ثم حدد الصف وأعد الجلب.','The last failed account tab remains open; inspect it, then select the row and retry.'): '');
+      control('status').hidden=!control('status').textContent;
+      control('results').hidden=!run?.items.length;
       table(control('results'),run?.items.map(account=>({id:account.id,row:account.row,name:account.name,score:account.score||'',exam:account.examTitle||'',date:account.testDate||'',status:account.status==='done'&&blocked.has(account.id)?reason(blocked.get(account.id)):account.status==='saved'?tr('تم الحفظ: ','Saved: ')+account.result:account.status==='done'?tr('ينتظر الحفظ: ','Awaiting save: ')+account.result:account.status==='pending'?tr('جارٍ الجلب / ينتظر دوره','Fetching / queued'):account.status==='reviewed'?tr('تمت المراجعة دون كتابة','Reviewed without writing'):reason(account.error),dismiss:account.status==='done'&&blocked.has(account.id)?{label:tr('عدم الكتابة','Do not write'),run:()=>dismiss(account.id)}:undefined}))||[]);
     }
     async function applyResults(current){
@@ -54,7 +57,7 @@ const TraineeExamResults=(()=>{
     }
     async function poll(){
       if(polling||!h.state().loaded||!h.state().user)return;polling=true;
-      try{update(await call('PING'));await applyResults(run);}catch(error){if(error.message!=='OUTDATED'){connected=false;if(dialog.open)lastError=reason(error.message);}}finally{polling=false;draw();}
+      try{update(await call('PING'));await applyResults(run);}catch(error){if(error.message!=='OUTDATED'){connected=false;if(dialog.open&&error.message!=='DISCONNECTED')lastError=reason(error.message);}}finally{polling=false;draw();}
     }
     async function start(){
       if(control('start').disabled)return;working=true;lastError='';draw();
@@ -81,7 +84,7 @@ const TraineeExamResults=(()=>{
     }
     function translate(){
       dialog.dir=currentLang==='ar'?'rtl':'ltr';
-      const labels={title:['جلب نتائج اختبارات Prometric','Fetch Prometric exam results'],open:['جلب نتائج Prometric','Fetch Prometric results'],start:['جلب النتائج للصفوف المحددة','Fetch selected results'],refresh:['تحديث الحالة','Refresh status'],stop:['إيقاف الجلب','Stop fetching'],recover:['استعادة نتائج التبويب المغلق','Recover results from a closed tab'],download:['تحميل إضافة Prometric المحدثة','Download the updated Prometric extension'],help:['حدد الصفوف أولًا. سيتم الدخول فقط للحسابات المحددة التي لها كود ويوزر وباسورد، وتُطابق النتيجة باسم الاختبار ولغته. يُحفظ ناجح أو راسب في عمود النتيجة، والنسبة في العمود التالي لـ AnyDesk ID مباشرة، وتُلوّن بالأحمر للراسب. الصفوف بدون كود تُسجل «لم يدخل» عند الجلب. فك ZIP وحدّث الإضافة من chrome://extensions ثم أعد تحميل TrainFlow.','Select rows first. Only selected accounts with a voucher, username and password will be accessed. Results must match the exam name and language. The outcome is saved in Result, and the percentage immediately after AnyDesk ID, colored red for failed results. Rows without a voucher are marked Did not attend when fetching. Extract ZIP, update the extension at chrome://extensions, then reload TrainFlow.']};
+      const labels={title:['جلب نتائج اختبارات Prometric','Fetch Prometric exam results'],open:['جلب نتائج Prometric','Fetch Prometric results'],start:['جلب النتائج للصفوف المحددة','Fetch selected results'],refresh:['تحديث الحالة','Refresh status'],stop:['إيقاف الجلب','Stop fetching'],recover:['استعادة نتائج التبويب المغلق','Recover results from a closed tab'],download:['تحديث الإضافة','Update extension']};
       for(const [name,label] of Object.entries(labels))control(name).textContent=tr(...label);control('close').setAttribute('aria-label',tr('إغلاق','Close'));draw();
     }
     function reset(){dialog.close();context=plan=run=null;blocked.clear();lastError='';for(const request of pending.values()){clearTimeout(request.timer);request.reject(Error('OUTDATED'));}pending.clear();draw();}

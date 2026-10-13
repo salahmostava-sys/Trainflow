@@ -15,6 +15,7 @@ const assert=require('node:assert/strict'),path=require('node:path'),{spawn}=req
       window.addEventListener('message',event=>{
         if(!['IBTA_PROMETRIC_APP','IBTA_PROMETRIC_EXAM_APP'].includes(event.data?.channel))return;
         const request=event.data,payload=request.payload;
+        if(request.channel==='IBTA_PROMETRIC_EXAM_APP'&&window.fixtureExamDisconnected){window.postMessage({channel:'IBTA_PROMETRIC_EXAM_EXTENSION',id:request.id,payload:{ok:false,error:'DISCONNECTED'}},location.origin);return;}
         if(payload.type==='START')window.registrationStarts.push(payload.items);
         window.postMessage({channel:request.channel==='IBTA_PROMETRIC_APP'?'IBTA_PROMETRIC_EXTENSION':'IBTA_PROMETRIC_EXAM_EXTENSION',id:request.id,payload:{ok:true,version:window.fixtureExtensionVersion,capabilities:{retake:true,examResults:true},busy:false,run:null}},location.origin);
       });
@@ -42,11 +43,20 @@ const assert=require('node:assert/strict'),path=require('node:path'),{spawn}=req
       assert.equal(await page.locator('#sheet-prometric-download').isVisible(),true,'Mismatched installed versions expose the update download');
       assert.match(await page.locator('#sheet-extension-update-download').getAttribute('href'),/trainflow-prometric\.zip/);
       await page.locator('#sheet-prometric-close').click();assert.equal(await updateNotice.isVisible(),true,'Update notice remains visible above the table');
-      await page.locator('#sheet-exam-open').click();await page.waitForFunction(version=>document.getElementById('sheet-exam-connection').textContent.includes(version),installed);
-      assert.match(await page.locator('#sheet-exam-connection').textContent(),new RegExp(requiredVersion.replaceAll('.','\\.')));
+      await page.locator('#sheet-exam-open').click();await page.waitForFunction(()=>document.getElementById('sheet-exam-connection').dataset.update==='true');
+      assert.equal(await page.locator('#sheet-exam-connection').textContent(),'غير متصل');
+      assert.equal(await page.locator('#sheet-exam-connection').evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(185, 28, 28)');
       assert.equal(await page.locator('#sheet-exam-download').isVisible(),true);await page.locator('#sheet-exam-close').click();await open(2);
     }
     await page.evaluate(version=>window.fixtureExtensionVersion=version,requiredVersion);await page.locator('#sheet-prometric-refresh').click();await updateNotice.waitFor({state:'hidden'});
+    await page.locator('#sheet-prometric-close').click();await page.locator('#sheet-exam-open').click();
+    await page.waitForFunction(()=>document.getElementById('sheet-exam-connection').textContent==='متصل');
+    assert.equal(await page.locator('#sheet-exam-download').isVisible(),false,'Reloading the current extension clears the update link');
+    await page.evaluate(()=>window.fixtureExamDisconnected=true);await page.locator('#sheet-exam-refresh').click();
+    await page.waitForFunction(()=>document.getElementById('sheet-exam-connection').textContent==='غير متصل');
+    assert.equal(await page.locator('#sheet-exam-download').isVisible(),false,'A lost connection alone does not imply an extension update');
+    assert.equal(await page.locator('#sheet-exam-status').isVisible(),false,'Connection failures show only the badge');
+    await page.evaluate(()=>window.fixtureExamDisconnected=false);await page.locator('#sheet-exam-close').click();await open(2);
     assert.match(await page.locator('#sheet-prometric-summary').textContent(),/جاهز للتسجيل: 0 · حسابات محفوظة: 1/);
     assert.equal(await preview.locator('tbody tr').getAttribute('class'),'sheet-prometric-existing-account');
     assert.notEqual(await preview.locator('tbody td').first().evaluate(el=>getComputedStyle(el).backgroundColor),'rgba(0, 0, 0, 0)');
