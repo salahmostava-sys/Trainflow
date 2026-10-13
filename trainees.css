@@ -428,22 +428,15 @@
 @media(max-width:680px){#sheet-prometric-account-records{grid-template-columns:1fr}}
 .sheet-prometric-pagination{display:flex;align-items:center;justify-content:center;gap:12px;margin:10px 0}
 .sheet-prometric-pagination span{font-size:12px;white-space:nowrap}
-#sheet-exam-dialog{overscroll-behavior:contain}
+#sheet-exam-dialog{width:fit-content;max-width:min(1000px,calc(100vw - 32px));padding:16px;overscroll-behavior:contain}
 .sheet-exam-connection-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px;font-size:13px}
 #sheet-exam-connection{display:inline-flex;align-items:center;padding:4px 12px;border-radius:6px;background:#b91c1c;color:#fff;font-weight:700;white-space:nowrap}
 #sheet-exam-connection[data-connected="true"]{background:#15803d}
 #sheet-exam-download{color:var(--blue);text-underline-offset:3px}
-.sheet-exam-table{width:100%;font-variant-numeric:tabular-nums}
-@media(max-width:600px){
-  .sheet-exam-table,.sheet-exam-table tbody,.sheet-exam-table tr{display:block}
-  .sheet-exam-table thead{display:none}
-  .sheet-exam-table tr{padding:8px;border:1px solid #d7dfe8;border-radius:8px;margin-bottom:8px}
-  #sheet-exam-dialog .sheet-exam-table td{display:flex;justify-content:space-between;gap:12px;padding:5px 0;border:0;max-width:none;white-space:normal}
-  .sheet-exam-table td::before{content:attr(data-label);color:#52647c;flex:0 0 90px;text-align:start}
-  .sheet-exam-table td span{min-width:0;overflow-wrap:anywhere;text-align:end}
-  .sheet-exam-table td:empty{display:none!important}
-  .sheet-exam-table td[data-empty="true"]{display:none!important}
-}
+.sheet-exam-table{width:max-content;min-width:100%;font-variant-numeric:tabular-nums}
+#sheet-exam-dialog .sheet-exam-table th,#sheet-exam-dialog .sheet-exam-table td{padding:5px 8px;white-space:nowrap;overflow-wrap:normal}
+#sheet-exam-dialog .sheet-dialog-footer{flex-wrap:wrap;gap:6px}
+#sheet-exam-dialog .sheet-dialog-footer button{padding:6px 10px;font-size:13px;white-space:nowrap}
 .sheet-file-preview{overflow:auto;max-height:230px;margin:12px 0}
 .sheet-file-preview table{border-collapse:collapse;font-size:12px;white-space:nowrap}
 .sheet-file-preview th,.sheet-file-preview td{padding:7px 10px;border:1px solid #d7dfe8;text-align:start}

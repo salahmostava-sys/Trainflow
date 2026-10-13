@@ -27,11 +27,12 @@ export interface ExamResultsTableProps {
 export function ExamResultsTable({headings, rows, labels}: ExamResultsTableProps) {
   const [page,setPage]=React.useState(0),lastPage=Math.max(0,Math.ceil(rows.length/50)-1),currentPage=Math.min(page,lastPage);
   if(!rows.length)return <p>{labels.empty}</p>;
+  const columns=[true,true,true,rows.some(row=>row.score),rows.some(row=>row.exam),rows.some(row=>row.date),rows.some(row=>row.dismiss)];
   return <><table className="sheet-exam-table" role="table">
-    <thead><tr>{headings.map(heading=><th key={heading} scope="col">{heading}</th>)}</tr></thead>
+    <thead><tr>{headings.map((heading,index)=>columns[index]&&<th key={heading} scope="col">{heading}</th>)}</tr></thead>
     <tbody>{rows.slice(currentPage*50,(currentPage+1)*50).map(account=><tr key={account.id} role="row">
-      {[String(account.row+1),account.name,account.status,account.score,account.exam,account.date].map((text,index)=><td key={index} data-label={headings[index]} data-empty={!text} role="cell"><span dir={index===3?'ltr':'auto'}>{text}</span></td>)}
-      <td data-label={headings[6]} role="cell">{account.dismiss && <button type="button" onClick={account.dismiss.run}>{account.dismiss.label}</button>}</td>
+      {[String(account.row+1),account.name,account.status,account.score,account.exam,account.date].map((text,index)=>columns[index]&&<td key={index} data-label={headings[index]} role="cell"><span dir={index===3?'ltr':'auto'}>{text}</span></td>)}
+      {columns[6]&&<td data-label={headings[6]} role="cell">{account.dismiss && <button type="button" onClick={account.dismiss.run}>{account.dismiss.label}</button>}</td>}
     </tr>)}</tbody>
   </table>{lastPage>0&&<div className="sheet-prometric-pagination">
     <button type="button" disabled={currentPage===0} onClick={()=>setPage(currentPage-1)}>{labels.previous}</button>

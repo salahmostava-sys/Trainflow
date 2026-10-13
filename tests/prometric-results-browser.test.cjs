@@ -81,7 +81,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
     const acknowledged=await worker.evaluate(()=>chrome.storage.local.get('ibtaExamRun'));assert.ok(acknowledged.ibtaExamRun.items.every(account=>account.status==='saved'));
     await page.screenshot({path:path.join(artifacts,'prometric-results-saved.png')});
     await page.setViewportSize({width:390,height:844});await page.screenshot({path:path.join(artifacts,'prometric-results-mobile.png')});
-    assert.equal(await page.locator('#sheet-exam-dialog').evaluate(dialog=>dialog.scrollWidth<=dialog.clientWidth),true,'Mobile report cards fit inside the dialog');
+    assert.equal(await page.locator('#sheet-exam-dialog').evaluate(dialog=>dialog.scrollWidth<=dialog.clientWidth),true,'Mobile tables scroll inside the dialog');
     await page.setViewportSize({width:1440,height:1000});
     await page.locator('#sheet-exam-close').click();await page.locator('#sheet-address').fill('N2');await page.locator('#sheet-address').press('Enter');
     assert.equal(await page.locator('td[data-v="1"][data-col="13"]').evaluate(cell=>getComputedStyle(cell).backgroundColor),'rgb(255, 0, 0)');
