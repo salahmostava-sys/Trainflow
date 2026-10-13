@@ -260,24 +260,72 @@ test('trainee details edit only AnyDesk and retain a failed save for retry',{tim
   const dialog=page.locator('#sheet-trainee-dialog'),id=dialog.getByRole('textbox',{name:'AnyDesk ID',exact:true}),save=dialog.getByRole('button',{name:'حفظ',exact:true});
   assert.equal(await dialog.locator('input,textarea,select,[contenteditable="true"]').count(),1,'AnyDesk is the only editable field');
   assert.equal(await id.inputValue(),'','Empty trailing AnyDesk is always available');
-  await id.fill('001 234 567');await save.click();
-  await page.waitForFunction(()=>uiTestDatabase.sheets['ui-admin'].cells[0][12]==='001 234 567');
-  const expected=structuredClone(original);expected[0][12]='001 234 567';
-  assert.deepEqual(await page.evaluate(()=>TraineeData.normalize(uiTestDatabase.sheets['ui-admin'].cells)),expected,'Only AnyDesk changes and leading zeros/spaces survive');
-  await dialog.locator('.sheet-detail-close').click();await open();assert.equal(await id.inputValue(),'001 234 567');
+  await id.fill('00123456789012');await id.pressSequentially('3');
+  assert.equal(await id.inputValue(),'00123456789012','The field accepts at most 14 digits');
+  const inputBox=await id.boundingBox(),saveBox=await save.boundingBox();
+  assert.ok(inputBox.width<190&&inputBox.x+inputBox.width<saveBox.x,'The compact input has Save on its right');
+  await id.press('Enter');
+  await page.waitForFunction(()=>uiTestDatabase.sheets['ui-admin'].cells[0][12]==='00123456789012');
+  await page.waitForFunction(()=>document.getElementById('toast').classList.contains('show')&&document.getElementById('toast').textContent==='تم حفظ AnyDesk ID');
+  const expected=structuredClone(original);expected[0][12]='00123456789012';
+  assert.deepEqual(await page.evaluate(()=>TraineeData.normalize(uiTestDatabase.sheets['ui-admin'].cells)),expected,'Enter saves only AnyDesk and preserves leading zeros');
+  await id.scrollIntoViewIfNeeded();await page.screenshot({path:path.join(root,'artifacts/trainee-anydesk-desktop.png')});
+  await dialog.locator('.sheet-detail-close').click();await open();assert.equal(await id.inputValue(),'00123456789012');
   await page.evaluate(()=>uiTestDatabase.saveError='NETWORK');await id.fill('009876543');await save.click();
   await dialog.getByRole('alert').waitFor({state:'visible'});
   assert.equal(await id.inputValue(),'009876543','Failed saving retains the typed ID');
-  assert.equal(await page.evaluate(()=>uiTestDatabase.sheets['ui-admin'].cells[0][12]),'001 234 567','A failed save does not report persistence');
+  assert.equal(await page.evaluate(()=>uiTestDatabase.sheets['ui-admin'].cells[0][12]),'00123456789012','A failed save does not report persistence');
   await page.evaluate(()=>uiTestDatabase.saveError='');await save.click();
   await page.waitForFunction(()=>uiTestDatabase.sheets['ui-admin'].cells[0][12]==='009876543');
   await page.setViewportSize({width:390,height:844});
   assert.ok(await dialog.evaluate(el=>el.scrollWidth<=el.clientWidth+1),'The editor fits on mobile');
   await id.scrollIntoViewIfNeeded();
+  const mobileInput=await id.boundingBox(),mobileSave=await save.boundingBox();
+  assert.ok(mobileInput.x+mobileInput.width<mobileSave.x&&Math.abs(mobileInput.y-mobileSave.y)<1,'Save remains beside the compact input on mobile: '+JSON.stringify({mobileInput,mobileSave}));
   await page.screenshot({path:path.join(root,'artifacts/trainee-anydesk-editor.png')});
   await id.fill('');await id.press('Enter');
   await page.waitForFunction(()=>!uiTestDatabase.sheets['ui-admin'].cells[0][12]);
   await dialog.locator('.sheet-detail-close').click();await open();assert.equal(await id.inputValue(),'','The existing ID can be removed');
+});
+
+for(const saveFailure of [false,true])test('Get announces a delayed claim and preserves AnyDesk typing when sheet saving '+(saveFailure?'fails':'succeeds'),{timeout:30000},async t=>{
+  const page=await openWorkspace(t);
+  await page.evaluate(async()=>{
+    uiTestDatabase.settings.payload.keycodes=[{code:'GET-KEY',title:'FIRST',lang:'Arabic',category:'Foundation'}];
+    uiTestDatabase.sheets['ui-admin']={sheet_id:'00000000-0000-0000-0000-000000000001',sheet_name:'Sheet 1',sheet_hidden:false,sheet_order:0,cells:[['','student@example.invalid','اسم المتدرب','GET STUDENT','1080424995','','','FIRST']],version:1,format:{}};
+    uiTestDatabase.codes[0].owner_id='ui-admin';
+    await Cloud.refresh();
+  });
+  await page.locator('#sheet-reload').click();await page.waitForFunction(()=>document.getElementById('sheet-status').textContent==='تم الحفظ');
+  await page.locator('td[data-v="0"][data-col="3"]').dblclick();
+  const dialog=page.locator('#sheet-trainee-dialog'),get=dialog.getByRole('button',{name:'جلب كود الاختبار',exact:true});
+  await page.evaluate(()=>{
+    uiTestDatabase.claimError='NETWORK';
+    window.uiTestTraineeClaimGate=new Promise(resolve=>window.releaseTraineeClaim=resolve);
+  });
+  await get.click();
+  await page.waitForFunction(()=>document.querySelector('.sheet-get-exam-code')?.getAttribute('aria-busy')==='true');
+  assert.equal(await get.isDisabled(),true);assert.match(await get.textContent(),/جارٍ جلب الكود/);
+  await page.evaluate(()=>window.releaseTraineeClaim());
+  await page.waitForFunction(()=>document.querySelector('.sheet-get-exam-code')?.disabled===false);
+  assert.equal(await page.evaluate(()=>uiTestDatabase.sheets['ui-admin'].cells[0][0]),'','An unsuccessful claim leaves the row empty');
+  await page.evaluate(()=>{
+    uiTestDatabase.claimError='';
+    window.uiTestSheetSaveGate=new Promise(resolve=>window.releaseSheetSave=resolve);
+  });
+  await get.click();
+  const code=dialog.getByRole('button',{name:'نسخ الكود',exact:true});await code.waitFor({state:'visible'});
+  assert.equal(await code.textContent(),'UI-VOUCHER','The code appears as soon as reservation is confirmed');
+  assert.equal(await get.count(),0,'The reserved voucher cannot be claimed again');
+  assert.equal(await page.evaluate(()=>uiTestDatabase.sheets['ui-admin'].cells[0][0]),'','Displaying the reserved code does not claim the sheet is already saved');
+  const anydesk=dialog.getByRole('textbox',{name:'AnyDesk ID',exact:true});await anydesk.fill('123456789');
+  await page.evaluate(saveFailure=>{uiTestDatabase.saveError=saveFailure?'NETWORK':'';window.releaseSheetSave();},saveFailure);
+  if(saveFailure){
+    await page.waitForFunction(()=>document.getElementById('toast').textContent.includes('تم حجز الكود لكن تعذر حفظ الجدول'));
+    assert.equal(await page.evaluate(()=>uiTestDatabase.sheets['ui-admin'].cells[0][0]),'');
+  }else await page.waitForFunction(()=>uiTestDatabase.sheets['ui-admin'].cells[0][0]==='UI-VOUCHER'&&uiTestCopies.at(-1)==='UI-VOUCHER');
+  assert.equal(await anydesk.inputValue(),'123456789','Finishing Get preserves the AnyDesk draft typed while saving');
+  assert.equal(await page.evaluate(()=>uiTestDatabase.codes[0].trainee_name),'GET STUDENT');
 });
 
 test('duplicate details keep mixed-direction labels and long values in separate aligned columns',{timeout:30000},async t=>{

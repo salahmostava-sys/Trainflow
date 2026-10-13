@@ -643,11 +643,7 @@ const Cloud = (() => {
       if (error) throw error;
       if (!data?.length) throw Error("CONFLICT");
       rows.set(candidate.code, data[0]);
-      try {
-        await load();
-      } catch {
-        project();
-      }
+      project();
       return candidate.code;
     } catch (error) {
       fail(error);

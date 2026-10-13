@@ -18,8 +18,9 @@ export interface DetailField {
     label: string;
     title: string;
     ariaLabel: string;
+    pendingLabel: string;
     disabled: boolean;
-    run(button: HTMLButtonElement): Promise<void>;
+    run(): Promise<void>;
   };
 }
 interface DetailRecord {
@@ -55,7 +56,8 @@ function DetailEditor({ field }: { field: DetailField }) {
         aria-label={field.label}
         dir="ltr"
         inputMode="numeric"
-        maxLength={2000}
+        maxLength={14}
+        size={14}
         value={draft}
         disabled={saving}
         onChange={(event) => setDraft(event.currentTarget.value)}
@@ -63,6 +65,29 @@ function DetailEditor({ field }: { field: DetailField }) {
       <button type="submit" disabled={saving}>{field.editor!.saveLabel}</button>
       {error && <span role="alert">{error}</span>}
     </form>
+  );
+}
+function DetailAction({ action }: { action: NonNullable<DetailField["action"]> }) {
+  const [pending, setPending] = React.useState(false);
+  async function runAction() {
+    if (pending) return;
+    setPending(true);
+    try { await action.run(); }
+    finally { setPending(false); }
+  }
+  return (
+    <button
+      type="button"
+      className="sheet-get-exam-code"
+      dir="ltr"
+      disabled={action.disabled || pending}
+      aria-busy={pending}
+      aria-label={action.ariaLabel}
+      title={action.title}
+      onClick={runAction}
+    >
+      {pending ? action.pendingLabel : action.label}
+    </button>
   );
 }
 function DetailValue({
@@ -75,22 +100,7 @@ function DetailValue({
   "copyLabel" | "copyTitle" | "copy"
 >) {
   if (field.editor) return <DetailEditor field={field} />;
-  if (field.action)
-    return (
-      <button
-        type="button"
-        className="sheet-get-exam-code"
-        dir="ltr"
-        disabled={field.action.disabled}
-        aria-label={field.action.ariaLabel}
-        title={field.action.title}
-        onClick={(event) => {
-          void field.action!.run(event.currentTarget);
-        }}
-      >
-        {field.action.label}
-      </button>
-    );
+  if (field.action) return <DetailAction action={field.action} />;
   if (!field.value) return <span>{field.empty || "—"}</span>;
   return (
     <button

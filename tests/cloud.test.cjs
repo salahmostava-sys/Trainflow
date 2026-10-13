@@ -405,7 +405,9 @@ for(const key of usedKeys) assert(englishKeys.includes(key),`Missing translation
   const duplicateBackup=clone(workbookBackup);duplicateBackup.traineeSheets[1].sheet_id=first;assert.equal(run('validBackup('+JSON.stringify(duplicateBackup)+')'),false,'Duplicate owner/worksheet pairs are rejected');
   console.log('PASS: backup restore, bulk code import, account profile, reports, cloud persistence, and categories.');
   db.codes.push({code:'TRAINEE-ALLOCATE',category:'TRAINEE-CATEGORY',version:1,used_on:null,owner_id:null});
+  const readsBeforeAllocation=codeReads;
   assert.equal(await run("Cloud.claimTraineeCode('TRAINEE-CATEGORY','user-1','AUTOMATIC TRAINEE')"),'TRAINEE-ALLOCATE');
+  assert.ok(codeReads-readsBeforeAllocation<=2,'Get avoids a redundant full inventory reload after the confirmed claim');
   assert.equal(db.codes.find(r=>r.code==='TRAINEE-ALLOCATE').trainee_name,'AUTOMATIC TRAINEE');assert.equal(run("state.voucherNames['TRAINEE-ALLOCATE']"),'AUTOMATIC TRAINEE');
   assert.equal(await run("Cloud.saveVoucherName('TRAINEE-ALLOCATE','Edited trainee')"),true);assert.equal(db.codes.find(r=>r.code==='TRAINEE-ALLOCATE').trainee_name,'Edited trainee');
   const allocation=db.codes.find(r=>r.code==='TRAINEE-ALLOCATE');assert.equal(allocation.owner_id,'user-1');assert.equal(allocation.used_by,'user-1');assert.ok(allocation.used_on);

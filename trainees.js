@@ -1121,8 +1121,8 @@ const Trainees=(()=>{
       fields.unshift({label:'Prometric login link',value:PROMETRIC_LOGIN_URL,display:loginDisplay,className:'sheet-detail-login',direction:'ltr',empty:tr('غير محدد','Not configured')},...credentials,detailKeycode(D.courseKeycode(row[7],DEFAULT_KEYCODES)),...[['Prometric Account',PROMETRIC_ACCOUNT],['Prometric Password',PROMETRIC_PASSWORD]].map(([label,value])=>({label,value,direction:'ltr',empty:tr('غير محدد','Not configured')})));
       const refreshRecord=()=>{if(dialog.open&&activeIndex===index&&activeEpoch===epoch)show(index);};
       const exam=D.courseKeycode(row[7],DEFAULT_KEYCODES),category=exam&&(state.keycodeOverrides?.[exam.code]||exam.category),codeCategory=category&&getLinkedCodesCat(category);
-      const claim=async action=>{
-        if(action.disabled)return;action.disabled=true;const token=epoch,selectedOwner=owner;
+      const claim=async()=>{
+        const token=epoch,selectedOwner=owner;let codeShown=false;
         try{
           if(!await flush())throw Error(tr('احفظ تعديلات الجدول أولًا.','Save sheet changes first.'));
           if(cells[index]?.[0]?.trim()){refreshRecord();return;}
@@ -1134,14 +1134,14 @@ const Trainees=(()=>{
           if(identity(cells[index])!==identity(currentRow))throw Error(tr('تم حجز الفاوتشر باسم المتدرب، لكن مكان الصف تغير. ستجد الكود باسمه في صفحة Vouchers.','The voucher was reserved with the trainee name, but the row moved. Find the named voucher on Vouchers.'));
           if(cells[index]?.[0]?.trim())throw Error(tr('خانة الكود تغيرت أثناء الحجز. لم يتم استبدال الكود الموجود.','Code changed during reservation. The existing code was preserved.'));
           change(D.paste(cells,[[code]],index,0),false);
-          action.hidden=true;
           const codeCell=$('sheet-grid').querySelector(`td[data-v="${view.indexOf(index)}"][data-col="0"]`);if(codeCell)decorateCell(codeCell,index,0);paint();
+          refreshRecord();codeShown=true;
           if(!await flush())throw Error(tr('تم حجز الكود لكن تعذر حفظ الجدول. اضغط حفظ الآن لإعادة محاولة حفظ نفس الكود.','Code reserved but sheet save failed. Press Save now to retry saving the same code.'));
           if(!await copyText(code))throw Error(tr('تم حفظ الكود. اضغط على قيمة الكود لنسخه.','Code saved. Click the code value to copy it.'));
-          refreshRecord();showToast(tr('تم حجز الكود وحفظه ونسخه','Code reserved, saved and copied'));
-        }catch(error){if(token===epoch&&owner===selectedOwner&&cells[index]?.[0]?.trim())refreshRecord();showToast(error.message||tr('تعذر جلب الكود','Could not get code'));}finally{action.disabled=!codeCategory;}
+          showToast(tr('تم حجز الكود وحفظه ونسخه','Code reserved, saved and copied'));
+        }catch(error){if(!codeShown&&token===epoch&&owner===selectedOwner&&cells[index]?.[0]?.trim())refreshRecord();showToast(error.message||tr('تعذر جلب الكود','Could not get code'));}
       };
-      if(!row[0]?.trim())voucher.action={label:'Get',ariaLabel:tr('جلب كود الاختبار','Get exam code'),disabled:!codeCategory,title:codeCategory?displayCatName(category):tr('لا توجد فئة اختبار مطابقة','No matching exam category'),run:claim};
+      if(!row[0]?.trim())voucher.action={label:'Get',pendingLabel:tr('جارٍ جلب الكود…','Getting code…'),ariaLabel:tr('جلب كود الاختبار','Get exam code'),disabled:!codeCategory,title:codeCategory?displayCatName(category):tr('لا توجد فئة اختبار مطابقة','No matching exam category'),run:claim};
       window.WorkspaceViews.detailRecords($('sheet-trainee-record'),{...detailViewProps(),records:[{fields}]});
       if(!dialog.open)dialog.show();
     };

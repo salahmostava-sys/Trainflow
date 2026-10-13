@@ -38,12 +38,16 @@ function installBoundaryFixtures(){
         if(args.settings_payload){db.settings.payload=clone(args.settings_payload);db.settings.version++;}
         persist();return {};
       }
-      if(name==='ibta_claim_code'){
+      if(name==='ibta_claim_code'||name==='ibta_claim_trainee_voucher'){
+        if(name==='ibta_claim_trainee_voucher'&&window.uiTestTraineeClaimGate)await window.uiTestTraineeClaimGate;
+        if(db.claimError)return {error:{message:db.claimError}};
         const row=db.codes.find(row=>row.code===args.target_code&&row.version===args.expected_version&&!row.used_on);
         if(!row)return {data:[]};
+        if(name==='ibta_claim_trainee_voucher')row.trainee_name=args.trainee_name;
         Object.assign(row,{used_on:args.use_date,used_by:user.id,version:row.version+1});persist();return {data:[clone(row)]};
       }
       if(name==='ibta_save_trainee_worksheet'){
+        if(window.uiTestSheetSaveGate)await window.uiTestSheetSaveGate;
         if(db.saveError)return {error:{message:db.saveError}};
         const old=db.sheets[args.target_owner]||{version:0};
         if(old.version!==args.expected_version)return {error:{message:'CONFLICT'}};
