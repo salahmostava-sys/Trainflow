@@ -86,7 +86,7 @@ export function WorkspaceSidebar({ activePanel }: { activePanel: Panel }) {
             <circle cx="8" cy="8" r="4"></circle>
             <path d="m11 11 9 9m-4-4 3-3m-6 0 3-3"></path>
           </svg>
-          <span data-i18n="tabKeycodes">Keycodes</span>
+          <span data-i18n="tabKeycodes">مفاتيح الأكواد</span>
         </a>
         <a
           href="/prometric"
@@ -98,7 +98,7 @@ export function WorkspaceSidebar({ activePanel }: { activePanel: Panel }) {
             <rect x="3" y="4" width="18" height="13" rx="2"></rect>
             <path d="M8 21h8m-4-4v4m-5-10 3 3 7-7"></path>
           </svg>
-          <span data-i18n="tabPrometric">Prometric</span>
+          <span data-i18n="tabPrometric">بروميترك</span>
         </a>
         <a
           href="/vouchers"
@@ -110,7 +110,7 @@ export function WorkspaceSidebar({ activePanel }: { activePanel: Panel }) {
             <path d="M3 7h18v4a2 2 0 0 0 0 4v3H3v-3a2 2 0 0 0 0-4Z"></path>
             <path d="M15 7v2m0 3v2m0 2v2"></path>
           </svg>
-          <span data-i18n="tabCodes">VOUCHERS</span>
+          <span data-i18n="tabCodes">الفاوتشرات</span>
         </a>
         <a
           href="/inventory"
@@ -121,7 +121,7 @@ export function WorkspaceSidebar({ activePanel }: { activePanel: Panel }) {
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="m3 7 9-4 9 4v10l-9 4-9-4Zm0 0 9 4 9-4m-9 4v10M7 5l9 4"></path>
           </svg>
-          <span data-i18n="tabInventory">Inventory</span>
+          <span data-i18n="tabInventory">المخزون</span>
         </a>
         <a
           href="/settings"

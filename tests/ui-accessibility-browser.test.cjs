@@ -390,8 +390,15 @@ test('duplicate details keep mixed-direction labels and long values in separate 
 
 test('language switching translates saved and failed status without discarding the sheet draft',{timeout:30000},async t=>{
   const page=await openWorkspace(t);
+  const checkSidebar=async language=>{
+    const expected=language==='ar'?['المتدربون','مفاتيح الأكواد','بروميترك','الفاوتشرات','المخزون','الإعدادات']:['Trainees','Keycodes','Prometric','VOUCHERS','Inventory','Settings'];
+    const tabs=page.locator('#workspace-sidebar nav [data-tab]');
+    assert.deepEqual(await tabs.locator('span').allTextContents(),expected);
+    assert.deepEqual(await tabs.evaluateAll(tabs=>tabs.map(tab=>tab.getAttribute('aria-label'))),expected,'Compact navigation names follow the current language');
+    assert.deepEqual(await tabs.evaluateAll(tabs=>tabs.map(tab=>tab.title)),expected,'Sidebar tooltips follow the current language');
+  };
   await page.waitForFunction(()=>document.getElementById('sheet-status').textContent==='تم الحفظ');
-  await page.locator('#lang-btn').click();assert.equal(await page.locator('#sheet-status').textContent(),'Saved');
+  await checkSidebar('ar');await page.locator('#lang-btn').click();assert.equal(await page.locator('#sheet-status').textContent(),'Saved');await checkSidebar('en');
   await page.evaluate(()=>{uiTestDatabase.saveError='CONFLICT';});
   const cell=page.locator('td[data-v="0"][data-col="0"]');
   await cell.dblclick();await page.keyboard.insertText('RETAINED-DRAFT');await page.keyboard.press('Tab');
@@ -399,6 +406,7 @@ test('language switching translates saved and failed status without discarding t
   await page.waitForFunction(()=>document.getElementById('sheet-status').dataset.error==='true');
   assert.match(await page.locator('#sheet-status').textContent(),/Another window/);
   await page.locator('#lang-btn').click();
+  await checkSidebar('ar');
   assert.match(await page.locator('#sheet-status').textContent(),/تم تعديل الجدول/);
   assert.equal(await cell.textContent(),'RETAINED-DRAFT');assert.equal(await page.evaluate(()=>Trainees.hasDraft()),true);
   assert.equal(await page.locator('#sheet-status').getAttribute('data-error'),'true');

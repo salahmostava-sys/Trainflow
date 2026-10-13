@@ -108,7 +108,7 @@ const TRANSLATIONS = {
     copyBtn:"نسخ", copyFailed:"تعذر النسخ. حاول مرة أخرى.", enterCredential:"أدخل القيمة أولًا.",
     sessionCredentials:"بيانات دخول Prometric موجودة مسبقًا لهذه الجلسة.",
     appTitle:"TrainFlow",skipToContent:"تجاوز التنقل إلى المحتوى",workspaceContent:"المحتوى الرئيسي",copyAccount:"نسخ حساب برومترك",copyPassword:"نسخ كلمة مرور برومترك",selectAllCodes:"تحديد جميع الأكواد",copyCode:code=>"نسخ الكود "+code,selectCode:code=>"تحديد الكود "+code,codeNote:code=>"ملاحظات الكود "+code,
-    tabKeycodes:"مفاتيح الأكواد", tabPrometric:"بروميترك", tabCodes:"VOUCHERS", tabInventory:"المخزون",
+    tabKeycodes:"مفاتيح الأكواد", tabPrometric:"بروميترك", tabCodes:"الفاوتشرات", tabInventory:"المخزون",
     sidebarOpen:"فتح القائمة الجانبية", sidebarClose:"إغلاق القائمة الجانبية", sidebarPages:"الصفحات", sidebarShrink:"تصغير القائمة إلى أيقونات", sidebarExpand:"توسيع القائمة الجانبية",
     codeDensityCompact:"عرض مدمج", codeDensityComfortable:"عرض مريح", codeExpandHeight:"توسيع الارتفاع", codeNormalHeight:"الارتفاع العادي", codeScrollToTop:"عرض من البداية (#1)", codeScrollToToday:"الذهاب لأكواد اليوم",
     inventoryIntro:"اللي معاك هو الأكواد غير المستخدمة في النظام. رصيد المشرف ينقص تلقائيًا عند إضافة أكواد جديدة.",
