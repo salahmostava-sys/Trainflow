@@ -1060,7 +1060,7 @@ const Trainees=(()=>{
     return {raw,text:raw.startsWith('=')?String(D.formulaValue(cells,index,column,formulaCache)):raw,style,textStyle,className:classes.join(' '),align,
       duplicateLabel:duplicates?duplicates.length+'×':undefined,
       resultLabel:tr('النتيجة للصف ','Result for row ')+(index+1),
-      onResultChange:(selected,td)=>{const v=+td.dataset.v;extraSelections=[];cursor=anchor={r:v,c:11};change(D.paste(cells,[[selected]],index,11));},
+      onResultChange:(selected,td)=>{const v=+td.dataset.v;extraSelections=[];cursor=anchor={r:v,c:11};change(D.paste(cells,[[selected]],index,11),true,PrometricExamData.resultFormat(formatting,index,selected));},
       onResultPointerDown:(e,td)=>{e.stopPropagation();if(e.shiftKey||e.ctrlKey||e.metaKey){e.preventDefault();dragging=true;dragMoved=false;skipSelectionClick=true;selectCell(+td.dataset.v,11,e.shiftKey,e.ctrlKey||e.metaKey);trackDragPointer(e);}},
       onResultClick:e=>{if(e.shiftKey||e.ctrlKey||e.metaKey)e.preventDefault();skipSelectionClick=false;},
       onResultFocus:td=>{const v=+td.dataset.v;if(v!==cursor.r||cursor.c!==11){extraSelections=[];cursor=anchor={r:v,c:11};paint();}}

@@ -72,12 +72,20 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
     assert.deepEqual(saved.cells.slice(0,2).map(row=>[row[11],row[13]]),[['ناجح','99%'],['راسب','61%']],'Each selected row uses its own exam name from the same multi-exam history');
     assert.equal(saved.format.headers[13],'نسبة الاختبار');assert.equal(saved.format.headers[14],'Custom');
     rows.forEach((row,index)=>{assert.deepEqual(saved.cells[index].slice(0,11),row.slice(0,11));assert.equal(saved.cells[index][12],row[12]);assert.equal(saved.cells[index][14],'KEEP CUSTOM');});
-    assert.equal(saved.cells[2][11],'');assert.equal(saved.cells[3][11],'');
+    assert.equal(saved.cells[2][11],'لم يدخل','Selected trainees without a voucher are marked absent');assert.equal(saved.cells[3][11],'','Unselected trainees are not changed');
+    assert.deepEqual(saved.format.styles['1:13'],{bg:'#ff0000',color:'#ffffff'},'Failed percentages retain a red fill in the saved sheet');
     const acknowledged=await worker.evaluate(()=>chrome.storage.local.get('ibtaExamRun'));assert.ok(acknowledged.ibtaExamRun.items.every(account=>account.status==='saved'));
     await page.screenshot({path:path.join(artifacts,'prometric-results-saved.png')});
     await page.setViewportSize({width:390,height:844});await page.screenshot({path:path.join(artifacts,'prometric-results-mobile.png')});
     assert.equal(await page.locator('#sheet-exam-dialog').evaluate(dialog=>dialog.scrollWidth<=dialog.clientWidth),true,'Mobile report cards fit inside the dialog');
     await page.setViewportSize({width:1440,height:1000});
+    await page.locator('#sheet-exam-close').click();await page.locator('#sheet-address').fill('N2');await page.locator('#sheet-address').press('Enter');
+    assert.equal(await page.locator('td[data-v="1"][data-col="13"]').evaluate(cell=>getComputedStyle(cell).backgroundColor),'rgb(255, 0, 0)');
+    await page.locator('#sheet-address').fill('D3');await page.locator('#sheet-address').press('Enter');
+    await page.locator('td[data-v="2"][data-col="3"]').click();await page.locator('#sheet-exam-open').click();
+    await page.waitForFunction(()=>!document.getElementById('sheet-exam-start').disabled);await page.locator('#sheet-exam-start').click();
+    await page.waitForFunction(()=>!document.getElementById('sheet-exam-start').disabled);
+    assert.equal(logins.length,2,'A selection containing only no-code trainees never opens another account');
     // Alternate Candidate markup must still open the known read-only scores page.
     missingHistoryControl=true;
     await page.locator('#sheet-exam-close').click();await page.locator('td[data-v="1"][data-col="3"]').click();

@@ -27,7 +27,16 @@ const trainee=(id,code='VOUCHER-'+id)=>[code,id+'@example.invalid','اسم '+id,
   const shifted=E.apply(historical,legacy,{row:1,column:15},{result:'راسب',score:'40%'});
   assert.deepEqual(shifted.cells.map(row=>row[13]),['70%','40%']);assert.equal(shifted.cells[0][14],'PRIVATE NOTES');assert.equal(shifted.cells[0][30],'LAST');
   assert.equal(shifted.format.widths[13],120);assert.equal(shifted.format.widths[14],220);assert.deepEqual(shifted.format.hidden,[14]);
-  assert.deepEqual(shifted.format.styles['0:14'],{bg:'#ff0000'});assert.deepEqual(shifted.format.styles['1:13'],{bold:true});assert.equal(shifted.format.headers[30],'Later');
+  assert.deepEqual(shifted.format.styles['0:14'],{bg:'#ff0000'});assert.deepEqual(shifted.format.styles['1:13'],{bold:true,bg:'#ff0000',color:'#ffffff'});assert.equal(shifted.format.headers[30],'Later');
+  assert.deepEqual(E.resultFormat(shifted.format,1,'ناجح').styles['1:13'],{bold:true},'Passing later removes the automatic red fill and preserves other formatting');
+  const noCode=rows.map(row=>[...row]);noCode[1][11]='راسب';noCode[1][13]='55%';
+  const absentFormat=D.defaultFormat();absentFormat.headers[13]='نسبة الاختبار';absentFormat.styles['1:13']={bg:'#ff0000',color:'#ffffff',bold:true};
+  const absentPlan=E.prepare(noCode,[0,1,2],[],absentFormat),marked=E.markAbsent(noCode,absentPlan.skipped,absentFormat);
+  assert.equal(marked.cells[1][11],'لم يدخل');assert.equal(marked.cells[1][13],'');assert.deepEqual(marked.format.styles['1:13'],{bold:true});
+  assert.equal(marked.cells[0][11],noCode[0][11]);assert.equal(marked.cells[2][11],noCode[2][11]);assert.equal(noCode[1][11],'راسب','Only selected rows without a code are changed, without mutating the source');
+  assert.equal(E.markAbsent(marked.cells,absentPlan.skipped,marked.format).cells,marked.cells,'Retrying an already marked row does not add another edit');
+  const changed=marked.cells.map(row=>[...row]);changed[1][0]='NEW-CODE';
+  assert.throws(()=>E.markAbsent(changed,absentPlan.skipped,marked.format),/OUTDATED/,'Adding a code before marking protects the changed row');
   const formulas=[trainee('FORMULA')];formulas[0][13]='2';formulas[0][14]='3';formulas[0][15]='70%';formulas[0][16]='=SUM(N1:O1)';formulas[0][17]='=SUM(O1:P1)';formulas[0][18]='=$N$1+O1';
   const calculated=E.apply(formulas,{headers:{15:'Exam score'}},{row:0,column:15},{result:'ناجح',score:'90%'});
   assert.deepEqual([16,17,18].map(column=>D.formulaValue(calculated.cells,0,column)),['5','3','5'],'Moving the score preserves formulas, split ranges and absolute references');

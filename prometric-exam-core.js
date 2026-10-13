@@ -21,7 +21,7 @@
       const keycode=D.courseKeycode(row[7],catalog),name=row[3]||row[2]||username;
       const language=String(keycode?.lang||'').trim(),examLanguage=/\bArabic\b/i.test(row[7])||/^(arabic|ar|العربية|عربي)$/i.test(language)?'Arabic':/\bEnglish\b/i.test(row[7])||/^(english|en|الإنجليزية|انجليزي)$/i.test(language)?'English':'';
       const reason=!voucher?'code':!username||!password||username.length>300||password.length>300?'credentials':name.length>300?'name':index.get(P.fingerprint(row))?.length!==1?'duplicate':!row[7]?.trim()?'exam':'';
-      if(reason){skipped.push({row:rowIndex,name,voucher,reason});continue;}
+      if(reason){skipped.push({row:rowIndex,name,voucher,reason,fingerprint:P.fingerprint(row),originalResult:row[11]||''});continue;}
       items.push({id:crypto.randomUUID(),row:rowIndex,name,voucher,username,password,fingerprint:P.fingerprint(row),originalCredentials:P.credentials(row),examTitles:[...new Set([row[7],keycode?.title].filter(Boolean))],examLanguage,originalResult:row[11]||'',originalScore:row[column]||''});
     }
     if(items.length>P.MAX_ITEMS)throw Error('LIMIT');
@@ -35,7 +35,36 @@
     if(await P.credentialsHash(P.credentials(values))!==item.credentialsHash)return {reason:'credentialsChanged'};
     const sameResult=values[11]===item.result&&String(values[column]||'')===item.score;
     if(!sameResult&&(String(values[11]||'')!==item.originalResult||String(values[column]||'')!==item.originalScore))return {reason:'resultChanged'};
-    return {row,column,alreadySaved:sameResult&&column===D.BASE_WIDTH&&SCORE_HEADERS.slice(0,2).includes(format.headers?.[column])&&!format.hidden?.includes(column)};
+    return {row,column,alreadySaved:sameResult&&column===D.BASE_WIDTH&&SCORE_HEADERS.slice(0,2).includes(format.headers?.[column])&&!format.hidden?.includes(column)&&resultFormat(format,row,item.result)===format};
+  }
+  function resultFormat(format,row,result){
+    let next=format;
+    for(const [column,label] of Object.entries(format.headers||{})){
+      if(Number(column)<D.BASE_WIDTH||!SCORE_HEADERS.includes(label))continue;
+      const key=row+':'+column,style=format.styles?.[key]||{},failed=result==='راسب',red=style.bg==='#ff0000'&&style.color==='#ffffff';
+      if(failed===red)continue;
+      if(next===format)next=D.format(format);
+      const updated={...style};
+      if(failed){updated.bg='#ff0000';updated.color='#ffffff';}else{delete updated.bg;delete updated.color;}
+      if(Object.keys(updated).length)next.styles[key]=updated;else delete next.styles[key];
+    }
+    return next;
+  }
+  function sameAbsentRow(row,account){
+    return !!row&&!row[0]?.trim()&&P.fingerprint(row)===account.fingerprint&&[account.originalResult,'لم يدخل'].includes(row[11]||'');
+  }
+  function markAbsent(rows,skipped,format){
+    let next=rows,nextFormat=format;const column=scoreColumn(rows,format),hasScore=SCORE_HEADERS.includes(format.headers?.[column]);
+    for(const account of skipped.filter(account=>account.reason==='code')){
+      const row=rows[account.row];
+      if(!sameAbsentRow(row,account))throw Error('OUTDATED');
+      if(row[11]!=='لم يدخل'||hasScore&&row[column]){
+        if(next===rows)next=rows.slice();
+        const updated=[...row];updated[11]='لم يدخل';if(hasScore)updated[column]='';next[account.row]=updated;
+      }
+      nextFormat=resultFormat(nextFormat,account.row,'لم يدخل');
+    }
+    return {cells:next===rows?rows:D.normalize(next),format:nextFormat};
   }
   function validResult(item){
     return ['ناجح','راسب'].includes(item.result)&&typeof item.score==='string'&&/^\d{1,6}(?:[.,]\d{1,4})?(?:\s*%|\s*\/\s*\d{1,6}(?:[.,]\d{1,4})?)?$/.test(item.score)&&item.score.length<=40;
@@ -79,7 +108,7 @@
     const layout=scoreLayout(rows,format,scoreColumn(rows,format)),next=layout.cells.slice(),values=[...next[matches.row]];
     values[11]=result.result;values[D.BASE_WIDTH]=result.score;next[matches.row]=values;
     layout.format.headers[D.BASE_WIDTH]=SCORE_HEADERS[0];layout.format.hidden=layout.format.hidden.filter(column=>column!==D.BASE_WIDTH);
-    return {cells:D.normalize(next),format:layout.format};
+    return {cells:D.normalize(next),format:resultFormat(layout.format,matches.row,result.result)};
   }
-  return {prepare,scoreColumn,locate,validResult,apply};
+  return {prepare,scoreColumn,locate,validResult,apply,resultFormat,markAbsent};
 });
