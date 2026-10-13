@@ -1183,7 +1183,7 @@ const Trainees=(()=>{
     const pageMatches=showAll?matches:matches.slice(detailPage*50,detailPage*50+50);
     $('sheet-duplicate-title').textContent=tr('بيانات الهوية / الإقامة: ','National / Iqama ID: ')+detailKey;
     $('sheet-duplicate-description').textContent=tr('مكرر ','Repeated ')+count+tr(' مرات في جدول المستخدم المعروض.',' times in the selected user’s sheet.');
-    window.WorkspaceViews.detailRecords($('sheet-duplicate-records'),{...detailViewProps(),records:pageMatches.map(i=>({title:tr('الصف ','Row ')+(i+1)+' · '+(cells[i][2]||cells[i][3]||'—'),fields:detailFields(cells[i])}))});
+    window.WorkspaceViews.detailRecords($('sheet-duplicate-records'),{...detailViewProps(),records:pageMatches.map(i=>({title:tr('الصف ','Row ')+(i+1)+' · '+(cells[i][2]||cells[i][3]||'—'),fields:detailFields(cells[i],true,D.BASE_WIDTH)}))});
     const hasPages=pageCount>1;
     $('sheet-detail-page').style.display=hasPages?'':'none';
     $('sheet-detail-prev').style.display=hasPages?'':'none';

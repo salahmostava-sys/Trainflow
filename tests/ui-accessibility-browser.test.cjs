@@ -253,8 +253,8 @@ test('duplicate details keep mixed-direction labels and long values in separate 
     const course='محترف الأعمال المعتمد في القيادة خلال التغيير CBP-LTC';
     uiTestDatabase.settings.payload.keycodes=[{code:keycode,title:course,lang:'Arabic',category:'Foundation'}];
     const cells=[
-      ['VOUCHER-1','first@example.invalid','الاسم العربي الطويل للمتدرب الأول','FIRST STUDENT','1080424995','0501234567','جامعة أم القرى',course,'2026-10-08','STUDENT1','PASSWORD1','ناجح',anydesk],
-      ['','second@example.invalid','الاسم العربي الثاني','SECOND STUDENT','1080424995','','',course,'','','','لم يدخل',anydesk]
+      ['VOUCHER-1','first@example.invalid','الاسم العربي الطويل للمتدرب الأول','FIRST STUDENT','1080424995','0501234567','جامعة أم القرى',course,'2026-10-08','STUDENT1','PASSWORD1','ناجح',anydesk,'PRIVATE EXTRA COLUMN'],
+      ['','second@example.invalid','الاسم العربي الثاني','SECOND STUDENT','1080424995','','',course,'2026-10-13']
     ];
     uiTestDatabase.sheets['ui-admin']={sheet_id:'00000000-0000-0000-0000-000000000001',sheet_name:'Sheet 1',sheet_hidden:false,sheet_order:0,cells,version:1,format:{}};
     await Cloud.refresh();
@@ -266,6 +266,12 @@ test('duplicate details keep mixed-direction labels and long values in separate 
     await page.locator('td[data-v="0"][data-col="4"]').click();
     const dialog=page.locator('#sheet-duplicate-dialog');await dialog.waitFor({state:'visible'});
     assert.equal(await dialog.locator('.sheet-detail-record').count(),2);
+    // Regression: rows with empty trailing credentials stopped before AnyDesk in identity details.
+    const cards=dialog.locator('.sheet-detail-record');
+    assert.equal((await cards.first().locator('dt').allTextContents()).at(-1),'AnyDesk ID');
+    assert.deepEqual(await cards.nth(1).locator('dt').allTextContents(),await cards.first().locator('dt').allTextContents());
+    assert.deepEqual((await cards.nth(1).locator('dd').allTextContents()).slice(-4),['—','—','—','—'],'Empty credentials, result and AnyDesk remain visible');
+    assert.doesNotMatch(await dialog.textContent(),/PRIVATE EXTRA COLUMN/,'Identity details stop at AnyDesk');
     for(const width of [1440,390]){
       await page.setViewportSize({width,height:1000});
       const records=await dialog.locator('.sheet-detail-record').evaluateAll(elements=>elements.map(record=>{
