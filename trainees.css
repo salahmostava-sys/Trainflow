@@ -637,6 +637,7 @@ body.sheet-expanded-open #workspace-sidebar,body.sheet-expanded-open #sidebar-ba
 }
 .app-modal-actions {
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-end;
   gap: 10px;
   padding: 14px 22px;
@@ -644,6 +645,8 @@ body.sheet-expanded-open #workspace-sidebar,body.sheet-expanded-open #sidebar-ba
   border-top: 1px solid var(--border, #e2e8f0);
 }
 .app-modal-btn {
+  flex-shrink: 0;
+  white-space: nowrap;
   min-height: var(--control-height);
   padding: 8px var(--space-lg);
   font-size: var(--type-body);
@@ -725,6 +728,9 @@ body.sheet-expanded-open #workspace-sidebar,body.sheet-expanded-open #sidebar-ba
   }
   .app-modal-actions {
     padding: 12px 16px;
+  }
+  .app-modal-btn {
+    padding: 8px 12px;
   }
 }
 

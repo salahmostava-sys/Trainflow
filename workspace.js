@@ -1166,8 +1166,8 @@ function renderCodeGrid(){
             message:isAr
               ?`هل تريد إزالة الكود (${code}) من صفحة المتدربين أيضًا، أم الاكتفاء بإلغاء علامة الاستخدام فقط؟`
               :`Would you like to remove code (${code}) from the trainees worksheet, or only unmark it?`,
-            confirmText:isAr?'إزالة من المتدربين وإلغاء العلامة':'Remove from Trainees & Unmark',
-            altText:isAr?'إلغاء العلامة فقط':'Unmark Only',
+            confirmText:isAr?'إزالة وإلغاء':'Remove & unmark',
+            altText:isAr?'إلغاء فقط':'Unmark only',
             cancelText:isAr?'تراجع':'Cancel',
             icon:'warning'
           });
