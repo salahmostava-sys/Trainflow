@@ -264,6 +264,7 @@ test('trainee details edit only AnyDesk and retain a failed save for retry',{tim
   assert.equal(await id.inputValue(),'00123456789012','The field accepts at most 14 digits');
   const inputBox=await id.boundingBox(),saveBox=await save.boundingBox();
   assert.ok(inputBox.width<190&&inputBox.x+inputBox.width<saveBox.x,'The compact input has Save on its right');
+  assert.ok(saveBox.x-inputBox.x-inputBox.width<=8&&inputBox.height<=30&&Math.abs(inputBox.height-saveBox.height)<1,'Input and Save stay close with the same compact height');
   await id.press('Enter');
   await page.waitForFunction(()=>uiTestDatabase.sheets['ui-admin'].cells[0][12]==='00123456789012');
   await page.waitForFunction(()=>document.getElementById('toast').classList.contains('show')&&document.getElementById('toast').textContent==='تم حفظ AnyDesk ID');
@@ -282,6 +283,7 @@ test('trainee details edit only AnyDesk and retain a failed save for retry',{tim
   await id.scrollIntoViewIfNeeded();
   const mobileInput=await id.boundingBox(),mobileSave=await save.boundingBox();
   assert.ok(mobileInput.x+mobileInput.width<mobileSave.x&&Math.abs(mobileInput.y-mobileSave.y)<1,'Save remains beside the compact input on mobile: '+JSON.stringify({mobileInput,mobileSave}));
+  assert.ok(mobileSave.x-mobileInput.x-mobileInput.width<=8&&mobileInput.height<=30&&Math.abs(mobileInput.height-mobileSave.height)<1,'Mobile controls keep the same compact spacing and height');
   await page.screenshot({path:path.join(root,'artifacts/trainee-anydesk-editor.png')});
   await id.fill('');await id.press('Enter');
   await page.waitForFunction(()=>!uiTestDatabase.sheets['ui-admin'].cells[0][12]);
