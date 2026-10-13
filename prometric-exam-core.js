@@ -4,7 +4,7 @@
   if(typeof module==='object')module.exports=api;else root.PrometricExamData=api;
 })(globalThis,function(P,D){
   'use strict';
-  const SCORE_HEADERS=['درجة الاختبار','Exam score'];
+  const SCORE_HEADERS=['نسبة الاختبار','Exam percentage','درجة الاختبار','Exam score'];
   function scoreColumn(rows,format){
     const matches=Object.entries(format.headers||{}).filter(([column,label])=>Number(column)>=D.BASE_WIDTH&&SCORE_HEADERS.includes(label));
     if(matches.length>1)throw Error('AMBIGUOUS_SCORE_COLUMN');
@@ -33,19 +33,53 @@
     const row=matches[0],values=rows[row],column=scoreColumn(rows,format);
     if(String(values[0]||'').trim()!==item.voucher)return {reason:'codeChanged'};
     if(await P.credentialsHash(P.credentials(values))!==item.credentialsHash)return {reason:'credentialsChanged'};
-    const alreadySaved=values[11]===item.result&&String(values[column]||'')===item.score;
-    if(!alreadySaved&&(String(values[11]||'')!==item.originalResult||String(values[column]||'')!==item.originalScore))return {reason:'resultChanged'};
-    return {row,column,alreadySaved};
+    const sameResult=values[11]===item.result&&String(values[column]||'')===item.score;
+    if(!sameResult&&(String(values[11]||'')!==item.originalResult||String(values[column]||'')!==item.originalScore))return {reason:'resultChanged'};
+    return {row,column,alreadySaved:sameResult&&column===D.BASE_WIDTH&&SCORE_HEADERS.slice(0,2).includes(format.headers?.[column])&&!format.hidden?.includes(column)};
   }
   function validResult(item){
     return ['ناجح','راسب'].includes(item.result)&&typeof item.score==='string'&&/^\d{1,6}(?:[.,]\d{1,4})?(?:\s*%|\s*\/\s*\d{1,6}(?:[.,]\d{1,4})?)?$/.test(item.score)&&item.score.length<=40;
   }
+  function sheetWidth(rows,format,column){
+    let width=column+1;
+    for(const row of rows)width=Math.max(width,row.length);
+    for(const index of [...Object.keys(format.headers),...Object.keys(format.widths||{}),...format.hidden])width=Math.max(width,Number(index)+1);
+    for(const [key,style] of Object.entries(format.styles))width=Math.max(width,Number(key.split(':')[1])+(style.mergeCols||1));
+    return width;
+  }
+  const scoreDestination=(index,column)=>index===column?D.BASE_WIDTH:index>=D.BASE_WIDTH&&index<column?index+1:index;
+  const columnReference=(reference,column)=>reference.replace(/[A-Z]+/i,D.letter(column));
+  function scoreFormula(cellText,column){
+    if(!cellText.startsWith('='))return cellText;
+    return cellText.replace(/(\$?[A-Z]+\$?[1-9]\d*)(?::(\$?[A-Z]+\$?[1-9]\d*))?/gi,(reference,first,last)=>{
+      const start=D.address(first),end=last&&D.address(last);if(!start||last&&!end)return reference;
+      if(!last)return columnReference(first,scoreDestination(start.c,column));
+      // Moving the score may split a range; keep the same referenced cells.
+      const columns=[];for(let index=Math.min(start.c,end.c);index<=Math.max(start.c,end.c);index++)columns.push(scoreDestination(index,column));
+      columns.sort((a,b)=>a-b);const spans=[];
+      for(const index of columns){const previous=spans.at(-1);if(previous&&previous[1]+1===index)previous[1]=index;else spans.push([index,index]);}
+      return spans.map(([left,right])=>columnReference(first,left)+':'+columnReference(last,right)).join(',');
+    });
+  }
+  function scoreLayout(rows,format,column){
+    const original=D.format(format);
+    if(column===D.BASE_WIDTH)return {cells:rows,format:original};
+    const width=sheetWidth(rows,original,column),removed=D.columns(rows,original,column,1,false,width);
+    const placed=D.columns(removed.cells,removed.format,D.BASE_WIDTH,1,true,width-1);
+    placed.cells=placed.cells.map((row,index)=>{const next=[...row];next[D.BASE_WIDTH]=rows[index][column]||'';return next.map(cellText=>scoreFormula(cellText,column));});
+    if(original.widths?.[column])placed.format.widths[D.BASE_WIDTH]=original.widths[column];
+    for(const [key,style] of Object.entries(original.styles)){
+      const [row,index]=key.split(':').map(Number);
+      if(index===column)placed.format.styles[row+':'+D.BASE_WIDTH]=style;
+    }
+    return placed;
+  }
   function apply(rows,format,matches,result){
     if(!validResult(result))throw Error('INVALID_RESULT');
-    const next=rows.slice(),values=[...next[matches.row]];
-    values[11]=result.result;values[matches.column]=result.score;next[matches.row]=values;
-    const nextFormat=D.format(format);nextFormat.headers[matches.column]||=SCORE_HEADERS[0];
-    return {cells:D.normalize(next),format:nextFormat};
+    const layout=scoreLayout(rows,format,scoreColumn(rows,format)),next=layout.cells.slice(),values=[...next[matches.row]];
+    values[11]=result.result;values[D.BASE_WIDTH]=result.score;next[matches.row]=values;
+    layout.format.headers[D.BASE_WIDTH]=SCORE_HEADERS[0];layout.format.hidden=layout.format.hidden.filter(column=>column!==D.BASE_WIDTH);
+    return {cells:D.normalize(next),format:layout.format};
   }
   return {prepare,scoreColumn,locate,validResult,apply};
 });

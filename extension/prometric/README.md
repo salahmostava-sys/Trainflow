@@ -18,8 +18,11 @@ Select trainee rows, then choose **Fetch Prometric results → Fetch selected re
 Only those selected rows with a voucher code, complete saved credentials and an exam
 title are eligible. The dedicated tab signs in to each account and reads Review Scores;
 it does not launch a test. TCNet's explicit Pass/Fail and score are written to the
-result column and a free **Exam score** column without changing credentials or custom
-columns. Each account's credentials are removed from this results queue after it
+result column and an **Exam percentage** column immediately after **AnyDesk ID**.
+Results must match the selected row's complete exam name and language; multiple
+matching attempts require manual review. Existing score columns are moved into
+that position while preserving custom columns and saved scores for other rows.
+Each account's credentials are removed from this results queue after it
 finishes. Confirmed scores remain recoverable until TrainFlow acknowledges its cloud save.
 
 Results follow **Candidate → Take Test → History / Review Scores**, using the site's

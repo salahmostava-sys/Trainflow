@@ -9,9 +9,10 @@ async function reportFixture(testRows,extra=''){
 }
 
 test('TCNet score history saves only the matching exam and its explicit outcome',async()=>{
-  const document=await reportFixture([['Sales Arabic','Fail (65%)'],['Leadership Arabic','Pass (88.2%)']]);
+  const document=await reportFixture([['Sales Arabic','Fail (65%)'],['Leading Through Change Arabic','Fail (30%)'],['Leadership Arabic','Pass (88.2%)']]);
   assert.deepEqual(Scores.report(document,['Leadership']),{result:'ناجح',score:'88.2%',examTitle:'Leadership Arabic',testDate:'October 7, 2026'});
   assert.equal(Scores.report(document,['Sales']).result,'راسب');
+  assert.equal(Scores.report(document,['Leading Through Change'],'Arabic').score,'30%','Similar exam names remain distinct');
   assert.deepEqual(Scores.report(document,['Leadership'],'English'),{error:'NO_MATCHING_RESULT'},'A different exam language cannot supply the result');
   const bilingual=await reportFixture([['Leadership Arabic','Pass (88%)'],['Leadership English','Fail (60%)']]);
   assert.equal(Scores.report(bilingual,['Leadership'],'Arabic').score,'88%');
@@ -24,6 +25,7 @@ test('uncertain, missing, repeated and paginated scores never produce a result t
     [[['Sales Arabic','Pass (80%)']],'','NO_MATCHING_RESULT'],
     [[['Leadership Arabic','88.2%']],'','UNCONFIRMED_RESULT'],
     [[['Leadership Arabic','Pass (88%)'],['Leadership English','Fail (60%)']],'','AMBIGUOUS_RESULTS'],
+    [[['Leadership Arabic','Pass (88%)'],['Leadership Arabic','Fail (40%)']],'','AMBIGUOUS_RESULTS'],
     [[['Leadership Arabic','Pass (88%)']],'<tr class="pagerStyle"><td><a href="javascript:next()">2</a></td></tr>','PAGINATED_RESULTS']
   ])assert.deepEqual(Scores.report(await reportFixture(rows,extra),['Leadership']),{error});
   for(const text of ['Pass','88%','Pending (0%)','<script>Pass (80%)</script>'])assert.equal(Scores.outcome(text),null);

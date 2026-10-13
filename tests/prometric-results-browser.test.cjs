@@ -9,6 +9,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
     const makeRow=(name,code,user)=>{const row=Array(52).fill('');row[0]=code;row[1]=name.toLowerCase()+'@example.invalid';row[3]=name+' STUDENT';row[7]='CBP-L';row[9]=user;row[10]='Dummy-Pass';row[13]='KEEP CUSTOM';return row;};
     // The worksheet is already saved; the simulated outage applies to saving fetched results.
     const rows=[makeRow('ALPHA','DUMMY-1','DUMMY-ALPHA'),makeRow('BETA','DUMMY-2','DUMMY-BETA'),makeRow('NO-CODE','','DUMMY-NO-CODE'),makeRow('UNSELECTED','DUMMY-4','DUMMY-OTHER')];
+    rows[0][7]='CBP-S';rows[0][12]='123456789';rows[1][12]='987654321';
     context=await chromium.launchPersistentContext(fs.mkdtempSync(path.join(artifacts,'prometric-results-')),{channel:'msedge',headless:true,viewport:{width:1440,height:1000},args:['--disable-extensions-except='+extension,'--load-extension='+extension,'--host-resolver-rules=MAP trainf.vercel.app 127.0.0.1, MAP tcnet1.prometric.com 127.0.0.1']});
     const logins=[],errors=[],examActions=[];let account='DUMMY-OUTSIDER',signouts=0,candidateVisited=false,forceSessionExpiry=false,stalledHistoryClicks=0,missingHistoryControl=false,postbackHistory=false,redirectHistory=false,scoreRequests=0;
     await context.exposeBinding('fixtureLogin',(_,credentials)=>{logins.push(credentials);account=credentials.username;candidateVisited=false;});
@@ -68,9 +69,9 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
     await page.locator('#sheet-exam-open').click();await page.locator('#sheet-exam-refresh').click();
     await page.waitForFunction(()=>document.getElementById('sheet-exam-results').textContent.includes('تم الحفظ: راسب'),null,{timeout:15000});
     const saved=await page.evaluate(()=>previewSheets.get('demo-admin'));
-    assert.deepEqual(saved.cells.slice(0,2).map(row=>[row[11],row[14]]),[['ناجح','88.2%'],['راسب','61%']]);
-    assert.equal(saved.format.headers[14],'درجة الاختبار');assert.equal(saved.format.headers[13],'Custom');
-    rows.forEach((row,index)=>{assert.deepEqual(saved.cells[index].slice(0,11),row.slice(0,11));assert.equal(saved.cells[index][13],'KEEP CUSTOM');});
+    assert.deepEqual(saved.cells.slice(0,2).map(row=>[row[11],row[13]]),[['ناجح','99%'],['راسب','61%']],'Each selected row uses its own exam name from the same multi-exam history');
+    assert.equal(saved.format.headers[13],'نسبة الاختبار');assert.equal(saved.format.headers[14],'Custom');
+    rows.forEach((row,index)=>{assert.deepEqual(saved.cells[index].slice(0,11),row.slice(0,11));assert.equal(saved.cells[index][12],row[12]);assert.equal(saved.cells[index][14],'KEEP CUSTOM');});
     assert.equal(saved.cells[2][11],'');assert.equal(saved.cells[3][11],'');
     const acknowledged=await worker.evaluate(()=>chrome.storage.local.get('ibtaExamRun'));assert.ok(acknowledged.ibtaExamRun.items.every(account=>account.status==='saved'));
     await page.screenshot({path:path.join(artifacts,'prometric-results-saved.png')});
