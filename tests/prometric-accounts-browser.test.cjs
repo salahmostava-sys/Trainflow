@@ -84,6 +84,29 @@ const assert=require('node:assert/strict'),path=require('node:path'),{spawn}=req
     await page.locator('#sheet-prometric-close').click();await open(3);
     assert.equal(await preview.locator('.sheet-prometric-existing-account').count(),0,'Conflicting IDs do not share an account even with identical names and email');
     assert.match(await page.locator('#sheet-prometric-summary').textContent(),/جاهز للتسجيل: 1 · حسابات محفوظة: 0/);
+    // Regression: keeping a historical account must populate new rows, including duplicate exam data.
+    for(const sourceCount of [1,2]){
+      const original=await page.evaluate(sourceCount=>{
+        const saved=previewSheets.get('demo-admin').cells[0];
+        const current=[...saved];current[9]=current[10]='';
+        const cells=[...Array.from({length:sourceCount},()=>[...saved]),current];
+        previewSheets.set('demo-admin',{cells,version:1});return structuredClone(TraineeData.normalize(cells));
+      },sourceCount);
+      await page.locator('#sheet-prometric-close').click();await page.locator('#sheet-reload').click();await saved();await open(sourceCount);
+      assert.equal(await preview.getByRole('combobox').inputValue(),'','Historical accounts require an explicit action');
+      await preview.getByRole('combobox').selectOption('reuse');
+      await page.waitForFunction(index=>previewSheets.get('demo-admin').cells[index][9]==='FIRST-USER',sourceCount);
+      const expected=structuredClone(original);expected[sourceCount][9]='FIRST-USER';expected[sourceCount][10]='FIRST-PASSWORD';
+      assert.deepEqual(await page.evaluate(()=>TraineeData.normalize(previewSheets.get('demo-admin').cells)),expected,'Keep copies both credentials to the new row and preserves every other cell');
+      assert.equal(await preview.getByRole('combobox').inputValue(),'reuse');
+    }
+    await page.locator('#sheet-prometric-close').click();
+    await page.evaluate(cells=>previewSheets.set('demo-admin',{cells,version:1}),before);await page.locator('#sheet-reload').click();await saved();await open(2);
+    await preview.getByRole('combobox').selectOption('reuse');await comparison.waitFor({state:'visible'});
+    assert.equal(await page.evaluate(()=>previewSheets.get('demo-admin').cells[2][9]),'','Conflicting saved accounts require choosing the source');
+    await page.locator('#sheet-prometric-account-source').selectOption('1');await page.locator('#sheet-prometric-reuse-account').click();
+    await page.waitForFunction(()=>previewSheets.get('demo-admin').cells[2][9]==='SECOND-USER');
+    assert.equal(await page.evaluate(()=>window.registrationStarts.length),1,'Reusing accounts never starts a new registration');
     assert.deepEqual(errors,[]);console.log('PASS: historical account warning, full comparison through AnyDesk, account selection, explicit reuse/save, unchanged history, explicit new registration and conflicting-ID isolation');
   }finally{await browser?.close();server.kill();}
 })().catch(error=>{console.error(error);process.exitCode=1;});

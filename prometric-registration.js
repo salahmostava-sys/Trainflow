@@ -38,10 +38,14 @@ const TraineePrometric=(()=>{
       try{plan=P.prepare(s.cells,selectedIndices,accountChoices);lastError='';}catch(error){plan=null;lastError=errorText(error.message);}
     }
     function accountChoicesLocked(){return working||extensionBusy||!!run?.items.some(item=>['pending','done'].includes(item.status));}
-    function chooseAccount(index,mode){
+    async function chooseAccount(index,mode){
       const s=h.state(),row=s.cells[index];if(!same(s)||accountChoicesLocked()||!selectedIndices.includes(index)||!row||!['new','reuse'].includes(mode))return;
       if(mode==='new')accountChoices.set(index,{fingerprint:P.fingerprint(row),credentials:P.credentials(row)});else accountChoices.delete(index);
       buildPlan();draw();
+      if(mode!=='reuse'||P.hasCredentials(row))return;
+      const sources=P.findAccounts(s.cells,row,accountIndex).filter(source=>s.cells[source][9]?.trim()&&s.cells[source][10]?.trim());
+      if(new Set(sources.map(source=>P.credentials(s.cells[source]))).size!==1){inspectAccount(index);return;}
+      const source=sources[0];await saveAccount(index,source,{target:row,source:s.cells[source]});
     }
     async function copyAccount(index){
       const s=h.state(),row=s.cells[index];if(!same(s)||!selectedIndices.includes(index)||!row)return;
@@ -68,27 +72,30 @@ const TraineePrometric=(()=>{
       if(comparisonSource!==comparisonRow)records.push({title:tr('الحساب المحفوظ — الصف: ','Saved account — row: ')+(comparisonSource+1),fields:h.accountDetails(saved)});
       window.WorkspaceViews.detailRecords(comparisonRecords,{...h.detailViewProps(),records});
     }
-    async function reuseAccount(){
+    function reuseAccount(){
       if(reuseAccountButton.disabled||!comparisonSnapshot||!same(h.state()))return;
-      const target=comparisonRow,source=comparisonSource,snapshot=comparisonSnapshot;
+      return saveAccount(comparisonRow,comparisonSource,comparisonSnapshot);
+    }
+    async function saveAccount(target,source,snapshot){
+      const savingContext=context;
       working=true;lastError='';reuseFailure='';draw();
       try{
         if(!await h.flush())throw Error('REUSE_PRE_SAVE');
-        const s=h.state();if(!same(s)||s.cells[target]!==snapshot.target||s.cells[source]!==snapshot.source)throw Error('OUTDATED');
+        const s=h.state();if(context!==savingContext||!same(s)||s.cells[target]!==snapshot.target||s.cells[source]!==snapshot.source)throw Error('OUTDATED');
         if(!P.findAccounts(s.cells,s.cells[target]).includes(source))throw Error('OUTDATED');
         h.change(D.paste(s.cells,[[snapshot.source[9],snapshot.source[10]]],target,9));accountChoices.delete(target);
         if(!await h.flush())throw Error('REUSE_SAVE');
-        if(same(h.state()))showToast(tr('تم حفظ الحساب في الصف الحالي','Account saved in the current row'));
-      }catch(error){if(same(h.state()))reuseFailure=error.message==='REUSE_SAVE'?tr('تم وضع الحساب في الصف؛ تعذر حفظ الجدول. اضغط حفظ الآن لإعادة المحاولة.','Account placed in the row; saving failed. Press Save now to retry.'):error.message==='REUSE_PRE_SAVE'?tr('احفظ تعديلات الجدول أولًا، ثم أعد اختيار الحساب.','Save sheet changes first, then choose the account again.'):errorText(error.message);}
+        if(context===savingContext&&same(h.state()))showToast(tr('تم حفظ الحساب في الصف الحالي','Account saved in the current row'));
+      }catch(error){if(context===savingContext&&same(h.state()))reuseFailure=error.message==='REUSE_SAVE'?tr('تم وضع الحساب في الصف؛ تعذر حفظ الجدول. اضغط حفظ الآن لإعادة المحاولة.','Account placed in the row; saving failed. Press Save now to retry.'):error.message==='REUSE_PRE_SAVE'?tr('احفظ تعديلات الجدول أولًا، ثم أعد اختيار الحساب.','Save sheet changes first, then choose the account again.'):errorText(error.message);}
       finally{working=false;buildPlan();draw();}
     }
     function drawPreview(s){
       const rows=plan?[...plan.items,...plan.skipped].sort((a,b)=>a.row-b.row).map(item=>{
         const row=s.cells[item.row],sources=P.findAccounts(s.cells,row,accountIndex),hasOwnAccount=P.hasCredentials(row),hasAccount=hasOwnAccount||sources.length>0;
         const savedNote=hasAccount?tr('له حساب محفوظ','Has a saved account')+(hasOwnAccount?'':tr(' في الصف: ',' in row: ')+sources.map(index=>index+1).join(', '))+' · ':'';
-        return {row:item.row,name:item.name,email:item.email,hasAccount,hasOwnAccount,username:hasOwnAccount?row[9]||'':sources.map(index=>s.cells[index][9]||'—').join(' / '),mode:P.replacementSelected(row,item.row,accountChoices)?'new':'reuse',status:savedNote+(item.reason==='existing'?tr('راجع الحساب قبل الاختيار','Review the account before choosing'):item.reason?reasonText(item.reason):tr('جاهز لإنشاء حساب','Ready to create an account'))};
+        return {row:item.row,name:item.name,email:item.email,hasAccount,hasOwnAccount,username:hasOwnAccount?row[9]||'':sources.map(index=>s.cells[index][9]||'—').join(' / '),mode:P.replacementSelected(row,item.row,accountChoices)?'new':hasOwnAccount?'reuse':'',status:savedNote+(item.reason==='existing'?tr('راجع الحساب قبل الاختيار','Review the account before choosing'):item.reason?reasonText(item.reason):tr('جاهز لإنشاء حساب','Ready to create an account'))};
       }):[];
-      window.WorkspaceViews.registrationPreview(preview,{rows,page:previewPage,disabled:accountChoicesLocked(),headings:[tr('الصف','Row'),tr('الاسم بالإنجليزي','English name'),tr('البريد الإلكتروني','Email'),tr('اسم المستخدم','Username'),tr('الإجراء','Action'),tr('الحالة','Status')],labels:{reuse:tr('الاحتفاظ بالحساب المسجل','Keep the saved account'),create:tr('إنشاء حساب جديد','Create a new account'),copy:tr('نسخ الحساب','Copy account'),inspect:tr('مقارنة بيانات الحساب','Compare account details'),account:tr('الإجراء لحساب الصف','Account action for row'),previous:tr('السابق','Previous'),next:tr('التالي','Next'),page:tr('الصفحة','Page')},changeAccount:chooseAccount,copyAccount,inspectAccount,changePage:page=>{previewPage=page;draw();}});
+      window.WorkspaceViews.registrationPreview(preview,{rows,page:previewPage,disabled:accountChoicesLocked(),headings:[tr('الصف','Row'),tr('الاسم بالإنجليزي','English name'),tr('البريد الإلكتروني','Email'),tr('اسم المستخدم','Username'),tr('الإجراء','Action'),tr('الحالة','Status')],labels:{choose:tr('اختر الإجراء','Choose an action'),reuse:tr('الاحتفاظ بالحساب المسجل','Keep the saved account'),create:tr('إنشاء حساب جديد','Create a new account'),copy:tr('نسخ الحساب','Copy account'),inspect:tr('مقارنة بيانات الحساب','Compare account details'),account:tr('الإجراء لحساب الصف','Account action for row'),previous:tr('السابق','Previous'),next:tr('التالي','Next'),page:tr('الصفحة','Page')},changeAccount:chooseAccount,copyAccount,inspectAccount,changePage:page=>{previewPage=page;draw();}});
     }
     function displayMatch(cells,item,index){
       if(!item.replaceExisting)return P.locate(cells,item,index);
@@ -103,7 +110,7 @@ const TraineePrometric=(()=>{
       connection.dataset.update=String(versionMismatch());
       setup.hidden=connected&&!versionMismatch();const retakePlan=!!plan?.items.some(item=>item.replaceExisting);start.disabled=!connected||working||!plan?.items.length||extensionBusy||!!run?.items.some(i=>['pending','done'].includes(i.status))||(retakePlan&&!retakeSupported);refresh.disabled=working;stop.hidden=!run?.items.some(i=>i.status==='pending');stop.disabled=working;
       recover.hidden=!recoverable;recover.disabled=working;
-      const hasSaved=selectedIndices.some(index=>{const row=s.cells[index];return P.hasCredentials(row)||row&&P.findAccounts(s.cells,row,accountIndex).length;});modeHelp.hidden=!hasSaved;modeHelp.textContent=retakePlan&&!retakeSupported&&connected?errorText('UPDATE_EXTENSION'):tr('الصف الأحمر له حساب محفوظ. قارن البيانات ثم اختر استخدام الحساب في الصف الحالي أو إنشاء حساب جديد. لا تُنسخ الحسابات تلقائيًا.','Red rows have saved accounts. Compare details, then choose to use the account in the current row or create a new one. Accounts are never copied automatically.');
+      const hasSaved=selectedIndices.some(index=>{const row=s.cells[index];return P.hasCredentials(row)||row&&P.findAccounts(s.cells,row,accountIndex).length;});modeHelp.hidden=!hasSaved;modeHelp.textContent=retakePlan&&!retakeSupported&&connected?errorText('UPDATE_EXTENSION'):tr('اختر الاحتفاظ بالحساب المسجل لنسخ اليوزر والباسورد إلى الصف الجديد وحفظهما. إذا وجدت حسابات مختلفة، اختر الحساب من المقارنة.','Choose Keep the saved account to copy and save its username and password in the new row. If different accounts exist, choose one in the comparison.');
       const savedAccounts=plan?.skipped.filter(item=>item.reason==='existing').length||0;
       summary.textContent=plan?tr('جاهز للتسجيل: ','Ready to register: ')+plan.items.length+tr(' · حسابات محفوظة: ',' · Saved accounts: ')+savedAccounts+tr(' · يحتاج مراجعة: ',' · Needs review: ')+(plan.skipped.length-savedAccounts):'';
       drawPreview(s);

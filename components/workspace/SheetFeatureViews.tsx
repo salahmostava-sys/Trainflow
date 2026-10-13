@@ -257,6 +257,7 @@ export function RegistrationPreview({
   }[];
   headings: string[];
   labels: {
+    choose: string;
     reuse: string;
     create: string;
     copy: string;
@@ -299,6 +300,7 @@ export function RegistrationPreview({
                       disabled={disabled}
                       onChange={(event) => changeAccount(row.row, event.currentTarget.value)}
                     >
+                      {!row.hasOwnAccount && <option value="" disabled>{labels.choose}</option>}
                       <option value="reuse">{labels.reuse}</option>
                       <option value="new">{labels.create}</option>
                     </select>
