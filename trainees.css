@@ -219,6 +219,9 @@
 .sheet-trainee-dialog .sheet-detail-record dl{direction:rtl;grid-template-columns:140px minmax(0,1fr);gap:10px var(--space-lg);align-items:start;font-size:var(--type-body);line-height:1.6}
 .sheet-trainee-dialog button.sheet-detail-copy-value{display:block;width:100%;text-align:left;box-sizing:border-box}
 .sheet-trainee-dialog button.sheet-detail-login{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sheet-detail-editor{display:flex;flex-wrap:wrap;gap:8px;max-width:100%;white-space:normal}
+.sheet-detail-editor input{flex:1 1 100px;min-width:0;width:100%;box-sizing:border-box;padding:7px;border:1px solid var(--border);border-radius:7px;background:var(--surface);color:var(--text);font:inherit}
+.sheet-detail-editor [role=alert]{flex-basis:100%;color:#b91c1c}
 .sheet-duplicate-dialog button.sheet-detail-course,.sheet-duplicate-dialog button.sheet-detail-course:hover,.sheet-prometric-dialog button.sheet-detail-course,.sheet-prometric-dialog button.sheet-detail-course:hover{color:#b91c1c}
 .sheet-trainee-dialog .sheet-detail-result[data-result=pass]{background:transparent!important;color:#008a3d!important}
 .sheet-detail-result[data-result=fail]{background:#ff0000!important;color:#ffffff!important}

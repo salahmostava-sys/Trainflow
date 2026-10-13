@@ -1075,7 +1075,7 @@ const Trainees=(()=>{
     let end=fieldCount??row.length;if(fieldCount===undefined)while(end>0&&!row[end-1].trim())end--;
     labels.slice(0,end).forEach((pair,column)=>{
       const keycode=column===7?D.courseKeycode(row[column],DEFAULT_KEYCODES):null;
-      const field={label:column===7?tr('الدورة','Course'):tr(...pair),copyName:tr(...pair),value:row[column]||'',className:({7:'sheet-detail-course',9:'sheet-detail-username',10:'sheet-detail-password',11:'sheet-detail-result'})[column]||'',result:column===11?detailResult(row[column]):undefined};
+      const field={label:column===7?tr('الدورة','Course'):tr(...pair),copyName:tr(...pair),value:row[column]||'',className:({7:'sheet-detail-course',9:'sheet-detail-username',10:'sheet-detail-password',11:'sheet-detail-result',12:'sheet-detail-anydesk'})[column]||'',result:column===11?detailResult(row[column]):undefined};
       if(column===7&&!keycode)field.note=tr('لا يوجد Key Code مطابق','No matching Key Code');
       fields.push(field);
       if(column===7&&keycode){
@@ -1105,6 +1105,18 @@ const Trainees=(()=>{
       hideDuplicateHint();dialog.dir=currentLang==='ar'?'rtl':'ltr';
       $('sheet-trainee-title').textContent=tr('بيانات المتدرب — ','Trainee details — ')+name;
       const fields=detailFields(row,false),voucher=fields[0],loginDisplay=PROMETRIC_LOGIN_URL.replace(/(\/Login).+$/i,'$1…');
+      const anydesk=fields.find(field=>field.className==='sheet-detail-anydesk')||{label:tr(...labels[12]),value:''};
+      if(!fields.includes(anydesk))fields.push(anydesk);
+      let editedRow=row;const detailEpoch=epoch,detailOwner=workspaceIdentity();
+      const currentRow=()=>loaded&&epoch===detailEpoch&&workspaceIdentity()===detailOwner&&cells[index]===editedRow;
+      const staleDetails=()=>Error(tr('بيانات الصف تغيرت. افتح بيانات المتدرب من جديد.','The row changed. Reopen the trainee details.'));
+      anydesk.editor={saveLabel:tr('حفظ','Save'),save:async value=>{
+        if(!currentRow())throw staleDetails();
+        if(value!==editedRow[12]){change(D.paste(cells,[[value]],index,12));editedRow=cells[index];}
+        if(!await flush())throw Error(tr('تعذر حفظ الرقم. أعد المحاولة أو اضغط حفظ الآن في الجدول.','Could not save the ID. Retry or use Save now in the sheet.'));
+        if(!currentRow())throw staleDetails();
+        showToast(tr('تم حفظ AnyDesk ID','AnyDesk ID saved'));
+      }};
       const credentials=[];for(const name of ['sheet-detail-username','sheet-detail-password']){const at=fields.findIndex(field=>field.className===name);if(at>=0)credentials.push(...fields.splice(at,1));}
       fields.unshift({label:'Prometric login link',value:PROMETRIC_LOGIN_URL,display:loginDisplay,className:'sheet-detail-login',direction:'ltr',empty:tr('غير محدد','Not configured')},...credentials,detailKeycode(D.courseKeycode(row[7],DEFAULT_KEYCODES)),...[['Prometric Account',PROMETRIC_ACCOUNT],['Prometric Password',PROMETRIC_PASSWORD]].map(([label,value])=>({label,value,direction:'ltr',empty:tr('غير محدد','Not configured')})));
       const refreshRecord=()=>{if(dialog.open&&activeIndex===index&&activeEpoch===epoch)show(index);};

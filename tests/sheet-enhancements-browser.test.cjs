@@ -175,7 +175,8 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),path
     assert.equal(await page.locator('#sheet-trainee-record .sheet-detail-keycode').evaluate(el=>getComputedStyle(el,'::after').content),'none','Copy icon is removed while copying remains available');
     assert.match(details,/Prometric Accountdemo-prometric-account/);assert.match(details,/Prometric Passworddemo-prometric-password/);
     assert.equal(await cell(0,7).textContent(),'محترف الأعمال المعتمد في المبيعات CBP-S','Source course name remains intact');
-    assert.equal(await page.locator('#sheet-trainee-dialog input,#sheet-trainee-dialog [contenteditable]').count(),0,'Details are read only');
+    assert.equal(await page.locator('#sheet-trainee-dialog input,#sheet-trainee-dialog [contenteditable]').count(),1,'Only AnyDesk is editable');
+    assert.equal(await page.locator('#sheet-trainee-dialog').getByRole('textbox',{name:'AnyDesk ID',exact:true}).inputValue(),'AD');
     await page.evaluate(()=>{Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async value=>{window.detailCopied=value;}}});});
     assert.ok(await page.locator('#sheet-trainee-dialog').evaluate(el=>el.getBoundingClientRect().width<=602),'Details use a narrower single-column dialog');
     const login=page.locator('#sheet-trainee-record .sheet-detail-login');assert.match(await login.textContent(),/\/Login…$/);assert.doesNotMatch(await login.textContent(),/ClientNameSingleSite/);await login.click();assert.equal(await page.evaluate(()=>window.detailCopied),await page.evaluate(()=>PROMETRIC_LOGIN_URL),'Shortened login link still copies the entire URL');
@@ -223,9 +224,9 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),path
     await page.locator('#sheet-reload').click();await page.waitForFunction(()=>document.querySelector('td[data-v="0"][data-col="3"]')?.textContent==='DETAIL TRAINEE 0');
     await cell(0,4).click();await page.locator('#sheet-duplicate-dialog').waitFor({state:'visible'});
     const records=page.locator('#sheet-duplicate-records .sheet-detail-record');
-    assert.deepEqual(await records.evaluateAll(records=>records.map(record=>record.querySelector('dt:last-of-type').textContent)),['النتيجة','عمود T','رقم الهوية / الإقامة'],'Each record stops at its own last populated column');
-    assert.equal(await records.nth(0).locator('dt').count(),12,'Trailing blank columns, including named columns, are omitted');
-    assert.equal(await records.nth(1).locator('dt').count(),20,'Blank fields between populated columns retain their positions');
+    assert.deepEqual(await records.evaluateAll(records=>records.map(record=>record.querySelector('dt:last-of-type').textContent)),['AnyDesk ID','AnyDesk ID','AnyDesk ID'],'Every identity card displays through AnyDesk');
+    assert.equal(await records.nth(0).locator('dt').count(),13,'Empty base fields remain visible');
+    assert.equal(await records.nth(1).locator('dt').count(),13,'Custom columns are excluded from identity cards');
     assert.equal(await page.locator('#sheet-duplicate-records').getByText('EMPTY LEGACY HEADER',{exact:true}).count(),0);
     const fail=page.locator('#sheet-duplicate-records .sheet-detail-result[data-result="fail"]');
     const appearance=await fail.evaluate(el=>({background:getComputedStyle(el).backgroundColor,color:getComputedStyle(el).color,width:el.getBoundingClientRect().width,parent:el.parentElement.getBoundingClientRect().width}));
@@ -233,11 +234,11 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),path
     await page.screenshot({path:path.join(__dirname,'../artifacts/trainee-details-trimmed.png')});
     await page.keyboard.press('Escape');await cell(2,3).dblclick();await page.locator('#sheet-trainee-dialog').waitFor({state:'visible'});
     assert.match(await page.locator('#sheet-trainee-record').textContent(),/DETAIL TRAINEE 2/,'Missing trailing credentials do not remove the trainee name');
-    assert.equal(await page.locator('#sheet-trainee-record dt').last().textContent(),'رقم الهوية / الإقامة');
+    assert.equal(await page.locator('#sheet-trainee-record dt').last().textContent(),'AnyDesk ID');
     await page.locator('#sheet-trainee-dialog .sheet-detail-close').click();
     await page.evaluate(()=>Trainees.reset());
     assert.equal(await page.locator('#sheet-trainee-record').textContent(),'','Account switches clear floating data');
     assert.deepEqual(errors,[]);
-    console.log('PASS: white surfaces, extra columns, shift/undo/formatting/RTL, persisted extra cells and private read-only details');
+    console.log('PASS: white surfaces, extra columns, shift/undo/formatting/RTL, persisted extra cells and private details with AnyDesk editing');
   }finally{if(browser)await browser.close();server.kill();}
 })().catch(error=>{console.error(error);process.exitCode=1;});

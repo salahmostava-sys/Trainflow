@@ -10,6 +10,10 @@ export interface DetailField {
   result?: string;
   empty?: string;
   note?: string;
+  editor?: {
+    saveLabel: string;
+    save(value: string): Promise<void>;
+  };
   action?: {
     label: string;
     title: string;
@@ -28,6 +32,39 @@ interface DetailRecordsProps {
   copyTitle: string;
   copy(value: string): Promise<void>;
 }
+function DetailEditor({ field }: { field: DetailField }) {
+  const [draft, setDraft] = React.useState(field.value);
+  const [saving, setSaving] = React.useState(false);
+  const [error, setError] = React.useState("");
+  async function saveDraft(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (saving) return;
+    setSaving(true);
+    setError("");
+    try {
+      await field.editor!.save(draft);
+    } catch (failure) {
+      setError((failure as Error).message);
+    } finally {
+      setSaving(false);
+    }
+  }
+  return (
+    <form className="sheet-detail-editor" onSubmit={saveDraft}>
+      <input
+        aria-label={field.label}
+        dir="ltr"
+        inputMode="numeric"
+        maxLength={2000}
+        value={draft}
+        disabled={saving}
+        onChange={(event) => setDraft(event.currentTarget.value)}
+      />
+      <button type="submit" disabled={saving}>{field.editor!.saveLabel}</button>
+      {error && <span role="alert">{error}</span>}
+    </form>
+  );
+}
 function DetailValue({
   field,
   copyLabel,
@@ -37,6 +74,7 @@ function DetailValue({
   DetailRecordsProps,
   "copyLabel" | "copyTitle" | "copy"
 >) {
+  if (field.editor) return <DetailEditor field={field} />;
   if (field.action)
     return (
       <button

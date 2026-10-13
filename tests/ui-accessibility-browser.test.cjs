@@ -246,6 +246,40 @@ test('Prometric account choices stay independent across preview pages and can co
   assert.equal(await preview.getByRole('combobox',{name:'Account action for row 1',exact:true}).inputValue(),'reuse','A new batch requires fresh explicit replacement choices');
 });
 
+test('trainee details edit only AnyDesk and retain a failed save for retry',{timeout:30000},async t=>{
+  const page=await openWorkspace(t);
+  if(await page.locator('#sidebar-toggle').getAttribute('aria-expanded')==='true')await page.locator('#sidebar-toggle').click();
+  await page.evaluate(async()=>{
+    uiTestDatabase.sheets['ui-admin']={sheet_id:'00000000-0000-0000-0000-000000000001',sheet_name:'Sheet 1',sheet_hidden:false,sheet_order:0,cells:[['','student@example.invalid','اسم المتدرب','ANYDESK STUDENT','1080424995']],version:1,format:{}};
+    await Cloud.refresh();
+  });
+  await page.locator('#sheet-reload').click();await page.waitForFunction(()=>document.getElementById('sheet-status').textContent==='تم الحفظ');
+  const original=await page.evaluate(()=>TraineeData.normalize(uiTestDatabase.sheets['ui-admin'].cells));
+  const open=async()=>{await page.locator('td[data-v="0"][data-col="3"]').dblclick();await page.locator('#sheet-trainee-dialog').waitFor({state:'visible'});};
+  await open();
+  const dialog=page.locator('#sheet-trainee-dialog'),id=dialog.getByRole('textbox',{name:'AnyDesk ID',exact:true}),save=dialog.getByRole('button',{name:'حفظ',exact:true});
+  assert.equal(await dialog.locator('input,textarea,select,[contenteditable="true"]').count(),1,'AnyDesk is the only editable field');
+  assert.equal(await id.inputValue(),'','Empty trailing AnyDesk is always available');
+  await id.fill('001 234 567');await save.click();
+  await page.waitForFunction(()=>uiTestDatabase.sheets['ui-admin'].cells[0][12]==='001 234 567');
+  const expected=structuredClone(original);expected[0][12]='001 234 567';
+  assert.deepEqual(await page.evaluate(()=>TraineeData.normalize(uiTestDatabase.sheets['ui-admin'].cells)),expected,'Only AnyDesk changes and leading zeros/spaces survive');
+  await dialog.locator('.sheet-detail-close').click();await open();assert.equal(await id.inputValue(),'001 234 567');
+  await page.evaluate(()=>uiTestDatabase.saveError='NETWORK');await id.fill('009876543');await save.click();
+  await dialog.getByRole('alert').waitFor({state:'visible'});
+  assert.equal(await id.inputValue(),'009876543','Failed saving retains the typed ID');
+  assert.equal(await page.evaluate(()=>uiTestDatabase.sheets['ui-admin'].cells[0][12]),'001 234 567','A failed save does not report persistence');
+  await page.evaluate(()=>uiTestDatabase.saveError='');await save.click();
+  await page.waitForFunction(()=>uiTestDatabase.sheets['ui-admin'].cells[0][12]==='009876543');
+  await page.setViewportSize({width:390,height:844});
+  assert.ok(await dialog.evaluate(el=>el.scrollWidth<=el.clientWidth+1),'The editor fits on mobile');
+  await id.scrollIntoViewIfNeeded();
+  await page.screenshot({path:path.join(root,'artifacts/trainee-anydesk-editor.png')});
+  await id.fill('');await id.press('Enter');
+  await page.waitForFunction(()=>!uiTestDatabase.sheets['ui-admin'].cells[0][12]);
+  await dialog.locator('.sheet-detail-close').click();await open();assert.equal(await id.inputValue(),'','The existing ID can be removed');
+});
+
 test('duplicate details keep mixed-direction labels and long values in separate aligned columns',{timeout:30000},async t=>{
   const page=await openWorkspace(t);
   const keycode='KEY-'.repeat(22),anydesk='1234567890'.repeat(8);
