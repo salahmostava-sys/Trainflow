@@ -50,6 +50,15 @@ const TraineeReports=(()=>{
     });
     return matched;
   }
+  function operationsRecords(records){
+    return records.map(({row,index})=>{
+      const iso=examDay(row[8]);
+      if(!iso)return {row,index};
+      const copiedRow=[...row];
+      copiedRow[8]=iso.slice(5,7)+'/'+iso.slice(8,10)+'/'+iso.slice(0,4);
+      return {row:copiedRow,index};
+    });
+  }
 
   function reportHtml(records,columns,worksheet){
     const formatting=worksheet.formatting||{};
@@ -114,7 +123,8 @@ const TraineeReports=(()=>{
       status.textContent=tr('انتظر تحميل الجدول واختر تاريخ التقرير أولًا.','Wait for the worksheet to load and choose a report date.');
       return;
     }
-    const records=dailyRecords(worksheet,date,kind).filter(({row})=>kind==='operations'||row[11]==='ناجح');
+    const matched=dailyRecords(worksheet,date,kind).filter(({row})=>kind==='operations'||row[11]==='ناجح');
+    const records=kind==='operations'?operationsRecords(matched):matched;
     if(!records.length){
       status.textContent=tr('لا توجد بيانات لهذا التقرير في التاريخ المختار.','No records for this report on the selected date.');
       return;
