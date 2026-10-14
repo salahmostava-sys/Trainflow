@@ -116,7 +116,7 @@ The inventory page combines team balances, supervisor balances and category tota
 
 ### Exchange files and daily reports
 
-Excel conversion uses a local Web Worker and bundled ExcelJS. JSON application backups use `trainflow-backup` and version 4; the restore path also accepts `ibta-ops-backup`. Daily operations and successful-trainee reports copy selected columns from the current private worksheet as TSV, without headers. Rows match vouchers used on the selected Riyadh date; successful reports include only passed rows. Column preferences are stored in the signed-in account’s Auth metadata. No report bridge or external upload is used.
+Excel conversion uses a local Web Worker and bundled ExcelJS. JSON application backups use `trainflow-backup` and version 4; the restore path also accepts `ibta-ops-backup`. Daily operations and successful-trainee reports copy selected columns from the current private worksheet as TSV, without headers. Rows match vouchers used on the selected Riyadh date; operations also include absent or blank-result rows whose worksheet exam date matches, even without a used voucher. Successful reports include only passed rows matched by voucher usage. Column preferences are stored in the signed-in account’s Auth metadata. No report bridge or external upload is used.
 
 ## API and trust boundaries
 
