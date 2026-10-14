@@ -253,7 +253,11 @@ export interface KeycodeView {
   language: string;
   copyLabel: string;
   categoryLabel: string;
+  first: boolean;
+  last: boolean;
   copy(): Promise<boolean>;
+  moveUp(): Promise<void>;
+  moveDown(): Promise<void>;
   move(category: string): Promise<void>;
   dragStart(event: React.DragEvent<HTMLDivElement>): void;
   dragEnd(): void;
@@ -337,7 +341,21 @@ function KeycodeRow({
           row.dragEnd();
         }}
       >
-        ⋮⋮
+        <span aria-hidden="true">⋮⋮</span>
+        <button
+          type="button"
+          className="kc-order-btn"
+          disabled={row.first}
+          aria-label={group.upLabel + ": " + row.title}
+          onClick={(event) => { event.stopPropagation(); void row.moveUp(); }}
+        >↑</button>
+        <button
+          type="button"
+          className="kc-order-btn"
+          disabled={row.last}
+          aria-label={group.downLabel + ": " + row.title}
+          onClick={(event) => { event.stopPropagation(); void row.moveDown(); }}
+        >↓</button>
       </div>
       <div className="kc-col-title">{row.title}</div>
       <div className="kc-col-lang">{row.language}</div>

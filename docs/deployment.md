@@ -61,3 +61,7 @@ See [architecture](../ARCHITECTURE.md), [operations](operations-guide.md) and [s
 ## Workbook schema prerequisites
 
 Before deploying the workbook commands, apply the trainee_border_styles, trainee_worksheets, trainee_worksheet_integrity and voucher_trainee_names migrations in their checked-in order. The original trainee row becomes Sheet 1 in place. Legacy saves remain scoped to it. Frontend rollback retains the database changes; an old owner-only multi-row read cannot display a workbook with multiple worksheets, so restore a compatible frontend rather than dropping live sheet data. Verify create/copy/save/switch/delete and all-sheet backup restore with synthetic records.
+
+## Worksheet owner quota
+
+Apply `supabase/migrations/20261014090000_enforce_worksheet_quota.sql` after the existing workbook migrations. It enforces the 100-sheet owner limit on direct INSERT and owner transfers as well as RPC operations, using the same transaction lock. Existing sheets are preserved; saves of existing sheets remain allowed at the limit. Run `tests/worksheet-quota-database.sql` in a dedicated fully migrated local test database. Do not run fixture SQL against production.

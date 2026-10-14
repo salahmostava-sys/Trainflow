@@ -20,7 +20,7 @@ function isValidEmail(email) {
  * Generate credentials based on the full name and a password pattern.
  * Does not depend on Chrome API (pattern must be passed in).
  */
-function generateCredentials(name, passPattern = '{F}@{f}#$1970') {
+function generateCredentials(name, passPattern = '{random}') {
   const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
   if (parts.length < 1) return null;
 
@@ -35,7 +35,9 @@ function generateCredentials(name, passPattern = '{F}@{f}#$1970') {
   const L = parts[parts.length-1][0].toUpperCase();
   const l = L.toLowerCase();
 
-  const password = passPattern
+  const pattern = !passPattern || passPattern === '{F}@{f}#$1970' ? '{random}' : passPattern;
+  const password = pattern
+    .replace(/{random}/g, () => randomPassword())
     .replace(/{F}/g, F)
     .replace(/{f}/g, f)
     .replace(/{L}/g, L)
@@ -55,6 +57,20 @@ function generateCredentials(name, passPattern = '{F}@{f}#$1970') {
   const needsBypass = (firstName.length > 20 || lastName.length > 20);
 
   return { username, password, firstName, lastName, needsBypass };
+}
+
+function randomPassword() {
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
+  const bytes = new Uint8Array(20);
+  // Reject biased byte values while keeping every accepted character unpredictable.
+  let password = 'Aa1!';
+  while (password.length < 20) {
+    crypto.getRandomValues(bytes);
+    for (const byte of bytes) {
+      if (byte < 256 - (256 % alphabet.length) && password.length < 20) password += alphabet[byte % alphabet.length];
+    }
+  }
+  return password;
 }
 
 // ─── Test Exports (Node.js / Jest only) ──────────────────────────────────────

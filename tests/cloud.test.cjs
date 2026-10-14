@@ -431,12 +431,16 @@ for(const key of usedKeys) assert(englishKeys.includes(key),`Missing translation
   const priorSignOuts=signOuts;let resets=0,flushes=0;
   ctx.Trainees={flush:async()=>{flushes++;return false;},hasDraft:()=>true,reset(){resets++;}};
   ctx.testExpiry=ctx.SessionPolicy.expiresAt(accessToken);
+  els['edit-code'].value='PRIVATE-VOUCHER';els['edit-notes'].value='PRIVATE-NOTE';
+  els['edit-dialog'].showModal();
   vm.runInContext('Date.now=()=>testExpiry;',ctx);
   windowListeners.focus();await new Promise(setImmediate);
   assert.equal(signOuts,priorSignOuts+1,'Daily cutoff signs out even when saving fails');
   assert.equal(storage.has(authTokenKey),false,'Daily cutoff removes remembered sessions');assert.equal(tabStorage.has(authTokenKey),false);
   assert.equal(flushes,1);assert.equal(resets,0,'Failed saves retain the draft in memory');
   assert.equal(els.app.hidden,true);assert.equal(els['auth-box'].hidden,false);
+  assert.equal(els['edit-dialog'].open,false,'Forced signout closes sibling dialogs');
+  assert.equal(els['edit-code'].value,'');assert.equal(els['edit-notes'].value,'');
   assert.match(els['auth-message'].textContent,/5 مساءً/);
   assert.match(els['auth-message'].textContent,/بنفس الحساب/);
   console.log('PASS: forced daily sign-out retains a failed sheet draft and shows manual login');

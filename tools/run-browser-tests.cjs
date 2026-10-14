@@ -1,15 +1,7 @@
 const {spawnSync} = require('child_process');
 const path = require('path');
 
-const browserTests = [
-  'tests/codes-timeline-browser.test.cjs',
-  'tests/workspace-position-browser.test.cjs',
-  'tests/trainees-performance-browser.test.cjs',
-  'tests/trainees-xlsx-browser.test.cjs',
-  'tests/certificate-name-browser.test.cjs',
-  'tests/prometric-flow-browser.test.cjs',
-  'tests/selection-export-browser.test.cjs'
-];
+const browserTests = require('../package.json').scripts['test:browser'].match(/tests\/[\w.-]+\.(?:cjs|mjs)/g);
 
 console.log('=== RUNNING BROWSER TESTS BATCH ===');
 const results = [];

@@ -22,6 +22,7 @@ import type {
 } from "@/lib/workspace-types";
 
 declare global {
+  function resetPendingImports(): void;
   var TraineeReports: { translate(): void };
   type WorkspacePanel = Panel;
   type CloudUser = User;
@@ -39,6 +40,7 @@ declare global {
   type CloudSheetAction = SheetAction;
   type CloudSheetOptions = SheetActionOptions;
   var AppDialog: {
+    close(): void;
     confirm(options: {
       title?: string;
       message: string;

@@ -6,7 +6,7 @@ const { renderToStaticMarkup } = require("react-dom/server");
 const root = path.resolve(__dirname, "..");
 const sources = [
   {
-    src: "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.116.0/dist/umd/supabase.js",
+    src: `https://cdn.jsdelivr.net/npm/@supabase/supabase-js@${require('../package.json').dependencies['@supabase/supabase-js']}/dist/umd/supabase.js`,
   },
   { src: "session-policy.js" },
   { src: "cloud.js" },

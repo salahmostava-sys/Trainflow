@@ -56,6 +56,20 @@ const Cloud = (() => {
     currentLang === "ar"
       ? "انتهت الجلسة الساعة 5 مساءً بتوقيت السعودية. سجّل الدخول من جديد."
       : "Your session ended at 5 PM Saudi time. Please sign in again.";
+  function clearPrivateDialogs() {
+    if (typeof AppDialog !== "undefined") AppDialog.close();
+    for (const dialog of document.querySelectorAll<HTMLDialogElement>("dialog")) {
+      if (dialog.open) {
+        const cancel = document.createEvent("Event");
+        cancel.initEvent("cancel", false, true);
+        dialog.dispatchEvent(cancel);
+        if (dialog.open) dialog.close();
+      }
+      for (const input of dialog.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>("input,textarea")) input.value = "";
+    }
+    for (const id of ["edit-heading", "delete-dialog-message", "app-modal-title", "app-modal-desc", "toast"]) $(id).textContent = "";
+    if (typeof resetPendingImports !== "undefined") resetPendingImports();
+  }
   async function endDailySession() {
     if (endingSession) return;
     endingSession = true;
@@ -63,6 +77,7 @@ const Cloud = (() => {
 
     $("app").hidden = true;
     $("cloud-tools").hidden = true;
+    clearPrivateDialogs();
     if (typeof Trainees !== "undefined") Trainees.suspend?.();
     const priorUser = user?.id;
     try {
@@ -736,6 +751,7 @@ const Cloud = (() => {
     }
   }
   function hasDraftInput() {
+    if (document.querySelector('[data-report-dirty="true"]')) return true;
     if (typeof Trainees !== "undefined" && Trainees.hasDraft()) return true;
     if ($<HTMLDialogElement>("edit-dialog")?.open) return true;
     if (
@@ -1320,6 +1336,7 @@ const Cloud = (() => {
       client.auth.onAuthStateChange((event, session) => {
         if (event === "SIGNED_OUT") {
           ready = false;
+          clearPrivateDialogs();
           clearTimeout(sessionTimer);
           if (typeof Trainees !== "undefined" && !retainedDraftUser)
             Trainees.reset();
@@ -1361,7 +1378,7 @@ const Cloud = (() => {
         if (!document.hidden) checkDailySession();
       });
       window.addEventListener("beforeunload", (e) => {
-        if (busy) {
+        if (busy || document.querySelector('[data-report-dirty="true"]')) {
           e.preventDefault();
           e.returnValue = "";
         }

@@ -81,6 +81,12 @@ export function ReportSettings(props: ReportSettingsProps) {
     setStatus("");
   }, [preferencesKey, props.owner, props.columns.length]);
 
+  const draft = {
+    operations: order.operations.filter((column) => checked.operations.has(column)),
+    success: order.success.filter((column) => checked.success.has(column)),
+  };
+  const dirty = JSON.stringify(draft) !== preferencesKey;
+
   const toggleColumn = (kind: ReportKind, column: number) => {
     setChecked((previous) => {
       const nextSet = new Set(previous[kind]);
@@ -114,12 +120,7 @@ export function ReportSettings(props: ReportSettingsProps) {
   const save = async (event: React.FormEvent) => {
     event.preventDefault();
     if (saving) return;
-    const currentDraft: ReportColumns = {
-      operations: order.operations.filter((c) => checked.operations.has(c)),
-      success: order.success.filter((c) => checked.success.has(c)),
-    };
-
-    if (!currentDraft.operations.length || !currentDraft.success.length) {
+    if (!draft.operations.length || !draft.success.length) {
       setStatus(
         tr(
           "اختر عمودًا واحدًا على الأقل لكل تقرير.",
@@ -130,7 +131,7 @@ export function ReportSettings(props: ReportSettingsProps) {
     }
     setSaving(true);
     try {
-      const saved = await props.save(currentDraft);
+      const saved = await props.save(draft);
       if (saved) {
         try {
           localStorage.setItem(
@@ -163,7 +164,7 @@ export function ReportSettings(props: ReportSettingsProps) {
   };
 
   return (
-    <section className="ops-card" dir={props.language === "ar" ? "rtl" : "ltr"}>
+    <section className="ops-card" data-report-dirty={dirty} dir={props.language === "ar" ? "rtl" : "ltr"}>
       <h3>{tr("أعمدة نسخ التقارير", "Report copy columns")}</h3>
       <p>
         {tr(
@@ -280,6 +281,22 @@ export function ReportSettings(props: ReportSettingsProps) {
                           {heading}
                         </span>
                       </label>
+
+                      <div className="report-reorder-actions">
+                        {([-1, 1] as const).map((step) => (
+                          <button
+                            key={step}
+                            type="button"
+                            aria-label={(step < 0
+                              ? tr("تحريك لأعلى: ", "Move up: ")
+                              : tr("تحريك لأسفل: ", "Move down: ")) + heading}
+                            disabled={saving || (step < 0 ? index === 0 : index === order[kind].length - 1)}
+                            onClick={() => moveColumn(kind, index, index + step)}
+                          >
+                            {step < 0 ? "↑" : "↓"}
+                          </button>
+                        ))}
+                      </div>
 
                       {isChecked && (
                         <span

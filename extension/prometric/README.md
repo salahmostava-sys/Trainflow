@@ -112,3 +112,7 @@ Download the current ZIP from **Settings → Extensions** or the registration di
 Drag/Shift selects adjacent rows; Ctrl/Cmd selects separate cell or column areas. Registration collects each selected visible-view row once, including rows covered by separate selections. It does not include unselected rows between those areas. The preview remains the final check before creating accounts. Existing credentials are never replaced automatically; the explicit retake option requires extension 4.1.4 or later.
 
 The Trust boundary remains the exact Vercel origin, the owning extension ID and its dedicated registration tab. A migrated frontend does not reset the same private sheet or pending result ownership. See the [operations guide](../../docs/operations-guide.md) and [deployment guide](../../docs/deployment.md).
+
+## Password generation (4.2.6)
+
+New registrations use `{random}` by default: a 20-character password from Web Crypto, independent of the trainee name. The former shipped `{F}@{f}#$1970` default is automatically treated as `{random}`, including saved settings. Explicit custom patterns remain supported; `{random}` can also be included in a custom pattern. Existing provider accounts are not changed. Reload the installed extension after updating its files. Preview passwords are examples; use the confirmed registration result for the actual account password.

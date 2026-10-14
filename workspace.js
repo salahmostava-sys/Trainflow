@@ -377,11 +377,7 @@ function getDayColors(){
   });
   return colors;
 }
-function hexToRgba(hex, alpha){
-  const h = hex.replace('#','');
-  const r = parseInt(h.substring(0,2),16), g = parseInt(h.substring(2,4),16), b = parseInt(h.substring(4,6),16);
-  return `rgba(${r},${g},${b},${alpha})`;
-}
+
 // Picks black or white text so it stays readable against a solid fill of any color
 // in the palette — same idea as Excel auto-contrasting text on a colored cell fill.
 function getContrastText(hex){
@@ -530,7 +526,7 @@ function applyLanguage(){
   renderCodeTabs();
   renderCodeGrid();
   const scrollLabel=document.getElementById('code-scroll-label');
-  if(scrollLabel)scrollLabel.textContent=codeScrolledToTop?t('codeScrollToToday'):t('codeScrollToTop');
+  if(scrollLabel)scrollLabel.textContent=t('codeScrollToTop');
   renderManageData();
   if(typeof renderInventory==='function')renderInventory();
   if(typeof renderMemberList==='function' && document.getElementById('admin-tools').open)renderMemberList();
@@ -949,7 +945,8 @@ function renderKeycodes(){
           state.categoryOrder=state.categoryOrder.filter(category=>category!==cat);delete state.categoryLabels[cat];delete state.keycodeOrder[cat];
           if(await saveState()){renderKeycodes();showToast(t('categoryRemoved'));}
         },
-        rows:items.map(exam=>({code:exam.code,title:exam.title,language:t('languageNames')[exam.lang]||exam.lang,copyLabel:t('copyCode')(exam.code),categoryLabel:t('moveCategoryCol')+': '+exam.title,
+        rows:items.map((exam,rowIndex)=>({code:exam.code,title:exam.title,language:t('languageNames')[exam.lang]||exam.lang,copyLabel:t('copyCode')(exam.code),categoryLabel:t('moveCategoryCol')+': '+exam.title,
+          first:rowIndex===0,last:rowIndex===items.length-1,moveUp:()=>moveKeycode(cat,exam.code,-1),moveDown:()=>moveKeycode(cat,exam.code,1),
           copy:async()=>{if(!await copyText(exam.code))return false;showToast(t('copiedColon')(exam.code));return true;},
           move:async(category)=>{state.keycodeOverrides[exam.code]=category;if(await saveState()){renderKeycodes();showToast(t('movedTo')(exam.title,displayCatName(category)));}},
           dragStart:event=>{draggedKcCode=exam.code;draggedKcCat=cat;event.dataTransfer.effectAllowed='move';event.dataTransfer.setData('text/plain',exam.code);},
@@ -995,7 +992,7 @@ let activeCategory = Object.keys(state.codesByCategory)[0];
 let codeTimelineReset=true,codeTimelineFrame=0;
 let codeCompact = localStorage.getItem('ibta_code_compact') !== 'false';
 let codeExpanded = localStorage.getItem('ibta_code_expanded') === 'true';
-let codeScrolledToTop = false;
+
 
 function applyCodeDensity(){
   const sheet=document.querySelector('.code-sheet');
@@ -1020,23 +1017,7 @@ function applyCodeExpand(){
   positionCodeTimeline();
 }
 
-function toggleCodeScrollTop(){
-  const scroll=document.getElementById('code-sheet-viewport');
-  const label=document.getElementById('code-scroll-label');
-  const btn=document.getElementById('code-scroll-top-btn');
-  if(!scroll)return;
-  codeScrolledToTop=!codeScrolledToTop;
-  if(codeScrolledToTop){
-    scroll.scrollTo({top:0,behavior:'smooth'});
-    if(label)label.textContent=t('codeScrollToToday');
-    if(btn)btn.classList.add('active');
-  }else{
-    codeTimelineReset=true;
-    positionCodeTimeline();
-    if(label)label.textContent=t('codeScrollToTop');
-    if(btn)btn.classList.remove('active');
-  }
-}
+
 
 function codeDayNumber(value){
   const date=parseAnyDateString(value || '');
@@ -1071,9 +1052,7 @@ function positionCodeTimeline(previous=null){
     const top=scroll.getBoundingClientRect().top,headHeight=head.offsetHeight;
     const target=anchor?anchor.getBoundingClientRect().top-top+scroll.scrollTop-headHeight:0;
     if(grid.dataset.hasHistory==='true')grid.style.paddingBottom=Math.max(0,scroll.clientHeight-(headHeight+grid.offsetHeight-target))+'px';
-    if(codeScrolledToTop){
-      scroll.scrollTop=0;
-    }else if(previous&&!codeTimelineReset){
+    if(previous&&!codeTimelineReset){
       const row=[...grid.querySelectorAll('.code-row')].find(row=>row.dataset.code===previous.code);
       scroll.scrollTop=row?row.getBoundingClientRect().top-top+scroll.scrollTop-headHeight-previous.delta:previous.scrollTop;
     }else scroll.scrollTop=Math.max(0,target);
@@ -1085,7 +1064,7 @@ function renderCodeTabs(){
   window.WorkspaceViews.categories(document.getElementById('code-cat-tabs'),{
     options:sortCategories(Object.keys(state.codesByCategory)).map(value=>({value,label:displayCatName(value)})),selected:activeCategory,
     choose:category=>{
-      activeCategory=category;selectedCodes.clear();codeScrolledToTop=false;
+      activeCategory=category;selectedCodes.clear();
       const label=document.getElementById('code-scroll-label');if(label)label.textContent=t('codeScrollToTop');
       document.getElementById('code-scroll-top-btn')?.classList.remove('active');renderCodeTabs();renderCodeGrid();
       window.TRAINFLOW_PANEL_CHANGED?.();
