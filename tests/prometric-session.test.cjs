@@ -71,6 +71,17 @@ test('upgrading restores the requested password default without changing saved a
   }
 });
 
+test('unresolved result dates reach the review queue without exposing account credentials',async()=>{
+  const fixture=extensionFixture(),items=(await examItems()).slice(0,1);
+  const app={id:fixture.chrome.runtime.id,frameId:0,url:'https://trainf.vercel.app/',tab:{id:10}};
+  const started=await fixture.send({action:'ibtaExamRequest',payload:{owner:'dummy-owner',client:'dummy-client',type:'START',items}},app);
+  assert.equal(started.ok,true);
+  const run=fixture.stored.ibtaExamRun,dates='02/03/2026 | 03/02/2026';
+  const recorded=await fixture.send({action:'ibtaExamRecord',run:run.id,id:items[0].id,error:'AMBIGUOUS_RESULTS',testDate:dates,page:'/Candidate/ManageReviewScores.aspx'},{id:fixture.chrome.runtime.id,frameId:0,url:'https://tcnet1.prometric.com/Candidate/ManageReviewScores.aspx',tab:{id:run.examTab}});
+  assert.equal(recorded.ok,true);const account=fixture.stored.ibtaExamRun.items[0];
+  assert.equal(account.status,'failed');assert.equal(account.testDate,dates);assert.equal(account.username,undefined);assert.equal(account.password,undefined);
+});
+
 test('result jobs isolate app and Prometric tabs and retain scores until durable acknowledgment',async()=>{
   const fixture=extensionFixture(),items=await examItems(),app={id:fixture.chrome.runtime.id,frameId:0,url:'https://trainf.vercel.app/',tab:{id:10}};
   const request=(type,extra={},sender=app)=>fixture.send({action:'ibtaExamRequest',payload:{owner:'dummy-owner',client:'dummy-client',type,...extra}},sender);

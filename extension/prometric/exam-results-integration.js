@@ -83,14 +83,14 @@ const IbtaExamResults=(()=>{
   }
   async function finish(run,account,report){
     delete account.username;delete account.password;
-    if(report.error){account.status='failed';account.error=report.error;account.page=report.page;}
+    if(report.error){account.status='failed';account.error=report.error;account.page=report.page;account.testDate=report.testDate||'';}
     else {account.status='done';Object.assign(account,report);}
     await persist(run);await advance(run);
   }
   async function record(message,sender){
     const trusted=await context(sender);if(!trusted.active||trusted.run!==message.run||trusted.id!==message.id)throw Error('FORBIDDEN');
     const run=await storedRun(),account=current(run);
-    if(message.error){if(!['LOGIN_FAILED','WRONG_ACCOUNT','SESSION_EXPIRED','REPORT_UNAVAILABLE','PAGINATED_RESULTS','AMBIGUOUS_RESULTS','NO_MATCHING_RESULT','UNCONFIRMED_RESULT'].includes(message.error))throw Error('INVALID_RESULT');await finish(run,account,{error:message.error,page:String(message.page||'').slice(0,200)});}
+    if(message.error){if(!['LOGIN_FAILED','WRONG_ACCOUNT','SESSION_EXPIRED','REPORT_UNAVAILABLE','PAGINATED_RESULTS','AMBIGUOUS_RESULTS','NO_MATCHING_RESULT','UNCONFIRMED_RESULT'].includes(message.error))throw Error('INVALID_RESULT');await finish(run,account,{error:message.error,page:String(message.page||'').slice(0,200),testDate:message.error==='AMBIGUOUS_RESULTS'?String(message.testDate||'').slice(0,200):''});}
     else if(message.loggedIn===true&&run.stage==='login'){
       if(String(message.username).toLowerCase()!==account.username.toLowerCase())throw Error('WRONG_ACCOUNT');run.stage='scores';await persist(run);
     }else {
