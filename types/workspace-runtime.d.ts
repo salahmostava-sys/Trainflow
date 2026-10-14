@@ -22,6 +22,7 @@ import type {
 } from "@/lib/workspace-types";
 
 declare global {
+  var WorkspaceLive: { connect(options: { client: CloudClient; owner: string; onRefresh(scope: string): Promise<boolean>; onStatus(status: string): void }): { close(): void; wake(): void } };
   function resetPendingImports(): void;
   var TraineeReports: { translate(): void };
   type WorkspacePanel = Panel;

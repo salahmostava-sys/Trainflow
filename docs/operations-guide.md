@@ -2,6 +2,10 @@
 
 Updated 11 October 2026.
 
+Live updates (14 October 2026): after a saved change, other open workspaces receive a small notification and reload authorized data automatically. Voucher usage, notes, shared settings and stock update without a manual refresh. Viewing the same private worksheet in another tab also picks up saved cell and worksheet changes; private sheets remain scoped to their owners and permitted administrators. This is saved-state synchronization, not simultaneous character-by-character editing or automatic merging of conflicting drafts.
+
+An active text field, unsaved settings, open dialogs or a worksheet draft can postpone the affected refresh. Settings → Sync shows when updates are waiting. They apply automatically when editing finishes; newer changes never replace an unsaved sheet draft. Checkbox selection is preserved while voucher availability updates. Returning to a hidden tab or reconnecting catches up missed changes. If two editors save conflicting worksheet versions, the existing conflict protection still applies.
+
 Connected project: `xaeffreqwtozsgqajzpc` (TrainFlow). The existing Muhimmat project was not changed.
 
 ## First sign-in

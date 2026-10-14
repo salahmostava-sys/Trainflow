@@ -835,6 +835,24 @@ const Trainees=(()=>{
     }
     clearTimeout(timer);await switchOwner(owner||Cloud.userId(),true);
   }
+  async function refreshLive(changedOwner=owner){
+    if(!initialized||!loaded||!owner||changedOwner!==owner)return true;
+    if(document.hidden||loading||worksheetBusy||codeBusy||hasDraft()||document.querySelector('dialog[open]'))return false;
+    const activeOwner=owner,activeSheet=sheetId,token=epoch,priorRevision=revision,priorVersion=version,viewer=Cloud.userId();
+    const current=()=>token===epoch&&owner===activeOwner&&sheetId===activeSheet&&Cloud.userId()===viewer;
+    const list=await Cloud.listTraineeSheets(activeOwner);
+    const nextSheet=list.some(s=>s.sheet_id===activeSheet&&!s.sheet_hidden)?activeSheet:list.find(s=>!s.sheet_hidden)?.sheet_id||FIRST_SHEET;
+    const incoming=await Cloud.readTrainees(activeOwner,nextSheet);
+    if(!current())return true;
+    if(loading||worksheetBusy||codeBusy||hasDraft()||revision!==priorRevision||version!==priorVersion||document.querySelector('dialog[open]'))return false;
+    worksheets=list;
+    if(nextSheet!==sheetId||Number(incoming.version)!==version){
+      epoch++;sheetId=nextSheet;cells=D.normalize(incoming.cells);formatting=D.format(incoming.format);colWidths={...(formatting.widths||{})};version=Number(incoming.version);
+      history=[];future=[];formulaCache.clear();closeDuplicateDetails();render();message(()=>tr('تم تحديث الجدول مباشرة','Sheet updated live'));
+      try{localStorage.setItem('ibta_active_worksheet:'+owner,sheetId);}catch{}
+    }
+    sheetTools?.paint();return true;
+  }
   function clearFilters(){['sheet-search','sheet-org','sheet-date','sheet-result'].forEach(id=>$(id).value='');$('sheet-duplicates-only').checked=false;sortCol=-1;sortRules=[];}
   function filtered(){return sortRules.length>0||sortCol>=0||$('sheet-duplicates-only').checked||['sheet-search','sheet-org','sheet-date','sheet-result'].some(id=>$(id).value);}
   function matchesSearch(row,search){
@@ -1618,7 +1636,7 @@ const Trainees=(()=>{
     }
     return false;
   }
-  return {open,translate,hasDraft,flush,reset,suspend,savePosition,reportColumnLabels:()=>allLabels().slice(0,DISPLAY_COLS).map(pair=>tr(...pair)),removeCode,addSeparatorRow};
+  return {open,translate,hasDraft,flush,reset,suspend,savePosition,refreshLive,reportColumnLabels:()=>allLabels().slice(0,DISPLAY_COLS).map(pair=>tr(...pair)),removeCode,addSeparatorRow};
 })();
 window.TRAINFLOW_ENGINE = Trainees;
 Trainees.translate();

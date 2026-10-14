@@ -9,6 +9,7 @@ const sources = [
     src: `https://cdn.jsdelivr.net/npm/@supabase/supabase-js@${require('../package.json').dependencies['@supabase/supabase-js']}/dist/umd/supabase.js`,
   },
   { src: "session-policy.js" },
+  { src: "workspace-live.js" },
   { src: "cloud.js" },
   { src: "voucher-columns.js" },
   { src: "app-dialog.js" },

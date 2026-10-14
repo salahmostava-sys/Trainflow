@@ -79,6 +79,7 @@ export interface WorkspaceSettings {
   inventoryMessageLanguage?: Language;
 }
 export interface TraineeEngine {
+  refreshLive(changedOwner?: string): Promise<boolean>;
   open(): Promise<void>;
   translate(): void;
   flush(keepEditing?: boolean): Promise<boolean>;
