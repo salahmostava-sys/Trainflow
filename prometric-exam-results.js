@@ -5,13 +5,14 @@ const TraineeExamResults=(()=>{
     const {$,tr}=h,E=PrometricExamData,P=PrometricData;
     let client;try{client=sessionStorage.getItem('ibta_exam_client');if(!client){client=crypto.randomUUID();sessionStorage.setItem('ibta_exam_client',client);}}catch{client=crypto.randomUUID();}
     let context=null,plan=null,run=null,connected=false,version='',supported=false,busy=false,recoverable=false,working=false,polling=false,applying=false,lastError='';
-    const pending=new Map(),blocked=new Map(),dialog=$('sheet-exam-dialog');
+    const pending=new Map(),blocked=new Map(),targets=new Map(),dialog=$('sheet-exam-dialog');
     window.WorkspaceViews.examResultsDialog(dialog);
     const requiredVersion=$('prometric-registration-script').dataset.version;
     const control=name=>$('sheet-exam-'+name),same=s=>context&&s.loaded&&s.owner===context.owner&&s.epoch===context.epoch;
     const reasons={
-      name:['الاسم أطول من 300 حرف؛ راجعه أولًا','Name exceeds 300 characters; review it first'],code:['لم يدخل — لا يوجد كود','Did not attend — no voucher code'],credentials:['يوزر أو باسورد غير مكتمل','Missing username or password'],duplicate:['بيانات مكررة؛ تحتاج مراجعة','Duplicate identity; review required'],exam:['اسم الاختبار غير موجود','Missing exam title'],
+      name:['الاسم أطول من 300 حرف؛ راجعه أولًا','Name exceeds 300 characters; review it first'],code:['لم يدخل — لا يوجد كود','Did not attend — no voucher code'],credentials:['يوزر أو باسورد غير مكتمل','Missing username or password'],duplicate:['صفوف متطابقة بلا وجهة مؤكدة؛ راجع النتيجة المعروضة','Identical rows without a confirmed destination; review the displayed result'],exam:['اسم الاختبار غير موجود','Missing exam title'],
       codeChanged:['تغير كود الصف؛ لم تتم الكتابة','Voucher changed; nothing written'],credentialsChanged:['تغير الحساب؛ لم تتم الكتابة','Credentials changed; nothing written'],resultChanged:['تغيرت النتيجة؛ لم تتم الكتابة','Result changed; nothing written'],missing:['تغير الصف أو تم حذفه','Row changed or deleted'],
+      duplicateChanged:['تغير الصف المكرر أثناء الجلب؛ حدد الصف الصحيح وأعد الجلب','The selected duplicate changed during fetching; select the correct row and fetch again'],
       LOGIN_FAILED:['تعذر الدخول؛ راجع الحساب','Sign-in failed; check credentials'],WRONG_ACCOUNT:['الحساب المفتوح لا يطابق الحساب المطلوب','Signed-in account does not match'],SESSION_EXPIRED:['انتهت جلسة Prometric؛ أعد جلب النتيجة','Prometric session expired; retry fetching'],NO_MATCHING_RESULT:['لا توجد نتيجة مطابقة للاختبار','No matching test result'],AMBIGUOUS_RESULTS:['تعذر تحديد أحدث محاولة؛ راجع تواريخ الاختبارات يدويًا','Cannot identify the newest attempt; review test dates manually'],PAGINATED_RESULTS:['النتائج موزعة على صفحات؛ راجعها يدويًا','Results have multiple pages; review manually'],UNCONFIRMED_RESULT:['الدرجة أو الحالة غير مؤكدة','Score or outcome not confirmed'],REPORT_UNAVAILABLE:['صفحة النتائج غير متاحة','Score report unavailable'],TIMEOUT:['انتهت مهلة الاتصال؛ حاول مجددًا','Connection timed out; retry'],TAB_CLOSED:['تم إغلاق تبويب النتائج','Results tab closed'],STOPPED:['تم الإيقاف','Stopped'],START_FAILED:['تعذر فتح تبويب النتائج','Could not open results tab'],
       DISCONNECTED:['الإضافة غير متصلة؛ حدّثها وأعد تحميل TrainFlow','Extension disconnected; update it and reload TrainFlow'],BUSY:['الإضافة مشغولة أو لديها نتائج تنتظر الحفظ','Extension busy or has results awaiting save'],OUTDATED:['تغير الجدول؛ افتح العملية مجددًا','Sheet changed; reopen this action'],SAVE:['تعذر الحفظ. النتيجة محفوظة في الإضافة؛ احفظ الجدول ثم حدّث الحالة','Save failed. Results remain in the extension; save the sheet then refresh'],ACTIVE_TAB:['التبويب الأصلي مفتوح؛ استخدمه أو أغلقه أولًا','Original tab is open; use it or close it first'],UPDATE_EXTENSION:['حدّث إضافة Prometric إلى '+requiredVersion+' لجلب النتائج','Update Prometric extension to '+requiredVersion+' to fetch results'],AMBIGUOUS_SCORE_COLUMN:['يوجد أكثر من عمود درجة الاختبار؛ راجع عناوين الأعمدة','Multiple exam score columns; review column headings'],COLUMN_LIMIT:['لا يوجد عمود فارغ لحفظ الدرجة','No free column for the score'],LIMIT:['حدد بحد أقصى 5000 متدرب','Select up to 5000 trainees'],
       ABSENT_SAVE:['تعذر حفظ «لم يدخل». اضغط حفظ الآن في الجدول ثم أعد المحاولة.','Could not save Did not attend. Save the sheet, then retry.']
@@ -47,11 +48,16 @@ const TraineeExamResults=(()=>{
       applying=true;const owner=s.owner,epoch=s.epoch,stillCurrent=()=>{const now=h.state();return now.loaded&&now.owner===owner&&now.epoch===epoch;};
       try{
         if(!await h.flush())throw Error('SAVE');if(!stillCurrent()||h.state().editing)return;s=h.state();
-        const index=P.indexRows(s.cells),matches=await Promise.all(completed.map(async account=>({account,match:await E.locate(s.cells,account,s.formatting,index)})));
+        const index=P.indexRows(s.cells),matches=await Promise.all(completed.map(async account=>({account,match:await E.locate(s.cells,account,s.formatting,{index,target:targets.get(account.id)})})));
         if(!stillCurrent()||h.state().editing||h.state().cells!==s.cells||h.state().formatting!==s.formatting)return;
         let next={cells:s.cells,format:s.formatting};const ids=[];
         for(const {account,match} of matches){if(match.reason){blocked.set(account.id,match.reason);continue;}blocked.delete(account.id);ids.push(account.id);if(!match.alreadySaved)next=E.apply(next.cells,next.format,match,account);}
-        if(!ids.length)return;if(next.cells!==s.cells)h.change(next.cells,true,next.format);
+        if(!ids.length)return;
+        if(next.cells!==s.cells){
+          const positions=new Map(s.cells.map((row,index)=>[row,index]));
+          for(const [id,target] of targets){const row=positions.get(target.row);if(row!==undefined)targets.set(id,{...target,row:next.cells[row]});}
+          h.change(next.cells,true,next.format);
+        }
         if(!await h.flush())throw Error('SAVE');if(!stillCurrent())return;update(await call('ACK',{run:current.id,ids}));lastError='';
       }catch(error){if(stillCurrent())lastError=reason(error.message);}finally{applying=false;draw();}
     }
@@ -67,7 +73,11 @@ const TraineeExamResults=(()=>{
         const items=await Promise.all(plan.items.map(async account=>{const {originalCredentials,...safe}=account;return {...safe,credentialsHash:await P.credentialsHash(originalCredentials)};}));
         if(!same(h.state())||h.state().cells!==s.cells)throw Error('OUTDATED');
         const marked=E.markAbsent(s.cells,plan.skipped,s.formatting);if(marked.cells!==s.cells||marked.format!==s.formatting)h.change(marked.cells,true,marked.format);
-        if(items.length){update(await call('START',{items}));plan=null;}
+        if(items.length){
+          targets.clear();const selected=h.state().cells,index=P.indexRows(selected);
+          for(const item of items)targets.set(item.id,{row:selected[item.row],duplicate:index.get(item.fingerprint)?.length>1});
+          update(await call('START',{items}));plan=null;
+        }
         if(!await h.flush())throw Error(items.length?'SAVE':'ABSENT_SAVE');
         if(!same(h.state()))throw Error('OUTDATED');
         if(!items.length)showToast(tr('تم حفظ «لم يدخل» للصفوف بدون كود','Saved Did not attend for rows without a voucher'));
@@ -87,7 +97,7 @@ const TraineeExamResults=(()=>{
       const labels={title:['جلب نتائج اختبارات Prometric','Fetch Prometric exam results'],open:['جلب نتائج Prometric','Fetch Prometric results'],start:['جلب النتائج للصفوف المحددة','Fetch selected results'],refresh:['تحديث الحالة','Refresh status'],stop:['إيقاف الجلب','Stop fetching'],recover:['استعادة نتائج التبويب المغلق','Recover results from a closed tab'],download:['تحديث الإضافة','Update extension']};
       for(const [name,label] of Object.entries(labels))control(name).textContent=tr(...label);control('close').setAttribute('aria-label',tr('إغلاق','Close'));draw();
     }
-    function reset(){dialog.close();context=plan=run=null;blocked.clear();lastError='';for(const request of pending.values()){clearTimeout(request.timer);request.reject(Error('OUTDATED'));}pending.clear();draw();}
+    function reset(){dialog.close();context=plan=run=null;blocked.clear();targets.clear();lastError='';for(const request of pending.values()){clearTimeout(request.timer);request.reject(Error('OUTDATED'));}pending.clear();draw();}
     control('open').onclick=open;control('close').onclick=()=>dialog.close();control('start').onclick=start;control('refresh').onclick=poll;control('stop').onclick=()=>run&&action('STOP',{run:run.id});control('recover').onclick=()=>action('RECOVER');
     control('download').href=$('prometric-registration-script')?.dataset.extension||'/workspace/trainflow-prometric.zip';
     window.addEventListener('message',event=>{const message=event.data;if(event.source!==window||event.origin!==location.origin||message?.channel!=='IBTA_PROMETRIC_EXAM_EXTENSION')return;if(message.changed){poll();return;}const request=pending.get(message.id);if(!request)return;pending.delete(message.id);clearTimeout(request.timer);request.resolve(message.payload);});
