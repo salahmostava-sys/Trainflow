@@ -1,21 +1,8 @@
 const {spawnSync} = require('child_process');
 const path = require('path');
+require('./prepare-runtime.cjs');
 
-const unitTests = [
-  'tests/cloud.test.cjs',
-  'tests/trainees.test.cjs',
-  'tests/trainees-xlsx.test.cjs',
-  'tests/certificate-name.test.cjs',
-  'tests/trainees-formulas.test.cjs',
-  'tests/trainees-performance.test.cjs',
-  'tests/sheet-delete.test.cjs',
-  'tests/session-policy.test.cjs',
-  'tests/server.test.mjs',
-  'tests/prometric.test.cjs',
-  'tests/prometric-session.test.cjs',
-  'tests/selection-export.test.cjs',
-  'tests/worksheet-actions.test.cjs'
-];
+const unitTests = require('../package.json').scripts['test'].match(/tests\/[\w.-]+\.(?:cjs|mjs)/g);
 
 console.log('=== RUNNING UNIT TESTS ===');
 const results = [];

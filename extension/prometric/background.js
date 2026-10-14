@@ -117,7 +117,7 @@ async function closeRegistrationWindow() {
   }
 }
 async function buildCredentials(item) {
-  const { passPattern = '{F}@{f}#$1970' } = await chrome.storage.local.get(['passPattern']);
+  const { passPattern = '{random}' } = await chrome.storage.local.get(['passPattern']);
   return generateCredentials(item.name, passPattern);
 }
 

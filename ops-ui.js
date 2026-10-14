@@ -1,5 +1,6 @@
 /* Administrator operations are kept in Settings. All writes are enforced by Supabase RLS and RPCs. */
 let pendingBackup=null,pendingImportCodes=[];
+let backupSelection=0,importSelection=0;
 const opsText=(id,value)=>{document.getElementById(id).textContent=value;};
 
 function validBackup(value){
@@ -45,34 +46,38 @@ function validBackup(value){
 }
 
 document.getElementById('restore-file').addEventListener('change',async event=>{
+  const selection=++backupSelection,owner=Cloud.userId();
   pendingBackup=null;document.getElementById('restore-button').disabled=true;
   const file=event.target.files?.[0];if(!file)return;
   try{
     if(file.size>10000000)throw Error('too large');
     const parsed=JSON.parse(await file.text());
+    if(selection!==backupSelection||owner!==Cloud.userId())return;
     if(!validBackup(parsed))throw Error('invalid backup');
     pendingBackup=parsed;
     opsText('restore-preview',t('restorePreview')(parsed.codes.length));
     document.getElementById('restore-button').disabled=false;
-  }catch{opsText('restore-preview',t('restoreInvalid'));}
+  }catch{if(selection===backupSelection&&owner===Cloud.userId())opsText('restore-preview',t('restoreInvalid'));}
 });
 document.getElementById('restore-button').addEventListener('click',async()=>{
   if(!pendingBackup)return;
+  const backup=pendingBackup,selection=backupSelection,owner=Cloud.userId();
   const ok=await (window.AppDialog?AppDialog.confirm({
     title:currentLang==='ar'?'تأكيد استعادة النسخة الاحتياطية':'Confirm Backup Restore',
-    message:t('restoreConfirm')(pendingBackup.codes.length),
+    message:t('restoreConfirm')(backup.codes.length),
     confirmText:currentLang==='ar'?'استعادة':'Restore',
     cancelText:currentLang==='ar'?'إلغاء':'Cancel',
     danger:true,
     icon:'warning'
-  }):confirm(t('restoreConfirm')(pendingBackup.codes.length)));
-  if(!ok)return;
+  }):confirm(t('restoreConfirm')(backup.codes.length)));
+  if(!ok||selection!==backupSelection||owner!==Cloud.userId())return;
   try{
-    await Cloud.restoreData(pendingBackup);
+    await Cloud.restoreData(backup);
+    if(selection!==backupSelection||owner!==Cloud.userId())return;
     pendingBackup=null;document.getElementById('restore-button').disabled=true;
     document.getElementById('restore-file').value='';
     opsText('restore-preview',t('restoreDone'));
-  }catch{opsText('restore-preview',t('operationFailed')+t('genericError'));}
+  }catch{if(selection===backupSelection&&owner===Cloud.userId())opsText('restore-preview',t('operationFailed')+t('genericError'));}
 });
 
 function parseCodeFile(text){
@@ -102,26 +107,36 @@ function parseCodeFile(text){
   return {codes,duplicates,invalid};
 }
 document.getElementById('bulk-import-file').addEventListener('change',async event=>{
+  const selection=++importSelection,owner=Cloud.userId();
   pendingImportCodes=[];document.getElementById('bulk-import-submit').disabled=true;
   const file=event.target.files?.[0];if(!file)return;
   try{
     if(file.size>1000000)throw Error('too large');
     const preview=parseCodeFile(await file.text());
+    if(selection!==importSelection||owner!==Cloud.userId())return;
     if(preview.codes.length>5000)throw Error('too many codes');
     pendingImportCodes=preview.codes;
     opsText('bulk-import-preview',t('bulkImportPreview')(preview.codes.length,preview.duplicates,preview.invalid));
     document.getElementById('bulk-import-submit').disabled=!preview.codes.length;
-  }catch{opsText('bulk-import-preview',t('genericError'));}
+  }catch{if(selection===importSelection&&owner===Cloud.userId())opsText('bulk-import-preview',t('genericError'));}
 });
 document.getElementById('bulk-import-submit').addEventListener('click',async()=>{
   if(!pendingImportCodes.length)return;
+  const codes=pendingImportCodes,selection=importSelection,owner=Cloud.userId();
   try{
-    const added=await Cloud.importCodes(document.getElementById('bulk-import-category').value,pendingImportCodes);
+    const added=await Cloud.importCodes(document.getElementById('bulk-import-category').value,codes);
+    if(selection!==importSelection||owner!==Cloud.userId())return;
     pendingImportCodes=[];document.getElementById('bulk-import-file').value='';
     document.getElementById('bulk-import-submit').disabled=true;
     opsText('bulk-import-preview',t('bulkImportDone')(added));
-  }catch{opsText('bulk-import-preview',t('genericError'));}
+  }catch{if(selection===importSelection&&owner===Cloud.userId())opsText('bulk-import-preview',t('genericError'));}
 });
+function resetPendingImports(){
+  backupSelection++;importSelection++;pendingBackup=null;pendingImportCodes=[];
+  for(const id of ['restore-file','bulk-import-file'])document.getElementById(id).value='';
+  for(const id of ['restore-button','bulk-import-submit'])document.getElementById(id).disabled=true;
+  for(const id of ['restore-preview','bulk-import-preview'])opsText(id,'');
+}
 async function renderMemberList(){
   if(Cloud.role()!=='admin')return;
   const box=document.getElementById('member-list');if(!box)return;

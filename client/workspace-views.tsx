@@ -114,7 +114,8 @@ export const WorkspaceViews = {
     container: Element,
     props: React.ComponentProps<typeof ReportSettings>,
   ) {
-    renderView(container, <ReportSettings key={props.owner} {...props} />);
+    const mounted = mountedView(container);
+    flushSync(() => mounted.root.render(<ReportSettings key={props.owner} {...props} />));
   },
   reportPanel(container: Element) {
     renderView(container, <ReportPanel />);

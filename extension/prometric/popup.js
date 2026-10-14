@@ -19,7 +19,7 @@ const DEFAULT_SETTINGS = {
   defPostal: '00000',
   defCountry: 'Saudi Arabia',
   defAnswer: 'a',
-  passPattern: '{F}@{f}#$1970',
+  passPattern: '{random}',
   sheetUrl: ''
 };
 
@@ -82,7 +82,7 @@ function renderCredentialPreview(name) {
   if (!card) return;
 
   const patternInput = document.getElementById('passPattern');
-  const pattern = patternInput ? patternInput.value : '{F}@{f}#$1970';
+  const pattern = patternInput ? patternInput.value : '{random}';
   const creds = generateCredentials(name, pattern);
 
   if (!creds) { card.classList.remove('show'); return; }
@@ -547,7 +547,7 @@ async function clearCurrentSession() {
 // pattern is already known (e.g. in background.js).
 function generateCredsFromCurrentPattern(name) {
   const patternInput = document.getElementById('passPattern');
-  const pattern = patternInput ? patternInput.value : '{F}@{f}#$1970';
+  const pattern = patternInput ? patternInput.value : '{random}';
   return generateCredentials(name, pattern);
 }
 
@@ -588,7 +588,7 @@ async function loadSettings() {
   setVal('defPostal', settings.defPostal);
   setVal('defCountry', settings.defCountry);
   setVal('defAnswer', settings.defAnswer);
-  setVal('passPattern', settings.passPattern);
+  setVal('passPattern', settings.passPattern === '{F}@{f}#$1970' ? '{random}' : settings.passPattern);
   setVal('sheetUrl', settings.sheetUrl);
 }
 
@@ -752,7 +752,7 @@ function updateSinglePreview() {
   const startEl = document.getElementById('sStart') || sStart;
   const credsPanel = document.getElementById('savedCredsPanel') || savedCredsPanel;
   const patternInput = document.getElementById('passPattern');
-  const pattern = patternInput ? patternInput.value : '{F}@{f}#$1970';
+  const pattern = patternInput ? patternInput.value : '{random}';
   const nameVal = nameEl ? nameEl.value.trim() : '';
   const emailVal = emailEl ? emailEl.value.trim() : '';
   const c = generateCredentials(nameVal, pattern);
@@ -782,7 +782,7 @@ sEmail.addEventListener('input', updateSinglePreview);
 
 sStart.addEventListener('click', async () => {
   const patternInput = document.getElementById('passPattern');
-  const pattern = patternInput ? patternInput.value : '{F}@{f}#$1970';
+  const pattern = patternInput ? patternInput.value : '{random}';
   const c = generateCredentials(sName.value, pattern);
   if (!c) return;
   if (!(await confirmReplaceRunning(sMsg))) return;

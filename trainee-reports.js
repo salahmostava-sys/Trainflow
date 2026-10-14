@@ -40,9 +40,7 @@ const TraineeReports=(()=>{
     });
     return matched;
   }
-  function dailyRows(worksheet,date){
-    return dailyRecords(worksheet,date).map(r=>r.row);
-  }
+
   function reportHtml(records,columns,worksheet){
     const formatting=worksheet.formatting||{};
     const styles=formatting.styles||{};

@@ -134,28 +134,7 @@ const Trainees=(()=>{
   function setSelectionAlignment(align){
     if(!loaded||loading)return;formatSelection({align});
   }
-  function shiftStylesOnInsert(fmt,insertIdx){
-    const next=D.format(fmt);next.styles={};
-    if(next.daySeparators)next.daySeparators=next.daySeparators.map(r=>r>=insertIdx?r+1:r).filter(r=>r<D.MAX_ROWS);
-    for(const [key,style]of Object.entries(fmt.styles)){
-      const [r,c]=key.split(':').map(Number);
-      const target=r>=insertIdx?r+1:r;
-      if(target<D.MAX_ROWS){const value={...style};if(value.mergeRows&&r<insertIdx&&r+value.mergeRows>insertIdx)value.mergeRows++;next.styles[target+':'+c]=value;}
-    }
-    return next;
-  }
-  function shiftAlignmentsOnInsert(insertIdx){
-    const prefix=(workspaceIdentity()||'default')+':',updated={};
-    for(const [key,val]of Object.entries(cellAlignments)){
-      if(key.startsWith(prefix)){
-        const rest=key.slice(prefix.length);
-        const [r,c]=rest.split(':').map(Number);
-        const target=r>=insertIdx?r+1:r;
-        updated[prefix+target+':'+c]=val;
-      }else updated[key]=val;
-    }
-    cellAlignments=updated;saveAlignments();
-  }
+
   function insertRow(pos='above'){
     commitEdit();
     if(filtered()||formatting.hiddenRows?.length){message(()=>tr('امسح الفلاتر والفرز وأظهر الصفوف قبل الإدراج.','Clear filters and sorting and unhide rows before inserting.'),true);return;}
