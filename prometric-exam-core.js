@@ -13,24 +13,38 @@
     throw Error('COLUMN_LIMIT');
   }
   function prepare(rows,indices,catalog,format){
-    const items=[],skipped=[],index=P.indexRows(rows),column=scoreColumn(rows,format);
+    const items=[],skipped=[],column=scoreColumn(rows,format);
     for(const rowIndex of new Set(indices)){
       if(!Number.isInteger(rowIndex)||rowIndex<0||rowIndex>=rows.length)continue;
       const row=rows[rowIndex],voucher=String(row[0]||'').trim(),username=String(row[9]||'').trim(),password=String(row[10]||'');
       if(!row.some(Boolean))continue;
       const keycode=D.courseKeycode(row[7],catalog),name=row[3]||row[2]||username;
       const language=String(keycode?.lang||'').trim(),examLanguage=/\bArabic\b/i.test(row[7])||/^(arabic|ar|العربية|عربي)$/i.test(language)?'Arabic':/\bEnglish\b/i.test(row[7])||/^(english|en|الإنجليزية|انجليزي)$/i.test(language)?'English':'';
-      const reason=!voucher?'code':!username||!password||username.length>300||password.length>300?'credentials':name.length>300?'name':index.get(P.fingerprint(row))?.length!==1?'duplicate':!row[7]?.trim()?'exam':'';
+      const reason=!voucher?'code':!username||!password||username.length>300||password.length>300?'credentials':name.length>300?'name':!row[7]?.trim()?'exam':'';
       if(reason){skipped.push({row:rowIndex,name,voucher,reason,fingerprint:P.fingerprint(row),originalResult:row[11]||''});continue;}
       items.push({id:crypto.randomUUID(),row:rowIndex,name,voucher,username,password,fingerprint:P.fingerprint(row),originalCredentials:P.credentials(row),examTitles:[...new Set([row[7],keycode?.title].filter(Boolean))],examLanguage,originalResult:row[11]||'',originalScore:row[column]||''});
     }
     if(items.length>P.MAX_ITEMS)throw Error('LIMIT');
     return {items,skipped,column};
   }
-  async function locate(rows,item,format,index=P.indexRows(rows)){
+  async function resultRow(rows,item,matches,target){
+    if(!matches.length)return {reason:'missing'};
+    // A selected duplicate is tracked by its immutable row, never by a stale row number.
+    if(target?.duplicate&&!rows.includes(target.row))return {reason:'duplicateChanged'};
+    if(matches.length===1)return {row:matches[0]};
+    const selected=target&&matches.filter(row=>rows[row]===target.row);
+    if(selected?.length===1)return {row:selected[0]};
+    const vouchers=matches.filter(row=>String(rows[row][0]||'').trim()===item.voucher);
+    if(!vouchers.length)return {reason:'codeChanged'};
+    const accounts=await Promise.all(vouchers.map(async row=>({row,hash:await P.credentialsHash(P.credentials(rows[row]))})));
+    const exact=accounts.filter(account=>account.hash===item.credentialsHash);
+    return exact.length===1?{row:exact[0].row}:{reason:exact.length?'duplicate':'credentialsChanged'};
+  }
+  async function locate(rows,item,format,{index=P.indexRows(rows),target}={}){
     const matches=index.get(item.fingerprint)||[];
-    if(matches.length!==1)return {reason:matches.length?'duplicate':'missing'};
-    const row=matches[0],values=rows[row],column=scoreColumn(rows,format);
+    const located=await resultRow(rows,item,matches,target);
+    if(located.reason)return located;
+    const row=located.row,values=rows[row],column=scoreColumn(rows,format);
     if(String(values[0]||'').trim()!==item.voucher)return {reason:'codeChanged'};
     if(await P.credentialsHash(P.credentials(values))!==item.credentialsHash)return {reason:'credentialsChanged'};
     const sameResult=values[11]===item.result&&String(values[column]||'')===item.score;

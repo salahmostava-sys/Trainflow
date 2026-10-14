@@ -7,7 +7,20 @@ const trainee=(id,code='VOUCHER-'+id)=>[code,id+'@example.invalid','اسم '+id,
   const rows=[trainee('1'),trainee('2',''),trainee('3'),trainee('4')];rows[2][10]='';
   const plan=E.prepare(rows,[0,0,1,2],[],D.defaultFormat());
   assert.deepEqual(plan.items.map(item=>item.row),[0]);assert.deepEqual(plan.skipped.map(item=>item.reason),['code','credentials']);
-  assert.equal(E.prepare([rows[0],[...rows[0]]],[0],[],D.defaultFormat()).skipped[0].reason,'duplicate');
+  const duplicates=D.normalize([rows[0],[...rows[0]]]),duplicatePlan=E.prepare(duplicates,[0],[],D.defaultFormat());
+  assert.deepEqual(duplicatePlan.items.map(item=>item.row),[0],'A selected duplicate can fetch its account result');
+  const duplicateItem={...duplicatePlan.items[0],credentialsHash:await P.credentialsHash(duplicatePlan.items[0].originalCredentials),result:'ناجح',score:'85%'};
+  assert.equal((await E.locate(duplicates,duplicateItem,D.defaultFormat())).reason,'duplicate','Recovered identical copies still cannot choose a destination automatically');
+  const targeted=await E.locate(duplicates,duplicateItem,D.defaultFormat(),{target:{row:duplicates[0],duplicate:true}});
+  assert.equal(targeted.row,0);
+  const duplicateSaved=E.apply(duplicates,D.defaultFormat(),targeted,duplicateItem);
+  assert.deepEqual(duplicateSaved.cells.map(row=>row[11]),['ناجح',''],'Only the explicitly selected copy is changed');
+  assert.equal((await E.locate([duplicates[1],duplicates[0]],duplicateItem,D.defaultFormat(),{target:{row:duplicates[0],duplicate:true}})).row,1,'An immutable selected duplicate can move without targeting the other copy');
+  assert.equal((await E.locate([[...duplicates[0]],duplicates[1]],duplicateItem,D.defaultFormat(),{target:{row:duplicates[0],duplicate:true}})).reason,'duplicateChanged','Replacing the selected duplicate never redirects its result to the other copy');
+  for(const [column,value] of [[0,'OTHER-VOUCHER'],[9,'OTHER-USER'],[10,'OTHER-PASSWORD']]){
+    const repeat=rows[0].slice();repeat[column]=value;
+    assert.equal((await E.locate([repeat,rows[0]],duplicateItem,D.defaultFormat())).row,1,'Voucher and complete account credentials distinguish repeated identities when recovering results');
+  }
   const custom=D.defaultFormat();custom.headers[13]='Notes';rows[0][13]='KEEP';rows[0][14]='EXISTING VALUE';
   assert.equal(E.scoreColumn(rows,custom),15,'A score column never overwrites custom data or headers');
   const item={...plan.items[0],credentialsHash:await P.credentialsHash(plan.items[0].originalCredentials),result:'ناجح',score:'85%'};

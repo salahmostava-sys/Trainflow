@@ -29,6 +29,14 @@ that position while preserving custom columns and saved scores for other rows.
 Each account's credentials are removed from this results queue after it
 finishes. Confirmed scores remain recoverable until TrainFlow acknowledges its cloud save.
 
+Repeated trainee identities do not prevent fetching results for selected rows. A
+live fetch tracks the explicitly selected immutable row, including identical copies,
+and follows that row if it moves. Other copies are not updated. If the selected
+duplicate is replaced or edited during fetching, its result remains visible for
+manual review. After a page reload, recovery may match repeated identities by an
+unambiguous voucher and account; indistinguishable copies still require manual
+review. New-account registration retains its separate duplicate-identity checks.
+
 Results follow **Candidate → Take Test → History / Review Scores**, using the site's
 navigation links or its History / Review Scores buttons, including submit inputs.
 If clicking History leaves the page unchanged, the extension rechecks the active
