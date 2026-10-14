@@ -36,7 +36,11 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
       if(url.origin==='https://tcnet1.prometric.com')return route.fulfill({contentType:'text/html; charset=utf-8',body:registrationFixture(url)});
       return route.abort();
     });
-    const worker=ctx.serviceWorkers()[0]||await ctx.waitForEvent('serviceworker');await worker.evaluate(()=>chrome.storage.local.set({pageDelay:0.01,userDelay:1,autoSubmit:true,desktopNotifications:false,backgroundMode:false,passPattern:'{F}#{f}Demo1970'}));
+    const worker=ctx.serviceWorkers()[0]||await ctx.waitForEvent('serviceworker');
+    const passwordPreviewPopup=await ctx.newPage();await passwordPreviewPopup.goto(worker.url().replace(/background\.js$/,'popup.html'));
+    assert.equal(await passwordPreviewPopup.locator('#passPattern').inputValue(),'{F}@{f}#$1970');
+    await passwordPreviewPopup.locator('#sName').fill('Ahmed Student');await passwordPreviewPopup.waitForFunction(()=>document.getElementById('sPreviewPass').textContent==='A@a#$1970');await passwordPreviewPopup.close();
+    await worker.evaluate(()=>chrome.storage.local.set({pageDelay:0.01,userDelay:1,autoSubmit:true,desktopNotifications:false,backgroundMode:false,passPattern:'{F}#{f}Demo1970'}));
     let page=await ctx.newPage();const errors=[];page.on('pageerror',error=>errors.push(error.message));page.on('dialog',dialog=>dialog.accept());
     await page.addInitScript(()=>window.previewSaveError='NETWORK');await page.goto('https://trainf.vercel.app/');await page.locator('#trainees-tab').click();await page.waitForFunction(()=>document.getElementById('sheet-status').textContent==='تم الحفظ');
     await page.locator('td[data-v="0"][data-col="3"]').click();await page.locator('td[data-v="2"][data-col="3"]').click({modifiers:['Shift']});await page.locator('#sheet-prometric-open').click();

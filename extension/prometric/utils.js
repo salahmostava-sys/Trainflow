@@ -1,5 +1,6 @@
 // utils.js - Shared utilities for Prometric Extension
 /* exported escapeHtml, isValidEmail, generateCredentials */
+const DEFAULT_PASSWORD_PATTERN = '{F}@{f}#$1970';
 
 function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, ch => ({
@@ -20,7 +21,7 @@ function isValidEmail(email) {
  * Generate credentials based on the full name and a password pattern.
  * Does not depend on Chrome API (pattern must be passed in).
  */
-function generateCredentials(name, passPattern = '{random}') {
+function generateCredentials(name, passPattern = DEFAULT_PASSWORD_PATTERN) {
   const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
   if (parts.length < 1) return null;
 
@@ -35,7 +36,7 @@ function generateCredentials(name, passPattern = '{random}') {
   const L = parts[parts.length-1][0].toUpperCase();
   const l = L.toLowerCase();
 
-  const pattern = !passPattern || passPattern === '{F}@{f}#$1970' ? '{random}' : passPattern;
+  const pattern = passPattern || DEFAULT_PASSWORD_PATTERN;
   const password = pattern
     .replace(/{random}/g, () => randomPassword())
     .replace(/{F}/g, F)
@@ -76,6 +77,7 @@ function randomPassword() {
 // ─── Test Exports (Node.js / Jest only) ──────────────────────────────────────
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
+    DEFAULT_PASSWORD_PATTERN,
     escapeHtml,
     isValidEmail,
     generateCredentials
