@@ -30,13 +30,23 @@ const TraineeReports=(()=>{
     return Number.isNaN(+parsed)?'':new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Riyadh',year:'numeric',month:'2-digit',day:'2-digit'}).format(parsed);
   };
   const voucherKey=code=>String(code||'').trim().toUpperCase();
-  function dailyRecords(worksheet,date){
+  function examDay(raw){
+    const text=String(raw||'').replace(/[٠-٩۰-۹]/g,digit=>String(digit.charCodeAt(0)-(digit<='٩'?1632:1776))).replace(/[\u200e\u200f\u061c]/g,'');
+    const iso=text.match(/(?:^|\D)(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})(?!\d)/);
+    const local=text.match(/(?:^|\D)(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})(?!\d)/);
+    if(!iso&&!local)return '';
+    const [year,month,date]=iso?iso.slice(1).map(Number):[Number(local[3]),Number(local[2]),Number(local[1])];
+    const parsed=new Date(Date.UTC(year,month-1,date));
+    return parsed.getUTCFullYear()===year&&parsed.getUTCMonth()===month-1&&parsed.getUTCDate()===date?parsed.toISOString().slice(0,10):'';
+  }
+  function dailyRecords(worksheet,date,kind){
     const codes=Cloud.codeSnapshot().filter(code=>code.owner_id===worksheet.owner&&
       (code.used_at?day(code.used_at):String(code.used_on||'').split('/').reverse().join('-'))===date);
     const vouchers=new Set(codes.map(code=>voucherKey(code.code)));
     const matched=[];
     (worksheet.rows||[]).forEach((row,index)=>{
-      if(vouchers.has(voucherKey(row[0]))) matched.push({row,index});
+      const pendingResult=!row[11]?.trim()||row[11].trim()==='لم يدخل';
+      if(vouchers.has(voucherKey(row[0]))||kind==='operations'&&pendingResult&&examDay(row[8])===date)matched.push({row,index});
     });
     return matched;
   }
@@ -104,7 +114,7 @@ const TraineeReports=(()=>{
       status.textContent=tr('انتظر تحميل الجدول واختر تاريخ التقرير أولًا.','Wait for the worksheet to load and choose a report date.');
       return;
     }
-    const records=dailyRecords(worksheet,date).filter(({row})=>kind==='operations'||row[11]==='ناجح');
+    const records=dailyRecords(worksheet,date,kind).filter(({row})=>kind==='operations'||row[11]==='ناجح');
     if(!records.length){
       status.textContent=tr('لا توجد بيانات لهذا التقرير في التاريخ المختار.','No records for this report on the selected date.');
       return;

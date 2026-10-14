@@ -22,12 +22,18 @@ const path=require('node:path'),assert=require('node:assert/strict'),fs=require(
     await page.evaluate(()=>{
       const passed=Array(20).fill('');
       Object.assign(passed,{0:'PASS-VOUCHER',1:'trainee@example.invalid',2:'اسم "المتدرب"\nالسطر الثاني\tتكملة',3:'<img src=x onerror=alert(1)>',4:'001234',5:'050123',6:'Organization',7:'Leadership',8:'06/10/2026',9:'PRIVATE USER',10:'PRIVATE PASSWORD',11:'ناجح',12:'001122',19:'آخر عمود'});
-      const record=(code,result)=>{const row=[...passed];row[0]=code;row[11]=result;return row;};
-      previewSheets.set('demo-admin',{cells:[passed,record('FAIL-VOUCHER','راسب'),record('NO-RESULT',''),record('OTHER-OWNER','ناجح'),record('OTHER-DAY','ناجح'),record('UNUSED','ناجح'),[]],format:{headers:{19:'ملاحظات التقرير'}},version:1});
+      const record=(code,result,date=passed[8])=>{const row=[...passed];row[0]=code;row[11]=result;row[8]=date;return row;};
+      // Regression: absent and blank results need no used voucher when the worksheet exam date matches.
+      previewSheets.set('demo-admin',{cells:[passed,record('FAIL-VOUCHER','راسب'),record('NO-RESULT',''),
+        record('','لم يدخل','05/10/2026'),record('','','الاثنين ٢٠٢٦-١٠-٥ م'),record('UNUSED-ABSENT','لم يدخل','5.10.2026'),record('USED-ABSENT','لم يدخل','2026/10/5'),
+        record('WRONG-DATE','لم يدخل','06/10/2026'),record('WRONG-BLANK-DATE','','2026-10-06'),record('INVALID-DATE','لم يدخل','2026-09-35'),record('NO-DATE','لم يدخل',''),
+        record('','ناجح','05/10/2026'),record('OTHER-OWNER','ناجح'),record('OTHER-DAY','ناجح'),record('UNUSED','ناجح'),[]],format:{headers:{19:'ملاحظات التقرير'}},version:1});
       previewCodes.push(
         {code:'PASS-VOUCHER',owner_id:'demo-admin',used_at:'2026-10-04T21:30:00Z'},
         {code:'FAIL-VOUCHER',owner_id:'demo-admin',used_on:'05/10/2026'},
         {code:'NO-RESULT',owner_id:'demo-admin',used_on:'05/10/2026'},
+        {code:'UNUSED-ABSENT',owner_id:'demo-admin',used_on:null},
+        {code:'USED-ABSENT',owner_id:'demo-admin',used_on:'05/10/2026'},
         {code:'OTHER-OWNER',owner_id:'demo-user',used_on:'05/10/2026'},
         {code:'OTHER-DAY',owner_id:'demo-admin',used_at:'2026-10-05T21:30:00Z'},
         {code:'UNUSED',owner_id:'demo-admin',used_on:null},
@@ -40,7 +46,8 @@ const path=require('node:path'),assert=require('node:assert/strict'),fs=require(
     await panel.locator('[data-field=date]').fill('2026-10-05');
     await panel.locator('[data-action=operations]').click();
     const defaultOperations=await page.evaluate(()=>TraineeData.parse(window.reportCopiedText));
-    assert.equal(defaultOperations.length,3,'Daily operations exclude unused codes, other owners and other Riyadh dates');
+    assert.deepEqual(defaultOperations.map(row=>row[0]),['PASS-VOUCHER','FAIL-VOUCHER','NO-RESULT','','','UNUSED-ABSENT','USED-ABSENT'],'Operations retain daily used vouchers and add absent/blank results by exam date without duplicating rows');
+    assert.match(await status.textContent(),/تم نسخ 7 صف/);
     assert.equal(defaultOperations[0].length,10);assert.equal(defaultOperations[0][0],'PASS-VOUCHER','Copy has no header row');
     assert.equal(defaultOperations[0][2],'اسم "المتدرب"\nالسطر الثاني\tتكملة','Multiline/tab/quoted cells survive TSV');
     assert.equal(defaultOperations[0][4],'001234');assert.equal(defaultOperations[0][8],'06/10/2026','Copy preserves the exam-date cell');
@@ -62,8 +69,17 @@ const path=require('node:path'),assert=require('node:assert/strict'),fs=require(
     await page.screenshot({path:path.join(__dirname,'../artifacts/report-copy-columns.png')});
     await page.locator('#trainees-tab').click();
     await panel.locator('[data-action=operations]').click();
-    assert.deepEqual(await page.evaluate(()=>TraineeData.parse(window.reportCopiedText)),Array(3).fill(['<img src=x onerror=alert(1)>','001122','آخر عمود']),'Only the selected operations columns are copied');
+    assert.deepEqual(await page.evaluate(()=>TraineeData.parse(window.reportCopiedText)),Array(7).fill(['<img src=x onerror=alert(1)>','001122','آخر عمود']),'Only the selected operations columns are copied, including absent and blank results even without the result/date columns');
+    await page.evaluate(()=>Object.defineProperty(navigator,'clipboard',{configurable:true,value:{write:async items=>{
+      const [text,html]=await Promise.all(['text/plain','text/html'].map(type=>items[0].getType(type).then(blob=>blob.text())));
+      window.reportCopiedText=text;window.reportCopiedHtml=html;
+    }}}));
+    await panel.locator('[data-action=operations]').click();
+    await page.waitForFunction(()=>typeof window.reportCopiedHtml==='string');
+    assert.equal(await page.evaluate(()=>new DOMParser().parseFromString(window.reportCopiedHtml,'text/html').querySelectorAll('tr').length),7,'Rich clipboard includes the same operations rows');
+    assert.deepEqual(await page.evaluate(()=>TraineeData.parse(window.reportCopiedText)),Array(7).fill(['<img src=x onerror=alert(1)>','001122','آخر عمود']));
     await panel.locator('[data-action=success]').click();
+    await page.waitForFunction(()=>TraineeData.parse(window.reportCopiedText).length===1);
     const successfulCopy=await page.evaluate(()=>window.reportCopiedText);
     assert.deepEqual(await page.evaluate(()=>TraineeData.parse(window.reportCopiedText)),[['PASS-VOUCHER','اسم "المتدرب"\nالسطر الثاني\tتكملة','ناجح']],'Successful report has its own column selection');
     assert.equal(await page.locator('#sheet-report-preview-root').count(),0);
