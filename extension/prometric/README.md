@@ -1,10 +1,10 @@
-# TrainFlow — Prometric 4.2.5
+# TrainFlow — Prometric 4.2.7
 
 Integrated from the user's Prometric Auto Register 4.0 source (Salah Mostafa,
 ISC license). Its original popup, registration steps, generation pattern,
 address defaults and import/export tools are retained.
 
-Production origin: **https://trainf.vercel.app/**. Updated 12 October 2026. Configured exclusively for the Vercel production origin.
+Production origin: **https://trainf.vercel.app/**. Updated 14 October 2026. Configured exclusively for the Vercel production origin.
 
 The toolbar, extension manager, notifications and popup use the same TrainFlow
 logo. Replace the installed extension files in their existing folder and reload
@@ -19,8 +19,12 @@ Only those selected rows with a voucher code, complete saved credentials and an 
 title are eligible. The dedicated tab signs in to each account and reads Review Scores;
 it does not launch a test. TCNet's explicit Pass/Fail and score are written to the
 result column and an **Exam percentage** column immediately after **AnyDesk ID**.
-Results must match the selected row's complete exam name and language; multiple
-matching attempts require manual review. Existing score columns are moved into
+Results must match the selected row's complete exam name and language. When several
+attempts match, version 4.2.7 selects the unique newest test date, regardless of
+Pass/Fail or percentage. Dates use TCNet's named-month format, such as `October 7, 2026`.
+Missing, invalid or unsupported dates, or a tie for the newest date, require manual
+review. Attempts on the same day cannot be ordered from a date without a time.
+Existing score columns are moved into
 that position while preserving custom columns and saved scores for other rows.
 Each account's credentials are removed from this results queue after it
 finishes. Confirmed scores remain recoverable until TrainFlow acknowledges its cloud save.
@@ -36,7 +40,7 @@ Take and Resume exam buttons are never used. An expired session is reported sepa
 The last failed account tab remains open for inspection; retrying closes that old tab.
 Previously visited documents cannot receive the next trainee's credentials.
 
-Multiple attempts for the same exam, paginated histories, unavailable reports and
+Attempts without a uniquely identifiable newest date, paginated histories, unavailable reports and
 unconfirmed scores require manual review. They do not change the existing result.
 Changes to a row's identity, voucher, credentials or result also prevent automatic writes.
 Use **Do not write** for a reviewed conflict, or restore pending scores from the same
