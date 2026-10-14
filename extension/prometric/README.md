@@ -1,4 +1,4 @@
-# TrainFlow — Prometric 4.2.8
+# TrainFlow — Prometric 4.2.9
 
 Integrated from the user's Prometric Auto Register 4.0 source (Salah Mostafa,
 ISC license). Its original popup, registration steps, generation pattern,
@@ -20,10 +20,17 @@ title are eligible. The dedicated tab signs in to each account and reads Review 
 it does not launch a test. TCNet's explicit Pass/Fail and score are written to the
 result column and an **Exam percentage** column immediately after **AnyDesk ID**.
 Results must match the selected row's complete exam name and language. When several
-attempts match, version 4.2.7 selects the unique newest test date, regardless of
-Pass/Fail or percentage. Dates use TCNet's named-month format, such as `October 7, 2026`.
-Missing, invalid or unsupported dates, or a tie for the newest date, require manual
-review. Attempts on the same day cannot be ordered from a date without a time.
+results match, version 4.2.9 first keeps only explicit completed Pass/Fail results
+with a percentage, ignoring pending or incomplete rows. It selects the unique
+newest completed result by its displayed date and time, regardless of outcome or
+percentage. Named English dates, ISO-style dates and numeric day/month or
+month/day dates are supported, with optional 12-hour or 24-hour clocks and seconds.
+Numeric dates are compared under every valid consistent interpretation; automatic
+selection requires the same winner in all of them. Displayed times are compared
+within Prometric's clock, without assuming Saudi or US time. Missing/invalid dates,
+conflicting date order or tied completed results still require manual review, with
+the raw completed-result dates shown in the results table. A missing clock is an
+unknown time within the day; it is never assumed to mean midnight.
 Existing score columns are moved into
 that position while preserving custom columns and saved scores for other rows.
 Each account's credentials are removed from this results queue after it
@@ -127,4 +134,4 @@ The Trust boundary remains the exact Vercel origin, the owning extension ID and 
 
 ## Password generation (4.2.8)
 
-At the user's request, new registrations default to `{F}@{f}#$1970`: `{F}` is the trainee's first initial uppercase and `{f}` is the same initial lowercase, so `Ahmed Student` produces `A@a#$1970`. This template is used literally and is no longer converted to random generation. Updating from 4.2.6 or 4.2.7 replaces their saved exact `{random}` setting with this default; other custom templates remain unchanged. `{random}` remains available as an explicit setting afterward. Existing provider accounts, saved registration history and queued accounts with confirmed credentials are not changed. Replace the installed files in the same extension folder and reload version 4.2.8, then reload TrainFlow and Prometric tabs.
+At the user's request, new registrations default to `{F}@{f}#$1970`: `{F}` is the trainee's first initial uppercase and `{f}` is the same initial lowercase, so `Ahmed Student` produces `A@a#$1970`. This template is used literally and is no longer converted to random generation. Updating from 4.2.6 or 4.2.7 replaces their saved exact `{random}` setting with this default; other custom templates remain unchanged. `{random}` remains available as an explicit setting afterward. Existing provider accounts, saved registration history and queued accounts with confirmed credentials are not changed. Replace the installed files in the same extension folder and reload version 4.2.9, then reload TrainFlow and Prometric tabs.

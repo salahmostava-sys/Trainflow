@@ -31,14 +31,37 @@ test('retakes use the newest matching exam date regardless of row order or outco
   }
 });
 
-test('retakes with missing, invalid, ambiguous or tied dates still require manual review',async()=>{
-  // Unsupported numeric dates must not be guessed as either month/day or day/month.
-  for(const date of ['', 'not a date', '02/03/2026', 'February 29, 2025', 'April 31, 2026', 'October 7, 2026']){
+test('completed results with missing, invalid or tied dates retain their dates for manual review',async()=>{
+  for(const date of ['', 'not a date', 'February 29, 2025', 'April 31, 2026', 'October 7, 2026', 'October 7, 2026 25:00']){
     const document=await reportFixture([['Leadership Arabic','Fail (40%)',date],['Leadership Arabic','Pass (88%)','October 7, 2026']]);
-    assert.deepEqual(Scores.report(document,['Leadership'],'Arabic'),{error:'AMBIGUOUS_RESULTS'});
+    assert.deepEqual(Scores.report(document,['Leadership'],'Arabic'),{error:'AMBIGUOUS_RESULTS',testDate:[...new Set([date||'—','October 7, 2026'])].join(' | ')});
   }
-  const unconfirmed=await reportFixture([['Leadership Arabic','Pass (88%)','October 6, 2026'],['Leadership Arabic','Pending (0%)','October 7, 2026']]);
-  assert.deepEqual(Scores.report(unconfirmed,['Leadership'],'Arabic'),{error:'UNCONFIRMED_RESULT'},'An older confirmed result cannot replace an unconfirmed newest attempt');
+});
+
+test('only completed Pass or Fail results participate in newest-result selection',async()=>{
+  const rows=[['Leadership Arabic','Fail (40%)','October 6, 2026'],['Leadership Arabic','Pass (88%)','October 7, 2026'],['Leadership Arabic','Pending (0%)','October 14, 2026'],['Leadership Arabic','In progress',''],['Sales Arabic','Pass (99%)','October 15, 2026']];
+  assert.deepEqual(Scores.report(await reportFixture(rows),['Leadership'],'Arabic'),{result:'ناجح',score:'88%',examTitle:'Leadership Arabic',testDate:'October 7, 2026'});
+  assert.deepEqual(Scores.report(await reportFixture(rows.slice(2,4)),['Leadership'],'Arabic'),{error:'UNCONFIRMED_RESULT'});
+});
+
+test('numeric dates, named dates and clocks select the same newest completed result in either row order',async()=>{
+  for(const [older,newer] of [
+    ['10/07/2026','10/14/2026'],['07/10/2026','14/10/2026'],['02/03/2026','05/03/2026'],
+    ['2026-10-07','2026-10-14'],['Oct. 7, 2026 8:10 AM','Oct. 7, 2026 1:30 PM'],
+    ['October 7, 2026 12:01 AM','October 7, 2026 12:00 PM'],
+    ['14/10/2026 08:00:01','14/10/2026 08:00:02'],['2026-10-07T23:59:59','2026-10-08T00:00:00']
+  ]){
+    const rows=[['Leadership Arabic','Fail (40%)',older],['Leadership Arabic','Pass (88%)',newer]];
+    for(const ordered of [rows,[...rows].reverse()])assert.deepEqual(Scores.report(await reportFixture(ordered),['Leadership'],'Arabic'),{result:'ناجح',score:'88%',examTitle:'Leadership Arabic',testDate:newer});
+  }
+});
+
+test('uncertain date order or a missing same-day clock cannot choose between completed results',async()=>{
+  for(const [first,second] of [
+    ['02/03/2026','03/02/2026'],['October 7, 2026','October 7, 2026 3:00 PM'],
+    ['October 7, 2026 3:00 PM','October 7, 2026 3:00:30 PM'],
+    ['October 7, 2026 3:00 PM','October 7, 2026 3:00 PM'],['October 7, 2026 0:30 PM','October 7, 2026 1:00 PM']
+  ])assert.deepEqual(Scores.report(await reportFixture([['Leadership Arabic','Fail (40%)',first],['Leadership Arabic','Pass (88%)',second]]),['Leadership'],'Arabic'),{error:'AMBIGUOUS_RESULTS',testDate:[...new Set([first,second])].join(' | ')});
 });
 
 test('uncertain, missing, repeated and paginated scores never produce a result to save',async()=>{
@@ -48,7 +71,7 @@ test('uncertain, missing, repeated and paginated scores never produce a result t
     [[['Leadership Arabic','Pass (88%)'],['Leadership English','Fail (60%)']],'','AMBIGUOUS_RESULTS'],
     [[['Leadership Arabic','Pass (88%)'],['Leadership Arabic','Fail (40%)']],'','AMBIGUOUS_RESULTS'],
     [[['Leadership Arabic','Pass (88%)']],'<tr class="pagerStyle"><td><a href="javascript:next()">2</a></td></tr>','PAGINATED_RESULTS']
-  ])assert.deepEqual(Scores.report(await reportFixture(rows,extra),['Leadership']),{error});
+  ])assert.deepEqual(Scores.report(await reportFixture(rows,extra),['Leadership']),{error,...(error==='AMBIGUOUS_RESULTS'?{testDate:'October 7, 2026'}:{})});
   for(const text of ['Pass','88%','Pending (0%)','<script>Pass (80%)</script>'])assert.equal(Scores.outcome(text),null);
   assert.deepEqual(Scores.outcome('Fail ( 0% )'),{result:'راسب',score:'0%'});
 });
