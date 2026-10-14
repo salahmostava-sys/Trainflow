@@ -104,7 +104,7 @@ const TraineeReports=(()=>{
       status.textContent=tr('انتظر تحميل الجدول واختر تاريخ التقرير أولًا.','Wait for the worksheet to load and choose a report date.');
       return;
     }
-    const records=dailyRecords(worksheet,date).filter(({row})=>kind==='operations'||row[11]==='ناجح');
+    const records=dailyRecords(worksheet,date).filter(({row})=>row[11]==='ناجح'||kind==='operations'&&row[11]==='راسب');
     if(!records.length){
       status.textContent=tr('لا توجد بيانات لهذا التقرير في التاريخ المختار.','No records for this report on the selected date.');
       return;
