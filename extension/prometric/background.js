@@ -3,6 +3,7 @@ if (typeof importScripts === 'function') {
 } else if (typeof require === 'function') {
   const utils = require('./utils.js');
   globalThis.generateCredentials = utils.generateCredentials;
+  globalThis.DEFAULT_PASSWORD_PATTERN = utils.DEFAULT_PASSWORD_PATTERN;
 }
 
 // -- State Management --------------------------------------------------------
@@ -117,7 +118,7 @@ async function closeRegistrationWindow() {
   }
 }
 async function buildCredentials(item) {
-  const { passPattern = '{random}' } = await chrome.storage.local.get(['passPattern']);
+  const { passPattern = DEFAULT_PASSWORD_PATTERN } = await chrome.storage.local.get(['passPattern']);
   return generateCredentials(item.name, passPattern);
 }
 
@@ -562,10 +563,14 @@ async function handleFetchSheet(msg) {
 }
 
 // -- Context Menu (Icon Dropdown) ---
-chrome.runtime.onInstalled.addListener(() => {
+chrome.runtime.onInstalled.addListener(async details => {
   chrome.contextMenus.create({ id: "pause_queue", title: "Pause Registration", contexts: ["action"] });
   chrome.contextMenus.create({ id: "resume_queue", title: "Resume Registration", contexts: ["action"] });
   chrome.contextMenus.create({ id: "stop_clear", title: "Stop & Clear Queue", contexts: ["action"] });
+  if (details.reason === 'update' && ['4.2.6', '4.2.7'].includes(details.previousVersion)) {
+    const {passPattern} = await chrome.storage.local.get(['passPattern']);
+    if (passPattern === '{random}') await chrome.storage.local.set({passPattern: DEFAULT_PASSWORD_PATTERN});
+  }
 });
 
 chrome.contextMenus.onClicked.addListener(async (info) => {

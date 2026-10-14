@@ -504,8 +504,8 @@
       </div>
       <div class="field" style="margin:0">
         <label for="passPattern">Password Pattern</label>
-        <input type="text" id="passPattern" value="{random}"/>
-        <div class="field-hint">{random} generates a unique secure password. Optional name tags: {F}, {f}, {L}, {l}.</div>
+        <input type="text" id="passPattern" value="{F}@{f}#$1970"/>
+        <div class="field-hint">{F}: first initial uppercase; {f}: first initial lowercase. Example: Ahmed → A@a#$1970. Optional tags: {L}, {l}, {random}.</div>
         <!-- Live pattern preview -->
         <div id="patternPreview" class="pattern-preview-box"></div>
       </div>

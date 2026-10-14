@@ -57,6 +57,20 @@ async function examItems(){
   return Promise.all(Exam.prepare(rows,[0,1],[],{}).items.map(async account=>{const {originalCredentials,...safe}=account;return {...safe,credentialsHash:await Prometric.credentialsHash(originalCredentials)};}));
 }
 
+test('upgrading restores the requested password default without changing saved accounts or custom templates',async()=>{
+  for(const [previousVersion,pattern,expected] of [
+    ['4.2.6','{random}','{F}@{f}#$1970'],['4.2.7','{random}','{F}@{f}#$1970'],
+    ['4.2.7','CUSTOM-{F}','CUSTOM-{F}'],['4.2.8','{random}','{random}']
+  ]){
+    const fixture=extensionFixture();fixture.stored.passPattern=pattern;
+    const accounts=[{username:'DUMMY-USER',password:'KEEP-EXISTING-PASSWORD'}];
+    fixture.stored.queue=structuredClone(accounts);fixture.stored.history=structuredClone(accounts);
+    await fixture.chrome.runtime.onInstalled.listener({reason:'update',previousVersion});
+    assert.equal(fixture.stored.passPattern,expected);
+    assert.deepEqual(fixture.stored.queue,accounts);assert.deepEqual(fixture.stored.history,accounts);
+  }
+});
+
 test('result jobs isolate app and Prometric tabs and retain scores until durable acknowledgment',async()=>{
   const fixture=extensionFixture(),items=await examItems(),app={id:fixture.chrome.runtime.id,frameId:0,url:'https://trainf.vercel.app/',tab:{id:10}};
   const request=(type,extra={},sender=app)=>fixture.send({action:'ibtaExamRequest',payload:{owner:'dummy-owner',client:'dummy-client',type,...extra}},sender);

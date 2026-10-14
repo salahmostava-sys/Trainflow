@@ -1,4 +1,4 @@
-# TrainFlow — Prometric 4.2.7
+# TrainFlow — Prometric 4.2.8
 
 Integrated from the user's Prometric Auto Register 4.0 source (Salah Mostafa,
 ISC license). Its original popup, registration steps, generation pattern,
@@ -125,6 +125,6 @@ Drag/Shift selects adjacent rows; Ctrl/Cmd selects separate cell or column areas
 
 The Trust boundary remains the exact Vercel origin, the owning extension ID and its dedicated registration tab. A migrated frontend does not reset the same private sheet or pending result ownership. See the [operations guide](../../docs/operations-guide.md) and [deployment guide](../../docs/deployment.md).
 
-## Password generation (4.2.6)
+## Password generation (4.2.8)
 
-New registrations use `{random}` by default: a 20-character password from Web Crypto, independent of the trainee name. The former shipped `{F}@{f}#$1970` default is automatically treated as `{random}`, including saved settings. Explicit custom patterns remain supported; `{random}` can also be included in a custom pattern. Existing provider accounts are not changed. Reload the installed extension after updating its files. Preview passwords are examples; use the confirmed registration result for the actual account password.
+At the user's request, new registrations default to `{F}@{f}#$1970`: `{F}` is the trainee's first initial uppercase and `{f}` is the same initial lowercase, so `Ahmed Student` produces `A@a#$1970`. This template is used literally and is no longer converted to random generation. Updating from 4.2.6 or 4.2.7 replaces their saved exact `{random}` setting with this default; other custom templates remain unchanged. `{random}` remains available as an explicit setting afterward. Existing provider accounts, saved registration history and queued accounts with confirmed credentials are not changed. Replace the installed files in the same extension folder and reload version 4.2.8, then reload TrainFlow and Prometric tabs.
