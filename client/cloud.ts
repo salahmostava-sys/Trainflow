@@ -73,6 +73,7 @@ const Cloud = (() => {
   async function endDailySession() {
     if (endingSession) return;
     endingSession = true;
+    stopLive();
     clearTimeout(sessionTimer);
 
     $("app").hidden = true;
@@ -111,6 +112,8 @@ const Cloud = (() => {
     return false;
   }
   let nextBackgroundRefresh = 0;
+  let liveSync: { close(): void; wake(): void } | null = null, liveSession = 0, workspaceOperation = 0;
+  let liveStatus = "connecting";
   let statusKey = "",
     statusArgs = [],
     statusError = false,
@@ -231,6 +234,7 @@ const Cloud = (() => {
       key === "error" ? errorText(args[0]) : translated(key, ...args);
   }
   function translateUi() {
+    renderLiveStatus();
     if (user) {
       const email = user.email || "";
       const name = accountName();
@@ -256,6 +260,7 @@ const Cloud = (() => {
     setAuthStatus(authStatusKey, ...authStatusArgs);
   }
   function lock(value: boolean) {
+    if (value) workspaceOperation++;
     busy = value;
     $("app").inert = value;
     $("cloud-tools").inert = value;
@@ -307,7 +312,7 @@ const Cloud = (() => {
       return String(a).localeCompare(String(b));
     });
   }
-  function project() {
+  function project(selection = new Set<string>()) {
     const p = config.payload;
     let prefs: { uiLang?: string } = {};
     try {
@@ -370,6 +375,7 @@ const Cloud = (() => {
     if (!Object.hasOwn(state.codesByCategory, activeCategory))
       activeCategory = Object.keys(state.codesByCategory)[0];
     selectedCodes.clear();
+    for (const code of selection) if (rows.has(code)) selectedCodes.add(code);
     applyLanguage();
     decorate();
     if (typeof renderInventory === "function") renderInventory();
@@ -415,7 +421,7 @@ const Cloud = (() => {
       activateSettingsTab("profile");
     translateUi();
   }
-  async function load() {
+  async function readWorkspace() {
     const [settings, codes, stockResult] = await Promise.all([
       client.from("ibta_settings").select("*").eq("id", 1).single(),
       allRows(),
@@ -423,10 +429,53 @@ const Cloud = (() => {
     ]);
     if (settings.error) throw settings.error;
     if (stockResult.error) throw stockResult.error;
-    config = settings.data;
-    rows = new Map(codes.map((r) => [r.code, r]));
-    stock = new Map(stockResult.data.map((r) => [r.category, r.remaining]));
-    project();
+    return { config: settings.data, codes, stock: stockResult.data };
+  }
+  function applyWorkspace(snapshot, selection = new Set<string>()) {
+    config = snapshot.config;
+    rows = new Map(snapshot.codes.map((r) => [r.code, r]));
+    stock = new Map(snapshot.stock.map((r) => [r.category, r.remaining]));
+    project(selection);
+  }
+  async function load() {
+    applyWorkspace(await readWorkspace());
+  }
+  function renderLiveStatus() {
+    const labels = { connected: ["مباشر — التغييرات تظهر تلقائيًا", "Live — changes appear automatically"], connecting: ["جارٍ الاتصال بالتحديث المباشر…", "Connecting to live updates…"], reconnecting: ["إعادة اتصال — التحديث الدوري يعمل مؤقتًا", "Reconnecting — periodic refresh is active"], retrying: ["تعذر تحديث البيانات؛ جارٍ إعادة المحاولة", "Refresh failed; retrying"], pending: ["وصلت تغييرات جديدة؛ ستظهر عند انتهاء التعديل الحالي", "New changes received; waiting for the current edit to finish"] };
+    const element = $("live-sync-status");
+    if (element) { element.textContent = labels[liveStatus][currentLang === "ar" ? 0 : 1]; element.dataset.state = liveStatus; }
+  }
+  function stopLive() {
+    liveSession++;
+    liveSync?.close();
+    liveSync = null;
+  }
+  function canRefreshWorkspaceLive() {
+    if (!ready || busy || document.hidden || hasWorkspaceDraftInput() || document.querySelector("dialog[open]")) return false;
+    const focused = document.activeElement;
+    const editingField = focused?.matches('input,textarea,select,[contenteditable="true"]') && !focused.matches('input[type="checkbox"],input[type="radio"],input[type="button"],input[type="submit"]');
+    return !editingField || !!focused.closest("#panel-trainees");
+  }
+  async function refreshLive(scope: string, activeUser: string, session: number) {
+    const current = () => ready && user.id === activeUser && liveSession === session;
+    if (!current() || checkDailySession()) return true;
+    if (scope !== "workspace") return typeof Trainees === "undefined" || await Trainees.refreshLive(scope === "sheets" ? undefined : scope);
+    if (!canRefreshWorkspaceLive()) return false;
+    const operation = workspaceOperation, priorRows = rows, priorConfig = config;
+    const snapshot = await readWorkspace();
+    if (!current()) return true;
+    if (!canRefreshWorkspaceLive() || operation !== workspaceOperation || rows !== priorRows || config !== priorConfig) return false;
+    applyWorkspace(snapshot, new Set(selectedCodes));
+    if (role === "admin" && $("member-list")) await renderMemberList();
+    return true;
+  }
+  function startLive() {
+    stopLive();
+    const activeUser = user.id, session = liveSession;
+    liveStatus = "connecting"; renderLiveStatus();
+    liveSync = WorkspaceLive.connect({client, owner: activeUser, onRefresh: scope => refreshLive(scope, activeUser, session), onStatus: status => {
+      if (ready && liveSession === session && liveStatus !== status) { liveStatus = status; renderLiveStatus(); }
+    }});
   }
   function metadata() {
     return {
@@ -684,6 +733,7 @@ const Cloud = (() => {
     fail(saveError);
   }
   async function saveVoucherName(code: string, name: string) {
+    workspaceOperation++;
     if (!ready || busy || !["admin", "operator"].includes(role)) return false;
     const prior = rows.get(code);
     if (!prior || typeof name !== "string" || name.length > 200) return false;
@@ -751,8 +801,10 @@ const Cloud = (() => {
     }
   }
   function hasDraftInput() {
+    return hasWorkspaceDraftInput() || (typeof Trainees !== "undefined" && Trainees.hasDraft());
+  }
+  function hasWorkspaceDraftInput() {
     if (document.querySelector('[data-report-dirty="true"]')) return true;
-    if (typeof Trainees !== "undefined" && Trainees.hasDraft()) return true;
     if ($<HTMLDialogElement>("edit-dialog")?.open) return true;
     if (
       $("profile-name").value !== accountName() ||
@@ -907,6 +959,7 @@ const Cloud = (() => {
     }
   }
   async function enter(session: CloudSession | null) {
+    stopLive();
     if (!session) {
       ready = false;
       $("app").hidden = true;
@@ -973,6 +1026,7 @@ const Cloud = (() => {
       $("app").classList.remove("workspace-restoring");
     }
     setStatus("dbConnected");
+    startLive();
   }
   async function authenticate() {
     if ($("auth-actions").inert) return;
@@ -1330,12 +1384,14 @@ const Cloud = (() => {
         if (typeof Trainees !== "undefined" && !(await Trainees.flush()))
           return;
         ready = false;
+        stopLive();
         await client.auth.signOut({ scope: "local" });
         location.reload();
       });
       client.auth.onAuthStateChange((event, session) => {
         if (event === "SIGNED_OUT") {
           ready = false;
+          stopLive();
           clearPrivateDialogs();
           clearTimeout(sessionTimer);
           if (typeof Trainees !== "undefined" && !retainedDraftUser)
@@ -1370,12 +1426,15 @@ const Cloud = (() => {
           !document.activeElement?.matches("input,textarea,select") &&
           !selectedCodes.size
         ) {
-          refresh(true);
+          void refresh(true).then(async refreshed => {
+            if (refreshed && ready && typeof Trainees !== "undefined") await Trainees.refreshLive();
+          }).catch(error => console.warn("TrainFlow fallback refresh failed:", error.message));
         }
       }, 30000);
-      window.addEventListener("focus", checkDailySession);
+      window.addEventListener("focus", () => { if (!checkDailySession()) liveSync?.wake(); });
+      window.addEventListener("online", () => liveSync?.wake());
       document.addEventListener("visibilitychange", () => {
-        if (!document.hidden) checkDailySession();
+        if (!document.hidden && !checkDailySession()) liveSync?.wake();
       });
       window.addEventListener("beforeunload", (e) => {
         if (busy || document.querySelector('[data-report-dirty="true"]')) {

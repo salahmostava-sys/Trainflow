@@ -807,6 +807,7 @@ export function SettingsScreen({ active = false }: { active?: boolean }) {
         <section id="cloud-tools" className="cloud-controls" hidden>
           <div className="cloud-popover settings-card">
             <p id="cloud-status" hidden></p>
+            <p id="live-sync-status" role="status" aria-live="polite"></p>
             <details id="admin-tools" className="cloud-admin" open>
               <summary>
                 <span data-i18n="manageDataUsers">

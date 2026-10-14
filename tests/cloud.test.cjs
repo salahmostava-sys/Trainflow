@@ -29,6 +29,7 @@ const initialSessionRead=new Promise(resolve=>{releaseInitialSession=resolve;});
 const accessToken='header.'+Buffer.from(JSON.stringify({amr:[{method:'password',timestamp:Math.floor(Date.now()/1000)}]})).toString('base64url')+'.signature';
 let membersReadError=false;
 const client={
+  channel(){return {on(){return this;},subscribe(){return this;}};},removeChannel:async()=> 'ok',
   auth:{getSession:async()=>{if(firstSessionRead){firstSessionRead=false;await initialSessionRead;}return sessionReadError?{error:Error('NETWORK')}:{data:{session:storedSessionMode?JSON.parse(await sdkStorage.getItem(authTokenKey)||'null'):{user:clone(authUser),access_token:accessToken}}};},onAuthStateChange(fn){authListener=fn;},signInWithPassword:async()=>{storedSessionMode=true;const session={user:clone(authUser),access_token:accessToken};await sdkStorage.setItem(authTokenKey,JSON.stringify(session));return {data:{session}};},signOut:async()=>{signOuts++;await sdkStorage.removeItem(authTokenKey);authListener?.('SIGNED_OUT',null);return {};},updateUser:async args=>{events.push({name:'auth_update',args:clone(args)});if(args.data)authUser.user_metadata={...authUser.user_metadata,...args.data};return {data:{user:clone(authUser)}};}},
   from(table){
     if(table==='ibta_trainee_sheets'){const filters=[];const selected=()=>db.traineeSheets.filter(row=>filters.every(([key,value])=>row[key]===value));return {select(){return this;},eq(key,value){filters.push([key,value]);return this;},order(){return this;},maybeSingle:async()=>({data:clone(selected()[0]||null)}),then(resolve,reject){return Promise.resolve({data:clone(selected()),error:null}).then(resolve,reject);},range:async(from,to)=>({data:clone(selected().slice(from,to+1)),error:null})};}
@@ -108,6 +109,7 @@ const ctx=vm.createContext({document,URL,Blob,localStorage:browserStorage(storag
 ctx.atob=atob;
 ctx.matchMedia=domWindow.matchMedia.bind(domWindow);
 vm.runInContext(fs.readFileSync(path.join(__dirname,'../session-policy.js'),'utf8'),ctx);
+vm.runInContext(fs.readFileSync(path.join(__dirname,'../workspace-live.js'),'utf8'),ctx);
 vm.runInContext(fs.readFileSync(path.join(__dirname,'../cloud.js'),'utf8'),ctx);
 assert.match(html,/family=Cairo/);
 assert.match(html,/--ui-font:'Cairo'/);

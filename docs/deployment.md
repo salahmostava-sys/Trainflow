@@ -65,3 +65,11 @@ Before deploying the workbook commands, apply the trainee_border_styles, trainee
 ## Worksheet owner quota
 
 Apply `supabase/migrations/20261014090000_enforce_worksheet_quota.sql` after the existing workbook migrations. It enforces the 100-sheet owner limit on direct INSERT and owner transfers as well as RPC operations, using the same transaction lock. Existing sheets are preserved; saves of existing sheets remain allowed at the limit. Run `tests/worksheet-quota-database.sql` in a dedicated fully migrated local test database. Do not run fixture SQL against production.
+
+## Live workspace updates
+
+Apply `supabase/migrations/20261014120000_workspace_live_changes.sql` before deploying the live-update frontend. It adds the read-only `ibta_live_changes` notification table, triggers on codes/settings/stock/members/sheets and its membership in the existing `supabase_realtime` publication. It does not publish source tables, worksheet contents, credentials or voucher values. RLS permits active members to read shared notifications and their own sheet notifications; administrators may also read other owners' notifications. Clients cannot write notifications or call the trigger helpers.
+
+Run `tests/workspace-live-database.sql` only against an empty isolated database named `trainflow_live_test`; it rolls back its fixtures. Client queue tests are included in `npm test`, and `npm run test:ui` includes a two-user browser scenario plus a same-sheet second-tab scenario. The browser test replaces the SDK boundary and uses dummy accounts; it is not a live Supabase transport test.
+
+After deployment, reload previously open pages to load `workspace-live.js`. Settings → Sync shows the connection state. The SDK reconnects automatically; resubscription and returning to the page trigger catch-up reads. Existing two-minute polling remains a fallback. A frontend rollback may leave these additive triggers/publication in place safely.

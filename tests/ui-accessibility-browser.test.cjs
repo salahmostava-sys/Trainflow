@@ -48,6 +48,39 @@ async function navigate(page,panel){
   await page.waitForFunction(()=>!document.getElementById('app').hidden&&!document.getElementById('app').classList.contains('workspace-restoring'));
 }
 
+test('live updates reach another signed-in user without refresh and preserve unfinished profile edits',{timeout:45000},async t=>{
+  const context=await browser.newContext({viewport:{width:1440,height:1000}});t.after(()=>context.close());
+  context.setDefaultTimeout(5000);
+  await context.route('**/*',route=>new URL(route.request().url()).origin===origin?route.continue():route.abort());
+  const first=await context.newPage(),second=await context.newPage();
+  const users=['first-user','second-user'].map(id=>({id,email:id+'@example.invalid',user_metadata:{}}));
+  const shared={settings:{id:1,version:1,payload:{categoryOrder:['Foundation'],codeCategories:['Foundation-100'],keycodeOrder:{},keycodes:[],credentials:{},links:{}}},codes:[{code:'LIVE-VOUCHER',category:'Foundation-100',notes:'',used_on:null,used_by:null,version:1}],members:users.map(user=>({...user,user_id:user.id,active:true,role:'admin'})),sheets:{}};
+  const row=Array(52).fill('');row[3]='INITIAL SECOND';shared.sheets['second-user']={sheet_id:'00000000-0000-0000-0000-000000000001',sheet_name:'Sheet 1',sheet_hidden:false,sheet_order:0,cells:[row],version:1,format:{}};
+  for(const [index,page] of [first,second].entries()){
+    await page.addInitScript(({user,db})=>{window.uiTestUser=user;sessionStorage.setItem('test-sdk-database',JSON.stringify(db));},{user:users[index],db:shared});
+    await page.goto(origin);await page.waitForFunction(()=>!document.getElementById('app').hidden&&!document.getElementById('app').classList.contains('workspace-restoring'));
+    await navigate(page,'codes');
+  }
+  await second.getByRole('checkbox',{name:'تحديد الكود LIVE-VOUCHER',exact:true}).check();
+  await first.getByRole('button',{name:'نسخ الكود LIVE-VOUCHER',exact:true}).click();await second.bringToFront();
+  await second.waitForFunction(()=>state.usedCodes['LIVE-VOUCHER']);
+  assert.equal(await second.getByRole('checkbox',{name:'تحديد الكود LIVE-VOUCHER',exact:true}).isChecked(),true);
+  assert.deepEqual(await second.evaluate(()=>uiTestCopies),[],'Receiving a usage update never copies the voucher');
+  await navigate(second,'settings');await second.locator('#profile-name').fill('UNFINISHED NAME');
+  await first.getByRole('textbox',{name:'ملاحظات الكود LIVE-VOUCHER',exact:true}).fill('SAVED ELSEWHERE');await first.locator('#code-grid').click({position:{x:5,y:5}});
+  await second.waitForFunction(()=>document.getElementById('live-sync-status').dataset.state==='pending');
+  assert.equal(await second.locator('#profile-name').inputValue(),'UNFINISHED NAME');
+  await second.locator('#profile-name').fill('');await second.locator('#settings-tab-profile').focus();
+  await second.waitForFunction(()=>state.codeNotes['LIVE-VOUCHER']==='SAVED ELSEWHERE');
+  assert.equal(await second.locator('#profile-name').inputValue(),'');
+  const editor=await context.newPage();
+  await editor.addInitScript(({user,db})=>{window.uiTestUser=user;sessionStorage.setItem('test-sdk-database',JSON.stringify(db));},{user:users[1],db:await second.evaluate(()=>uiTestDatabase)});
+  await editor.goto(origin);await editor.waitForFunction(()=>!document.getElementById('app').hidden&&!document.getElementById('app').classList.contains('workspace-restoring'));await navigate(editor,'trainees');
+  await navigate(second,'trainees');await second.waitForFunction(()=>document.querySelector('td[data-v="0"][data-col="3"]')?.textContent==='INITIAL SECOND');
+  await editor.locator('td[data-v="0"][data-col="3"]').click();await editor.locator('#sheet-cell-content').fill('UPDATED LIVE');await editor.locator('#sheet-cell-content').press('Enter');await editor.locator('#sheet-save').click();
+  await second.bringToFront();await second.waitForFunction(()=>document.querySelector('td[data-v="0"][data-col="3"]')?.textContent==='UPDATED LIVE');
+});
+
 test('keyboard copying claims a voucher once and leaves selection controls independent',{timeout:30000},async t=>{
   const page=await openWorkspace(t);
   await navigate(page,'keycodes');
