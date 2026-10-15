@@ -945,11 +945,9 @@ const Trainees=(()=>{
     rowHeights.clear();for(const [key,style]of Object.entries(formatting.styles)){const r=Number(key.split(':')[0]),height=Math.max((style.height||0)*excelView.zoom/100,style.rotation?70:0);if(height)rowHeights.set(r,Math.max(rowHeights.get(r)||0,height));}
   }
   function dayDateLabel(raw){
-    const digits=raw.replace(/[٠-٩]/g,digit=>String(digit.charCodeAt(0)-1632)).replace(/[۰-۹]/g,digit=>String(digit.charCodeAt(0)-1776));
-    const iso=digits.match(/(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/),local=digits.match(/(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})/);
-    if(!iso&&!local)return raw;
-    const [year,month,day]=iso?iso.slice(1).map(Number):[Number(local[3]),Number(local[2]),Number(local[1])],date=new Date(Date.UTC(year,month-1,day));
-    if(date.getUTCFullYear()!==year||date.getUTCMonth()!==month-1||date.getUTCDate()!==day)return raw;
+    const parsed=TrainflowDates.parse(raw,{embedded:true});
+    if(!parsed)return raw;
+    const date=new Date(Date.UTC(parsed.year,parsed.month-1,parsed.day));
     const weekday=new Intl.DateTimeFormat(currentLang==='ar'?'ar-EG':'en-GB',{weekday:'long',timeZone:'UTC'}).format(date);
     return weekday+tr(' الموافق ',' · ')+date.toLocaleDateString('en-GB',{timeZone:'UTC'});
   }

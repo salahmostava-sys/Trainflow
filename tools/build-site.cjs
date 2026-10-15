@@ -19,8 +19,13 @@ for(const file of ['inventory-delivery.js','trainflow-whatsapp-web.zip','_worker
 let html=next?'':renderDocument();
 const hashes=new Map();
 const fingerprint=(file,bytes)=>{const hash=createHash('sha256').update(bytes).digest('hex').slice(0,12);hashes.set(file,hash);return hash;};
-const files=['app-dialog.js','prometric-core.js','prometric-exam-core.js','prometric-exam-results.js','prometric-registration.js','certificate-name.js','cloud.js','workspace.js','workspace.css','navigation.js','ops-ui.js','trainees.js','trainees-excel.js','trainees-borders.js','trainees-sheets.js','trainees-core.js','trainees-xlsx.js','trainees-files.js','trainees.css','trainee-reports.js','session-policy.js','codes-export.js','voucher-columns.js'];
+const files=['app-dialog.js','prometric-core.js','prometric-exam-core.js','prometric-exam-results.js','prometric-registration.js','certificate-name.js','cloud.js','date-utils.js','workspace.js','workspace.css','navigation.js','ops-ui.js','trainees.js','trainees-excel.js','trainees-borders.js','trainees-sheets.js','trainees-core.js','trainees-xlsx.js','trainees-files.js','trainees.css','trainee-reports.js','session-policy.js','codes-export.js','voucher-columns.js'];
 files.unshift('workspace-live.js');
+// Self-hosted Supabase SDK (same pinned version as package.json).
+const supabaseUmd=path.join(path.dirname(require.resolve('@supabase/supabase-js/package.json')),'dist/umd/supabase.js');
+fs.copyFileSync(supabaseUmd,path.join(output,'supabase-js.js'));
+fs.copyFileSync(path.join(path.dirname(supabaseUmd),'../../LICENSE'),path.join(output,'supabase-js-LICENSE.txt'));
+html=html.replaceAll('"supabase-js.js"','"supabase-js.js?v='+fingerprint('supabase-js.js',fs.readFileSync(supabaseUmd))+'"');
 const vendor=fs.readFileSync(require.resolve('exceljs/dist/exceljs.min.js'));
 fs.writeFileSync(path.join(output,'exceljs-4.4.0.min.js'),vendor);
 fs.copyFileSync(require.resolve('exceljs/LICENSE'),path.join(output,'exceljs-LICENSE.txt'));

@@ -45,7 +45,8 @@ const client={
         update(changes){return {eq:async(field,value)=>{const row=db.members.find(item=>item[field]===value);Object.assign(row,changes);return {error:null};}};}
       };
     }
-    return {select(){return this;},eq(){return this;},order(){return this;},single:async()=>({data:clone(db.settings)}),range:async()=>{codeReads++;return {data:clone(db.codes)};}};
+    let after=null;
+    return {select(){return this;},eq(){return this;},order(){return this;},gt(_key,value){after=value;return this;},single:async()=>({data:clone(db.settings)}),limit:async count=>{if(after===null)codeReads++;return {data:clone([...db.codes].sort((a,b)=>a.code<b.code?-1:a.code>b.code?1:0).filter(row=>after===null||row.code>after).slice(0,count))};}};
   },
   async rpc(name,args){
     events.push({name,args:clone(args)});

@@ -18,7 +18,7 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=r
 
 
     await page.addInitScript(()=>{window.uiUseNativeClipboard=true;});
-    await page.route('https://cdn.jsdelivr.net/**',route=>route.fulfill({contentType:'text/javascript',body:'('+require('./workspace-sdk-fixture.cjs').toString()+')();'}));
+    await page.route('**/supabase-js.js*',route=>route.fulfill({contentType:'text/javascript',body:'('+require('./workspace-sdk-fixture.cjs').toString()+')();'}));
     await page.goto('http://localhost:'+port);await reference.goto('http://127.0.0.1:'+previewPort);
     for(const target of [page,reference]){try{await target.waitForFunction(()=>!document.getElementById('app').hidden&&!document.getElementById('app').inert&&!document.getElementById('app').classList.contains('workspace-restoring'));}catch(error){console.error({url:target.url(),errors,authMessage:await target.locator('#auth-message').textContent()});throw error;}await target.waitForFunction(()=>document.getElementById('sheet-status').textContent==='تم الحفظ'&&document.getElementById('sheet-ribbon-panel-all'));await target.evaluate(()=>document.fonts.ready);}
     await page.waitForURL('**/trainees');

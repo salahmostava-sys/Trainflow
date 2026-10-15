@@ -6,13 +6,16 @@ const { renderToStaticMarkup } = require("react-dom/server");
 const root = path.resolve(__dirname, "..");
 const sources = [
   {
-    src: `https://cdn.jsdelivr.net/npm/@supabase/supabase-js@${require('../package.json').dependencies['@supabase/supabase-js']}/dist/umd/supabase.js`,
+    // Served from this origin (copied from the pinned npm package by build-site),
+    // so no third-party CDN can change the code that handles sign-in tokens.
+    src: "supabase-js.js",
   },
   { src: "session-policy.js" },
   { src: "workspace-live.js" },
   { src: "cloud.js" },
   { src: "voucher-columns.js" },
   { src: "app-dialog.js" },
+  { src: "date-utils.js" },
   { src: "workspace.js" },
   { src: "navigation.js" },
   { src: "ops-ui.js" },
@@ -93,6 +96,12 @@ function renderDocument({
     loadingLanguage +
     sources
       .map((attributes) => {
+        if (inlineRuntime && attributes.src === "date-utils.js")
+          return (
+            "<script>" +
+            fs.readFileSync(path.join(root, "date-utils.js"), "utf8") +
+            "</script>"
+          );
         if (inlineRuntime && attributes.src === "workspace.js")
           return (
             "<script>" +

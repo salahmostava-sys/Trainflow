@@ -272,17 +272,19 @@ const Cloud = (() => {
     else setStatus("error", true, error);
     showToast($("cloud-status").textContent);
   }
+  // Keyset paging: rows inserted or deleted between pages cannot shift a page
+  // boundary and make another row disappear or repeat, as offset paging could.
   async function allRows() {
     const result = [];
-    for (let offset = 0; ; offset += 1000) {
-      const { data, error } = await client
-        .from("ibta_codes")
-        .select("*")
-        .order("code")
-        .range(offset, offset + 999);
+    let last: string | null = null;
+    for (;;) {
+      let query = client.from("ibta_codes").select("*").order("code");
+      if (last !== null) query = query.gt("code", last);
+      const { data, error } = await query.limit(1000);
       if (error) throw error;
       result.push(...data);
       if (data.length < 1000) return result;
+      last = data[data.length - 1].code;
     }
   }
   function sortCategories(cats: string[]) {
@@ -422,6 +424,11 @@ const Cloud = (() => {
       activateSettingsTab("profile");
     translateUi();
   }
+  // Export filenames use the Riyadh calendar day, not UTC (00:00-03:00 Riyadh is still yesterday in UTC).
+  const exportDate = () =>
+    typeof TrainflowDates !== "undefined"
+      ? TrainflowDates.riyadhIsoDate()
+      : new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Riyadh" }).format(new Date());
   async function readWorkspace() {
     const [settings, codes, stockResult, credentials] = await Promise.all([
       client.from("ibta_settings").select("*").eq("id", 1).single(),
@@ -1199,7 +1206,7 @@ const Cloud = (() => {
       a = document.createElement("a");
     a.href = url;
     a.download =
-      "trainflow-backup-" + new Date().toISOString().slice(0, 10) + ".json";
+      "trainflow-backup-" + exportDate() + ".json";
     a.click();
     window.URL.revokeObjectURL(url);
   }
@@ -1231,7 +1238,7 @@ const Cloud = (() => {
       a = document.createElement("a");
     a.href = url;
     a.download =
-      "trainflow-codes-" + new Date().toISOString().slice(0, 10) + ".csv";
+      "trainflow-codes-" + exportDate() + ".csv";
     a.click();
     window.URL.revokeObjectURL(url);
   }

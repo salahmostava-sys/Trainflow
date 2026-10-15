@@ -24,7 +24,9 @@ function installBoundaryFixtures(){
         if(!Object.hasOwn(tables,table))throw Error('Unexpected table: '+table);
         return tables[table].filter(row=>filters.every(([key,value])=>row[key]===value));
       };
-      return {select(){return this;},eq(key,value){filters.push([key,value]);return this;},order(){return this;},
+      let after=null;
+      return {select(){return this;},eq(key,value){filters.push([key,value]);return this;},order(){return this;},gt(_key,value){after=value;return this;},
+        limit:async count=>({data:clone(records().filter(row=>after===null||row.code>after).sort((a,b)=>a.code<b.code?-1:a.code>b.code?1:0).slice(0,count))}),
         single:async()=>({data:clone(records()[0])}),maybeSingle:async()=>({data:clone(records()[0]||null)}),
         range:async(from,to)=>({data:clone(records().slice(from,to+1))}),then(resolve,reject){return Promise.resolve({data:clone(records())}).then(resolve,reject);}};
     },
