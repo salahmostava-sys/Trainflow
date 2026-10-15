@@ -57,9 +57,9 @@ async function examItems(){
   return Promise.all(Exam.prepare(rows,[0,1],[],{}).items.map(async account=>{const {originalCredentials,...safe}=account;return {...safe,credentialsHash:await Prometric.credentialsHash(originalCredentials)};}));
 }
 
-test('upgrading restores the requested password default without changing saved accounts or custom templates',async()=>{
+test('upgrading respects the saved password pattern (including random) without changing saved accounts or custom templates',async()=>{
   for(const [previousVersion,pattern,expected] of [
-    ['4.2.6','{random}','{F}@{f}#$1970'],['4.2.7','{random}','{F}@{f}#$1970'],
+    ['4.2.6','{random}','{random}'],['4.2.7','{random}','{random}'],
     ['4.2.7','CUSTOM-{F}','CUSTOM-{F}'],['4.2.8','{random}','{random}']
   ]){
     const fixture=extensionFixture();fixture.stored.passPattern=pattern;

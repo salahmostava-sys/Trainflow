@@ -8,14 +8,14 @@ const IbtaRegistration=(()=>{
     const {ibtaRun:run,isRunning,singleRunning}=await chrome.storage.local.get(['ibtaRun','isRunning','singleRunning']);
     return {ok:true,version:chrome.runtime.getManifest().version,capabilities:{retake:true},busy:!!(isRunning||singleRunning||run?.items.some(i=>['pending','done'].includes(i.status))),recoverable:!!(run&&run.owner===payload.owner&&run.client!==payload.client),run:same(run,payload)?run:null};
   }
-  async function notify(run){try{await chrome.tabs.sendMessage(run.tab,{action:'ibtaChanged'},{frameId:0});}catch{}}
+  async function notify(run){try{await chrome.tabs.sendMessage(run.tab,{action:'ibtaChanged'},{frameId:0});}catch{/* tab may be closed */}}
   async function request(payload,sender){
     if(!appSender(sender)||!payload||!['PING','START','ACK','DISMISS','RECOVER','STOP'].includes(payload.type)||!str(payload.client,80)||!str(payload.owner,80))throw Error('FORBIDDEN');
     if(payload.type==='PING')return status(payload);
     const stored=await chrome.storage.local.get(['ibtaRun','isRunning','singleRunning']);let run=stored.ibtaRun;
     if(payload.type==='RECOVER'){
       if(!run||run.owner!==payload.owner)throw Error('OUTDATED');
-      if(run.tab!==sender.tab.id){let existing;try{existing=await chrome.tabs.get(run.tab);}catch{}if(existing)throw Error('ACTIVE_TAB');}
+      if(run.tab!==sender.tab.id){let existing;try{existing=await chrome.tabs.get(run.tab);}catch{/* tab may be closed */}if(existing)throw Error('ACTIVE_TAB');}
       run.client=payload.client;run.tab=sender.tab.id;await chrome.storage.local.set({ibtaRun:run});return status(payload);
     }
     if(payload.type==='START'){

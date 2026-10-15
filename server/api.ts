@@ -34,6 +34,7 @@ const adminRpc = new Set([
   "ibta_import_codes",
   "ibta_change_supervisor_stock",
   "ibta_assign_codes",
+  "ibta_set_prometric_credentials",
 ]);
 const userRpc = new Set([
   "ibta_apply_changes",
@@ -43,6 +44,7 @@ const userRpc = new Set([
   "ibta_trainee_worksheet_action",
   "ibta_set_voucher_trainee_name",
   "ibta_claim_trainee_voucher",
+  "ibta_get_prometric_credentials",
 ]);
 const json = (status: number, message: string): Response =>
   Response.json(
@@ -227,7 +229,7 @@ export async function handleApi(
           month: "2-digit",
           year: "numeric",
         }).formatToParts(new Date());
-        const part = (name) => parts.find((p) => p.type === name).value;
+        const part = (name: string) => parts.find((p) => p.type === name)?.value ?? "";
         payload.use_date =
           part("day") + "/" + part("month") + "/" + part("year");
         body = JSON.stringify(payload);

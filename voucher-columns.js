@@ -3,10 +3,10 @@ const VoucherColumns=(()=>{
   'use strict';
   const key='trainflow_voucher_widths',minimum=[24,28,100,100,100,100,80],maximum=1000;
   const sheet=document.querySelector('.code-sheet'),head=sheet.querySelector('.code-sheet-head');let widths={};
-  try{const saved=JSON.parse(localStorage.getItem(key)||'{}');for(let i=0;i<7;i++)if(Number.isFinite(saved[i])&&saved[i]>=minimum[i]&&saved[i]<=maximum)widths[i]=Math.round(saved[i]);}catch{}
+  try{const saved=JSON.parse(localStorage.getItem(key)||'{}');for(let i=0;i<7;i++)if(Number.isFinite(saved[i])&&saved[i]>=minimum[i]&&saved[i]<=maximum)widths[i]=Math.round(saved[i]);}catch{/* optional device preference */}
   const defaults=()=>matchMedia('(max-width:700px)').matches?[44,44,172,148,240,220,104]:[32,38,172,148,240,220,80];
   const clamp=(i,width)=>Math.max(i===6&&matchMedia('(max-width:700px)').matches?90:minimum[i],Math.min(maximum,Math.round(width)));
-  const persist=()=>{try{localStorage.setItem(key,JSON.stringify(widths));}catch{}};
+  const persist=()=>{try{localStorage.setItem(key,JSON.stringify(widths));}catch{/* optional device preference */}};
   function sync(){[...head.children].forEach((cell,i)=>{const control=cell.querySelector('.voucher-col-resizer');if(control)control.setAttribute('aria-valuenow',String(Math.round(cell.getBoundingClientRect().width)||widths[i]||defaults()[i]||180));});}
   function apply(){
     const base=defaults(),tracks=base.map((value,i)=>widths[i]===undefined?value:clamp(i,widths[i])),tableWidth=tracks.reduce((total,width)=>total+width,0)+'px';

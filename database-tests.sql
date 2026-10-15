@@ -48,8 +48,7 @@ do $$ declare n int; begin
   begin
     update public.ibta_codes set used_on=null where code='IBTA-TEST-COPY';
     raise exception 'FAIL: copy-only user released code';
-  exception when raise_exception then
-    if sqlerrm not like 'Copy-only members%' then raise; end if;
+  exception when insufficient_privilege then null;
   end;
 end $$;
 select set_config('request.jwt.claims','{"sub":"00000000-0000-4000-8000-000000000102","email":"ibta-test-operator@example.invalid","role":"authenticated"}',true);
@@ -59,7 +58,7 @@ do $$ declare n int; begin
   select count(*) into n from public.ibta_claim_code('IBTA-TEST-ONLY',1,'22/09/2026');
   if n<>0 then raise exception 'FAIL: duplicate claim'; end if;
   if (select used_by from public.ibta_codes where code='IBTA-TEST-ONLY')<>'00000000-0000-4000-8000-000000000102'::uuid then raise exception 'FAIL: claim ownership'; end if;
-  perform public.ibta_apply_changes('[{"op":"update","code":"IBTA-TEST-ONLY","version":2,"notes":"saved note","used_on":"22/09/2026"}]'::jsonb);
+  perform public.ibta_apply_changes(jsonb_build_array(jsonb_build_object('op','update','code','IBTA-TEST-ONLY','version',2,'notes','saved note','used_on',private.ibta_riyadh_today())));
   begin
     perform public.ibta_apply_changes('[{"op":"update","code":"IBTA-TEST-ONLY","version":2,"notes":"stale","used_on":null}]'::jsonb);
     raise exception 'FAIL: stale update succeeded';

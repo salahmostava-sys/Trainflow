@@ -56,6 +56,7 @@ declare global {
     expiresAt(token: string): number;
     expired(token: string, now?: number): boolean;
   };
+  var TrainflowDates: { riyadhIsoDate(now?: Date): string; riyadhToday(now?: Date): string };
   var currentLang: Language;
   var DEFAULT_KEYCODES: Keycode[];
   var PROMETRIC_ACCOUNT: string,

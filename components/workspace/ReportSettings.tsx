@@ -25,25 +25,37 @@ function cachedReportOrder(owner: string, kind: ReportKind, totalColumns: number
   }
 }
 
+// Pure so the preference effect below depends only on its real inputs.
+function resolveReportOrder(owner: string, total: number, kind: ReportKind, saved: number[] | undefined): number[] {
+  const all = Array.from({ length: total }, (_, i) => i);
+  const savedColumns = [...new Set((saved || []).filter(
+    (column) => Number.isInteger(column) && column >= 0 && column < total
+  ))];
+  const cachedOrder = cachedReportOrder(owner, kind, total);
+  const orderedColumns = [...new Set([...cachedOrder, ...all])];
+  const selectedColumns = new Set(savedColumns);
+  let savedIndex = 0;
+  // Account preferences determine the copied order; cached slots retain unchecked columns.
+  return orderedColumns.map((column) =>
+    selectedColumns.has(column) ? savedColumns[savedIndex++] : column
+  );
+}
+
+function storeReportOrder(owner: string, order: Record<ReportKind, number[]>) {
+  try {
+    localStorage.setItem(`trainflow_report_order_${owner}`, JSON.stringify(order));
+  } catch (error) {
+    // Device-only ordering is optional; the account copy is still saved.
+    console.warn("Could not store the report column order on this device", error);
+  }
+}
+
 export function ReportSettings(props: ReportSettingsProps) {
   const tr = (ar: string, en: string) => (props.language === "ar" ? ar : en);
   const preferencesKey = JSON.stringify(props.preferences);
 
-  const resolveInitialOrder = (kind: ReportKind, saved: number[]): number[] => {
-    const total = props.columns.length;
-    const all = Array.from({ length: total }, (_, i) => i);
-    const savedColumns = [...new Set(saved.filter(
-      (column) => Number.isInteger(column) && column >= 0 && column < total
-    ))];
-    const cachedOrder = cachedReportOrder(props.owner, kind, total);
-    const orderedColumns = [...new Set([...cachedOrder, ...all])];
-    const selectedColumns = new Set(savedColumns);
-    let savedIndex = 0;
-    // Account preferences determine the copied order; cached slots retain unchecked columns.
-    return orderedColumns.map((column) =>
-      selectedColumns.has(column) ? savedColumns[savedIndex++] : column
-    );
-  };
+  const resolveInitialOrder = (kind: ReportKind, saved: number[] | undefined): number[] =>
+    resolveReportOrder(props.owner, props.columns.length, kind, saved);
 
   const [order, setOrder] = React.useState<Record<ReportKind, number[]>>(() => ({
     operations: resolveInitialOrder("operations", props.preferences?.operations),
@@ -75,8 +87,8 @@ export function ReportSettings(props: ReportSettingsProps) {
       success: new Set(nextPrefs.success || []),
     });
     setOrder({
-      operations: resolveInitialOrder("operations", nextPrefs.operations),
-      success: resolveInitialOrder("success", nextPrefs.success),
+      operations: resolveReportOrder(props.owner, props.columns.length, "operations", nextPrefs.operations),
+      success: resolveReportOrder(props.owner, props.columns.length, "success", nextPrefs.success),
     });
     setStatus("");
   }, [preferencesKey, props.owner, props.columns.length]);
@@ -107,12 +119,7 @@ export function ReportSettings(props: ReportSettingsProps) {
       const [moved] = list.splice(fromIndex, 1);
       list.splice(toIndex, 0, moved);
       const nextOrder = { ...previous, [kind]: list };
-      try {
-        localStorage.setItem(
-          `trainflow_report_order_${props.owner}`,
-          JSON.stringify(nextOrder)
-        );
-      } catch {}
+      storeReportOrder(props.owner, nextOrder);
       return nextOrder;
     });
   };
@@ -132,14 +139,7 @@ export function ReportSettings(props: ReportSettingsProps) {
     setSaving(true);
     try {
       const saved = await props.save(draft);
-      if (saved) {
-        try {
-          localStorage.setItem(
-            `trainflow_report_order_${props.owner}`,
-            JSON.stringify(order)
-          );
-        } catch {}
-      }
+      if (saved) storeReportOrder(props.owner, order);
       setStatus(
         saved
           ? tr(
@@ -151,7 +151,8 @@ export function ReportSettings(props: ReportSettingsProps) {
               "Could not save columns. Please retry."
             )
       );
-    } catch {
+    } catch (error) {
+      console.error("Saving report columns failed", error);
       setStatus(
         tr(
           "تعذر حفظ الأعمدة. حاول مجددًا.",

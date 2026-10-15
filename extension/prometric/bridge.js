@@ -1,13 +1,14 @@
-// bridge.js - runs in ISOLATED world
-// Handles chrome APIs and passes data to/from MAIN world content.js
+// bridge.js - runs in the ISOLATED world, like content.js.
+// Handles chrome APIs and talks to content.js only over the private PromChannel
+// (prom-channel.js); nothing is exchanged through page-visible window events.
 
-const DEFAULT_PAGE_DELAY = 1;
-const DEFAULT_ANSWER = 'a';
+const BRIDGE_DEFAULT_PAGE_DELAY = 1;
+const BRIDGE_DEFAULT_ANSWER = 'a';
 
 /** Wait before retrying a message to a sleeping service worker (MV3). */
-const SW_WAKE_RETRY_MS = 300;
+const BRIDGE_SW_WAKE_RETRY_MS = 300;
 
-// Send currentItem to MAIN world
+// Send currentItem to content.js
 async function registrationTabAllowed(){const result=await sendToBackground({action:'prometricContext'});return result?.ok===true&&result.active===true;}
 async function sendDataToPage() {
   if(!await registrationTabAllowed())return;
@@ -19,17 +20,15 @@ async function sendDataToPage() {
     'autoSubmit', 'defAnswer', 'stabilityMode'
   ]);
   if((isRunning||singleRunning)&&(!currentProcessingId||currentItem?._queueId!==currentProcessingId))return;
-  globalThis.dispatchEvent(new CustomEvent('__prom_init', {
-    detail: {
+  PromChannel.emit('__prom_init', {
       currentItem: currentItem || null,
       isRunning,
       singleRunning,
-      pageDelay: pageDelay ?? DEFAULT_PAGE_DELAY,
+      pageDelay: pageDelay ?? BRIDGE_DEFAULT_PAGE_DELAY,
       autoSubmit: autoSubmit ?? false,
       stabilityMode: stabilityMode ?? false,
-      defAnswer: defAnswer ?? DEFAULT_ANSWER
-    }
-  }));
+      defAnswer: defAnswer ?? BRIDGE_DEFAULT_ANSWER
+  });
 }
 
 // Retry once if service worker was sleeping (MV3).
@@ -39,7 +38,7 @@ async function sendToBackground(payload) {
     return await chrome.runtime.sendMessage(payload);
   } catch (e) {
     if (e?.message?.includes('Receiving end does not exist')) {
-      await new Promise(r => setTimeout(r, SW_WAKE_RETRY_MS));
+      await new Promise(r => setTimeout(r, BRIDGE_SW_WAKE_RETRY_MS));
       try {
         return await chrome.runtime.sendMessage(payload);
       } catch (retryErr) {
@@ -52,13 +51,13 @@ async function sendToBackground(payload) {
   }
 }
 
-// Listen for messages FROM MAIN world content.js
-globalThis.addEventListener('__prom_msg', async (e) => {
+// Listen for messages from content.js (private channel only)
+PromChannel.on('__prom_msg', async (e) => {
   const { action, payload } = e.detail || {};
   if(!await registrationTabAllowed())return;
 
   if (action === 'ibtaSubmitted') {
-    const result=await sendToBackground({action:'ibtaSubmitted',queueId:payload?.queueId});globalThis.dispatchEvent(new CustomEvent('__prom_ibta_ack',{detail:{queueId:payload?.queueId,ok:result?.ok===true}}));
+    const result=await sendToBackground({action:'ibtaSubmitted',queueId:payload?.queueId});PromChannel.emit('__prom_ibta_ack',{queueId:payload?.queueId,ok:result?.ok===true});
   }
   if (action === 'stepDone') {
     const result=await sendToBackground({
@@ -71,7 +70,7 @@ globalThis.addEventListener('__prom_msg', async (e) => {
       step:          payload?.step          || '',
       queueId:       payload?.queueId       || ''
     });
-    globalThis.dispatchEvent(new CustomEvent('__prom_done_ack',{detail:{queueId:payload?.queueId,ok:result?.ok===true}}));
+    PromChannel.emit('__prom_done_ack',{queueId:payload?.queueId,ok:result?.ok===true});
   }
 
   if (action === 'stepFailed') {
@@ -119,13 +118,13 @@ globalThis.addEventListener('__prom_msg', async (e) => {
   }
 });
 
-// Send data when page loads. MAIN world may not have attached its listener yet,
+// Send data when page loads. content.js may not have attached its listener yet,
 // so also respond to an explicit ready signal and do a couple of short retries.
 (async () => { await sendDataToPage(); })();
 setTimeout(sendDataToPage, 250);
 setTimeout(sendDataToPage, 1000);
 
-globalThis.addEventListener('__prom_ready', () => {
+PromChannel.on('__prom_ready', () => {
   sendDataToPage();
 });
 
@@ -141,17 +140,15 @@ chrome.storage.onChanged.addListener((changes) => {
     ]).then(async state => {
       if(!await registrationTabAllowed())return;
       if((state.isRunning||state.singleRunning)&&(!state.currentProcessingId||state.currentItem?._queueId!==state.currentProcessingId))return;
-      globalThis.dispatchEvent(new CustomEvent('__prom_init', {
-        detail: {
+      PromChannel.emit('__prom_init', {
           currentItem: state.currentItem || null,
           isRunning: state.isRunning,
           singleRunning: state.singleRunning,
-          pageDelay: state.pageDelay ?? DEFAULT_PAGE_DELAY,
+          pageDelay: state.pageDelay ?? BRIDGE_DEFAULT_PAGE_DELAY,
           autoSubmit: state.autoSubmit ?? false,
           stabilityMode: state.stabilityMode ?? false,
-          defAnswer: state.defAnswer ?? DEFAULT_ANSWER
-        }
-      }));
+          defAnswer: state.defAnswer ?? BRIDGE_DEFAULT_ANSWER
+      });
     });
   }
 });

@@ -1,4 +1,4 @@
-# TrainFlow — Prometric 4.2.9
+# TrainFlow — Prometric 4.3.0
 
 Integrated from the user's Prometric Auto Register 4.0 source (Salah Mostafa,
 ISC license). Its original popup, registration steps, generation pattern,
@@ -134,4 +134,10 @@ The Trust boundary remains the exact Vercel origin, the owning extension ID and 
 
 ## Password generation (4.2.8)
 
-At the user's request, new registrations default to `{F}@{f}#$1970`: `{F}` is the trainee's first initial uppercase and `{f}` is the same initial lowercase, so `Ahmed Student` produces `A@a#$1970`. This template is used literally and is no longer converted to random generation. Updating from 4.2.6 or 4.2.7 replaces their saved exact `{random}` setting with this default; other custom templates remain unchanged. `{random}` remains available as an explicit setting afterward. Existing provider accounts, saved registration history and queued accounts with confirmed credentials are not changed. Replace the installed files in the same extension folder and reload version 4.2.9, then reload TrainFlow and Prometric tabs.
+At the user's request, new registrations default to `{F}@{f}#$1970`: `{F}` is the trainee's first initial uppercase and `{f}` is the same initial lowercase, so `Ahmed Student` produces `A@a#$1970`. This template is used literally and is no longer converted to random generation. A saved password setting, including `{random}`, is respected on every update (since 4.3.0 no version migrates it back to the default). Existing provider accounts, saved registration history and queued accounts with confirmed credentials are not changed. Replace the installed files in the same extension folder and reload version 4.3.0, then reload TrainFlow and Prometric tabs.
+
+## Security and stored passwords (4.3.0)
+
+- All Prometric registration scripts (`prom-channel.js`, `bridge.js`, `dom-utils.js`, `content.js`) run in the extension's isolated world. They talk over a private in-extension channel tagged with a per-load random nonce instead of page-visible `window` events, so scripts on the Prometric page cannot forge "step done" results or read the pending password over that channel.
+- Passwords in registration history are cleared after 7 days, and the "last registration" panel credentials expire after 30 days. Pruning runs when the service worker starts, every 6 hours (`alarms` permission), and whenever the popup reads them.
+- History → **حذف كلمات المرور (Purge passwords)** removes every stored password immediately, after confirmation.

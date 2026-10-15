@@ -1,6 +1,47 @@
 // utils.js - Shared utilities for Prometric Extension
-/* exported escapeHtml, isValidEmail, generateCredentials */
+/* exported escapeHtml, isValidEmail, generateCredentials, pruneStoredPasswords, purgeStoredPasswords, CREDENTIAL_RETENTION */
 const DEFAULT_PASSWORD_PATTERN = '{F}@{f}#$1970';
+
+// How long plaintext passwords stay in chrome.storage.local.
+const CREDENTIAL_RETENTION = Object.freeze({
+  historyPasswordMs: 7 * 24 * 60 * 60 * 1000,   // history entries keep their password for 7 days
+  savedCredsMs:      30 * 24 * 60 * 60 * 1000   // the "last registration" panel expires after 30 days
+});
+
+/**
+ * Pure helper: strip passwords from old history entries and expire savedCreds.
+ * Returns { history, savedCreds, changed } where savedCreds === null means "remove".
+ * Legacy savedCreds without a timestamp are stamped now (not deleted) so they expire later.
+ */
+function pruneStoredPasswords({ history, savedCreds } = {}, now = Date.now(), retention = CREDENTIAL_RETENTION) {
+  let changed = false;
+  let nextHistory = history;
+  if (Array.isArray(history)) {
+    nextHistory = history.map(entry => {
+      if (!entry || !entry.password) return entry;
+      const at = Date.parse(entry.date || '');
+      // saveToHistory always stamps a date; entries without one cannot be aged, so leave them.
+      if (!Number.isFinite(at) || now - at <= retention.historyPasswordMs) return entry;
+      changed = true;
+      return { ...entry, password: '', passwordExpired: true };
+    });
+  }
+  let nextSaved = savedCreds;
+  if (savedCreds && typeof savedCreds === 'object') {
+    const at = Number(savedCreds.savedAt);
+    if (!Number.isFinite(at) || at <= 0) { nextSaved = { ...savedCreds, savedAt: now }; changed = true; }
+    else if (now - at > retention.savedCredsMs) { nextSaved = null; changed = true; }
+  }
+  return { history: nextHistory, savedCreds: nextSaved, changed };
+}
+
+/** Pure helper for the "purge saved passwords" button: drops every stored password. */
+function purgeStoredPasswords({ history } = {}) {
+  const nextHistory = Array.isArray(history)
+    ? history.map(entry => (entry && entry.password ? { ...entry, password: '', passwordExpired: true } : entry))
+    : history;
+  return { history: nextHistory, savedCreds: null, copiedCreds: null };
+}
 
 function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, ch => ({
@@ -78,6 +119,9 @@ function randomPassword() {
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     DEFAULT_PASSWORD_PATTERN,
+    CREDENTIAL_RETENTION,
+    pruneStoredPasswords,
+    purgeStoredPasswords,
     escapeHtml,
     isValidEmail,
     generateCredentials

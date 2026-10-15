@@ -43,13 +43,14 @@ const Cloud = (() => {
   let client: CloudClient,
     config: { id: number; version: number; payload: CloudSettings },
     user: CloudUser,
-    role: CloudRole;
+    role: CloudRole,
+    sharedCredentials: { account: string; password: string } | null = null;
   let rows = new Map<string, CloudCode>(),
     stock = new Map<string, number>(),
     busy = false,
     ready = false;
   let sessionDeadline = 0,
-    sessionTimer,
+    sessionTimer: ReturnType<typeof setTimeout> | undefined,
     endingSession = false,
     retainedDraftUser = "";
   const dailyMessage = () =>
@@ -115,17 +116,17 @@ const Cloud = (() => {
   let liveSync: { close(): void; wake(): void } | null = null, liveSession = 0, workspaceOperation = 0;
   let liveStatus = "connecting";
   let statusKey = "",
-    statusArgs = [],
+    statusArgs: unknown[] = [],
     statusError = false,
     authStatusKey = "authAccessHelp",
-    authStatusArgs = [];
+    authStatusArgs: unknown[] = [];
   let profileStatusKey = "",
     profileStatusError = false;
   const BACKGROUND_REFRESH_MS = 120000;
   const $ = <T extends HTMLElement = HTMLInputElement>(id: string): T =>
     document.getElementById(id) as T;
-  const clone = (value) => JSON.parse(JSON.stringify(value));
-  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value));
+  const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
   const accountName = () =>
     typeof user?.user_metadata?.full_name === "string"
       ? user.user_metadata.full_name.trim()
@@ -143,15 +144,15 @@ const Cloud = (() => {
       return false;
     }
   }
-  function message(text, error = false) {
+  function message(text: string, error = false) {
     $("cloud-status").textContent = text;
     $("cloud-status").style.color = error ? "#b42318" : "";
   }
-  function translated(key, ...args) {
+  function translated(key: string, ...args: any[]) {
     const value = t(key) as string | ((...values: string[]) => string);
     return typeof value === "function" ? value(...args) : value;
   }
-  function errorText(error) {
+  function errorText(error: any) {
     const raw = error?.message || String(error);
     if (raw === "DAILY_SIGN_IN_REQUIRED") return dailyMessage();
     if (raw === "AUTH_RATE_LIMITED" || raw === "MEMBERSHIP_RATE_LIMITED")
@@ -221,13 +222,13 @@ const Cloud = (() => {
         : translated(statusKey, ...statusArgs);
     message(text, statusError);
   }
-  function setStatus(key, error = false, ...args) {
+  function setStatus(key: string, error = false, ...args: unknown[]) {
     statusKey = key;
     statusError = error;
     statusArgs = args;
     renderStatus();
   }
-  function setAuthStatus(key, ...args) {
+  function setAuthStatus(key: string, ...args: unknown[]) {
     authStatusKey = key;
     authStatusArgs = args;
     $("auth-message").textContent =
@@ -265,23 +266,25 @@ const Cloud = (() => {
     $("app").inert = value;
     $("cloud-tools").inert = value;
   }
-  function fail(error) {
+  function fail(error: any) {
     if (/CONFLICT|duplicate key/.test(error.message || ""))
       setStatus("conflict", true);
     else setStatus("error", true, error);
     showToast($("cloud-status").textContent);
   }
+  // Keyset paging: rows inserted or deleted between pages cannot shift a page
+  // boundary and make another row disappear or repeat, as offset paging could.
   async function allRows() {
     const result = [];
-    for (let offset = 0; ; offset += 1000) {
-      const { data, error } = await client
-        .from("ibta_codes")
-        .select("*")
-        .order("code")
-        .range(offset, offset + 999);
+    let last: string | null = null;
+    for (;;) {
+      let query = client.from("ibta_codes").select("*").order("code");
+      if (last !== null) query = query.gt("code", last);
+      const { data, error } = await query.limit(1000);
       if (error) throw error;
       result.push(...data);
       if (data.length < 1000) return result;
+      last = data[data.length - 1].code;
     }
   }
   function sortCategories(cats: string[]) {
@@ -318,7 +321,9 @@ const Cloud = (() => {
     try {
       prefs =
         JSON.parse(localStorage.getItem("ibta_ui_preferences") || "{}") || {};
-    } catch {}
+    } catch {
+      // Device preferences are optional; blocked or corrupt storage uses defaults.
+    }
     state = {
       usedCodes: {},
       codeUseTimes: {},
@@ -346,8 +351,8 @@ const Cloud = (() => {
       if (r.trainee_name) state.voucherNames[r.code] = r.trainee_name;
     }
     DEFAULT_KEYCODES = clone(p.keycodes || []);
-    PROMETRIC_ACCOUNT = p.credentials?.account || "";
-    PROMETRIC_PASSWORD = p.credentials?.password || "";
+    PROMETRIC_ACCOUNT = sharedCredentials?.account || "";
+    PROMETRIC_PASSWORD = sharedCredentials?.password || "";
     ZOOM_URL = validHttpsUrl(p.links?.zoom, "zoom.us") ? p.links.zoom : "";
     PROMETRIC_LOGIN_URL = validHttpsUrl(p.links?.prometric, "prometric.com")
       ? p.links.prometric
@@ -421,27 +426,48 @@ const Cloud = (() => {
       activateSettingsTab("profile");
     translateUi();
   }
+  // Export filenames use the Riyadh calendar day, not UTC (00:00-03:00 Riyadh is still yesterday in UTC).
+  const exportDate = () =>
+    typeof TrainflowDates !== "undefined"
+      ? TrainflowDates.riyadhIsoDate()
+      : new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Riyadh" }).format(new Date());
   async function readWorkspace() {
-    const [settings, codes, stockResult] = await Promise.all([
+    const [settings, codes, stockResult, credentials] = await Promise.all([
       client.from("ibta_settings").select("*").eq("id", 1).single(),
       allRows(),
       client.from("ibta_supervisor_stock").select("category,remaining"),
+      readCredentials(),
     ]);
     if (settings.error) throw settings.error;
     if (stockResult.error) throw stockResult.error;
-    return { config: settings.data, codes, stock: stockResult.data };
+    return { config: settings.data, codes, stock: stockResult.data, credentials };
   }
-  function applyWorkspace(snapshot, selection = new Set<string>()) {
+  // Shared Prometric credentials live outside the settings payload; copy-only
+  // members receive none. Older databases still carry them in the payload.
+  async function readCredentials(): Promise<{ account: string; password: string } | null> {
+    if (role === "copy_only") return null;
+    try {
+      const { data, error } = await client.rpc("ibta_get_prometric_credentials", {});
+      if (error) throw error;
+      const item = Array.isArray(data) ? data[0] : data;
+      return item ? { account: String(item.account || ""), password: String(item.password || "") } : null;
+    } catch (error) {
+      console.warn("Prometric credentials unavailable", error);
+      return null;
+    }
+  }
+  function applyWorkspace(snapshot: Awaited<ReturnType<typeof readWorkspace>>, selection = new Set<string>()) {
     config = snapshot.config;
-    rows = new Map(snapshot.codes.map((r) => [r.code, r]));
-    stock = new Map(snapshot.stock.map((r) => [r.category, r.remaining]));
+    sharedCredentials = snapshot.credentials || config.payload?.credentials || null;
+    rows = new Map(snapshot.codes.map((r: CloudCode) => [r.code, r] as [string, CloudCode]));
+    stock = new Map(snapshot.stock.map((r: { category: string; remaining: number }) => [r.category, r.remaining] as [string, number]));
     project(selection);
   }
   async function load() {
     applyWorkspace(await readWorkspace());
   }
   function renderLiveStatus() {
-    const labels = { connected: ["مباشر — التغييرات تظهر تلقائيًا", "Live — changes appear automatically"], connecting: ["جارٍ الاتصال بالتحديث المباشر…", "Connecting to live updates…"], reconnecting: ["إعادة اتصال — التحديث الدوري يعمل مؤقتًا", "Reconnecting — periodic refresh is active"], retrying: ["تعذر تحديث البيانات؛ جارٍ إعادة المحاولة", "Refresh failed; retrying"], pending: ["وصلت تغييرات جديدة؛ ستظهر عند انتهاء التعديل الحالي", "New changes received; waiting for the current edit to finish"] };
+    const labels: Record<string, string[]> = { connected: ["مباشر — التغييرات تظهر تلقائيًا", "Live — changes appear automatically"], connecting: ["جارٍ الاتصال بالتحديث المباشر…", "Connecting to live updates…"], reconnecting: ["إعادة اتصال — التحديث الدوري يعمل مؤقتًا", "Reconnecting — periodic refresh is active"], retrying: ["تعذر تحديث البيانات؛ جارٍ إعادة المحاولة", "Refresh failed; retrying"], pending: ["وصلت تغييرات جديدة؛ ستظهر عند انتهاء التعديل الحالي", "New changes received; waiting for the current edit to finish"] };
     const element = $("live-sync-status");
     if (element) { element.textContent = labels[liveStatus][currentLang === "ar" ? 0 : 1]; element.dataset.state = liveStatus; }
   }
@@ -593,7 +619,9 @@ const Cloud = (() => {
     } catch (error) {
       try {
         await load();
-      } catch {}
+      } catch (reloadError) {
+        console.warn("Reload after a failed change also failed", reloadError);
+      }
       fail(error);
       return false;
     } finally {
@@ -655,7 +683,9 @@ const Cloud = (() => {
     } catch (error) {
       try {
         await load();
-      } catch {}
+      } catch (reloadError) {
+        console.warn("Reload after a failed change also failed", reloadError);
+      }
       fail(error);
       return false;
     } finally {
@@ -716,7 +746,7 @@ const Cloud = (() => {
       lock(false);
     }
   }
-  async function showVoucherNameError(code: string, editingUser: string, saveError) {
+  async function showVoucherNameError(code: string, editingUser: string, saveError: any) {
     if (!ready || user.id !== editingUser) return;
     if (/CONFLICT/.test(saveError.message || "")) {
       try {
@@ -818,8 +848,8 @@ const Cloud = (() => {
     if (role === "admin" && config) {
       const p = config.payload;
       const shared = [
-        ["settings-prometric-account", p.credentials?.account || ""],
-        ["settings-prometric-password", p.credentials?.password || ""],
+        ["settings-prometric-account", sharedCredentials?.account || ""],
+        ["settings-prometric-password", sharedCredentials?.password || ""],
         ["settings-zoom-link", p.links?.zoom || ""],
         ["settings-prometric-link", p.links?.prometric || ""],
       ];
@@ -832,7 +862,7 @@ const Cloud = (() => {
       ),
     ].some((input) => input.value.trim());
   }
-  async function savePrometricSettings(event) {
+  async function savePrometricSettings(event: Event) {
     event.preventDefault();
     if (role !== "admin" || busy || !ready) return false;
     const account = $("settings-prometric-account").value.trim();
@@ -845,21 +875,30 @@ const Cloud = (() => {
       if (!validHttpsUrl(prometric, "prometric.com"))
         throw Error("IBTA_INVALID_PROMETRIC_URL");
       const payload = clone(config.payload);
-      payload.credentials = {
-        ...(payload.credentials || {}),
-        account,
-        password,
-      };
+      delete payload.credentials;
       payload.links = { ...(payload.links || {}), zoom, prometric };
-      if (same(payload, config.payload)) return true;
+      const credentialsChanged =
+        account !== (sharedCredentials?.account || "") ||
+        password !== (sharedCredentials?.password || "");
+      const linksChanged = !same(payload, config.payload);
+      if (!credentialsChanged && !linksChanged) return true;
       lock(true);
       setStatus("saving");
-      const { error } = await client.rpc("ibta_apply_changes", {
-        changes: [],
-        settings_payload: payload,
-        settings_version: config.version,
-      });
-      if (error) throw error;
+      if (credentialsChanged) {
+        const { error } = await client.rpc("ibta_set_prometric_credentials", {
+          new_account: account,
+          new_password: password,
+        });
+        if (error) throw error;
+      }
+      if (linksChanged) {
+        const { error } = await client.rpc("ibta_apply_changes", {
+          changes: [],
+          settings_payload: payload,
+          settings_version: config.version,
+        });
+        if (error) throw error;
+      }
       await load();
       setStatus("saved");
       showToast(t("saved"));
@@ -868,19 +907,21 @@ const Cloud = (() => {
       if (/CONFLICT/.test(error.message || ""))
         try {
           await load();
-        } catch {}
+        } catch (reloadError) {
+          console.warn("Reload after a save conflict failed", reloadError);
+        }
       fail(error);
       return false;
     } finally {
       lock(false);
     }
   }
-  function profileMessage(key, error = null) {
+  function profileMessage(key: string, error: any = null) {
     profileStatusKey = key;
     profileStatusError = error;
     translateUi();
   }
-  async function saveProfileName(event) {
+  async function saveProfileName(event: Event) {
     event.preventDefault();
     if (!ready || busy) return;
     const name = $("profile-name").value.trim();
@@ -901,7 +942,7 @@ const Cloud = (() => {
       lock(false);
     }
   }
-  async function saveProfileEmail(event) {
+  async function saveProfileEmail(event: Event) {
     event.preventDefault();
     if (!ready || busy) return;
     const email = $("profile-email").value.trim().toLowerCase();
@@ -926,7 +967,7 @@ const Cloud = (() => {
       lock(false);
     }
   }
-  async function saveProfilePassword(event) {
+  async function saveProfilePassword(event: Event) {
     event.preventDefault();
     if (!ready || busy) return;
     const current = $("profile-current-password").value,
@@ -1173,14 +1214,14 @@ const Cloud = (() => {
       a = document.createElement("a");
     a.href = url;
     a.download =
-      "trainflow-backup-" + new Date().toISOString().slice(0, 10) + ".json";
+      "trainflow-backup-" + exportDate() + ".json";
     a.click();
     window.URL.revokeObjectURL(url);
   }
   async function exportCodesCsv() {
     if (role !== "admin") return;
     if (!(await refresh())) return;
-    const csvCell = (value) => {
+    const csvCell = (value: unknown) => {
       let text = String(value ?? "");
       if (/^[=+@\-\t\r]/.test(text)) text = "'" + text;
       return '"' + text.replaceAll('"', '""') + '"';
@@ -1205,11 +1246,11 @@ const Cloud = (() => {
       a = document.createElement("a");
     a.href = url;
     a.download =
-      "trainflow-codes-" + new Date().toISOString().slice(0, 10) + ".csv";
+      "trainflow-codes-" + exportDate() + ".csv";
     a.click();
     window.URL.revokeObjectURL(url);
   }
-  async function restoreData(backup) {
+  async function restoreData(backup: any) {
     if (!ready || role !== "admin") throw Error("IBTA_NOT_APPROVED");
     if (typeof Trainees !== "undefined" && !(await Trainees.flush()))
       throw Error("UNSAVED_SHEET");
@@ -1229,7 +1270,7 @@ const Cloud = (() => {
       backup.supervisorStock !== undefined &&
       (!Array.isArray(backup.supervisorStock) ||
         backup.supervisorStock.some(
-          (row) =>
+          (row: any) =>
             !row ||
             typeof row.category !== "string" ||
             !Number.isInteger(row.remaining) ||

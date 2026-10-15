@@ -17,8 +17,9 @@ const authTokenKey='sb-test-auth-token';
 const documentListeners={};const documentListen=document.addEventListener.bind(document);
 document.addEventListener=(event,listener,...args)=>{documentListeners[event]=listener;return documentListen(event,listener,...args);};
 const fire=async(element,type)=>{global.IS_REACT_ACT_ENVIRONMENT=true;try{await React.act(async()=>{element.dispatchEvent(new domWindow.Event(type,{bubbles:true,cancelable:true}));});}finally{delete global.IS_REACT_ACT_ENVIRONMENT;}};
-const db={settings:{id:1,version:1,payload:{keycodes:[],categoryOrder:['Foundation'],codeCategories:['Foundation-100'],keycodeOrder:{},keycodeOverrides:{},dateColors:{},credentials:{account:'test-account',password:'test-password'},links:{zoom:'https://us02web.zoom.us/j/demo',prometric:'https://tcnet1.prometric.com/Login.aspx?demo=1'}}},codes:[{code:'TEST',category:'Foundation-100',notes:'',used_on:null,used_by:null,version:1}],stock:[],members:[{email:'test@example.invalid',role:'admin',active:true,user_id:'user-1'},{email:'member@example.invalid',role:'operator',active:true,user_id:null}]};
+const db={settings:{id:1,version:1,payload:{keycodes:[],categoryOrder:['Foundation'],codeCategories:['Foundation-100'],keycodeOrder:{},keycodeOverrides:{},dateColors:{},links:{zoom:'https://us02web.zoom.us/j/demo',prometric:'https://tcnet1.prometric.com/Login.aspx?demo=1'}}},codes:[{code:'TEST',category:'Foundation-100',notes:'',used_on:null,used_by:null,version:1}],stock:[],members:[{email:'test@example.invalid',role:'admin',active:true,user_id:'user-1'},{email:'member@example.invalid',role:'operator',active:true,user_id:null}]};
 const clone=x=>JSON.parse(JSON.stringify(x));
+db.credentials={account:'test-account',password:'test-password'};
 const backupBlobs=[];db.traineeSheets=[];
 db.auditEvents=[{id:'audit-1',actor:'user-1',action:'UPDATE',entity:'ibta_codes',record_key:'TEST',happened_at:'2026-10-07T09:00:00Z'}];
 let conflict=false,clipboardFails=false,codeReads=0;
@@ -44,11 +45,14 @@ const client={
         update(changes){return {eq:async(field,value)=>{const row=db.members.find(item=>item[field]===value);Object.assign(row,changes);return {error:null};}};}
       };
     }
-    return {select(){return this;},eq(){return this;},order(){return this;},single:async()=>({data:clone(db.settings)}),range:async()=>{codeReads++;return {data:clone(db.codes)};}};
+    let after=null;
+    return {select(){return this;},eq(){return this;},order(){return this;},gt(_key,value){after=value;return this;},single:async()=>({data:clone(db.settings)}),limit:async count=>{if(after===null)codeReads++;return {data:clone([...db.codes].sort((a,b)=>a.code<b.code?-1:a.code>b.code?1:0).filter(row=>after===null||row.code>after).slice(0,count))};}};
   },
   async rpc(name,args){
     events.push({name,args:clone(args)});
     if(conflict)return {error:{message:'CONFLICT: reload required'}};
+    if(name==='ibta_get_prometric_credentials')return {data:db.credentials?[clone(db.credentials)]:[]};
+    if(name==='ibta_set_prometric_credentials'){db.credentials={account:args.new_account,password:args.new_password};return {};}
     if(name==='ibta_assign_codes'){
       for(const item of args.items){const row=db.codes.find(r=>r.code===item.code);assert.equal(row.version,item.version);row.owner_id=args.target_owner;row.version++;}return {};
     }
@@ -331,8 +335,9 @@ for(const key of usedKeys) assert(englishKeys.includes(key),`Missing translation
   els['settings-prometric-password'].value='updated-password';
   els['settings-prometric-link'].value='https://tcnet1.prometric.com/Login.aspx?updated=1';
   await els['prometric-settings-form'].listeners.submit({preventDefault(){}});
-  assert.equal(db.settings.payload.credentials.account,'updated-account');
-  assert.equal(db.settings.payload.credentials.password,'updated-password');
+  assert.equal(db.credentials.account,'updated-account');
+  assert.equal(db.credentials.password,'updated-password');
+  assert.equal(db.settings.payload.credentials,undefined,'Credentials never return to the shared settings payload');
   assert.equal(db.settings.payload.links.zoom,'https://us02web.zoom.us/j/updated');
   assert.equal(db.settings.payload.links.prometric,'https://tcnet1.prometric.com/Login.aspx?updated=1');
   assert.equal(els['zoom-link-val'].textContent,'https://us02web.zoom.us/j/updated');

@@ -30,18 +30,10 @@ const TraineeReports=(()=>{
     return Number.isNaN(+parsed)?'':new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Riyadh',year:'numeric',month:'2-digit',day:'2-digit'}).format(parsed);
   };
   const voucherKey=code=>String(code||'').trim().toUpperCase();
-  function examDay(raw){
-    const text=String(raw||'').replace(/[٠-٩۰-۹]/g,digit=>String(digit.charCodeAt(0)-(digit<='٩'?1632:1776))).replace(/[\u200e\u200f\u061c]/g,'');
-    const iso=text.match(/(?:^|\D)(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})(?!\d)/);
-    const local=text.match(/(?:^|\D)(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})(?!\d)/);
-    if(!iso&&!local)return '';
-    const [year,month,date]=iso?iso.slice(1).map(Number):[Number(local[3]),Number(local[2]),Number(local[1])];
-    const parsed=new Date(Date.UTC(year,month-1,date));
-    return parsed.getUTCFullYear()===year&&parsed.getUTCMonth()===month-1&&parsed.getUTCDate()===date?parsed.toISOString().slice(0,10):'';
-  }
+  const examDay=raw=>TrainflowDates.toIso(raw,{embedded:true})||'';
+  const usedDay=code=>code.used_at?day(code.used_at):TrainflowDates.toIso(code.used_on)||'';
   function dailyRecords(worksheet,date,kind){
-    const codes=Cloud.codeSnapshot().filter(code=>code.owner_id===worksheet.owner&&
-      (code.used_at?day(code.used_at):String(code.used_on||'').split('/').reverse().join('-'))===date);
+    const codes=Cloud.codeSnapshot().filter(code=>code.owner_id===worksheet.owner&&usedDay(code)===date);
     const vouchers=new Set(codes.map(code=>voucherKey(code.code)));
     const matched=[];
     (worksheet.rows||[]).forEach((row,index)=>{
@@ -112,7 +104,7 @@ const TraineeReports=(()=>{
         'text/html':new Blob([html],{type:'text/html'})
       })]);
       copied=true;
-    }catch{}
+    }catch(error){console.warn('Rich clipboard copy failed; falling back to plain text',error);}
     if(!copied)copied=await copyText(text);
     return copied;
   }

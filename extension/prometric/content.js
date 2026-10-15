@@ -175,7 +175,7 @@ function updateStatus(msg, color = '#3fb950', glowColor = 'rgba(63,185,80,0.25)'
 }
 
 function send(action, payload) {
-  globalThis.dispatchEvent(new CustomEvent('__prom_msg', { detail: { action, payload } }));
+  PromChannel.emit('__prom_msg', { action, payload });
 }
 
 function pageSnippet() {
@@ -207,12 +207,10 @@ function copyText(text, label) {
     fallbackCopy(text);
   }
   const COPIED_EXPIRY_MS = 30_000;
-  globalThis.dispatchEvent(new CustomEvent('__prom_msg', {
-    detail: {
-      action: 'saveCopied',
-      payload: { text, label: label || '', expiresAt: Date.now() + COPIED_EXPIRY_MS }
-    }
-  }));
+  PromChannel.emit('__prom_msg', {
+    action: 'saveCopied',
+    payload: { text, label: label || '', expiresAt: Date.now() + COPIED_EXPIRY_MS }
+  });
 }
 
 function fallbackCopy(text) {
@@ -831,8 +829,8 @@ async function run() {
   const url = globalThis.location.href;
 
   const state = await new Promise(resolve => {
-    globalThis.addEventListener('__prom_init', e => resolve(e.detail), { once: true });
-    globalThis.dispatchEvent(new CustomEvent('__prom_ready'));
+    PromChannel.on('__prom_init', e => resolve(e.detail), { once: true });
+    PromChannel.emit('__prom_ready');
     setTimeout(() => resolve(null), 1500);
   });
 
@@ -875,7 +873,7 @@ async function run() {
   observer.observe(document.body, { childList: true, subtree: true });
 }
 
-globalThis.addEventListener('__prom_init', e => {
+PromChannel.on('__prom_init', e => {
   if (e.detail?.currentItem) currentItem = e.detail.currentItem;
   if (e.detail?.pageDelay !== undefined) PAGE_DELAY = e.detail.pageDelay * 1000;
   if (e.detail?.autoSubmit !== undefined) AUTO_SUBMIT = e.detail.autoSubmit;
@@ -888,6 +886,6 @@ globalThis.addEventListener('__prom_init', e => {
 (async () => { try { await run(); } catch (e) { if (e.message !== 'STOPPED') updateStatus('Error ' + e.message, '#d73a49'); } })();
 
 function prometricEscapeHtml(value){return String(value||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
-function markIbtaSubmitted(queueId){return new Promise((resolve,reject)=>{const receive=e=>{if(e.detail?.queueId!==queueId)return;clearTimeout(timer);globalThis.removeEventListener('__prom_ibta_ack',receive);e.detail.ok?resolve():reject(Error('IBTA submission confirmation failed'));};const timer=setTimeout(()=>{globalThis.removeEventListener('__prom_ibta_ack',receive);reject(Error('IBTA submission confirmation timed out'));},10000);globalThis.addEventListener('__prom_ibta_ack',receive);globalThis.dispatchEvent(new CustomEvent('__prom_msg',{detail:{action:'ibtaSubmitted',payload:{queueId}}}));});}
+function markIbtaSubmitted(queueId){return new Promise((resolve,reject)=>{const receive=e=>{if(e.detail?.queueId!==queueId)return;clearTimeout(timer);PromChannel.off('__prom_ibta_ack',receive);e.detail.ok?resolve():reject(Error('IBTA submission confirmation failed'));};const timer=setTimeout(()=>{PromChannel.off('__prom_ibta_ack',receive);reject(Error('IBTA submission confirmation timed out'));},10000);PromChannel.on('__prom_ibta_ack',receive);PromChannel.emit('__prom_msg',{action:'ibtaSubmitted',payload:{queueId}});});}
 
-function sendConfirmedDone(payload){return new Promise((resolve,reject)=>{const receive=e=>{if(e.detail?.queueId!==payload.queueId)return;clearTimeout(timer);globalThis.removeEventListener('__prom_done_ack',receive);e.detail.ok?resolve():reject(Error('Result confirmation failed'));};const timer=setTimeout(()=>{globalThis.removeEventListener('__prom_done_ack',receive);reject(Error('Result confirmation timed out'));},10000);globalThis.addEventListener('__prom_done_ack',receive);send('stepDone',payload);});}
+function sendConfirmedDone(payload){return new Promise((resolve,reject)=>{const receive=e=>{if(e.detail?.queueId!==payload.queueId)return;clearTimeout(timer);PromChannel.off('__prom_done_ack',receive);e.detail.ok?resolve():reject(Error('Result confirmation failed'));};const timer=setTimeout(()=>{PromChannel.off('__prom_done_ack',receive);reject(Error('Result confirmation timed out'));},10000);PromChannel.on('__prom_done_ack',receive);send('stepDone',payload);});}

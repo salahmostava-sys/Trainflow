@@ -387,10 +387,7 @@ function getContrastText(hex){
   return luminance > 0.6 ? '#1A1A1A' : '#FFFFFF';
 }
 function todayStr(){
-  const parts=Object.fromEntries(new Intl.DateTimeFormat('en-GB',{
-    timeZone:'Asia/Riyadh',day:'2-digit',month:'2-digit',year:'numeric'
-  }).formatToParts(new Date()).map(part=>[part.type,part.value]));
-  return formatEnglishDate(parts.day,parts.month,parts.year);
+  return TrainflowDates.riyadhToday();
 }
 function codeCopyTime(iso){
   if(!iso)return '';
@@ -400,25 +397,17 @@ function codeCopyTime(iso){
 }
 
 // ---------- Unified English-numeral date formatting ----------
-const ARABIC_DIGITS = ['٠','١','٢','٣','٤','٥','٦','٧','٨','٩'];
+// Parsing lives in date-utils.js (TrainflowDates): DD/MM/YYYY, D/M/YYYY or
+// YYYY/MM/DD with '/', '-' or '.', Western/Arabic-Indic/Persian digits, and
+// only real calendar dates.
 function toWesternDigits(str){
-  return String(str).replace(/[٠-٩]/g, d => ARABIC_DIGITS.indexOf(d));
+  return TrainflowDates.westernDigits(str);
 }
 function formatEnglishDate(day, month, year){
-  const pad = n => String(n).padStart(2,'0');
-  return `${pad(day)}/${pad(month)}/${year}`;
+  return TrainflowDates.format(day, month, year);
 }
-// Parses either DD/MM/YYYY or YYYY/MM/DD (Western or Arabic-Indic digits) — formats
-// this tool has produced across earlier versions — using the 4-digit year
-// (always > 31) to detect which slot is the year, regardless of position.
 function parseAnyDateString(str){
-  const western = toWesternDigits(str);
-  const parts = western.split('/').map(p=>parseInt(p,10));
-  if(parts.length !== 3 || parts.some(isNaN)) return null;
-  let day, month, year;
-  if(parts[0] > 31){ year = parts[0]; month = parts[1]; day = parts[2]; }
-  else { day = parts[0]; month = parts[1]; year = parts[2]; }
-  return { day, month, year };
+  return TrainflowDates.parse(str);
 }
 function normalizeAllDates(){
   let changed = false;
@@ -471,7 +460,7 @@ async function copyText(text){
       await navigator.clipboard.writeText(text);
       return true;
     }
-  }catch(e){}
+  }catch(error){console.warn('Clipboard API copy failed; trying the fallback',error);}
   if(fallbackCopy(text)) return true;
   showToast(t('copyFailed'));
   return false;
@@ -540,7 +529,7 @@ function toggleLanguage(){
   try{
     const prefs=JSON.parse(localStorage.getItem('ibta_ui_preferences') || '{}') || {};
     localStorage.setItem('ibta_ui_preferences',JSON.stringify({...prefs,uiLang:currentLang}));
-  }catch{}
+  }catch{/* optional device preference */}
   applyLanguage();
 }
 document.getElementById('lang-btn').addEventListener('click',toggleLanguage);
@@ -555,7 +544,7 @@ function setSidebarOpen(open, persist = false) {
   window.IBTA_SIDEBAR_OPEN = Boolean(open);
   document.getElementById('html-root').dataset.sidebar = open ? 'open' : 'closed';
   if (persist) {
-    try { localStorage.setItem('trainflow_sidebar_open', open ? '1' : '0'); } catch {}
+    try { localStorage.setItem('trainflow_sidebar_open', open ? '1' : '0'); } catch{/* optional device preference */}
   }
   updateSidebar();
 }
@@ -622,7 +611,7 @@ document.addEventListener('keydown', e => {
 document.getElementById('sidebar-compact').addEventListener('click', () => {
   window.IBTA_SIDEBAR_COMPACT = !window.IBTA_SIDEBAR_COMPACT;
   document.getElementById('html-root').dataset.sidebarSize = window.IBTA_SIDEBAR_COMPACT ? 'compact' : 'expanded';
-  try { localStorage.setItem('trainflow_sidebar_compact', window.IBTA_SIDEBAR_COMPACT ? '1' : '0'); } catch {}
+  try { localStorage.setItem('trainflow_sidebar_compact', window.IBTA_SIDEBAR_COMPACT ? '1' : '0'); } catch{/* optional device preference */}
   updateSidebar();
 });
 
@@ -670,7 +659,7 @@ function rememberWorkspaceView(change) {
       'ibta_workspace_view:' + Cloud.userId(),
       JSON.stringify({ ...workspaceView(), ...change })
     );
-  } catch {}
+  } catch{/* optional device preference */}
 }
 
 async function restoreWorkspaceView() {
@@ -1002,7 +991,7 @@ function applyCodeDensity(){
   sheet.classList.toggle('compact',codeCompact);
   btn.classList.toggle('active',codeCompact);
   if(label)label.textContent=codeCompact?t('codeDensityCompact'):t('codeDensityComfortable');
-  try{localStorage.setItem('ibta_code_compact',String(codeCompact));}catch{}
+  try{localStorage.setItem('ibta_code_compact',String(codeCompact));}catch{/* optional device preference */}
 }
 
 function applyCodeExpand(){
@@ -1013,7 +1002,7 @@ function applyCodeExpand(){
   scroll.classList.toggle('expanded',codeExpanded);
   btn.classList.toggle('active',codeExpanded);
   if(label)label.textContent=codeExpanded?t('codeNormalHeight'):t('codeExpandHeight');
-  try{localStorage.setItem('ibta_code_expanded',String(codeExpanded));}catch{}
+  try{localStorage.setItem('ibta_code_expanded',String(codeExpanded));}catch{/* optional device preference */}
   positionCodeTimeline();
 }
 

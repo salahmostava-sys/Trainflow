@@ -14,7 +14,7 @@ const path=require('node:path'),assert=require('node:assert/strict'),fs=require(
     if(next){
       const source=fs.readFileSync(path.join(__dirname,'../tools/design-preview.cjs'),'utf8'),mock=vm.runInNewContext(source.match(/const mock=(\x60[^]*?\x60);/)[1]);
       await page.route('**/workspace/cloud.js*',route=>route.fulfill({contentType:'text/javascript',body:mock}));
-      await page.route('https://cdn.jsdelivr.net/**',route=>route.fulfill({contentType:'text/javascript',body:'window.supabase={};'}));
+      await page.route('**/supabase-js.js*',route=>route.fulfill({contentType:'text/javascript',body:'window.supabase={};'}));
     }
     await page.goto('http://localhost:4198');await page.locator('#app').waitFor({state:'visible'});
     await page.locator('#trainees-tab').click();

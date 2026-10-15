@@ -24,11 +24,15 @@ function installBoundaryFixtures(){
         if(!Object.hasOwn(tables,table))throw Error('Unexpected table: '+table);
         return tables[table].filter(row=>filters.every(([key,value])=>row[key]===value));
       };
-      return {select(){return this;},eq(key,value){filters.push([key,value]);return this;},order(){return this;},
+      let after=null;
+      return {select(){return this;},eq(key,value){filters.push([key,value]);return this;},order(){return this;},gt(_key,value){after=value;return this;},
+        limit:async count=>({data:clone(records().filter(row=>after===null||row.code>after).sort((a,b)=>a.code<b.code?-1:a.code>b.code?1:0).slice(0,count))}),
         single:async()=>({data:clone(records()[0])}),maybeSingle:async()=>({data:clone(records()[0]||null)}),
         range:async(from,to)=>({data:clone(records().slice(from,to+1))}),then(resolve,reject){return Promise.resolve({data:clone(records())}).then(resolve,reject);}};
     },
     async rpc(name,args){
+      if(name==='ibta_get_prometric_credentials')return {data:db.settings.payload.credentials?[clone(db.settings.payload.credentials)]:[]};
+      if(name==='ibta_set_prometric_credentials'){db.settings.payload.credentials={account:args.new_account,password:args.new_password};persist();return {};}
       if(name==='ibta_set_voucher_trainee_name'){
         if(window.uiTestNameSaveGate)await window.uiTestNameSaveGate;
         if(db.nameSaveError)return {error:{message:db.nameSaveError}};

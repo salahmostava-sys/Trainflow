@@ -61,7 +61,7 @@ const IbtaExamResults=(()=>{
     const run=await storedRun();
     if(payload.type==='RECOVER'){
       if(!run||run.owner!==payload.owner)throw Error('OUTDATED');
-      if(run.appTab!==sender.tab.id){let tab;try{tab=await chrome.tabs.get(run.appTab);}catch{}if(tab)throw Error('ACTIVE_TAB');}
+      if(run.appTab!==sender.tab.id){let tab;try{tab=await chrome.tabs.get(run.appTab);}catch{/* tab no longer exists */}if(tab)throw Error('ACTIVE_TAB');}
       run.client=payload.client;run.appTab=sender.tab.id;await persist(run);return status(payload,sender);
     }
     if(!same(run,payload,sender)||run.id!==payload.run)throw Error('OUTDATED');

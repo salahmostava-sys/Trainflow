@@ -13,7 +13,7 @@ before(async()=>{
   server=http.createServer((req,res)=>{
     const name=new URL(req.url,'http://localhost').pathname.slice(1);
     if(['','trainees','keycodes','prometric','vouchers','inventory','settings'].includes(name)){
-      const html=require('../tools/workspace-source.cjs').renderDocument().replace(/<script src="https:\/\/cdn.jsdelivr.net[^>]+><\/script>/,'<script src="supabase-test-sdk.js"></script>');
+      const html=require('../tools/workspace-source.cjs').renderDocument().replace(/<script src="supabase-js\.js[^"]*"><\/script>/,'<script src="supabase-test-sdk.js"></script>');
       res.setHeader('Content-Type','text/html; charset=utf-8');res.end(html);
     }else if(name==='supabase-test-sdk.js'){
       res.setHeader('Content-Type','text/javascript');res.end('('+installBoundaryFixtures.toString()+')();');
