@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "TrainFlow — Prometric",
-  "version": "4.2.9",
+  "version": "4.3.0",
   "description": "Prometric registration and selected exam results linked to your TrainFlow trainee sheet",
   "permissions": [
     "tabs",
@@ -9,7 +9,8 @@
     "downloads",
     "contextMenus",
     "unlimitedStorage",
-    "notifications"
+    "notifications",
+    "alarms"
   ],
   "host_permissions": [
     "https://tcnet1.prometric.com/*",
@@ -43,20 +44,13 @@
         "https://tcnet1.prometric.com/*"
       ],
       "js": [
-        "bridge.js"
-      ],
-      "run_at": "document_idle"
-    },
-    {
-      "matches": [
-        "https://tcnet1.prometric.com/*"
-      ],
-      "js": [
+        "prom-channel.js",
+        "bridge.js",
         "dom-utils.js",
         "content.js"
       ],
       "run_at": "document_idle",
-      "world": "MAIN"
+      "world": "ISOLATED"
     },
     {
       "matches": [

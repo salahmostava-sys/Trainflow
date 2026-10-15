@@ -1,4 +1,7 @@
 -- IBTA Ops: run only in the dedicated IBTA project.
+-- Reference baseline only. The authoritative, ordered schema is supabase/migrations/
+-- (see docs/database.md); a fresh project is built by applying those migrations.
+-- No administrator is seeded: create the first one by hand (README, "First administrator").
 create schema if not exists private;
 revoke all on schema private from public;
 grant usage on schema private to authenticated;
@@ -54,11 +57,20 @@ grant select,insert,update,delete on public.ibta_members to authenticated;
 grant select on public.ibta_settings to authenticated;
 grant update(payload) on public.ibta_settings to authenticated;
 grant select,insert,delete on public.ibta_codes to authenticated;
-grant update(notes,used_on) on public.ibta_codes to authenticated;
+-- used_on changes only through ibta_claim_code / ibta_apply_changes (server-computed dates).
+grant update(notes) on public.ibta_codes to authenticated;
 grant select on public.ibta_audit to authenticated;
 
+create function private.ibta_confirmed_email() returns text
+language sql stable security definer set search_path = '' as $$
+  select lower(u.email) from auth.users u
+  where u.id=(select auth.uid()) and u.email_confirmed_at is not null
+$$;
+revoke all on function private.ibta_confirmed_email() from public, anon;
+grant execute on function private.ibta_confirmed_email() to authenticated;
+
 create policy member_read on public.ibta_members for select to authenticated
-using (user_id=(select auth.uid()) or (user_id is null and email=lower((select auth.jwt())->>'email'))
+using (user_id=(select auth.uid()) or (user_id is null and email=(select private.ibta_confirmed_email()))
   or (select private.ibta_role())='admin');
 create policy member_admin on public.ibta_members for all to authenticated
 using ((select private.ibta_role())='admin') with check ((select private.ibta_role())='admin');
@@ -105,10 +117,11 @@ create trigger audit_settings after update on public.ibta_settings for each row 
 create trigger audit_members after insert or update or delete on public.ibta_members for each row execute function private.ibta_audit_change();
 
 -- Keep approved access bound to the Auth ID when a user confirms a new email.
+-- Unconfirmed addresses never bind an invite; a later confirmation fires this trigger.
 create function private.ibta_sync_member_identity() returns trigger
 language plpgsql security definer set search_path = '' as $$
 begin
-  if new.email is not null then
+  if new.email is not null and new.email_confirmed_at is not null then
     update public.ibta_members set user_id=new.id,email=lower(new.email)
     where (user_id=new.id or (user_id is null and email=lower(new.email)))
       and (user_id is distinct from new.id or email is distinct from lower(new.email));
@@ -165,15 +178,23 @@ begin
     else raise exception 'Invalid operation'; end if;
   end loop;
 end $$;
+create function private.ibta_riyadh_today() returns text
+language sql stable set search_path='' as $$
+  select to_char((now() at time zone 'Asia/Riyadh')::date,'DD/MM/YYYY')
+$$;
+-- use_date is accepted for compatibility and ignored: the claim day is the database's Riyadh date.
 create function public.ibta_claim_code(target_code text, expected_version bigint, use_date text)
-returns setof public.ibta_codes language plpgsql security invoker set search_path='' as $$
+returns setof public.ibta_codes language plpgsql security definer set search_path='' as $$
 begin
-  if length(target_code)>200 or use_date is null or use_date !~ '^\d{2}/\d{2}/\d{4}$' then raise exception 'Invalid claim'; end if;
-  return query update public.ibta_codes set used_on=use_date
+  if auth.uid() is null or private.ibta_role() is null then raise exception 'Access denied'; end if;
+  if target_code is null or length(target_code)>200 then raise exception 'Invalid claim'; end if;
+  return query update public.ibta_codes set used_on=private.ibta_riyadh_today()
   where code=target_code and version=expected_version and used_on is null returning *;
 end $$;
 revoke all on function public.ibta_apply_changes(jsonb,jsonb,bigint),public.ibta_claim_code(text,bigint,text) from public,anon;
 grant execute on function public.ibta_apply_changes(jsonb,jsonb,bigint),public.ibta_claim_code(text,bigint,text) to authenticated;
 
-insert into public.ibta_members(email,role) values ('salah@gmail.ru','admin');
+create index ibta_audit_actor_idx on public.ibta_audit(actor);
+insert into public.ibta_settings(id,payload)
+values(1,'{"categoryOrder":[],"codeCategories":[],"keycodes":[]}'::jsonb);
 

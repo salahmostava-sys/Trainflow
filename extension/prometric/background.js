@@ -3,6 +3,7 @@ if (typeof importScripts === 'function') {
 } else if (typeof require === 'function') {
   const utils = require('./utils.js');
   globalThis.generateCredentials = utils.generateCredentials;
+  globalThis.pruneStoredPasswords = utils.pruneStoredPasswords;
   globalThis.DEFAULT_PASSWORD_PATTERN = utils.DEFAULT_PASSWORD_PATTERN;
 }
 
@@ -142,6 +143,24 @@ async function saveToHistory(entry) {
   history.unshift({ ...entry, date: new Date().toISOString() });
   await chrome.storage.local.set({ history: history.slice(0, MAX_HISTORY_ENTRIES) });
 }
+
+// Expire stored plaintext passwords (history > 7 days, savedCreds > 30 days).
+const PASSWORD_PRUNE_ALARM = 'prunePasswords';
+async function pruneExpiredPasswords() {
+  const stored = await chrome.storage.local.get(['history', 'savedCreds']);
+  const pruned = pruneStoredPasswords(stored);
+  if (!pruned.changed) return false;
+  const update = {};
+  if (Array.isArray(pruned.history)) update.history = pruned.history;
+  if (pruned.savedCreds) update.savedCreds = pruned.savedCreds;
+  if (Object.keys(update).length) await chrome.storage.local.set(update);
+  if (stored.savedCreds && !pruned.savedCreds) await chrome.storage.local.remove(['savedCreds']);
+  return true;
+}
+chrome.runtime.onStartup?.addListener(() => { pruneExpiredPasswords().catch(() => {}); });
+chrome.alarms?.onAlarm?.addListener(alarm => { if (alarm?.name === PASSWORD_PRUNE_ALARM) pruneExpiredPasswords().catch(() => {}); });
+try { chrome.alarms?.create?.(PASSWORD_PRUNE_ALARM, { periodInMinutes: 360 }); } catch (_) { /* alarms unavailable */ }
+pruneExpiredPasswords().catch(() => {});
 
 async function addRunLog(message, type = 'info') {
   const { runLogs = [] } = await chrome.storage.local.get(['runLogs']);
@@ -364,7 +383,8 @@ async function handleStepDone(msg, state) {
       savedCreds: {
         name:     msg.name          || entry.name     || '',
         username: user,
-        password: pass
+        password: pass,
+        savedAt:  Date.now()
       }
     });
   }
@@ -567,10 +587,8 @@ chrome.runtime.onInstalled.addListener(async details => {
   chrome.contextMenus.create({ id: "pause_queue", title: "Pause Registration", contexts: ["action"] });
   chrome.contextMenus.create({ id: "resume_queue", title: "Resume Registration", contexts: ["action"] });
   chrome.contextMenus.create({ id: "stop_clear", title: "Stop & Clear Queue", contexts: ["action"] });
-  if (details.reason === 'update' && ['4.2.6', '4.2.7'].includes(details.previousVersion)) {
-    const {passPattern} = await chrome.storage.local.get(['passPattern']);
-    if (passPattern === '{random}') await chrome.storage.local.set({passPattern: DEFAULT_PASSWORD_PATTERN});
-  }
+  // A user's saved password pattern (including '{random}') is respected across updates.
+  await pruneExpiredPasswords().catch(() => {});
 });
 
 chrome.contextMenus.onClicked.addListener(async (info) => {

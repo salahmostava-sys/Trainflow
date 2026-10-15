@@ -147,12 +147,12 @@ function renderEnhancedQueueItem(item, i) {
   const top = document.createElement('div');
   top.className = 'queue-item-top';
   top.innerHTML = `
-    <div class="q-dot ${item.status}" id="qd-${i}"></div>
+    <div class="q-dot ${escapeHtml(item.status)}" id="qd-${i}"></div>
     <div style="flex:1;min-width:0">
       <div class="q-name">${escapeHtml(item.name || '')}</div>
       <div class="q-email">${escapeHtml(hasFailed ? (item.failureReason || item.email || '') : (item.email || ''))}</div>
     </div>
-    <div class="q-status ${item.status}" id="qs-${i}">${statusMap[item.status] || item.status}</div>
+    <div class="q-status ${escapeHtml(item.status)}" id="qs-${i}">${escapeHtml(statusMap[item.status] || item.status || '')}</div>
   `;
   div.appendChild(top);
 
@@ -901,7 +901,7 @@ function updatePastePreview() {
 
   pastePreviewBox.style.display = 'block';
   const preview = valid.slice(0, 3);
-  pastePreviewItems.innerHTML = preview.map(name => {
+  let previewHtml = preview.map(name => {
     const email = domain ? nameToEmail(name, domain) : '<span style="color:var(--yellow)">⚠ no domain set</span>';
     return `<div class="paste-preview-row">
       <span class="paste-preview-name">${escapeHtml(name)}</span>
@@ -909,8 +909,9 @@ function updatePastePreview() {
     </div>`;
   }).join('');
   if (valid.length > 3) {
-    pastePreviewItems.innerHTML += `<div style="font-size:10px;color:var(--muted);margin-top:4px">+${valid.length - 3} more...</div>`;
+    previewHtml += `<div style="font-size:10px;color:var(--muted);margin-top:4px">+${valid.length - 3} more...</div>`;
   }
+  pastePreviewItems.innerHTML = previewHtml;
 }
 
 pasteNamesArea?.addEventListener('input',   updatePastePreview);
@@ -1506,8 +1507,22 @@ function exportDayCSV(dayRecords, dateLabel) {
   setTimeout(() => URL.revokeObjectURL(url), 100);
 }
 
+// Apply the password retention policy on read (also enforced by background.js).
+async function readPrunedCredentialStorage() {
+  const stored = await chrome.storage.local.get(['history', 'savedCreds']);
+  const pruned = pruneStoredPasswords(stored);
+  if (pruned.changed) {
+    const update = {};
+    if (Array.isArray(pruned.history)) update.history = pruned.history;
+    if (pruned.savedCreds) update.savedCreds = pruned.savedCreds;
+    if (Object.keys(update).length) await chrome.storage.local.set(update);
+    if (stored.savedCreds && !pruned.savedCreds) await chrome.storage.local.remove(['savedCreds']);
+  }
+  return { history: Array.isArray(pruned.history) ? pruned.history : [], savedCreds: pruned.savedCreds || undefined };
+}
+
 async function loadHistory() {
-  const { history = [] } = await chrome.storage.local.get(['history']);
+  const { history = [] } = await readPrunedCredentialStorage();
   const list          = document.getElementById('histList');
   const countEl       = document.getElementById('histCount');
   const analyticsWrap = document.getElementById('histAnalytics');
@@ -1728,6 +1743,16 @@ document.getElementById('clearHist')?.addEventListener('click', async () => {
   loadHistory();
 });
 
+document.getElementById('purgePasswords')?.addEventListener('click', async () => {
+  if (!confirm('حذف جميع كلمات المرور المحفوظة من السجل وآخر تسجيل؟ لا يمكن التراجع.\nPurge all saved passwords from history and the last registration? This cannot be undone.')) return;
+  const { history = [] } = await chrome.storage.local.get(['history']);
+  const purged = purgeStoredPasswords({ history });
+  await chrome.storage.local.set({ history: purged.history });
+  await chrome.storage.local.remove(['savedCreds', 'copiedCreds']);
+  loadHistory();
+  loadSavedCreds();
+});
+
 document.querySelectorAll('.tab').forEach(tab => {
   if (tab.dataset.tab === 'history') tab.addEventListener('click', loadHistory);
 });
@@ -1736,7 +1761,7 @@ loadHistory();
 
 // -- Saved Credentials Panel ---
 async function loadSavedCreds() {
-  const { savedCreds } = await chrome.storage.local.get(['savedCreds']);
+  const { savedCreds } = await readPrunedCredentialStorage();
 
   // Only show after registration completes (username is filled by stepDone in background.js)
   if (savedCreds && savedCreds.username && savedCreds.username !== '-') {
@@ -1933,18 +1958,12 @@ document.getElementById('sheetFetch')?.addEventListener('click', async () => {
     const daySel = document.getElementById('sheetDayCol');
     const certSel = document.getElementById('sheetCertCol');
 
-    if (daySel) daySel.innerHTML = '<option value="-1">- None -</option>';
-    if (certSel) certSel.innerHTML = '<option value="-1">- None -</option>';
-    if (nameSel) nameSel.innerHTML = '';
-    if (emailSel) emailSel.innerHTML = '';
-
-    headers.forEach((h, i) => {
-      const opt = `<option value="${i}">${escapeHtml(h || 'Column ' + (i + 1))}</option>`;
-      if (nameSel) nameSel.innerHTML += opt;
-      if (emailSel) emailSel.innerHTML += opt;
-      if (daySel) daySel.innerHTML += opt;
-      if (certSel) certSel.innerHTML += opt;
-    });
+    const noneOpt = '<option value="-1">- None -</option>';
+    const headerOpts = headers.map((h, i) => `<option value="${i}">${escapeHtml(h || 'Column ' + (i + 1))}</option>`).join('');
+    if (nameSel) nameSel.innerHTML = headerOpts;
+    if (emailSel) emailSel.innerHTML = headerOpts;
+    if (daySel) daySel.innerHTML = noneOpt + headerOpts;
+    if (certSel) certSel.innerHTML = noneOpt + headerOpts;
 
     // Auto-detect Name, Email, Day, Cert columns
     const nIdx = findColumnIndex(headers, ['الاسم باللغة الانجليزية', 'english', 'en', 'name', 'اسم']);

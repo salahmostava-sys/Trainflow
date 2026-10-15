@@ -29,6 +29,8 @@ function installBoundaryFixtures(){
         range:async(from,to)=>({data:clone(records().slice(from,to+1))}),then(resolve,reject){return Promise.resolve({data:clone(records())}).then(resolve,reject);}};
     },
     async rpc(name,args){
+      if(name==='ibta_get_prometric_credentials')return {data:db.settings.payload.credentials?[clone(db.settings.payload.credentials)]:[]};
+      if(name==='ibta_set_prometric_credentials'){db.settings.payload.credentials={account:args.new_account,password:args.new_password};persist();return {};}
       if(name==='ibta_set_voucher_trainee_name'){
         if(window.uiTestNameSaveGate)await window.uiTestNameSaveGate;
         if(db.nameSaveError)return {error:{message:db.nameSaveError}};

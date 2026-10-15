@@ -102,7 +102,7 @@ The existing Supabase project, accounts, ibta_* tables, sheet versions and permi
 | server/api.ts | Typed authenticated API; worker.mjs is a compatibility entry for local checks |
 | extension/ | Prometric registration Chrome extension |
 | tools/ | Asset packaging and synthetic preview |
-| database.sql, migrations/, supabase/migrations/ | Original schema and reviewed incremental SQL changes |
+| supabase/migrations/, database.sql | Ordered schema migrations (authoritative) and a reference copy of the core schema |
 | tests/, .github/workflows/ | Unit, integration, browser and CI checks |
 | docs/, ARCHITECTURE.md | User guides and technical documentation |
 | generated/, public/workspace/, .next/ | Generated Next build artifacts; ignored by Git |
@@ -131,9 +131,19 @@ The broader pnpm test:browser command includes legacy preview suites; some older
 
 The application and browser extensions run exclusively on the Vercel production origin. See [deployment](docs/deployment.md).
 
-Download extension updates from **Settings → Extensions**, extract them and reload the unpacked extension in the same Chrome profile. Prometric **4.1.3** targets the current Vercel origin; older installed copies must be updated.
+Download extension updates from **Settings → Extensions**, extract them and reload the unpacked extension in the same Chrome profile. Prometric **4.3.0** targets the current Vercel origin; older installed copies must be updated.
 
-Current administrator backups use trainflow-backup; older ibta-ops-backup files remain supported. Backups may contain trainee credentials and shared configuration. Auth accounts are managed separately. Do not rerun the original database.sql against a provisioned project; use reviewed migrations.
+Current administrator backups use trainflow-backup; older ibta-ops-backup files remain supported. Backups may contain trainee credentials and shared configuration. Auth accounts are managed separately. Do not rerun the original database.sql against a provisioned project; use reviewed migrations. See [database and migrations](docs/database.md).
+
+### First administrator
+
+No administrator account is seeded. On a new project, run this once in the Supabase SQL editor, then sign up with that address and confirm the email:
+
+```sql
+insert into public.ibta_members(email, role) values ('owner@example.com', 'admin');
+```
+
+Keep **Confirm email** enabled in Supabase Auth: memberships bind only to confirmed addresses.
 
 ## Documentation
 
@@ -142,6 +152,7 @@ Current administrator backups use trainflow-backup; older ibta-ops-backup files 
 | Daily work and keyboard controls | [Operations guide](docs/operations-guide.md) |
 | System design and ownership | [Architecture](ARCHITECTURE.md) |
 | Local builds, Vercel and rollback | [Deployment](docs/deployment.md) |
+| Schema, migrations and first admin | [Database](docs/database.md) |
 | API authentication and limits | [JavaScript server](docs/javascript-server.md) |
 | Daily reports and copied columns | [Copy reports](docs/copy-reports.md) |
 | Chrome registration and recovery | [Prometric extension](extension/prometric/README.md) |

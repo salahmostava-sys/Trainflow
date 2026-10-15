@@ -43,7 +43,8 @@ const Cloud = (() => {
   let client: CloudClient,
     config: { id: number; version: number; payload: CloudSettings },
     user: CloudUser,
-    role: CloudRole;
+    role: CloudRole,
+    sharedCredentials: { account: string; password: string } | null = null;
   let rows = new Map<string, CloudCode>(),
     stock = new Map<string, number>(),
     busy = false,
@@ -346,8 +347,8 @@ const Cloud = (() => {
       if (r.trainee_name) state.voucherNames[r.code] = r.trainee_name;
     }
     DEFAULT_KEYCODES = clone(p.keycodes || []);
-    PROMETRIC_ACCOUNT = p.credentials?.account || "";
-    PROMETRIC_PASSWORD = p.credentials?.password || "";
+    PROMETRIC_ACCOUNT = sharedCredentials?.account || "";
+    PROMETRIC_PASSWORD = sharedCredentials?.password || "";
     ZOOM_URL = validHttpsUrl(p.links?.zoom, "zoom.us") ? p.links.zoom : "";
     PROMETRIC_LOGIN_URL = validHttpsUrl(p.links?.prometric, "prometric.com")
       ? p.links.prometric
@@ -422,17 +423,33 @@ const Cloud = (() => {
     translateUi();
   }
   async function readWorkspace() {
-    const [settings, codes, stockResult] = await Promise.all([
+    const [settings, codes, stockResult, credentials] = await Promise.all([
       client.from("ibta_settings").select("*").eq("id", 1).single(),
       allRows(),
       client.from("ibta_supervisor_stock").select("category,remaining"),
+      readCredentials(),
     ]);
     if (settings.error) throw settings.error;
     if (stockResult.error) throw stockResult.error;
-    return { config: settings.data, codes, stock: stockResult.data };
+    return { config: settings.data, codes, stock: stockResult.data, credentials };
+  }
+  // Shared Prometric credentials live outside the settings payload; copy-only
+  // members receive none. Older databases still carry them in the payload.
+  async function readCredentials(): Promise<{ account: string; password: string } | null> {
+    if (role === "copy_only") return null;
+    try {
+      const { data, error } = await client.rpc("ibta_get_prometric_credentials", {});
+      if (error) throw error;
+      const item = Array.isArray(data) ? data[0] : data;
+      return item ? { account: String(item.account || ""), password: String(item.password || "") } : null;
+    } catch (error) {
+      console.warn("Prometric credentials unavailable", error);
+      return null;
+    }
   }
   function applyWorkspace(snapshot, selection = new Set<string>()) {
     config = snapshot.config;
+    sharedCredentials = snapshot.credentials || config.payload?.credentials || null;
     rows = new Map(snapshot.codes.map((r) => [r.code, r]));
     stock = new Map(snapshot.stock.map((r) => [r.category, r.remaining]));
     project(selection);
@@ -818,8 +835,8 @@ const Cloud = (() => {
     if (role === "admin" && config) {
       const p = config.payload;
       const shared = [
-        ["settings-prometric-account", p.credentials?.account || ""],
-        ["settings-prometric-password", p.credentials?.password || ""],
+        ["settings-prometric-account", sharedCredentials?.account || ""],
+        ["settings-prometric-password", sharedCredentials?.password || ""],
         ["settings-zoom-link", p.links?.zoom || ""],
         ["settings-prometric-link", p.links?.prometric || ""],
       ];
@@ -845,21 +862,30 @@ const Cloud = (() => {
       if (!validHttpsUrl(prometric, "prometric.com"))
         throw Error("IBTA_INVALID_PROMETRIC_URL");
       const payload = clone(config.payload);
-      payload.credentials = {
-        ...(payload.credentials || {}),
-        account,
-        password,
-      };
+      delete payload.credentials;
       payload.links = { ...(payload.links || {}), zoom, prometric };
-      if (same(payload, config.payload)) return true;
+      const credentialsChanged =
+        account !== (sharedCredentials?.account || "") ||
+        password !== (sharedCredentials?.password || "");
+      const linksChanged = !same(payload, config.payload);
+      if (!credentialsChanged && !linksChanged) return true;
       lock(true);
       setStatus("saving");
-      const { error } = await client.rpc("ibta_apply_changes", {
-        changes: [],
-        settings_payload: payload,
-        settings_version: config.version,
-      });
-      if (error) throw error;
+      if (credentialsChanged) {
+        const { error } = await client.rpc("ibta_set_prometric_credentials", {
+          new_account: account,
+          new_password: password,
+        });
+        if (error) throw error;
+      }
+      if (linksChanged) {
+        const { error } = await client.rpc("ibta_apply_changes", {
+          changes: [],
+          settings_payload: payload,
+          settings_version: config.version,
+        });
+        if (error) throw error;
+      }
       await load();
       setStatus("saved");
       showToast(t("saved"));
