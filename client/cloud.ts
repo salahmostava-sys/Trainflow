@@ -50,7 +50,7 @@ const Cloud = (() => {
     busy = false,
     ready = false;
   let sessionDeadline = 0,
-    sessionTimer,
+    sessionTimer: ReturnType<typeof setTimeout> | undefined,
     endingSession = false,
     retainedDraftUser = "";
   const dailyMessage = () =>
@@ -116,17 +116,17 @@ const Cloud = (() => {
   let liveSync: { close(): void; wake(): void } | null = null, liveSession = 0, workspaceOperation = 0;
   let liveStatus = "connecting";
   let statusKey = "",
-    statusArgs = [],
+    statusArgs: unknown[] = [],
     statusError = false,
     authStatusKey = "authAccessHelp",
-    authStatusArgs = [];
+    authStatusArgs: unknown[] = [];
   let profileStatusKey = "",
     profileStatusError = false;
   const BACKGROUND_REFRESH_MS = 120000;
   const $ = <T extends HTMLElement = HTMLInputElement>(id: string): T =>
     document.getElementById(id) as T;
-  const clone = (value) => JSON.parse(JSON.stringify(value));
-  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value));
+  const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
   const accountName = () =>
     typeof user?.user_metadata?.full_name === "string"
       ? user.user_metadata.full_name.trim()
@@ -144,15 +144,15 @@ const Cloud = (() => {
       return false;
     }
   }
-  function message(text, error = false) {
+  function message(text: string, error = false) {
     $("cloud-status").textContent = text;
     $("cloud-status").style.color = error ? "#b42318" : "";
   }
-  function translated(key, ...args) {
+  function translated(key: string, ...args: any[]) {
     const value = t(key) as string | ((...values: string[]) => string);
     return typeof value === "function" ? value(...args) : value;
   }
-  function errorText(error) {
+  function errorText(error: any) {
     const raw = error?.message || String(error);
     if (raw === "DAILY_SIGN_IN_REQUIRED") return dailyMessage();
     if (raw === "AUTH_RATE_LIMITED" || raw === "MEMBERSHIP_RATE_LIMITED")
@@ -222,13 +222,13 @@ const Cloud = (() => {
         : translated(statusKey, ...statusArgs);
     message(text, statusError);
   }
-  function setStatus(key, error = false, ...args) {
+  function setStatus(key: string, error = false, ...args: unknown[]) {
     statusKey = key;
     statusError = error;
     statusArgs = args;
     renderStatus();
   }
-  function setAuthStatus(key, ...args) {
+  function setAuthStatus(key: string, ...args: unknown[]) {
     authStatusKey = key;
     authStatusArgs = args;
     $("auth-message").textContent =
@@ -266,7 +266,7 @@ const Cloud = (() => {
     $("app").inert = value;
     $("cloud-tools").inert = value;
   }
-  function fail(error) {
+  function fail(error: any) {
     if (/CONFLICT|duplicate key/.test(error.message || ""))
       setStatus("conflict", true);
     else setStatus("error", true, error);
@@ -321,7 +321,9 @@ const Cloud = (() => {
     try {
       prefs =
         JSON.parse(localStorage.getItem("ibta_ui_preferences") || "{}") || {};
-    } catch {}
+    } catch {
+      // Device preferences are optional; blocked or corrupt storage uses defaults.
+    }
     state = {
       usedCodes: {},
       codeUseTimes: {},
@@ -454,18 +456,18 @@ const Cloud = (() => {
       return null;
     }
   }
-  function applyWorkspace(snapshot, selection = new Set<string>()) {
+  function applyWorkspace(snapshot: Awaited<ReturnType<typeof readWorkspace>>, selection = new Set<string>()) {
     config = snapshot.config;
     sharedCredentials = snapshot.credentials || config.payload?.credentials || null;
-    rows = new Map(snapshot.codes.map((r) => [r.code, r]));
-    stock = new Map(snapshot.stock.map((r) => [r.category, r.remaining]));
+    rows = new Map(snapshot.codes.map((r: CloudCode) => [r.code, r] as [string, CloudCode]));
+    stock = new Map(snapshot.stock.map((r: { category: string; remaining: number }) => [r.category, r.remaining] as [string, number]));
     project(selection);
   }
   async function load() {
     applyWorkspace(await readWorkspace());
   }
   function renderLiveStatus() {
-    const labels = { connected: ["مباشر — التغييرات تظهر تلقائيًا", "Live — changes appear automatically"], connecting: ["جارٍ الاتصال بالتحديث المباشر…", "Connecting to live updates…"], reconnecting: ["إعادة اتصال — التحديث الدوري يعمل مؤقتًا", "Reconnecting — periodic refresh is active"], retrying: ["تعذر تحديث البيانات؛ جارٍ إعادة المحاولة", "Refresh failed; retrying"], pending: ["وصلت تغييرات جديدة؛ ستظهر عند انتهاء التعديل الحالي", "New changes received; waiting for the current edit to finish"] };
+    const labels: Record<string, string[]> = { connected: ["مباشر — التغييرات تظهر تلقائيًا", "Live — changes appear automatically"], connecting: ["جارٍ الاتصال بالتحديث المباشر…", "Connecting to live updates…"], reconnecting: ["إعادة اتصال — التحديث الدوري يعمل مؤقتًا", "Reconnecting — periodic refresh is active"], retrying: ["تعذر تحديث البيانات؛ جارٍ إعادة المحاولة", "Refresh failed; retrying"], pending: ["وصلت تغييرات جديدة؛ ستظهر عند انتهاء التعديل الحالي", "New changes received; waiting for the current edit to finish"] };
     const element = $("live-sync-status");
     if (element) { element.textContent = labels[liveStatus][currentLang === "ar" ? 0 : 1]; element.dataset.state = liveStatus; }
   }
@@ -617,7 +619,9 @@ const Cloud = (() => {
     } catch (error) {
       try {
         await load();
-      } catch {}
+      } catch (reloadError) {
+        console.warn("Reload after a failed change also failed", reloadError);
+      }
       fail(error);
       return false;
     } finally {
@@ -679,7 +683,9 @@ const Cloud = (() => {
     } catch (error) {
       try {
         await load();
-      } catch {}
+      } catch (reloadError) {
+        console.warn("Reload after a failed change also failed", reloadError);
+      }
       fail(error);
       return false;
     } finally {
@@ -740,7 +746,7 @@ const Cloud = (() => {
       lock(false);
     }
   }
-  async function showVoucherNameError(code: string, editingUser: string, saveError) {
+  async function showVoucherNameError(code: string, editingUser: string, saveError: any) {
     if (!ready || user.id !== editingUser) return;
     if (/CONFLICT/.test(saveError.message || "")) {
       try {
@@ -856,7 +862,7 @@ const Cloud = (() => {
       ),
     ].some((input) => input.value.trim());
   }
-  async function savePrometricSettings(event) {
+  async function savePrometricSettings(event: Event) {
     event.preventDefault();
     if (role !== "admin" || busy || !ready) return false;
     const account = $("settings-prometric-account").value.trim();
@@ -901,19 +907,21 @@ const Cloud = (() => {
       if (/CONFLICT/.test(error.message || ""))
         try {
           await load();
-        } catch {}
+        } catch (reloadError) {
+          console.warn("Reload after a save conflict failed", reloadError);
+        }
       fail(error);
       return false;
     } finally {
       lock(false);
     }
   }
-  function profileMessage(key, error = null) {
+  function profileMessage(key: string, error: any = null) {
     profileStatusKey = key;
     profileStatusError = error;
     translateUi();
   }
-  async function saveProfileName(event) {
+  async function saveProfileName(event: Event) {
     event.preventDefault();
     if (!ready || busy) return;
     const name = $("profile-name").value.trim();
@@ -934,7 +942,7 @@ const Cloud = (() => {
       lock(false);
     }
   }
-  async function saveProfileEmail(event) {
+  async function saveProfileEmail(event: Event) {
     event.preventDefault();
     if (!ready || busy) return;
     const email = $("profile-email").value.trim().toLowerCase();
@@ -959,7 +967,7 @@ const Cloud = (() => {
       lock(false);
     }
   }
-  async function saveProfilePassword(event) {
+  async function saveProfilePassword(event: Event) {
     event.preventDefault();
     if (!ready || busy) return;
     const current = $("profile-current-password").value,
@@ -1213,7 +1221,7 @@ const Cloud = (() => {
   async function exportCodesCsv() {
     if (role !== "admin") return;
     if (!(await refresh())) return;
-    const csvCell = (value) => {
+    const csvCell = (value: unknown) => {
       let text = String(value ?? "");
       if (/^[=+@\-\t\r]/.test(text)) text = "'" + text;
       return '"' + text.replaceAll('"', '""') + '"';
@@ -1242,7 +1250,7 @@ const Cloud = (() => {
     a.click();
     window.URL.revokeObjectURL(url);
   }
-  async function restoreData(backup) {
+  async function restoreData(backup: any) {
     if (!ready || role !== "admin") throw Error("IBTA_NOT_APPROVED");
     if (typeof Trainees !== "undefined" && !(await Trainees.flush()))
       throw Error("UNSAVED_SHEET");
@@ -1262,7 +1270,7 @@ const Cloud = (() => {
       backup.supervisorStock !== undefined &&
       (!Array.isArray(backup.supervisorStock) ||
         backup.supervisorStock.some(
-          (row) =>
+          (row: any) =>
             !row ||
             typeof row.category !== "string" ||
             !Number.isInteger(row.remaining) ||

@@ -4,14 +4,15 @@
   "private": true,
   "scripts": {
     "build": "node tools/build-site.cjs --next && next build",
-    "test": "node tools/prepare-runtime.cjs && node tests/cloud.test.cjs && node tests/database-migrations.test.cjs && node tests/cloud-proxy.test.cjs && node tests/ops-import.test.cjs && node tests/report-settings.test.cjs && node tests/prometric-credentials.test.cjs && node tests/trainees.test.cjs && node tests/trainees-xlsx.test.cjs && node tests/certificate-name.test.cjs && node tests/trainees-formulas.test.cjs && node tests/trainees-performance.test.cjs && node tests/sheet-delete.test.cjs && node tests/session-policy.test.cjs && node tests/server.test.mjs && node tests/prometric.test.cjs && node tests/prometric-exam.test.cjs && node tests/workspace-live.test.cjs && node tests/prometric-scores.test.cjs && node tests/prometric-session.test.cjs && node tests/prometric-extension-security.test.cjs && node tests/date-utils.test.cjs && node tests/selection-export.test.cjs && node tests/worksheet-actions.test.cjs",
-    "test:browser": "node tests/trainees-browser.test.cjs && node tests/trainees-excel-browser.test.cjs && node tests/trainees-expanded-browser.test.cjs && node tests/codes-timeline-browser.test.cjs && node tests/workspace-position-browser.test.cjs && node tests/sheet-enhancements-browser.test.cjs && node tests/trainees-tools-browser.test.cjs && node tests/trainees-performance-browser.test.cjs && node tests/trainees-xlsx-browser.test.cjs && node tests/certificate-name-browser.test.cjs && node tests/daily-reports-browser.test.cjs && node tests/prometric-accounts-browser.test.cjs && node tests/prometric-flow-browser.test.cjs && node tests/prometric-results-browser.test.cjs && node tests/sheet-interaction-browser.test.cjs && node tests/sheet-day-groups-browser.test.cjs && node tests/selection-export-browser.test.cjs && node tests/worksheet-actions-browser.test.cjs && node tests/excel-menu-browser.test.cjs",
+    "test": "node tools/prepare-runtime.cjs && node tests/cloud.test.cjs && node tests/database-migrations.test.cjs && node tests/cloud-proxy.test.cjs && node tests/ops-import.test.cjs && node tests/report-settings.test.cjs && node tests/prometric-credentials.test.cjs && node tests/trainees.test.cjs && node tests/trainees-xlsx.test.cjs && node tests/certificate-name.test.cjs && node tests/trainees-formulas.test.cjs && node tests/trainees-performance.test.cjs && node tests/sheet-delete.test.cjs && node tests/sheet-add-separator.test.cjs && node tests/session-policy.test.cjs && node tests/server.test.mjs && node tests/prometric.test.cjs && node tests/prometric-exam.test.cjs && node tests/workspace-live.test.cjs && node tests/prometric-scores.test.cjs && node tests/prometric-session.test.cjs && node tests/prometric-extension-security.test.cjs && node tests/date-utils.test.cjs && node tests/selection-export.test.cjs && node tests/worksheet-actions.test.cjs",
+    "test:browser": "node tests/trainees-browser.test.cjs && node tests/trainees-excel-browser.test.cjs && node tests/trainees-expanded-browser.test.cjs && node tests/codes-timeline-browser.test.cjs && node tests/workspace-position-browser.test.cjs && node tests/sheet-enhancements-browser.test.cjs && node tests/trainees-tools-browser.test.cjs && node tests/trainees-performance-browser.test.cjs && node tests/trainees-xlsx-browser.test.cjs && node tests/certificate-name-browser.test.cjs && node tests/daily-reports-browser.test.cjs && node tests/prometric-accounts-browser.test.cjs && node tests/prometric-flow-browser.test.cjs && node tests/prometric-results-browser.test.cjs && node tests/sheet-interaction-browser.test.cjs && node tests/sheet-day-groups-browser.test.cjs && node tests/selection-export-browser.test.cjs && node tests/worksheet-actions-browser.test.cjs && node tests/excel-menu-browser.test.cjs && node tests/app-dialog-browser.test.cjs",
     "dev": "node tools/build-site.cjs --next && next dev",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint .",
     "test:next": "node tests/next-workspace-browser.test.cjs",
     "test:vouchers": "node tests/voucher-unmark-browser.test.cjs",
-    "test:ui": "node tools/prepare-runtime.cjs && node tests/ui-accessibility-browser.test.cjs"
+    "test:ui": "node tools/prepare-runtime.cjs && node tests/ui-accessibility-browser.test.cjs",
+    "typecheck": "tsc --noEmit -p ."
   },
   "dependencies": {
     "@supabase/supabase-js": "2.49.1",
@@ -22,14 +23,19 @@
   },
   "devDependencies": {
     "@electric-sql/pglite": "0.5.10",
+    "@eslint/js": "9.39.5",
     "@types/node": "^20.17.19",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
     "autoprefixer": "^10.4.20",
+    "eslint": "9.39.5",
+    "eslint-plugin-react-hooks": "5.2.0",
+    "globals": "17.0.0",
     "happy-dom": "20.14.5",
     "playwright": "1.63.0",
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.17",
-    "typescript": "^5.7.3"
+    "typescript": "^5.7.3",
+    "typescript-eslint": "8.71.2"
   }
 }

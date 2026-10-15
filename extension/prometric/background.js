@@ -114,7 +114,7 @@ async function getRegistrationTabId(url) {
 async function closeRegistrationWindow() {
   const { currentTabId } = await chrome.storage.local.get(['currentTabId']);
   if (currentTabId) {
-    try { await chrome.tabs.remove(currentTabId); } catch (_) {}
+    try { await chrome.tabs.remove(currentTabId); } catch(_){/* tab may already be closed */}
     await chrome.storage.local.remove('currentTabId');
   }
 }

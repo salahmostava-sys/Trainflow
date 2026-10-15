@@ -33,11 +33,11 @@ const Trainees=(()=>{
   function savePosition(){
     clearTimeout(positionTimer);if(!initialized||!loaded||loading||restoringPosition||!owner||!view.length)return;
     const scroll=$('sheet-grid').parentElement;if(!$('panel-trainees').classList.contains('active')||!scroll.clientHeight)return;const first=rowAtOffset(scroll.scrollTop);
-    try{localStorage.setItem(positionKey(),JSON.stringify({row:view[cursor.r]??0,column:cursor.c,firstRow:view[first]??0,offset:Math.max(0,scroll.scrollTop-rowOffsets[first]),left:scroll.scrollLeft}));}catch{}
+    try{localStorage.setItem(positionKey(),JSON.stringify({row:view[cursor.r]??0,column:cursor.c,firstRow:view[first]??0,offset:Math.max(0,scroll.scrollTop-rowOffsets[first]),left:scroll.scrollLeft}));}catch{/* optional device preference */}
   }
   function schedulePosition(){if(loaded&&!loading&&!restoringPosition){clearTimeout(positionTimer);positionTimer=setTimeout(savePosition,200);}}
   function restorePosition(){
-    let saved;try{saved=JSON.parse(localStorage.getItem(positionKey())||'null');}catch{}if(!saved||!view.length)return;
+    let saved;try{saved=JSON.parse(localStorage.getItem(positionKey())||'null');}catch{/* optional device preference */}if(!saved||!view.length)return;
     const valid=value=>Number.isInteger(value)&&value>=0&&value<D.MAX_ROWS;
     if(!valid(saved.row)||!valid(saved.firstRow)||!Number.isInteger(saved.column)||saved.column<0||saved.column>=D.MAX_COLS)return;
     restoringPosition=true;
@@ -54,7 +54,7 @@ const Trainees=(()=>{
   const totalInputRows=()=>Math.min(D.MAX_ROWS,Math.max(cells.length,lastDataRow+1001,(formatting.daySeparators?.at(-1)??-1)+1));
   let excelView={wrap:false,zoom:100};
   let rowSize=15;
-  try{const savedRowSize=Number(localStorage.getItem('ibta_trainee_row_size'));if([15,21,28,36].includes(savedRowSize))rowSize=savedRowSize;}catch{}
+  try{const savedRowSize=Number(localStorage.getItem('ibta_trainee_row_size'));if([15,21,28,36].includes(savedRowSize))rowSize=savedRowSize;}catch{/* optional device preference */}
   let expandedView=false,previousViewZoom=null;
   const touchPointer=matchMedia('(pointer: coarse)');
   function displayRowHeight(){
@@ -64,11 +64,11 @@ const Trainees=(()=>{
   }
   function setRowSize(value){
     const next=Number(value);if(![15,21,28,36].includes(next))return;
-    rowSize=next;try{localStorage.setItem('ibta_trainee_row_size',String(rowSize));}catch{}
+    rowSize=next;try{localStorage.setItem('ibta_trainee_row_size',String(rowSize));}catch{/* optional device preference */}
     $('sheet-row-size').value=String(rowSize);applyExcelView();
     resetRowHeights();rebuildRowOffsets();drawRows(true);
   }
-  try{const pref=JSON.parse(localStorage.getItem('ibta_sheet_view')||'{}');excelView={wrap:pref.wrap===true,zoom:Number.isInteger(pref.zoom)&&pref.zoom>=50&&pref.zoom<=200?pref.zoom:100};}catch{}
+  try{const pref=JSON.parse(localStorage.getItem('ibta_sheet_view')||'{}');excelView={wrap:pref.wrap===true,zoom:Number.isInteger(pref.zoom)&&pref.zoom>=50&&pref.zoom<=200?pref.zoom:100};}catch{/* optional device preference */}
   function setZoom(value){
     if(expandedView)previousViewZoom=null;
     const previous=excelView.zoom,scroll=$('sheet-grid').parentElement,numeric=Number(value);
@@ -76,7 +76,7 @@ const Trainees=(()=>{
     applyExcelView();scroll.scrollLeft*=excelView.zoom/previous;scroll.scrollTop*=excelView.zoom/previous;resetRowHeights();rebuildRowOffsets();drawRows(true);
     saveExcelView();
   }
-  function saveExcelView(){try{localStorage.setItem('ibta_sheet_view',JSON.stringify({...excelView,zoom:previousViewZoom??excelView.zoom}));}catch{}}
+  function saveExcelView(){try{localStorage.setItem('ibta_sheet_view',JSON.stringify({...excelView,zoom:previousViewZoom??excelView.zoom}));}catch{/* optional device preference */}}
   function expandedZoom(){const scroll=$('sheet-grid').parentElement,head=$('sheet-grid').querySelector('thead').getBoundingClientRect().height;const row=Math.max(16,formatting.fontSize*1.2);return Math.max(50,Math.min(previousViewZoom??excelView.zoom,Math.floor(((scroll.clientHeight-head-18)/45-1)/row*10)*10));}
   function setExpandedView(active){
     stopSelectionDrag();
@@ -101,7 +101,7 @@ const Trainees=(()=>{
   }
   let hoverTimer,hoverHideTimer,detailTimer,hoverCell=null,detailKey='',detailPage=0;
   let colWidths={};
-  try{colWidths=JSON.parse(localStorage.getItem('ibta_trainee_col_widths')||'{}')||{};}catch{}
+  try{colWidths=JSON.parse(localStorage.getItem('ibta_trainee_col_widths')||'{}')||{};}catch{/* optional device preference */}
   const legacyWidths={...colWidths};
   function applySavedColWidths(){
     const ws=$('sheet-workspace');if(!ws)return;
@@ -124,13 +124,13 @@ const Trainees=(()=>{
     if(loaded){const fmt=D.format(formatting);fmt.widths={...colWidths};change(cells,true,fmt);}
   }
   let cellAlignments={};
-  try{cellAlignments=JSON.parse(localStorage.getItem('ibta_trainee_alignments')||'{}')||{};}catch{}
+  try{cellAlignments=JSON.parse(localStorage.getItem('ibta_trainee_alignments')||'{}')||{};}catch{/* optional device preference */}
   function getCellAlign(idx,col){return formatting.styles[idx+':'+col]?.align||cellAlignments[(workspaceIdentity()||'default')+':'+idx+':'+col]||'';}
   function setCellAlign(idx,col,align){
     const key=(workspaceIdentity()||'default')+':'+idx+':'+col;
     if(!align)delete cellAlignments[key];else cellAlignments[key]=align;
   }
-  function saveAlignments(){try{localStorage.setItem('ibta_trainee_alignments',JSON.stringify(cellAlignments));}catch{}}
+  function saveAlignments(){try{localStorage.setItem('ibta_trainee_alignments',JSON.stringify(cellAlignments));}catch{/* optional device preference */}}
   function setSelectionAlignment(align){
     if(!loaded||loading)return;formatSelection({align});
   }
@@ -274,7 +274,7 @@ const Trainees=(()=>{
     // Plain text works in any application; HTML keeps the selected table in Excel.
     if(navigator.clipboard?.write&&typeof ClipboardItem!=='undefined')try{
       await navigator.clipboard.write([new ClipboardItem({'text/plain':new Blob([text],{type:'text/plain'}),'text/html':new Blob([selectionHtml()],{type:'text/html'})})]);copied=true;
-    }catch{}
+    }catch(error){console.warn('Rich clipboard copy failed; falling back to plain text',error);}
     if(!copied)copied=await copyText(text);
     if(copied)message(()=>tr('تم النسخ إلى الحافظة','Copied to clipboard'));
     return copied;
@@ -800,11 +800,11 @@ const Trainees=(()=>{
     message(()=>tr('جارٍ تحميل الجدول…','Loading sheet…'));
     try{
       const list=Cloud.listTraineeSheets?await Cloud.listTraineeSheets(next):[{sheet_id:FIRST_SHEET,sheet_name:'Sheet 1',sheet_hidden:false,sheet_order:0}];
-      if(!owner){try{nextSheet=localStorage.getItem('ibta_active_worksheet:'+next)||nextSheet;}catch{}}
+      if(!owner){try{nextSheet=localStorage.getItem('ibta_active_worksheet:'+next)||nextSheet;}catch{/* optional device preference */}}
       if(!list.some(s=>s.sheet_id===nextSheet&&!s.sheet_hidden))nextSheet=list.find(s=>!s.sheet_hidden)?.sheet_id||FIRST_SHEET;
       const data=await Cloud.readTrainees(next,nextSheet);if(token!==epoch)return false;
       const normalized=D.normalize(data.cells);owner=next;sheetId=nextSheet;worksheets=list;cells=normalized;formatting=D.format(data.format);colWidths={...(formatting.widths||(sheetId===FIRST_SHEET?legacyWidths:{}))};version=Number(data.version);revision=savedRevision=0;history=[];future=[];loaded=true;
-      try{localStorage.setItem('ibta_active_worksheet:'+next,sheetId);}catch{}
+      try{localStorage.setItem('ibta_active_worksheet:'+next,sheetId);}catch{/* optional device preference */}
       clearFilters();extraSelections=[];anchor=cursor={r:0,c:0};owner=next;render();restorePosition();renderCodes();if(typeof rememberWorkspaceView==='function')rememberWorkspaceView({sheetOwner:owner});message(()=>tr('تم الحفظ','Saved'));return true;
     }catch(error){if(token===epoch)message(()=>errorMessage(error),true);return false;}
     finally{if(token===epoch){loading=false;$('sheet-workspace').inert=!loaded;sheetTools?.paint();}}
@@ -849,7 +849,7 @@ const Trainees=(()=>{
     if(nextSheet!==sheetId||Number(incoming.version)!==version){
       epoch++;sheetId=nextSheet;cells=D.normalize(incoming.cells);formatting=D.format(incoming.format);colWidths={...(formatting.widths||{})};version=Number(incoming.version);
       history=[];future=[];formulaCache.clear();closeDuplicateDetails();render();message(()=>tr('تم تحديث الجدول مباشرة','Sheet updated live'));
-      try{localStorage.setItem('ibta_active_worksheet:'+owner,sheetId);}catch{}
+      try{localStorage.setItem('ibta_active_worksheet:'+owner,sheetId);}catch{/* optional device preference */}
     }
     sheetTools?.paint();return true;
   }

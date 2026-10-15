@@ -730,7 +730,8 @@ document.getElementById('importSettingsFile')?.addEventListener('change', (e) =>
 
 document.getElementById('clearAllData')?.addEventListener('click', async () => {
   if (!confirm('Warning Are you sure? This will delete History and Active Queues, but KEEP your Settings.')) return;
-  if (!await sendCommand({ action: 'clearSession' }, backupMsgEl)) return;
+  // backupMsgEl only exists inside the import/export handlers; using it here threw a ReferenceError.
+  if (!await sendCommand({ action: 'clearSession' }, document.getElementById('settingsBackupMsg'))) return;
   await chrome.storage.local.remove('history');
   location.reload();
 });

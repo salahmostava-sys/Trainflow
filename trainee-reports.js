@@ -104,7 +104,7 @@ const TraineeReports=(()=>{
         'text/html':new Blob([html],{type:'text/html'})
       })]);
       copied=true;
-    }catch{}
+    }catch(error){console.warn('Rich clipboard copy failed; falling back to plain text',error);}
     if(!copied)copied=await copyText(text);
     return copied;
   }

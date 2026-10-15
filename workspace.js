@@ -460,7 +460,7 @@ async function copyText(text){
       await navigator.clipboard.writeText(text);
       return true;
     }
-  }catch(e){}
+  }catch(error){console.warn('Clipboard API copy failed; trying the fallback',error);}
   if(fallbackCopy(text)) return true;
   showToast(t('copyFailed'));
   return false;
@@ -529,7 +529,7 @@ function toggleLanguage(){
   try{
     const prefs=JSON.parse(localStorage.getItem('ibta_ui_preferences') || '{}') || {};
     localStorage.setItem('ibta_ui_preferences',JSON.stringify({...prefs,uiLang:currentLang}));
-  }catch{}
+  }catch{/* optional device preference */}
   applyLanguage();
 }
 document.getElementById('lang-btn').addEventListener('click',toggleLanguage);
@@ -544,7 +544,7 @@ function setSidebarOpen(open, persist = false) {
   window.IBTA_SIDEBAR_OPEN = Boolean(open);
   document.getElementById('html-root').dataset.sidebar = open ? 'open' : 'closed';
   if (persist) {
-    try { localStorage.setItem('trainflow_sidebar_open', open ? '1' : '0'); } catch {}
+    try { localStorage.setItem('trainflow_sidebar_open', open ? '1' : '0'); } catch{/* optional device preference */}
   }
   updateSidebar();
 }
@@ -611,7 +611,7 @@ document.addEventListener('keydown', e => {
 document.getElementById('sidebar-compact').addEventListener('click', () => {
   window.IBTA_SIDEBAR_COMPACT = !window.IBTA_SIDEBAR_COMPACT;
   document.getElementById('html-root').dataset.sidebarSize = window.IBTA_SIDEBAR_COMPACT ? 'compact' : 'expanded';
-  try { localStorage.setItem('trainflow_sidebar_compact', window.IBTA_SIDEBAR_COMPACT ? '1' : '0'); } catch {}
+  try { localStorage.setItem('trainflow_sidebar_compact', window.IBTA_SIDEBAR_COMPACT ? '1' : '0'); } catch{/* optional device preference */}
   updateSidebar();
 });
 
@@ -659,7 +659,7 @@ function rememberWorkspaceView(change) {
       'ibta_workspace_view:' + Cloud.userId(),
       JSON.stringify({ ...workspaceView(), ...change })
     );
-  } catch {}
+  } catch{/* optional device preference */}
 }
 
 async function restoreWorkspaceView() {
@@ -991,7 +991,7 @@ function applyCodeDensity(){
   sheet.classList.toggle('compact',codeCompact);
   btn.classList.toggle('active',codeCompact);
   if(label)label.textContent=codeCompact?t('codeDensityCompact'):t('codeDensityComfortable');
-  try{localStorage.setItem('ibta_code_compact',String(codeCompact));}catch{}
+  try{localStorage.setItem('ibta_code_compact',String(codeCompact));}catch{/* optional device preference */}
 }
 
 function applyCodeExpand(){
@@ -1002,7 +1002,7 @@ function applyCodeExpand(){
   scroll.classList.toggle('expanded',codeExpanded);
   btn.classList.toggle('active',codeExpanded);
   if(label)label.textContent=codeExpanded?t('codeNormalHeight'):t('codeExpandHeight');
-  try{localStorage.setItem('ibta_code_expanded',String(codeExpanded));}catch{}
+  try{localStorage.setItem('ibta_code_expanded',String(codeExpanded));}catch{/* optional device preference */}
   positionCodeTimeline();
 }
 

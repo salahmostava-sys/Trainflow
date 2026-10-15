@@ -55,7 +55,7 @@
       fn(value);
     }
     if (prevFocusedElement && typeof prevFocusedElement.focus === 'function') {
-      try { prevFocusedElement.focus(); } catch (e) {}
+      try { prevFocusedElement.focus(); } catch(e){/* focus restore is best-effort */}
       prevFocusedElement = null;
     }
   }

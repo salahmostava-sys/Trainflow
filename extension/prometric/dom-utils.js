@@ -169,10 +169,10 @@ function fillSelect(sel, textOrAliases) {
 
   triggerEvents(sel, ['input', 'change']);
   if (typeof sel.onchange === 'function') {
-    try { sel.onchange(); } catch (_) {}
+    try { sel.onchange(); } catch(_){/* page handler errors are not ours */}
   }
   if (typeof sel.oninput === 'function') {
-    try { sel.oninput(); } catch (_) {}
+    try { sel.oninput(); } catch(_){/* page handler errors are not ours */}
   }
 
   return true;

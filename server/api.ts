@@ -229,7 +229,7 @@ export async function handleApi(
           month: "2-digit",
           year: "numeric",
         }).formatToParts(new Date());
-        const part = (name) => parts.find((p) => p.type === name).value;
+        const part = (name: string) => parts.find((p) => p.type === name)?.value ?? "";
         payload.use_date =
           part("day") + "/" + part("month") + "/" + part("year");
         body = JSON.stringify(payload);
